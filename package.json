@@ -1,0 +1,98 @@
+{
+  "name": "mobalt",
+  "productName": "MobAlt",
+  "version": "0.1.0",
+  "description": "MobaXterm alternative for macOS - tabbed SSH/SFTP/local terminal with session manager, tunnels, MultiExec, X11 forwarding",
+  "main": "src/main/main.js",
+  "author": "Hyeongcheol An (https://github.com/Hyeongcheol-An)",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "rebuild": "electron-rebuild -f -w node-pty",
+    "postinstall": "electron-rebuild -f -w node-pty",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --mac",
+    "test:sshd": "node test/start-sshd.js",
+    "test": "node --test \"test/unit/**/*.test.js\"",
+    "release": "semantic-release",
+    "icon": "python3 scripts/make-icon.py"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/addon-unicode11": "^0.9.0",
+    "@xterm/addon-web-links": "^0.12.0",
+    "@xterm/addon-webgl": "^0.19.0",
+    "@xterm/xterm": "^6.0.0",
+    "node-pty": "^1.1.0",
+    "ssh2": "^1.17.0"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
+    "@electron/rebuild": "^4.2.1",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "conventional-changelog-conventionalcommits": "^10.4.1",
+    "electron": "^45.1.0",
+    "electron-builder": "^26.18.0",
+    "semantic-release": "^24.2.9"
+  },
+  "build": {
+    "appId": "io.github.hyeongcheol-an.mobalt",
+    "productName": "MobAlt",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.icns",
+      "hardenedRuntime": false,
+      "identity": null,
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Hyeongcheol-An",
+      "repo": "mobaXterm"
+    },
+    "dmg": {
+      "sign": false
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Hyeongcheol-An/mobaXterm.git"
+  },
+  "homepage": "https://github.com/Hyeongcheol-An/mobaXterm#readme",
+  "bugs": {
+    "url": "https://github.com/Hyeongcheol-An/mobaXterm/issues"
+  }
+}
