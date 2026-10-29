@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;" />
+  <title>MobAlt</title>
+  <link rel="stylesheet" href="../../node_modules/@xterm/xterm/css/xterm.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Top toolbar (MobaXterm ribbon equivalent) -->
+    <header id="toolbar">
+      <div class="drag-region"></div>
+      <div class="brand">MobAlt</div>
+      <div class="tb-group">
+        <button class="tb-btn" data-action="new-session" title="New session (⌘N)"><span class="ico">＋</span>Session</button>
+        <button class="tb-btn" data-action="new-local" title="New local terminal (⌘T)"><span class="ico">&gt;_</span>Terminal</button>
+        <button class="tb-btn" data-action="tunnels" title="SSH tunnels / port forwarding (⇧⌘U)"><span class="ico">⇄</span>Tunneling</button>
+        <button class="tb-btn toggle" id="btn-multiexec" data-action="multiexec" title="Broadcast keystrokes to all terminals (⇧⌘M)"><span class="ico">⋔</span>MultiExec</button>
+        <div class="tb-split">
+          <button class="tb-btn" data-action="split" data-arg="right" title="Split right (⌘D)"><span class="ico">◫</span>Split</button>
+          <button class="tb-btn narrow" data-action="split" data-arg="down" title="Split down (⇧⌘D)">▭</button>
+        </div>
+        <button class="tb-btn" data-action="sidebar" data-arg="tools" title="Network tools"><span class="ico">🛠</span>Tools</button>
+        <button class="tb-btn" data-action="settings" title="Settings (⌘,)"><span class="ico">⚙</span>Settings</button>
+      </div>
+      <form id="quick-connect" class="quick" autocomplete="off">
+        <input id="qc-input" placeholder="quick connect: user@host[:port]" spellcheck="false" />
+        <button type="submit" title="Connect">Go</button>
+      </form>
+    </header>
+
+    <div id="main">
+      <!-- Left: vertical tab strip + panel -->
+      <nav id="side-strip">
+        <button class="strip-btn active" data-panel="sessions" title="Sessions (⌘1)"><span>Sessions</span></button>
+        <button class="strip-btn" data-panel="sftp" title="SFTP browser (⌘2)"><span>Sftp</span></button>
+        <button class="strip-btn" data-panel="tools" title="Tools (⌘3)"><span>Tools</span></button>
+        <button class="strip-btn" data-panel="macros" title="Macros (⌘4)"><span>Macros</span></button>
+        <div class="strip-spacer"></div>
+        <button class="strip-btn" data-action="toggle-sidebar" title="Hide sidebar (⌘B)"><span>◀</span></button>
+      </nav>
+
+      <aside id="sidebar">
+        <!-- Sessions panel -->
+        <section class="panel active" id="panel-sessions">
+          <div class="panel-head">
+            <input id="session-filter" placeholder="Filter sessions…" spellcheck="false" />
+            <button class="icon-btn" data-action="new-folder" title="New folder">📁+</button>
+            <button class="icon-btn" data-action="new-session" title="New session">＋</button>
+          </div>
+          <div id="session-tree" class="tree"></div>
+          <div class="panel-foot">
+            <button class="link-btn" data-action="import-sshconfig">Import ~/.ssh/config</button>
+            <button class="link-btn" data-action="import-moba">Import MobaXterm.ini</button>
+          </div>
+        </section>
+
+        <!-- SFTP panel -->
+        <section class="panel" id="panel-sftp">
+          <div class="sftp-empty" id="sftp-empty">
+            <div class="big">SFTP</div>
+            <p>Open an SSH session to browse remote files here.<br/>Drag files from Finder into the list to upload.</p>
+          </div>
+          <div id="sftp-ui" hidden>
+            <div class="sftp-conn" id="sftp-conn"></div>
+            <div class="sftp-toolbar">
+              <button class="icon-btn" data-sftp="up" title="Parent folder">⬆</button>
+              <button class="icon-btn" data-sftp="home" title="Home">🏠</button>
+              <button class="icon-btn" data-sftp="refresh" title="Refresh">⟳</button>
+              <button class="icon-btn" data-sftp="mkdir" title="New folder">📁+</button>
+              <button class="icon-btn" data-sftp="upload" title="Upload…">⇪</button>
+              <button class="icon-btn" data-sftp="download" title="Download selected">⇩</button>
+              <button class="icon-btn" data-sftp="delete" title="Delete selected">🗑</button>
+              <button class="icon-btn" data-sftp="terminal-cd" title="cd terminal to this folder">&gt;_</button>
+            </div>
+            <form class="sftp-path" id="sftp-path-form"><input id="sftp-path" spellcheck="false" /></form>
+            <div class="sftp-opts">
+              <label><input type="checkbox" id="sftp-follow" /> Follow terminal folder</label>
+              <label><input type="checkbox" id="sftp-hidden" /> Show hidden</label>
+            </div>
+            <div id="sftp-list" class="sftp-list" tabindex="0"></div>
+            <div id="sftp-transfers" class="sftp-transfers"></div>
+          </div>
+        </section>
+
+        <!-- Tools panel -->
+        <section class="panel" id="panel-tools">
+          <div class="tools-form">
+            <div class="row"><input id="tool-host" placeholder="host or IP" spellcheck="false" /></div>
+            <div class="row btns">
+              <button data-tool="ping">Ping</button>
+              <button data-tool="traceroute">Traceroute</button>
+              <button data-tool="lookup">DNS</button>
+              <button data-tool="netinfo">Net info</button>
+            </div>
+            <div class="row">
+              <input id="tool-port-from" type="number" value="1" min="1" max="65535" title="from port" />
+              <span>–</span>
+              <input id="tool-port-to" type="number" value="1024" min="1" max="65535" title="to port" />
+              <button data-tool="portscan">Port scan</button>
+              <button data-tool="stop" class="danger">Stop</button>
+            </div>
+          </div>
+          <pre id="tool-output" class="tool-output"></pre>
+        </section>
+
+        <!-- Macros panel -->
+        <section class="panel" id="panel-macros">
+          <div class="panel-head">
+            <button class="icon-btn" data-macro="record" id="macro-record" title="Record keystrokes of the active terminal">● Rec</button>
+            <button class="icon-btn" data-macro="new" title="New macro from text">＋</button>
+            <span class="hint">Double-click to play in the active terminal</span>
+          </div>
+          <div id="macro-list" class="tree"></div>
+        </section>
+      </aside>
+      <div id="sidebar-resizer"></div>
+
+      <!-- Right: tabs + terminals -->
+      <div id="workspace">
+        <div id="multiexec-banner" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> terminals</div>
+        <div id="tabbar">
+          <div id="tabs"></div>
+          <button id="tab-add" title="New local terminal (⌘T)">＋</button>
+        </div>
+        <div id="tab-content"></div>
+        <div id="find-bar" hidden>
+          <input id="find-input" placeholder="Find in terminal" spellcheck="false" />
+          <button data-find="prev" title="Previous (⇧⏎)">▲</button>
+          <button data-find="next" title="Next (⏎)">▼</button>
+          <label><input type="checkbox" id="find-case" /> Aa</label>
+          <label><input type="checkbox" id="find-regex" /> .*</label>
+          <button data-find="close" title="Close (Esc)">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <footer id="statusbar">
+      <span id="st-session">No session</span>
+      <span id="st-cwd"></span>
+      <span class="spacer"></span>
+      <span id="st-transfers"></span>
+      <span id="st-x11" title="Local X server">X11</span>
+      <span id="st-log" title="Session logging"></span>
+      <span id="st-version"></span>
+    </footer>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="ctx-root"></div>
+  <div id="toast-root"></div>
+
+  <script src="../../node_modules/@xterm/xterm/lib/xterm.js"></script>
+  <script src="../../node_modules/@xterm/addon-fit/lib/addon-fit.js"></script>
+  <script src="../../node_modules/@xterm/addon-web-links/lib/addon-web-links.js"></script>
+  <script src="../../node_modules/@xterm/addon-search/lib/addon-search.js"></script>
+  <script src="../../node_modules/@xterm/addon-webgl/lib/addon-webgl.js"></script>
+  <script src="../../node_modules/@xterm/addon-unicode11/lib/addon-unicode11.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

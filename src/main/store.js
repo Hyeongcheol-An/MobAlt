@@ -1,0 +1,182 @@
+'use strict';
+// Persistence for sessions, settings, macros. Secrets are encrypted at rest
+// with Electron safeStorage (backed by the macOS Keychain).
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const crypto = require('crypto');
+// Outside Electron (unit tests) require('electron') yields the binary path string.
+const electron = require('electron');
+const { app, safeStorage } = typeof electron === 'object' ? electron : {};
+
+const SECRET_FIELDS = ['password', 'passphrase', 'jumpPassword'];
+
+function userDataFile(name) {
+  const dir = app ? app.getPath('userData') : process.env.MOBALT_USER_DATA || path.join(os.tmpdir(), 'mobalt-userdata');
+  return path.join(dir, name);
+}
+
+function readJson(file, fallback) {
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch {
+    return fallback;
+  }
+}
+
+function writeJson(file, data) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.renameSync(tmp, file);
+}
+
+function encrypt(plain) {
+  if (!plain) return '';
+  if (safeStorage && safeStorage.isEncryptionAvailable()) {
+    return 'enc:' + safeStorage.encryptString(plain).toString('base64');
+  }
+  return 'b64:' + Buffer.from(plain, 'utf8').toString('base64');
+}
+
+function decrypt(stored) {
+  if (!stored) return '';
+  if (stored.startsWith('enc:')) {
+    if (!safeStorage) return '';
+    try {
+      return safeStorage.decryptString(Buffer.from(stored.slice(4), 'base64'));
+    } catch {
+      return '';
+    }
+  }
+  if (stored.startsWith('b64:')) return Buffer.from(stored.slice(4), 'base64').toString('utf8');
+  return stored; // legacy plain
+}
+
+const DEFAULT_SETTINGS = {
+  fontFamily: 'Menlo, "SF Mono", "JetBrains Mono", "Fira Code", monospace',
+  fontSize: 13,
+  lineHeight: 1.0,
+  cursorStyle: 'block',
+  cursorBlink: true,
+  scrollback: 10000,
+  theme: 'moba-dark',
+  rightClickPaste: true,
+  copyOnSelect: true,
+  bell: 'none',
+  localShell: '',
+  localShellArgs: ['-l'],
+  localShellIntegration: true,
+  editorCommand: '',
+  confirmClose: true,
+  sidebarWidth: 280,
+  sidebarVisible: true,
+  sidebarTab: 'sessions',
+  sftpAutoOpen: true,
+  downloadDir: '',
+  keepAliveInterval: 30,
+  readyTimeout: 20000,
+  macros: [],
+  tunnels: [],
+  windowBounds: null,
+  recentSessions: [],
+};
+
+class Store {
+  constructor() {
+    this._sessions = null;
+    this._settings = null;
+  }
+
+  // Resolved lazily so app.setPath('userData') can run first.
+  get sessionsFile() {
+    return userDataFile('sessions.json');
+  }
+
+  get settingsFile() {
+    return userDataFile('settings.json');
+  }
+
+  // ---- sessions ----
+  loadSessions() {
+    if (!this._sessions) {
+      const data = readJson(this.sessionsFile, { sessions: [], folders: [] });
+      this._sessions = {
+        sessions: Array.isArray(data.sessions) ? data.sessions : [],
+        folders: Array.isArray(data.folders) ? data.folders : [],
+      };
+    }
+    return this._sessions;
+  }
+
+  /** Returns sessions with secrets decrypted (for in-memory use). */
+  getSessions() {
+    const d = this.loadSessions();
+    return {
+      folders: d.folders.slice(),
+      sessions: d.sessions.map((s) => this._decryptSession(s)),
+    };
+  }
+
+  getSession(id) {
+    const s = this.loadSessions().sessions.find((x) => x.id === id);
+    return s ? this._decryptSession(s) : null;
+  }
+
+  saveSessions({ sessions, folders }) {
+    const enc = sessions.map((s) => this._encryptSession(s));
+    this._sessions = { sessions: enc, folders: folders || [] };
+    writeJson(this.sessionsFile, this._sessions);
+    return this.getSessions();
+  }
+
+  upsertSession(session) {
+    const d = this.loadSessions();
+    if (!session.id) session.id = crypto.randomUUID();
+    const idx = d.sessions.findIndex((s) => s.id === session.id);
+    const enc = this._encryptSession(session);
+    if (idx >= 0) d.sessions[idx] = enc;
+    else d.sessions.push(enc);
+    writeJson(this.sessionsFile, d);
+    return this._decryptSession(enc);
+  }
+
+  deleteSession(id) {
+    const d = this.loadSessions();
+    d.sessions = d.sessions.filter((s) => s.id !== id);
+    writeJson(this.sessionsFile, d);
+  }
+
+  _encryptSession(s) {
+    const out = { ...s };
+    for (const f of SECRET_FIELDS) {
+      if (out[f]) out[f] = encrypt(out[f]);
+      else delete out[f];
+    }
+    return out;
+  }
+
+  _decryptSession(s) {
+    const out = { ...s };
+    for (const f of SECRET_FIELDS) {
+      if (out[f]) out[f] = decrypt(out[f]);
+    }
+    return out;
+  }
+
+  // ---- settings ----
+  getSettings() {
+    if (!this._settings) {
+      this._settings = { ...DEFAULT_SETTINGS, ...readJson(this.settingsFile, {}) };
+    }
+    return this._settings;
+  }
+
+  setSettings(patch) {
+    this._settings = { ...this.getSettings(), ...patch };
+    writeJson(this.settingsFile, this._settings);
+    return this._settings;
+  }
+}
+
+module.exports = { Store, DEFAULT_SETTINGS, encrypt, decrypt, userDataFile };
