@@ -486,6 +486,11 @@ function registerIpc() {
   ipcMain.handle('settings:get', () => store.getSettings());
   ipcMain.handle('settings:set', (_e, patch) => store.setSettings(patch));
 
+  ipcMain.handle('workspace:get', () => store.getWorkspace());
+  ipcMain.on('workspace:save', (_e, data) => {
+    try { store.saveWorkspace(data); } catch {}
+  });
+
   ipcMain.handle('dialog:open', (_e, opts) => dialog.showOpenDialog(win, opts));
   ipcMain.handle('dialog:save', (_e, opts) => dialog.showSaveDialog(win, opts));
   ipcMain.handle('dialog:message', (_e, opts) => dialog.showMessageBox(win, opts));

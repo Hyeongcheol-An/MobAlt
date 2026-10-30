@@ -287,3 +287,18 @@ input, select, textarea { user-select: text; }
 .toast { background: var(--bg-3); border: 1px solid var(--border); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: 6px; box-shadow: 0 6px 20px rgba(0,0,0,.4); max-width: 360px; font-size: 12px; animation: toast-in .15s ease-out; }
 .toast.error { border-left-color: var(--red); } .toast.success { border-left-color: var(--green); } .toast.warn { border-left-color: var(--yellow); }
 @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } }
+
+/* ---- session icons & colours ---- */
+.tree-row .ico.emoji { font-size: 13px; }
+.tab .tabico { flex: none; font-size: 12px; line-height: 1; }
+.pane-head .picon { flex: none; font-size: 12px; line-height: 1; }
+.pane[style*="--pane-color"] .pane-head { box-shadow: inset 3px 0 0 var(--pane-color); }
+.pane[style*="--pane-color"].focused .pane-head .title { color: var(--pane-color); }
+
+/* icon / colour pickers in the session editor */
+.pick-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.pick-row .pick { width: 26px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: var(--bg-2); color: var(--fg-dim); font-size: 14px; line-height: 1; cursor: pointer; }
+.pick-row .pick:hover { border-color: var(--fg-faint); }
+.pick-row .pick.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); color: var(--fg); }
+.pick-row .pick.swatch { color: transparent; }
+.pick-row input[type="color"] { width: 26px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: var(--bg-2); cursor: pointer; }

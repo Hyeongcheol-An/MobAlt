@@ -76,6 +76,10 @@ contextBridge.exposeInMainWorld('api', {
     get: () => invoke('settings:get'),
     set: (patch) => invoke('settings:set', patch),
   },
+  workspace: {
+    get: () => invoke('workspace:get'),
+    save: (data) => send('workspace:save', data),
+  },
   dialog: {
     open: (opts) => invoke('dialog:open', opts),
     save: (opts) => invoke('dialog:save', opts),

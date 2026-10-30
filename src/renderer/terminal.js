@@ -81,6 +81,7 @@ export class TermPane {
     this.el = h('div', { class: 'pane', dataset: { pane: this.id } },
       (this.headEl = h('div', { class: 'pane-head' },
         h('span', { class: 'dot' }),
+        this.session?.icon ? h('span', { class: 'picon' }, this.session.icon) : null,
         (this.headTitle = h('span', { class: 'title' }, this.title)),
         h('button', { title: 'Split right', onclick: () => app.action('split', 'right', this) }, '◫'),
         h('button', { title: 'Split down', onclick: () => app.action('split', 'down', this) }, '▭'),
@@ -88,6 +89,7 @@ export class TermPane {
       )),
       (this.termEl = h('div', { class: 'pane-term' }))
     );
+    if (this.session?.color) this.el.style.setProperty('--pane-color', this.session.color);
     this.el.addEventListener('mousedown', () => app.focusPane(this), true);
     this._wireDnD();
 

@@ -33,6 +33,32 @@ export function sessionEditor(app, initial = {}) {
 
   // --- common
   const name = text(s.name, { placeholder: 'Session name (defaults to user@host)' });
+
+  // icon + color (like MobaXterm's per-session icon and tab colour)
+  const ICON_CHOICES = ['🐧', '🖥', '🪟', '🍎', '☁️', '🐳', '🗄', '🌐', '🔒', '🔑', '⚙️', '🧪', '🚀', '⭐', '🔥', '📦', '💾', '🎛', '📡', '🏠', '🏢', '🎮', '🤖', '📊'];
+  const COLOR_CHOICES = ['#e5534b', '#f08c3a', '#e6b422', '#4caf50', '#2fbfa7', '#4ea1ff', '#7a7dff', '#bd93f9', '#ff79c6', '#8a93a2'];
+  let iconVal = s.icon || '';
+  let colorVal = s.color || '';
+  const iconRow = h('div', { class: 'pick-row' });
+  const renderIcons = () => {
+    iconRow.replaceChildren(
+      h('button', { type: 'button', class: 'pick' + (iconVal ? '' : ' active'), title: 'Default (by session type)', onclick: () => { iconVal = ''; renderIcons(); } }, '—'),
+      ICON_CHOICES.map((ic) => h('button', { type: 'button', class: 'pick' + (ic === iconVal ? ' active' : ''), onclick: () => { iconVal = ic; renderIcons(); } }, ic))
+    );
+  };
+  renderIcons();
+  const customColor = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(colorVal) ? colorVal : '#4ea1ff', title: 'Custom colour' });
+  const colorRow = h('div', { class: 'pick-row' });
+  const renderColors = () => {
+    colorRow.replaceChildren(
+      h('button', { type: 'button', class: 'pick' + (colorVal ? '' : ' active'), title: 'No colour', onclick: () => { colorVal = ''; renderColors(); } }, '—'),
+      COLOR_CHOICES.map((c) => h('button', { type: 'button', class: 'pick swatch' + (c === colorVal ? ' active' : ''), style: { background: c }, title: c, onclick: () => { colorVal = c; renderColors(); } })),
+      customColor
+    );
+  };
+  customColor.addEventListener('input', () => { colorVal = customColor.value; renderColors(); });
+  renderColors();
+
   const folder = text(s.folder || '', { list: 'folder-list', placeholder: '(root)' });
   const dl = h('datalist', { id: 'folder-list' }, folders.map((f) => h('option', { value: f })));
   const host = text(s.host, { placeholder: 'hostname or IP' });
@@ -140,7 +166,8 @@ export function sessionEditor(app, initial = {}) {
   const buildBasic = () => {
     const b = pages.basic;
     b.replaceChildren();
-    b.append(...field('Name', name), ...field('Folder', h('div', { class: 'inline' }, folder, dl)));
+    b.append(...field('Name', name), ...field('Folder', h('div', { class: 'inline' }, folder, dl)),
+      ...field('Icon', iconRow), ...field('Colour', colorRow, 'Shown on the session, its tab and pane'));
     if (type === 'local') {
       b.append(...field('Shell', shell, 'Leave blank for your login shell'), ...field('Start folder', cwd));
     } else if (type === 'serial') {
@@ -225,6 +252,8 @@ export function sessionEditor(app, initial = {}) {
       localEcho: localEcho.cb.checked,
       newline: newline.value,
       folder: folder.value.trim().replace(/^\/+|\/+$/g, ''),
+      icon: iconVal,
+      color: colorVal,
       host: host.value.trim(),
       port: parseInt(port.value, 10) || DEFAULT_PORT[type],
       username: username.value.trim(),
@@ -368,6 +397,7 @@ export function settingsDialog(app) {
   const shellInt = check('zsh/bash integration (folder following)', s.localShellIntegration !== false);
   const editor = text(s.editorCommand, { placeholder: 'e.g. code --wait {file}   (blank = TextEdit)' });
   const confirmClose = check('Confirm quit with open SSH sessions', s.confirmClose);
+  const restoreWs = check('Restore tabs & split layout at startup', s.restoreWorkspace !== false);
   const sftpAutoOpen = check('Switch to SFTP panel when SSH connects', s.sftpAutoOpen !== false);
   const downloadDir = text(s.downloadDir, { placeholder: '~/Downloads' });
   const logDir = text(s.logDir, { placeholder: '~/Documents/MobAlt Logs' });
@@ -383,7 +413,7 @@ export function settingsDialog(app) {
       ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
       ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
       ...field('Download folder', downloadDir), ...field('Log folder', logDir), ...field('SSH keep-alive (s)', keepAlive),
-      h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el),
+      h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
       h('label', {}, 'Data'), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, 'Open config folder'))
     ),
     buttons: [
@@ -393,7 +423,7 @@ export function settingsDialog(app) {
         cursorStyle: cursorStyle.value, cursorBlink: cursorBlink.cb.checked, scrollback: parseInt(scrollback.value, 10) || 10000, theme: theme.value,
         rightClickPaste: rightClickPaste.cb.checked, copyOnSelect: copyOnSelect.cb.checked, macOptionIsMeta: optMeta.cb.checked,
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
-        confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(),
+        confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(),
         keepAliveInterval: parseInt(keepAlive.value, 10) || 0,
       }) },
     ],

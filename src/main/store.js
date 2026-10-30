@@ -94,6 +94,7 @@ const DEFAULT_SETTINGS = {
   sidebarVisible: true,
   sidebarTab: 'sessions',
   sftpAutoOpen: true,
+  restoreWorkspace: true,
   downloadDir: '',
   keepAliveInterval: 30,
   readyTimeout: 20000,
@@ -116,6 +117,20 @@ class Store {
 
   get settingsFile() {
     return userDataFile('settings.json');
+  }
+
+  get workspaceFile() {
+    return userDataFile('workspace.json');
+  }
+
+  // ---- workspace (open tabs / split layout; no secrets, session refs by id) ----
+  getWorkspace() {
+    return readJson(this.workspaceFile, null);
+  }
+
+  saveWorkspace(data) {
+    if (!data || !Array.isArray(data.tabs)) return;
+    writeJson(this.workspaceFile, data);
   }
 
   // ---- sessions (stored form: secrets encrypted) ----

@@ -9,6 +9,7 @@ export class Tab {
     this.title = title;
     this.autoTitle = true;
     this.color = null;
+    this.icon = null;
     this.root = null;
     this.activePane = null;
     this.pageEl = h('div', { class: 'tab-page' });
@@ -61,6 +62,7 @@ export class Workspace {
   _buildTabEl(tab) {
     const el = h('div', { class: 'tab', draggable: true, dataset: { tab: tab.id } },
       h('span', { class: 'dot' }),
+      h('span', { class: 'tabico', hidden: !tab.icon }, tab.icon || ''),
       h('span', { class: 'title' }, tab.title),
       h('button', { class: 'close', title: 'Close (⌘W)', onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, '✕')
     );
@@ -110,6 +112,7 @@ export class Workspace {
       this.tabs.splice(idx, 0, src);
       if (before) el.before(src.tabEl);
       else el.after(src.tabEl);
+      this.app.saveWorkspaceSoon?.();
     });
     return el;
   }
@@ -138,6 +141,12 @@ export class Workspace {
     dot.className = 'dot ' + (pane ? pane.status : '');
     if (tab.color) tab.tabEl.style.setProperty('--tab-color', tab.color);
     else tab.tabEl.style.removeProperty('--tab-color');
+    const ico = tab.tabEl.querySelector('.tabico');
+    if (ico) {
+      ico.textContent = tab.icon || '';
+      ico.hidden = !tab.icon;
+    }
+    this.app.saveWorkspaceSoon?.();
   }
 
   activate(tab) {
@@ -170,6 +179,7 @@ export class Workspace {
       if (next) this.activate(next);
       else this.app.onActiveTabChanged(null);
     }
+    this.app.saveWorkspaceSoon?.();
   }
 
   nextTab(dir = 1) {
@@ -328,6 +338,7 @@ export class Workspace {
       p.mount();
       p.fit();
     }
+    this.app.saveWorkspaceSoon?.();
   }
 
   allPanes() {

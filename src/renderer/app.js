@@ -34,7 +34,108 @@ class App {
     $('#st-x11').title = this.info.x11Available ? `Local X server: ${this.info.display}` : 'No X server found (install XQuartz for X11 forwarding)';
     if (!this.settings.sidebarVisible) $('#sidebar').classList.add('collapsed');
     this.showPanel(this.settings.sidebarTab || 'sessions');
-    await this.newLocalTab();
+    let restored = false;
+    if (this.settings.restoreWorkspace !== false) {
+      try { restored = await this.restoreWorkspace(); } catch (e) { console.error('workspace restore failed', e); }
+    }
+    if (!restored) await this.newLocalTab();
+    this._wsReady = true;
+    this.saveWorkspaceSoon();
+    setInterval(() => this.saveWorkspaceNow(), 20000);
+    window.addEventListener('beforeunload', () => this.saveWorkspaceNow());
+  }
+
+  // ---------- workspace persistence (tabs + split layout; survives restarts/updates) ----------
+  serializeWorkspace() {
+    const serPane = (p) => {
+      const d = { kind: p.kind };
+      if (p.session) {
+        if (p.session.id) d.sessionId = p.session.id;
+        else {
+          // ad-hoc (quick connect) session: inline it, never its secrets
+          const c = { ...p.session };
+          delete c.password; delete c.passphrase; delete c.jumpPassword;
+          d.session = c;
+        }
+      }
+      if (p.kind === 'local' && p.cwd) d.cwd = p.cwd;
+      return d;
+    };
+    const ser = (n) => n.type === 'pane'
+      ? { t: 'pane', ...serPane(n.pane) }
+      : { t: 'split', dir: n.dir, ratio: n.ratio, children: n.children.map(ser) };
+    return {
+      v: 1,
+      activeTab: Math.max(0, this.workspace.tabs.indexOf(this.workspace.active)),
+      tabs: this.workspace.tabs.filter((t) => t.root).map((t) => ({
+        title: t.title,
+        autoTitle: t.autoTitle,
+        color: t.color || null,
+        icon: t.icon || null,
+        active: Math.max(0, t.panes().indexOf(t.activePane)),
+        root: ser(t.root),
+      })),
+    };
+  }
+
+  saveWorkspaceSoon() {
+    if (!this._wsReady) return;
+    clearTimeout(this._wsTimer);
+    this._wsTimer = setTimeout(() => this.saveWorkspaceNow(), 800);
+  }
+
+  saveWorkspaceNow() {
+    if (!this._wsReady) return;
+    clearTimeout(this._wsTimer);
+    this._wsTimer = null;
+    try { window.api.workspace.save(this.serializeWorkspace()); } catch {}
+  }
+
+  /** Rebuild tabs/panes from the saved workspace. Terminals reconnect (SSH) or start fresh shells (local). */
+  async restoreWorkspace() {
+    const saved = await window.api.workspace.get();
+    if (!saved || !Array.isArray(saved.tabs) || !saved.tabs.length) return false;
+    const makePane = (d) => {
+      let session = null;
+      if (d.sessionId) session = this.sessions.sessions.find((s) => s.id === d.sessionId) || null;
+      else if (d.session) session = d.session;
+      let kind = d.kind;
+      if (kind !== 'local' && kind !== 'empty' && !session) kind = 'empty'; // session was deleted
+      if (kind === 'rdp' || kind === 'vnc') kind = 'empty';
+      return new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined });
+    };
+    const build = (n) => (n.t === 'split' && Array.isArray(n.children) && n.children.length === 2)
+      ? { type: 'split', dir: n.dir === 'v' ? 'v' : 'h', ratio: Math.min(0.9, Math.max(0.1, n.ratio || 0.5)), children: n.children.map(build) }
+      : { type: 'pane', pane: makePane(n) };
+    let any = false;
+    const starts = [];
+    for (const td of saved.tabs) {
+      if (!td || !td.root) continue;
+      let root;
+      try { root = build(td.root); } catch { continue; }
+      const panes = [];
+      (function walk(n) { n.type === 'pane' ? panes.push(n.pane) : n.children.forEach(walk); })(root);
+      if (!panes.length) continue;
+      const tab = this.workspace.newTab(panes[0], td.title || panes[0].title);
+      tab.autoTitle = td.autoTitle !== false;
+      tab.color = td.color || null;
+      tab.icon = td.icon || null;
+      tab.root = root;
+      for (const p of panes) p.tab = tab;
+      tab.activePane = panes[Math.min(td.active || 0, panes.length - 1)];
+      this.workspace.render(tab);
+      this.workspace.updateTab(tab);
+      for (const p of panes) starts.push(p.start().catch(() => {}));
+      any = true;
+    }
+    if (!any) return false;
+    const at = this.workspace.tabs[saved.activeTab];
+    if (at) this.workspace.activate(at);
+    const ap = this.activePane();
+    if (ap) this.focusPane(ap, true);
+    this.updateMultiexec();
+    Promise.allSettled(starts);
+    return true;
   }
 
   // ---------- main-process events ----------
@@ -196,7 +297,9 @@ class App {
       this.workspace.split(target.tab, target, opts.split, pane);
     } else {
       const tab = this.workspace.newTab(pane, s.name);
-      if (s.color) { tab.color = s.color; this.workspace.updateTab(tab); }
+      if (s.color) tab.color = s.color;
+      if (s.icon) tab.icon = s.icon;
+      if (s.color || s.icon) this.workspace.updateTab(tab);
     }
     this.focusPane(pane);
     await pane.start();
@@ -380,11 +483,13 @@ class App {
   onActiveTabChanged(tab) {
     this.updateStatus(tab ? tab.activePane : null);
     if (tab && tab.activePane) this.sftpPanel.setPane(tab.activePane);
+    this.saveWorkspaceSoon();
   }
 
   onPaneTitle(pane) {
     if (pane.tab && pane.tab.autoTitle && pane.tab.activePane === pane) {
       pane.tab.title = pane.session ? pane.session.name : pane.title;
+      pane.tab.icon = pane.session?.icon || null;
       this.workspace.updateTab(pane.tab);
     }
   }
@@ -398,6 +503,7 @@ class App {
   onPaneCwd(pane) {
     if (this.activePane() === pane) this.setStatusCwd(pane.remoteCwd);
     this.sftpPanel.onPaneCwd(pane);
+    if (pane.kind === 'local') this.saveWorkspaceSoon(); // keep restored shells in their folder
   }
 
   updateStatus(pane, msg) {

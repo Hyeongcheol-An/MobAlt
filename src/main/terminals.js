@@ -97,6 +97,10 @@ function defaultShell(settings) {
 function buildEnv(settings, shell) {
   const env = { ...process.env };
   delete env.ELECTRON_RUN_AS_NODE;
+  // Don't leak markers inherited when MobAlt itself was launched from a dev shell
+  // (e.g. CLAUDE_CODE_CHILD_SESSION disables transcript saving in Claude Code).
+  delete env.CLAUDECODE;
+  for (const k of Object.keys(env)) if (k.startsWith('CLAUDE_CODE_')) delete env[k];
   env.TERM = 'xterm-256color';
   env.COLORTERM = 'truecolor';
   env.TERM_PROGRAM = 'MobAlt';

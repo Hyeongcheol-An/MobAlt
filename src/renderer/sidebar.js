@@ -35,12 +35,15 @@ export class SessionTree {
     this.el.tabIndex = 0;
     // drop onto root (empty area) -> move to root folder
     this.el.addEventListener('dragover', (e) => {
-      if (e.dataTransfer.types.includes('text/x-mobalt-session')) e.preventDefault();
+      const t = e.dataTransfer.types;
+      if (t.includes('text/x-mobalt-session') || t.includes('text/x-mobalt-folder')) e.preventDefault();
     });
     this.el.addEventListener('drop', (e) => {
       if (e.target !== this.el) return;
       const id = e.dataTransfer.getData('text/x-mobalt-session');
-      if (id) this.moveToFolder(id, '');
+      if (id) return this.moveToFolder(id, '');
+      const src = e.dataTransfer.getData('text/x-mobalt-folder');
+      if (src) this.moveFolder(src, '');
     });
   }
 
@@ -85,7 +88,7 @@ export class SessionTree {
         if (q && !hasContent) continue;
         const collapsed = !q && this.collapsed.has(f.path);
         const wrap = h('div', { class: 'tree-folder' + (collapsed ? ' collapsed' : '') });
-        const row = h('div', { class: 'tree-row folder', dataset: { folder: f.path } },
+        const row = h('div', { class: 'tree-row folder', dataset: { folder: f.path }, draggable: true },
           h('span', { class: 'caret' }, '▼'),
           h('span', { class: 'ico' }, '📁'),
           h('span', { class: 'label' }, f.name),
@@ -97,8 +100,14 @@ export class SessionTree {
           e.stopPropagation();
           this.folderMenu(e.clientX, e.clientY, f);
         });
+        row.addEventListener('dragstart', (e) => {
+          e.stopPropagation();
+          e.dataTransfer.setData('text/x-mobalt-folder', f.path);
+          e.dataTransfer.effectAllowed = 'move';
+        });
         row.addEventListener('dragover', (e) => {
-          if (e.dataTransfer.types.includes('text/x-mobalt-session')) {
+          const t = e.dataTransfer.types;
+          if (t.includes('text/x-mobalt-session') || t.includes('text/x-mobalt-folder')) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             row.classList.add('drop-target');
@@ -110,7 +119,9 @@ export class SessionTree {
           e.stopPropagation();
           row.classList.remove('drop-target');
           const id = e.dataTransfer.getData('text/x-mobalt-session');
-          if (id) this.moveToFolder(id, f.path);
+          if (id) return this.moveToFolder(id, f.path);
+          const src = e.dataTransfer.getData('text/x-mobalt-folder');
+          if (src) this.moveFolder(src, f.path);
         });
         const children = h('div', { class: 'tree-children' });
         wrap.append(row, children);
@@ -137,7 +148,9 @@ export class SessionTree {
       : s.type === 'serial' ? `${(s.serialPath || '').replace('/dev/', '')} @ ${s.baudRate || ''}`
       : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
     const row = h('div', { class: 'tree-row' + (this.selected === s.id ? ' selected' : ''), dataset: { session: s.id }, draggable: true, title: `${s.name}\n${sub}` },
-      h('span', { class: 'ico ' + (ICON[s.type] || '') }, '●'),
+      s.icon
+        ? h('span', { class: 'ico emoji', style: s.color ? { color: s.color } : null }, s.icon)
+        : h('span', { class: 'ico ' + (ICON[s.type] || ''), style: s.color ? { color: s.color } : null }, '●'),
       h('span', { class: 'label' }, s.name),
       open ? h('span', { class: 'dot', title: 'connected' }) : null,
       h('span', { class: 'sub' }, sub)
@@ -186,6 +199,21 @@ export class SessionTree {
       }
       e.preventDefault();
     }
+  }
+
+  /** Re-parent a folder (drag-drop): "a/b" into "c" becomes "c/b"; descendants and sessions follow. */
+  async moveFolder(srcPath, destPath) {
+    if (!srcPath || srcPath === destPath) return;
+    if (destPath && (destPath + '/').startsWith(srcPath + '/')) return toast('Cannot move a folder into itself', 'warn');
+    const name = srcPath.split('/').pop();
+    const target = destPath ? destPath + '/' + name : name;
+    if (target === srcPath) return;
+    const re = (p) => (p === srcPath ? target : (p || '').startsWith(srcPath + '/') ? target + p.slice(srcPath.length) : p);
+    const sessions = this.app.sessions.sessions.map((s) => ({ ...s, folder: re(s.folder || '') }));
+    const folders = [...new Set([...(this.app.sessions.folders || []).map(re), target])];
+    if (this.collapsed.delete(srcPath)) this.collapsed.add(target);
+    this.saveCollapsed();
+    await this.app.saveAllSessions({ sessions, folders });
   }
 
   async moveToFolder(id, folder) {
