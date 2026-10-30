@@ -1,3 +1,13 @@
+## [0.9.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.8.1...v0.9.0) (2026-10-30)
+
+### Features
+
+* auto-update, Mosh and FTP/FTPS sessions ([731624f](https://github.com/Hyeongcheol-An/MobAlt/commit/731624f13abf5869209dc4ddf637d0c8988f8725))
+
+### Bug Fixes
+
+* QA pass across dialogs, sidebar, terminal, SFTP, tools and tunnels ([4183a49](https://github.com/Hyeongcheol-An/MobAlt/commit/4183a49c677218e373a5c7bb4fcb845f0a009242))
+
 ## [0.8.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.8.0...v0.8.1) (2026-10-30)
 
 ### Bug Fixes
