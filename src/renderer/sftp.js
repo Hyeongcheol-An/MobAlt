@@ -98,6 +98,7 @@ export class SftpPanel {
     const defPort = s.type === 'ftp' ? 21 : 22;
     this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`);
     this.els.follow.checked = st.follow;
+    this.els.follow.closest('label').hidden = st.pane.kind === 'ftp'; // FTP has no terminal to follow
     this.els.hidden.checked = st.hidden;
     if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
     else this.renderList();

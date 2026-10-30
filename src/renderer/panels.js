@@ -37,12 +37,21 @@ export class ToolsPanel {
       else if (tool === 'lookup') {
         this.append(`Resolving ${host}…\n`);
         const r = await window.api.tools.lookup(host);
+        const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':');
+        const mx = r.mx || [], txt = r.txt || [], ptr = r.reverse || [];
         if (r.error) this.append(`  ${r.error}\n`);
         for (const a of r.addresses || []) this.append(`  ${a.family === 6 ? 'AAAA' : 'A   '}  ${a.address}\n`);
-        for (const m of r.mx || []) this.append(`  MX    ${m.priority} ${m.exchange}\n`);
-        for (const t of r.txt || []) this.append(`  TXT   ${t.join('')}\n`);
-        for (const p of r.reverse || []) this.append(`  PTR   ${p}\n`);
-        if (!r.error && !(r.addresses || []).length && !(r.reverse || []).length) this.append('  no records\n');
+        for (const m of mx) this.append(`  MX    ${m.priority} ${m.exchange}\n`);
+        for (const t of txt) this.append(`  TXT   ${t.join('')}\n`);
+        for (const p of ptr) this.append(`  PTR   ${p}\n`);
+        // say explicitly what was not found instead of ending the listing silently
+        if (isIp) {
+          if (!ptr.length) this.append(`  (no PTR record: ${host} has no reverse DNS name)\n`);
+        } else if (!r.error) {
+          if (!mx.length) this.append('  (no MX records)\n');
+          if (!txt.length) this.append('  (no TXT records)\n');
+        }
+        if (!r.error && !(r.addresses || []).length && !ptr.length) this.append('  no records\n');
       } else if (tool === 'netinfo') {
         const r = await window.api.tools.netinfo();
         this.append(`Hostname: ${r.hostname}\nDNS: ${r.dns.join(', ')}\n`);
