@@ -1,6 +1,11 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
 import { h, contextMenu, toast } from './ui.js';
-import { connIdOf } from './sftp.js';
+import { connIdOf, errMsg } from './sftp.js';
+
+/** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
+const startErrorText = (e) => errMsg(e);
+/** A Mosh client that exits this soon after its spawn never got past the ssh bootstrap. */
+const MOSH_BOOTSTRAP_MS = 3000;
 
 const { Terminal } = window;
 const FitAddon = window.FitAddon.FitAddon;
@@ -298,17 +303,28 @@ export class TermPane {
     this.app.onPaneStatus(this);
   }
 
-  /** FTP sessions have no terminal: the pane explains where the files are. */
-  showFtpInfo() {
+  /**
+   * FTP sessions have no terminal: the pane shows a card instead. state: 'connecting' | 'connected' |
+   * 'failed' (msg = why) | 'disconnected'. Only a live connection offers the card's buttons; a dead one
+   * is handled by the overlay (Reconnect / Close) like any other pane.
+   */
+  showFtpInfo(state = 'connected', msg) {
     this.hidePlaceholder();
     const s = this.session || {};
-    this.placeholder = h('div', { class: 'pane-placeholder ftp-info' },
+    const where = `${s.username ? s.username + '@' : 'anonymous@'}${s.host}${s.port && s.port !== 21 ? ':' + s.port : ''}`;
+    const live = state === 'connected';
+    const hint = live ? `${where} — browse, transfer and edit files in the Sftp panel.`
+      : state === 'connecting' ? `Connecting to ${where}…`
+      : state === 'failed' ? `Connection to ${where} failed.`
+      : `Disconnected from ${where}.`;
+    this.placeholder = h('div', { class: `pane-placeholder ftp-info ${state}` },
       h('div', { class: 'big' }, `FTP${s.ftps ? 'S' : ''} · ${s.name || s.host}`),
-      h('div', { class: 'hint' }, `${s.username ? s.username + '@' : 'anonymous@'}${s.host}${s.port && s.port !== 21 ? ':' + s.port : ''} — browse, transfer and edit files in the Sftp panel.`),
-      h('div', { class: 'btns' },
+      h('div', { class: 'hint' }, hint),
+      state === 'failed' && msg ? h('div', { class: 'ftp-err' }, msg) : null,
+      live ? h('div', { class: 'btns' },
         h('button', { class: 'btn small', onclick: () => this.app.sftpPanel.show(this.termId) }, 'Open file browser'),
         h('button', { class: 'btn small', onclick: () => this.app.closePane(this) }, 'Disconnect & close')
-      )
+      ) : null
     );
     this.el.append(this.placeholder);
     this.termEl.style.visibility = 'hidden'; // no stray cursor behind the info card
@@ -396,6 +412,7 @@ export class TermPane {
         else if (this.app.activePane() === this) this.app.sftpPanel.setPane(this);
       } else if (this.kind === 'ftp') {
         this.setStatus('connecting');
+        this.showFtpInfo('connecting');
         const r = await window.api.ftp.connect(this.session);
         this.termId = r.id;
         this.app.registerPane(this);
@@ -407,8 +424,10 @@ export class TermPane {
       }
       if (this.session?.logging && this.kind !== 'ftp') this.toggleLog(true);
     } catch (e) {
-      this.term.write(`\r\n\x1b[31mFailed to start: ${e.message}\x1b[0m\r\n`);
-      this.setStatus('failed', e.message);
+      const why = startErrorText(e);
+      this.term.write(`\r\n\x1b[31mFailed to start: ${why}\x1b[0m\r\n`);
+      if (this.kind === 'ftp') this.showFtpInfo('failed', why); // the card covers the terminal text
+      this.setStatus('failed', why);
       this.markDead();
     }
   }
@@ -487,10 +506,17 @@ export class TermPane {
     const id = this.termId;
     if (this.kind === 'ssh') await window.api.ssh.disconnect(id);
     else if (this.kind === 'ftp') {
+      // FTP has no exit event: the pane goes through the same motions itself (status, dots, panel state, card)
       await window.api.ftp.disconnect(id);
       this.app.sftpPanel.dropConnection(id);
+      if (this.termId !== id) return; // reconnected meanwhile
+      this.app.unregisterPane(this);
+      this.termId = null;
+      this.showFtpInfo('disconnected');
+      this.setStatus('disconnected');
       this.markDead();
     } else {
+      this._killed = true; // a Mosh client ending on request is a disconnect, never a failure
       this.closeSftpCompanion();
       window.api.term.kill(id);
     }
@@ -663,8 +689,13 @@ export class TermPane {
     if (this.termId) {
       const id = this.termId;
       if (this.kind === 'ssh') window.api.ssh.disconnect(id);
-      else window.api.term.kill(id);
+      else if (this.kind === 'ftp') window.api.ftp.disconnect(id); // not a terminal backend: term.kill would miss it
+      else {
+        this._killed = true;
+        window.api.term.kill(id);
+      }
       this.app.unregisterPane(this);
+      this.app.sftpPanel.dropConnection(id);
       this.termId = null;
     }
     try { this.webgl && this.webgl.dispose(); } catch {}

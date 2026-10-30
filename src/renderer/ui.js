@@ -45,6 +45,7 @@ export function fmtDate(ts) {
 }
 
 export function fmtDuration(ms) {
+  if (ms < 10000) return (Math.max(0, ms) / 1000).toFixed(1) + 's'; // a quick transfer or cancel is not "0s"
   const s = Math.round(ms / 1000);
   if (s < 60) return s + 's';
   const m = Math.floor(s / 60);

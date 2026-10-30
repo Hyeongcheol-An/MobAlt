@@ -413,3 +413,9 @@ svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; strok
 .tree-row.selected:focus-visible { outline-color: #fff; } /* the keyboard cursor stays visible on the blue selected fill */
 .ctx-item:focus-visible { background: var(--accent-2); color: #fff; outline: none; }
 .ctx-item:focus-visible .k { color: #dbe9ff; }
+/* ---- net follow-ups ---- */
+/* FTP pane card: states other than connected have no buttons; the dead overlay offers Reconnect / Close. */
+.pane .pane-placeholder.ftp-info.connecting .big::after { content: " · connecting…"; font-weight: 400; opacity: .7; }
+.pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: var(--fg-dim); }
+.pane .pane-placeholder.ftp-info.failed .big, .pane .pane-placeholder.ftp-info.disconnected .big { opacity: .75; }
+.pane .pane-placeholder.ftp-info .ftp-err { max-width: 70%; padding: 6px 10px; border: 1px solid var(--red); border-radius: var(--radius); color: var(--red); font-size: 12px; text-align: center; word-break: break-word; }

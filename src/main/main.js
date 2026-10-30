@@ -77,7 +77,7 @@ const prompter = {
 
 const ssh = new SshManager(registry, store, prompter);
 const sftp = new SftpManager(ssh, store);
-const ftp = new FtpManager(store);
+const ftp = new FtpManager(store, prompter);
 let updater = null;
 const tunnels = new TunnelManager(ssh, store);
 
