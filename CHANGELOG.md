@@ -1,3 +1,9 @@
+## [0.9.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.9.0...v0.9.1) (2026-10-30)
+
+### Bug Fixes
+
+* hide the unused terminal cursor behind the FTP pane info ([d52aeaf](https://github.com/Hyeongcheol-An/MobAlt/commit/d52aeafc0eec58e7fb89609ce825fb404086df49))
+
 ## [0.9.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.8.1...v0.9.0) (2026-10-30)
 
 ### Features
