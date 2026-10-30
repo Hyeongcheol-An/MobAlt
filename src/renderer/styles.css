@@ -47,7 +47,7 @@ input, select, textarea { user-select: text; }
 .tb-group { display: flex; gap: 4px; align-items: center; }
 .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--fg); }
 .tb-btn:hover { background: var(--bg-3); border-color: var(--border); }
-.tb-btn .ico { font-size: 13px; opacity: .9; }
+.tb-btn .ico { font-size: 13px; }
 .tb-btn.narrow { padding: 0 6px; }
 .tb-btn.toggle.on { background: #5a2d2d; border-color: var(--red); color: #ffd5d2; }
 .tb-split { display: inline-flex; }
@@ -363,7 +363,7 @@ input::placeholder, textarea::placeholder { color: #8b9098; }
 svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .tb-btn .ico { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; }
 .icon-btn, #find-bar button, .xfer .l1 button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
-.icon-btn svg.i, #find-bar svg.i, .xfer svg.i { width: 15px; height: 15px; }
+.icon-btn svg.i, #find-bar svg.i, .xfer svg.i, .tb-btn svg.i { width: 15px; height: 15px; }
 .strip-btn[data-action] { display: flex; align-items: center; justify-content: center; }
 /* narrow sidebar (180px): footer links wrap onto two lines instead of mid-word ellipsis; the macros hint ellipsizes at the end */
 .panel-foot { flex-wrap: wrap; gap: 4px 12px; }
@@ -380,7 +380,7 @@ svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; strok
 .workspace-empty, .pane .pane-placeholder { background: var(--term-bg); color: var(--term-fg, var(--fg)); gap: 10px; padding: 16px; border: 2px dashed var(--border); border-radius: var(--radius-l); }
 .workspace-empty { inset: 8px; }
 .workspace-empty .big, .pane .pane-placeholder .big { color: inherit; }
-.workspace-empty .hint, .pane .pane-placeholder .hint { opacity: .72; }
+.workspace-empty .hint, .pane .pane-placeholder .hint { opacity: .9; }
 .workspace-empty .btns, .pane .pane-placeholder .btns { gap: 6px; margin-top: 2px; }
 /* ---- tab bar overflow / logging ---- */
 /* Scroll arrows exist only while #tabs overflows (hidden otherwise: no layout shift); disabled at an end. */
@@ -413,3 +413,25 @@ svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; strok
 .tree-row.selected:focus-visible { outline-color: #fff; } /* the keyboard cursor stays visible on the blue selected fill */
 .ctx-item:focus-visible { background: var(--accent-2); color: #fff; outline: none; }
 .ctx-item:focus-visible .k { color: #dbe9ff; }
+
+/* ---- visual QA follow-ups ---- */
+body.find-open #toast-root { bottom: 84px; }                       /* toasts never cover the open find bar */
+.form-grid .inline select { height: 28px; min-height: 28px; }       /* jump-host select on the dialog scale */
+.form-grid .inline .btn.small { height: 28px; }                      /* Browse… beside a 28px input */
+.tab .close svg.i, .pane-head svg.i { width: 12px; height: 12px; }
+.tab .close { display: inline-flex; align-items: center; justify-content: center; }
+.pane-head button { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 18px; border-radius: var(--radius-s); }
+.pane-head button:hover { background: var(--bg-4); }
+.modal-title .close svg.i { width: 14px; height: 14px; }
+.modal-title .close { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--radius-s); }
+#tab-add svg.i, #tab-list svg.i { width: 14px; height: 14px; }
+#tab-add, #tab-list { display: inline-flex; align-items: center; justify-content: center; }
+.btn.icon-only { padding: 0 6px; display: inline-flex; align-items: center; }
+.xfer .xfer-kind { display: inline-flex; color: var(--fg-dim); }
+#qc-input, #qc-input::placeholder { text-overflow: ellipsis; }
+.sftp-opts label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sftp-toolbar { flex-wrap: wrap; }
+.sftp-toolbar button { flex: 1 0 auto; }                             /* wrapped rows fill evenly instead of leaving an orphan */
+#macro-list .tree-row .sub { flex: none; }                           /* "17 ch" badge never truncates */
+#sidebar { container-type: inline-size; }
+@container (max-width: 239px) { .panel-head .hint { display: none; } }

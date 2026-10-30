@@ -404,7 +404,7 @@ function registerIpc() {
   ipcMain.handle('term:log-start', (_e, id, name) => {
     const s = store.getSettings();
     const dir = s.logDir || path.join(app.getPath('documents'), 'MobAlt Logs');
-    const safe = (name || id).replace(/[^\w.-]+/g, '_');
+    const safe = String(name || '').replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '') || 'session';
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     return registry.startLog(id, path.join(dir, `${safe}_${stamp}.log`), { plain: !!s.logPlainText });
   });

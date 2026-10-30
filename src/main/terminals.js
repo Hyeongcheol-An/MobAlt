@@ -17,6 +17,8 @@ const { ensureZdotdir } = require('./zdotdir');
 class PlainTextFilter {
   constructor() {
     this.pending = ''; // tail of the previous chunk that may continue in the next one
+    this.line = ''; // the line being built, with terminal semantics: CR → column 0, BS → back one, text overwrites
+    this.col = 0;
   }
 
   /** Index just past the escape sequence that starts at s[i] (an ESC), or -1 when it is not complete yet. */
@@ -49,7 +51,37 @@ class PlainTextFilter {
     return j >= n ? -1 : j + 1;
   }
 
-  /** Feed a chunk; returns the plain text that is safe to write now. */
+  _put(ch) {
+    if (this.col < this.line.length) this.line = this.line.slice(0, this.col) + ch + this.line.slice(this.col + 1);
+    else this.line += ' '.repeat(this.col - this.line.length) + ch;
+    this.col++;
+  }
+
+  _endLine() {
+    const out = this.line.replace(/\s+$/, '') + '\n';
+    this.line = '';
+    this.col = 0;
+    return out;
+  }
+
+  /** A few CSI editing sequences change what the user saw on the line; everything else is dropped. */
+  _csi(body, fin) {
+    const n = parseInt(body, 10);
+    if (fin === 'K') { // erase in line
+      if (!body || n === 0) this.line = this.line.slice(0, this.col);
+      else if (n === 1) this.line = ' '.repeat(Math.min(this.col, this.line.length)) + this.line.slice(this.col);
+      else if (n === 2) this.line = '';
+    } else if (fin === 'J') { // erase in display: the rest of this line goes too
+      if (!body || n === 0) this.line = this.line.slice(0, this.col);
+      else if (n === 2 || n === 3) { this.line = ''; this.col = 0; }
+    } else if (fin === 'D') this.col = Math.max(0, this.col - (n || 1));
+    else if (fin === 'C') this.col += n || 1;
+    else if (fin === 'G') this.col = Math.max(0, (n || 1) - 1);
+    else if (fin === 'P') this.line = this.line.slice(0, this.col) + this.line.slice(this.col + (n || 1)); // delete chars
+    else if (fin === '@') this.line = this.line.slice(0, this.col) + ' '.repeat(n || 1) + this.line.slice(this.col); // insert blanks
+  }
+
+  /** Feed a chunk; returns the plain text of the lines completed so far. */
   push(chunk) {
     const s = this.pending + String(chunk);
     this.pending = '';
@@ -64,25 +96,23 @@ class PlainTextFilter {
           if (n - i < 4096) this.pending = s.slice(i); // wait for the rest (bounded: a runaway string is dropped)
           break;
         }
+        if (s[i + 1] === '[' && end > i + 2) this._csi(s.slice(i + 2, end - 1).replace(/[^0-9]/g, ''), s[end - 1]);
         i = end;
-      } else if (c === 0x0d) {
-        if (i + 1 >= n) { this.pending = '\r'; break; } // CR LF may straddle chunks
-        if (s.charCodeAt(i + 1) !== 0x0a) out += '\n'; // lone CR (progress bars) starts a new line
-        i++;
-      } else if ((c < 0x20 && c !== 0x09 && c !== 0x0a) || c === 0x7f || (c >= 0x80 && c <= 0x9f)) {
-        i++; // other C0/C1 controls (BEL, backspace, …)
-      } else {
-        out += s[i++];
-      }
+      } else if (c === 0x0d) { this.col = 0; i++; } // CR: back to the start of the line (the shell will overwrite it)
+      else if (c === 0x0a) { out += this._endLine(); i++; }
+      else if (c === 0x08) { this.col = Math.max(0, this.col - 1); i++; } // backspace: the next char replaces the erased one
+      else if (c === 0x09) { this._put('\t'); i++; }
+      else if (c < 0x20 || c === 0x7f || (c >= 0x80 && c <= 0x9f)) i++; // other C0/C1 controls (BEL, …)
+      else { this._put(s[i]); i++; }
     }
     return out;
   }
 
-  /** Text still held back at the end of the session (a trailing CR becomes a newline). */
+  /** Text still held back at the end of the session (an unfinished line is written as one line). */
   flush() {
-    const p = this.pending;
     this.pending = '';
-    return p === '\r' ? '\n' : '';
+    if (!this.line.length && this.col === 0) return '';
+    return this._endLine();
   }
 }
 

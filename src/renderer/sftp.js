@@ -530,8 +530,8 @@ export class SftpPanel {
       const elapsed = (t.finishedAt || Date.now()) - t.startedAt;
       const speed = elapsed > 300 ? fmtSize((t.transferred / elapsed) * 1000) + '/s' : '';
       el.append(h('div', { class: 'xfer ' + t.status },
-        h('div', { class: 'l1' }, h('span', {}, t.kind === 'upload' ? '⇪' : '⇩'), h('span', { class: 'n', title: t.remote }, t.name),
-          t.status === 'running' ? h('button', { title: 'Cancel', onclick: () => window.api.sftp.cancel(t.id) }, '✕') : null,
+        h('div', { class: 'l1' }, h('span', { class: 'xfer-kind' }, icon(t.kind === 'upload' ? 'upload' : 'download')), h('span', { class: 'n', title: t.remote }, t.name),
+          t.status === 'running' ? h('button', { title: 'Cancel', 'aria-label': 'Cancel transfer', onclick: () => window.api.sftp.cancel(t.id) }, icon('x')) : null,
           t.status === 'done' && t.kind === 'download' ? h('button', { title: 'Show in Finder', onclick: () => window.api.shell.showItem(t.local) }, icon('folder')) : null),
         h('div', { class: 'bar' }, h('i', { style: { width: pct + '%' } })),
         h('div', { class: 'l2' }, h('span', {}, t.status === 'running' ? `${fmtSize(t.transferred)} / ${fmtSize(t.total)}${t.filesTotal > 1 ? ` · ${t.filesDone}/${t.filesTotal} files` : ''}` : t.status === 'error' ? t.error : t.status), h('span', {}, t.status === 'running' ? speed : fmtDuration(elapsed)))

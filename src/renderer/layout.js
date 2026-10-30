@@ -1,5 +1,5 @@
 // Tabs and split-pane layout. Each tab owns a tree: {type:'pane', pane} | {type:'split', dir, children:[a,b], ratio}
-import { h, contextMenu, promptDialog } from './ui.js';
+import { h, contextMenu, promptDialog, icon } from './ui.js';
 
 let tabSeq = 0;
 
@@ -154,7 +154,7 @@ export class Workspace {
       h('span', { class: 'dot' }),
       h('span', { class: 'tabico', hidden: !tab.icon }, tab.icon || ''),
       h('span', { class: 'title' }, tab.title),
-      h('button', { class: 'close', title: 'Close (⌘W)', 'aria-label': 'Close tab', tabindex: -1, onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, '✕')
+      h('button', { class: 'close', title: 'Close (⌘W)', 'aria-label': 'Close tab', tabindex: -1, onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, icon('x'))
     );
     el.addEventListener('mousedown', (e) => {
       if (e.button === 1) { e.preventDefault(); this.app.closeTab(tab); }

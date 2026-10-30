@@ -1,5 +1,5 @@
 // Modal dialogs: session editor, settings, tunnels, host key / password / keyboard-interactive prompts.
-import { h, showModal, toast, confirmDialog, TYPE_LABEL } from './ui.js';
+import { h, showModal, toast, confirmDialog, TYPE_LABEL, icon } from './ui.js';
 import { THEMES } from './terminal.js';
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -156,7 +156,7 @@ export function sessionEditor(app, initial = {}) {
           h('td', { class: 'mono' }, `${t.bindHost || '127.0.0.1'}:${t.bindPort}`),
           h('td', { class: 'mono' }, t.type === 'dynamic' ? '—' : `${t.destHost}:${t.destPort}`),
           h('td', {}, h('input', { type: 'checkbox', checked: t.enabled !== false, onchange: (e) => (t.enabled = e.target.checked) })),
-          h('td', {}, h('button', { class: 'btn small', onclick: () => { tunnels.splice(i, 1); renderTunnels(); } }, '✕'))
+          h('td', {}, h('button', { class: 'btn small icon-only', title: 'Remove', 'aria-label': 'Remove tunnel', onclick: () => { tunnels.splice(i, 1); renderTunnels(); } }, icon('x')))
         )))
       ),
       h('div', { style: { marginTop: '8px' } }, h('button', { class: 'btn small', onclick: async () => { const t = await tunnelForm(); if (t) { tunnels.push({ ...t, enabled: true }); renderTunnels(); } } }, '＋ Add tunnel'))

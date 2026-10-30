@@ -758,12 +758,14 @@ class App {
       case 'find': {
         if (!ap) return;
         $('#find-bar').hidden = false;
+        document.body.classList.add('find-open');
         $('#find-input').focus();
         $('#find-input').select();
         return;
       }
       case 'find-close':
         $('#find-bar').hidden = true;
+        document.body.classList.remove('find-open');
         ap && ap.searchAddon.clearDecorations();
         ap && ap.focus();
         return;

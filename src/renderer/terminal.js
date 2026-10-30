@@ -1,5 +1,5 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
-import { h, contextMenu, toast } from './ui.js';
+import { h, contextMenu, toast, icon } from './ui.js';
 import { connIdOf } from './sftp.js';
 
 const { Terminal } = window;
@@ -88,9 +88,9 @@ export class TermPane {
         h('span', { class: 'dot' }),
         this.session?.icon ? h('span', { class: 'picon' }, this.session.icon) : null,
         (this.headTitle = h('span', { class: 'title' }, this.title)),
-        h('button', { title: 'Split right', onclick: () => app.action('split', 'right', this) }, '◫'),
-        h('button', { title: 'Split down', onclick: () => app.action('split', 'down', this) }, '▭'),
-        h('button', { title: 'Close pane', onclick: () => app.closePane(this) }, '✕')
+        h('button', { title: 'Split right', 'aria-label': 'Split right', onclick: () => app.action('split', 'right', this) }, icon('split')),
+        h('button', { title: 'Split down', 'aria-label': 'Split down', onclick: () => app.action('split', 'down', this) }, icon('split-down')),
+        h('button', { title: 'Close pane', 'aria-label': 'Close pane', onclick: () => app.closePane(this) }, icon('x'))
       )),
       (this.termEl = h('div', { class: 'pane-term' }))
     );

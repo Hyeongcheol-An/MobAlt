@@ -76,7 +76,7 @@
             </div>
             <form class="sftp-path" id="sftp-path-form"><input id="sftp-path" spellcheck="false" /></form>
             <div class="sftp-opts">
-              <label><input type="checkbox" id="sftp-follow" /> Follow terminal folder</label>
+              <label title="Keep the panel on the shell's current folder"><input type="checkbox" id="sftp-follow" /> Follow terminal</label>
               <label><input type="checkbox" id="sftp-hidden" /> Show hidden</label>
             </div>
             <div id="sftp-list" class="sftp-list" tabindex="0"></div>
@@ -110,7 +110,7 @@
           <div class="panel-head">
             <button class="icon-btn" data-macro="record" id="macro-record" title="Record keystrokes of the active terminal">● Rec</button>
             <button class="icon-btn" data-macro="new" data-icon="plus" title="New macro from text"></button>
-            <span class="hint" title="Double-click to play in the active terminal">Double-click to play in the active terminal</span>
+            <span class="hint" title="Double-click a macro to play it in the active terminal">Double-click to play</span>
           </div>
           <div id="macro-list" class="tree"></div>
         </section>
@@ -124,8 +124,8 @@
           <button id="tab-scroll-left" class="tab-scroll" title="Scroll tabs left" aria-label="Scroll tabs left" hidden>‹</button>
           <div id="tabs"></div>
           <button id="tab-scroll-right" class="tab-scroll" title="Scroll tabs right" aria-label="Scroll tabs right" hidden>›</button>
-          <button id="tab-add" title="New local terminal (⌘T)" aria-label="New local terminal">＋</button>
-          <button id="tab-list" title="All tabs" aria-label="All tabs" hidden>▾</button>
+          <button id="tab-add" data-icon="plus" title="New local terminal (⌘T)" aria-label="New local terminal"></button>
+          <button id="tab-list" data-icon="chevron-down" title="All tabs" aria-label="All tabs" hidden></button>
         </div>
         <div id="tab-content"></div>
         <div id="find-bar" hidden>
