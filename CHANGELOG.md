@@ -1,3 +1,9 @@
+## [0.4.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.3.0...v0.4.0) (2026-10-30)
+
+### Features
+
+* grid layouts up to 2×4 (8 panes), Split menu and open-folder-in-grid ([92c32c4](https://github.com/Hyeongcheol-An/mobaXterm/commit/92c32c48176677113ece41bc5e1d1ff1ec34d9cd))
+
 ## [0.3.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.3...v0.3.0) (2026-10-30)
 
 ### Features
