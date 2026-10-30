@@ -25,11 +25,11 @@ export class SessionTree {
         this.render();
       }
     });
+    // Rows stop propagation, so anything that reaches here (background, gutter, empty state) is "root".
     this.el.addEventListener('contextmenu', (e) => {
-      if (e.target === this.el || e.target.classList.contains('tree-empty')) {
-        e.preventDefault();
-        this.rootMenu(e.clientX, e.clientY);
-      }
+      if (e.target.closest('.tree-row')) return;
+      e.preventDefault();
+      this.rootMenu(e.clientX, e.clientY);
     });
     this.el.addEventListener('keydown', (e) => this.onKey(e));
     this.el.tabIndex = 0;
@@ -84,8 +84,7 @@ export class SessionTree {
     const renderNode = (node, depth, container) => {
       const folders = [...node.children.values()].sort((a, b) => a.name.localeCompare(b.name));
       for (const f of folders) {
-        const hasContent = f.sessions.length || f.children.size;
-        if (q && !hasContent) continue;
+        if (q && !this.countSessions(f)) continue; // filtering: only folders with matching sessions
         const collapsed = !q && this.collapsed.has(f.path);
         const wrap = h('div', { class: 'tree-folder' + (collapsed ? ' collapsed' : '') });
         const row = h('div', { class: 'tree-row folder', dataset: { folder: f.path }, draggable: true },
@@ -119,9 +118,11 @@ export class SessionTree {
           e.stopPropagation();
           row.classList.remove('drop-target');
           const id = e.dataTransfer.getData('text/x-mobalt-session');
+          const src = id ? '' : e.dataTransfer.getData('text/x-mobalt-folder');
+          if (!id && !src) return;
+          if (this.collapsed.delete(f.path)) this.saveCollapsed(); // show where the drop went
           if (id) return this.moveToFolder(id, f.path);
-          const src = e.dataTransfer.getData('text/x-mobalt-folder');
-          if (src) this.moveFolder(src, f.path);
+          this.moveFolder(src, f.path);
         });
         const children = h('div', { class: 'tree-children' });
         wrap.append(row, children);
@@ -219,6 +220,10 @@ export class SessionTree {
   async moveToFolder(id, folder) {
     const s = this.sessionById(id);
     if (!s || (s.folder || '') === folder) return;
+    const from = s.folder || '';
+    const known = this.app.sessions.folders || [];
+    // keep a folder that only existed through this session (typed into the editor) instead of dropping it silently
+    if (from && !known.includes(from)) await this.app.saveAllSessions({ sessions: this.app.sessions.sessions, folders: [...known, from] });
     await this.app.saveSession({ ...s, folder });
   }
 
@@ -286,7 +291,8 @@ export class SessionTree {
   async newFolder(parent) {
     const name = await promptDialog('New folder', { label: parent ? `Inside "${parent}"` : 'Folder name', placeholder: 'Production' });
     if (!name || !name.trim()) return;
-    const path = (parent ? parent + '/' : '') + name.trim().replace(/\//g, '-');
+    if (name.includes('/')) return toast('Folder names cannot contain "/" — use New Subfolder to nest folders', 'warn');
+    const path = (parent ? parent + '/' : '') + name.trim();
     const folders = new Set(this.app.sessions.folders || []);
     folders.add(path);
     await this.app.saveAllSessions({ sessions: this.app.sessions.sessions, folders: [...folders] });
@@ -296,10 +302,13 @@ export class SessionTree {
     const name = await promptDialog('Rename folder', { value: f.name });
     if (!name || !name.trim() || name.trim() === f.name) return;
     const parent = f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '';
-    const np = (parent ? parent + '/' : '') + name.trim().replace(/\//g, '-');
+    if (name.includes('/')) return toast('Folder names cannot contain "/"', 'warn');
+    const np = (parent ? parent + '/' : '') + name.trim();
     const re = (p) => (p === f.path ? np : p.startsWith(f.path + '/') ? np + p.slice(f.path.length) : p);
     const sessions = this.app.sessions.sessions.map((s) => ({ ...s, folder: re(s.folder || '') }));
     const folders = [...new Set((this.app.sessions.folders || []).map(re))];
+    this.collapsed = new Set([...this.collapsed].map(re)); // collapsed state follows the renamed folder
+    this.saveCollapsed();
     await this.app.saveAllSessions({ sessions, folders });
   }
 

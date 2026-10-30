@@ -17,7 +17,7 @@ function streamCommand(win, cmd, args) {
   p.stderr.on('data', (d) => send(d.toString()));
   p.on('error', (e) => send(`error: ${e.message}\n`));
   p.on('close', (code) => {
-    send(`\n[exit ${code}]\n`);
+    send(code === null ? '\n[stopped]\n' : `\n[exit ${code}]\n`);
     running.delete(id);
     win && !win.isDestroyed() && win.webContents.send('tools:done', { id, code });
   });

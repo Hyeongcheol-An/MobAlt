@@ -2,6 +2,8 @@
 import { h, showModal, toast, confirmDialog, TYPE_LABEL } from './ui.js';
 import { THEMES } from './terminal.js';
 
+const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+const clamp = (v, min, max, def) => (Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : def);
 const DEFAULT_PORT = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
 const BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
 
@@ -35,7 +37,7 @@ export function sessionEditor(app, initial = {}) {
   const name = text(s.name, { placeholder: 'Session name (defaults to user@host)' });
 
   // icon + color (like MobaXterm's per-session icon and tab colour)
-  const ICON_CHOICES = ['🐧', '🖥', '🪟', '🍎', '☁️', '🐳', '🗄', '🌐', '🔒', '🔑', '⚙️', '🧪', '🚀', '⭐', '🔥', '📦', '💾', '🎛', '📡', '🏠', '🏢', '🎮', '🤖', '📊'];
+  const ICON_CHOICES = ['🐧', '🖥️', '🪟', '🍎', '☁️', '🐳', '🗄️', '🌐', '🔒', '🔑', '⚙️', '🧪', '🚀', '⭐', '🔥', '📦', '💾', '📡', '🏠', '🏢', '🎮', '🤖', '📊'];
   const COLOR_CHOICES = ['#e5534b', '#f08c3a', '#e6b422', '#4caf50', '#2fbfa7', '#4ea1ff', '#7a7dff', '#bd93f9', '#ff79c6', '#8a93a2'];
   let iconVal = s.icon || '';
   let colorVal = s.color || '';
@@ -75,6 +77,19 @@ export function sessionEditor(app, initial = {}) {
     if (!r.canceled && r.filePaths[0]) keyPath.value = r.filePaths[0].replace(app.info.home, '~');
   } }, 'Browse…');
   const passphrase = h('input', { type: 'password', placeholder: s.hasPassphrase ? '•••••••• (saved)' : 'optional', autocomplete: 'new-password' });
+  // rows whose relevance depends on the authentication method
+  const pwRow = field('Password', password);
+  const clearRow = [h('div', {}), h('div', { class: 'checks' }, clearPw.el)];
+  const keyRow = field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse));
+  const ppRow = field('Key passphrase', passphrase);
+  const applyAuth = () => {
+    const m = authMethod.value;
+    const showPw = m === 'auto' || m === 'password';
+    const showKey = m === 'auto' || m === 'key';
+    for (const el of [...pwRow, ...clearRow]) el.hidden = !showPw;
+    for (const el of [...keyRow, ...ppRow]) el.hidden = !showKey;
+  };
+  authMethod.addEventListener('change', applyAuth);
   const sshSessions = app.sessions.sessions.filter((x) => x.type === 'ssh' && x.id !== s.id);
   const jumpSel = select([['', '(none)'], ...sshSessions.map((x) => [x.id, `${x.name} (${x.username ? x.username + '@' : ''}${x.host})`]), ['__manual', 'Enter manually…']], s.jumpSessionId || (s.jumpHost ? '__manual' : ''));
   const jumpHost = text(s.jumpHost, { placeholder: 'user@bastion[:port]', hidden: jumpSel.value !== '__manual' });
@@ -91,12 +106,12 @@ export function sessionEditor(app, initial = {}) {
   const keepAlive = num(s.keepAliveInterval ?? app.settings.keepAliveInterval ?? 30, { min: 0, max: 3600 });
 
   // --- terminal / behaviour
-  const startup = h('textarea', { spellcheck: false, placeholder: 'Typed into the terminal once it is ready (after login for SSH/Telnet), e.g.\nsudo -i\ncd /var/log' });
+  const startup = h('textarea', { spellcheck: false, placeholder: 'One command per line, typed once the terminal is ready\ne.g. cd /var/log' });
   startup.value = s.startupCommand || '';
   const sftpAuto = check('Open SFTP browser automatically', s.sftpAuto !== false);
   const followCwd = check('SFTP follows terminal folder (injects prompt hook)', s.followCwd);
   const logging = check('Log session output to file', s.logging);
-  const theme = select([['', '(default)'], ...Object.keys(THEMES).map((t) => [t, t])], s.theme || '');
+  const theme = select([['', '(default)'], ...Object.keys(THEMES).map((t) => [t, themeLabel(t)])], s.theme || '');
   const fontSize = num(s.fontSize || '', { min: 8, max: 40, placeholder: String(app.settings.fontSize) });
   const notes = h('textarea', { spellcheck: false, placeholder: 'Notes' });
   notes.value = s.notes || '';
@@ -120,7 +135,7 @@ export function sessionEditor(app, initial = {}) {
     );
   };
   serialSel.addEventListener('change', () => { if (serialSel.value) serialCustom.value = serialSel.value; });
-  const serialRefresh = h('button', { class: 'btn small', type: 'button', title: 'Rescan ports', onclick: () => loadPorts() }, '⟳');
+  const serialRefresh = h('button', { class: 'btn small', type: 'button', title: 'Rescan ports', onclick: () => loadPorts() }, '↻');
   const baud = select(BAUD_RATES.map((b) => [String(b), String(b)]), String(s.baudRate || 115200));
   const dataBits = select([['8', '8 data bits'], ['7', '7 data bits'], ['6', '6'], ['5', '5']], String(s.dataBits || 8));
   const parity = select([['none', 'No parity'], ['even', 'Even'], ['odd', 'Odd']], s.parity || 'none');
@@ -166,7 +181,7 @@ export function sessionEditor(app, initial = {}) {
   tabBtns.basic.classList.add('active');
 
   const typeBtns = {};
-  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '>_', telnet: '☎', serial: '⌁', ftp: '📁', rdp: '🖥', vnc: '🖵' }[t]), TYPE_LABEL[t]))));
+  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '>_', telnet: '☎️', serial: '⌁', ftp: '📁', rdp: '🪟', vnc: '🖥️' }[t]), TYPE_LABEL[t]))));
 
   const buildBasic = () => {
     const b = pages.basic;
@@ -189,8 +204,8 @@ export function sessionEditor(app, initial = {}) {
       b.append(...field('Host', host), ...field('Port', port), ...field('Username', username));
     }
     if (type === 'ssh') {
-      b.append(...field('Authentication', authMethod), ...field('Password', password), h('div', {}), h('div', { class: 'checks' }, clearPw.el),
-        ...field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse)), ...field('Key passphrase', passphrase));
+      b.append(...field('Authentication', authMethod), ...pwRow, ...clearRow, ...keyRow, ...ppRow);
+      applyAuth();
     }
     if (type === 'mosh') {
       b.append(...field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse), 'Used by the ssh bootstrap; agent keys and password prompts work in the terminal'),
@@ -217,10 +232,13 @@ export function sessionEditor(app, initial = {}) {
     ...field('Theme', theme), ...field('Font size', fontSize), ...field('Notes', notes)
   );
 
+  let prevType = s.type;
   const setType = (t) => {
-    type = t;
     for (const [k, b] of Object.entries(typeBtns)) b.classList.toggle('active', k === t);
-    if (!port.value || +port.value === DEFAULT_PORT[s.type] || +port.value === 0) port.value = DEFAULT_PORT[t] || '';
+    // keep a custom port, but follow the type's default when the port was still the previous type's default
+    if (!port.value || +port.value === DEFAULT_PORT[prevType] || +port.value === 0) port.value = DEFAULT_PORT[t] || '';
+    prevType = type = t;
+    name.placeholder = t === 'local' ? 'Session name (defaults to "Local")' : t === 'serial' ? 'Session name (defaults to device @ baud)' : 'Session name (defaults to user@host)';
     tabBtns.advanced.hidden = t !== 'ssh';
     tabBtns.tunnels.hidden = t !== 'ssh';
     tabBtns.terminal.hidden = t === 'rdp' || t === 'vnc' || t === 'ftp';
@@ -231,15 +249,20 @@ export function sessionEditor(app, initial = {}) {
   setType(type);
 
   const body = h('div', {}, tabs, picker, ...Object.values(pages));
+  let dirty = false;
+  body.addEventListener('input', () => { dirty = true; });
+  body.addEventListener('change', () => { dirty = true; });
+  body.addEventListener('click', (e) => { if (e.target.closest('.pick-row, .type-picker')) dirty = true; });
   const modal = showModal({
     title: s.id ? `Edit session — ${s.name}` : 'New session',
     width: 'wide',
     closeOnBackdrop: false,
+    beforeClose: () => !dirty || confirmDialog('Discard the changes to this session?', { title: 'Discard changes', okLabel: 'Discard', danger: true }),
     body,
     buttons: [
       { label: 'Cancel', value: null },
-      { label: 'Save & Connect', action: (api) => api.close({ ...collect(), _connect: true }) },
-      { label: 'Save', primary: true, action: (api) => api.close(collect()) },
+      { label: 'Save & Connect', action: (api) => { const out = collect(); if (out) api.close({ ...out, _connect: true }); } },
+      { label: 'Save', primary: true, action: (api) => { const out = collect(); if (out) api.close(out); } },
     ],
   });
   function collect() {
@@ -247,12 +270,21 @@ export function sessionEditor(app, initial = {}) {
     if (type === 'serial' && !serialPath) {
       serialCustom.focus();
       toast('Serial device path is required', 'warn');
-      throw new Error('validation');
+      return null;
     }
     if (type !== 'local' && type !== 'serial' && !host.value.trim()) {
       host.focus();
       toast('Host is required', 'warn');
-      throw new Error('validation');
+      return null;
+    }
+    if (type !== 'local' && type !== 'serial') {
+      const pn = parseInt(port.value, 10);
+      if (!(pn >= 1 && pn <= 65535)) {
+        toast('Port must be between 1 and 65535', 'warn');
+        showPage('basic');
+        port.focus();
+        return null;
+      }
     }
     const out = {
       ...s,
@@ -305,18 +337,6 @@ export function sessionEditor(app, initial = {}) {
     else delete out.passphrase;
     return out;
   }
-  // wrap actions so validation errors keep the dialog open
-  for (const b of modal.el.querySelectorAll('.modal-foot .btn')) {
-    const orig = b.onclick;
-    b.onclick = null;
-    b.addEventListener('click', (e) => {
-      try {
-        orig && orig.call(b, e);
-      } catch (err) {
-        if (err.message !== 'validation') throw err;
-      }
-    });
-  }
   return modal.promise;
 }
 
@@ -336,8 +356,9 @@ export function tunnelForm(initial = {}) {
       { label: 'Cancel', value: null },
       { label: 'OK', primary: true, action: (api) => {
         const bp = parseInt(bindPort.value, 10);
-        if (isNaN(bp)) return bindPort.focus();
-        if (type.value !== 'dynamic' && (!destHost.value.trim() || !parseInt(destPort.value, 10))) return destHost.focus();
+        if (isNaN(bp) || bp < 0 || bp > 65535) { toast('Bind port is required (0-65535)', 'warn'); return bindPort.focus(); }
+        if (type.value !== 'dynamic' && !destHost.value.trim()) { toast('Destination host is required', 'warn'); return destHost.focus(); }
+        if (type.value !== 'dynamic' && !(parseInt(destPort.value, 10) >= 1 && parseInt(destPort.value, 10) <= 65535)) { toast('Destination port must be 1-65535', 'warn'); return destPort.focus(); }
         api.close({ type: type.value, name: name.value.trim(), bindHost: bindHost.value.trim() || '127.0.0.1', bindPort: bp, destHost: destHost.value.trim(), destPort: parseInt(destPort.value, 10) || 0 });
       } },
     ],
@@ -359,7 +380,7 @@ export async function tunnelsDialog(app, preset = {}) {
             h('td', { class: 'mono' }, `${t.bindHost || '127.0.0.1'}:${t.bindPort}`),
             h('td', { class: 'mono' }, t.type === 'dynamic' ? 'SOCKS5' : `${t.destHost}:${t.destPort}`),
             h('td', {}, t.sessionName || t.connId || ''),
-            h('td', {}, h('span', { class: 'badge ' + t.status, title: t.error || '' }, t.status)),
+            h('td', {}, h('span', { class: 'badge ' + t.status, title: t.error || '' }, t.status), t.error ? h('div', { class: 'form-help', style: { gridColumn: 'auto', color: 'var(--danger, #e5534b)', marginTop: '2px' } }, t.error) : null),
             h('td', {}, String(t.connections || 0)),
             h('td', {}, h('button', { class: 'btn small', onclick: async () => { await window.api.tunnels.stop(t.id); render(); } }, 'Stop'))
           ))))
@@ -371,13 +392,16 @@ export async function tunnelsDialog(app, preset = {}) {
 
   const openConns = app.workspace.allPanes().filter((p) => p.kind === 'ssh' && p.status === 'connected');
   const sessions = app.sessions.sessions.filter((x) => x.type === 'ssh');
-  const via = select([
+  const viaOptions = [
     ...openConns.map((p) => ['conn:' + p.termId, `Open connection: ${p.title}`]),
     ...sessions.map((x) => ['sess:' + x.id, `New connection: ${x.name}`]),
-  ], preset.sessionId ? 'sess:' + preset.sessionId : openConns[0] ? 'conn:' + openConns[0].termId : '');
+  ];
+  const via = select(viaOptions.length ? viaOptions : [['', '(no SSH sessions yet — create one in the Sessions panel)']],
+    preset.sessionId ? 'sess:' + preset.sessionId : openConns[0] ? 'conn:' + openConns[0].termId : '');
+  if (!viaOptions.length) via.disabled = true;
   const form = h('div', { class: 'form-grid', style: { marginTop: '12px' } },
     ...field('Via', via),
-    h('label', {}), h('div', {}, h('button', { class: 'btn primary small', onclick: async () => {
+    h('label', {}), h('div', {}, h('button', { class: 'btn primary small', disabled: !viaOptions.length, onclick: async () => {
       if (!via.value) return toast('No SSH session available', 'warn');
       const t = await tunnelForm();
       if (!t) return;
@@ -408,7 +432,7 @@ export function settingsDialog(app) {
   const cursorStyle = select([['block', 'Block'], ['underline', 'Underline'], ['bar', 'Bar']], s.cursorStyle);
   const cursorBlink = check('Blink cursor', s.cursorBlink);
   const scrollback = num(s.scrollback, { min: 100, max: 1000000 });
-  const theme = select(Object.keys(THEMES).map((t) => [t, t]), s.theme);
+  const theme = select(Object.keys(THEMES).map((t) => [t, themeLabel(t)]), s.theme);
   const rightClickPaste = check('Right-click pastes (⇧-right-click for menu)', s.rightClickPaste);
   const copyOnSelect = check('Copy on select', s.copyOnSelect);
   const optMeta = check('Option key acts as Meta/Alt', s.macOptionIsMeta !== false);
@@ -440,12 +464,12 @@ export function settingsDialog(app) {
     buttons: [
       { label: 'Cancel', value: null },
       { label: 'Save', primary: true, action: (api) => api.close({
-        fontFamily: fontFamily.value.trim() || s.fontFamily, fontSize: parseInt(fontSize.value, 10) || 13, lineHeight: parseFloat(lineHeight.value) || 1,
-        cursorStyle: cursorStyle.value, cursorBlink: cursorBlink.cb.checked, scrollback: parseInt(scrollback.value, 10) || 10000, theme: theme.value,
+        fontFamily: fontFamily.value.trim() || s.fontFamily, fontSize: clamp(parseInt(fontSize.value, 10), 8, 40, 13), lineHeight: clamp(parseFloat(lineHeight.value), 0.8, 2, 1),
+        cursorStyle: cursorStyle.value, cursorBlink: cursorBlink.cb.checked, scrollback: clamp(parseInt(scrollback.value, 10), 100, 1000000, 10000), theme: theme.value,
         rightClickPaste: rightClickPaste.cb.checked, copyOnSelect: copyOnSelect.cb.checked, macOptionIsMeta: optMeta.cb.checked,
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
         confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(),
-        keepAliveInterval: parseInt(keepAlive.value, 10) || 0, autoUpdate: autoUpdate.cb.checked,
+        keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked,
       }) },
     ],
   });
@@ -455,7 +479,6 @@ export function settingsDialog(app) {
 export function hostKeyDialog(p) {
   const m = showModal({
     title: p.status === 'mismatch' ? '⚠️ Host key changed!' : 'Unknown host key',
-    width: 'narrow',
     closeOnBackdrop: false,
     body: h('div', {},
       p.status === 'mismatch' ? h('div', { class: 'warn' }, 'The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.') : h('p', {}, `The authenticity of host ${p.host}:${p.port} can't be established.`),
@@ -506,13 +529,13 @@ export function kbdIntDialog(p) {
   return m.promise;
 }
 
-export function shortcutsDialog() {
+export function shortcutsDialog(app) {
   const rows = [
     ['New session', '⌘N'], ['New local terminal', '⌘T'], ['Quick connect', '⇧⌘N'], ['Duplicate session', '⇧⌘T'], ['Reconnect', '⌘R'], ['Close tab', '⌘W'],
     ['Split right / down', '⌘D / ⇧⌘D'], ['Grid 2 / 4 / 6 / 8 panes', '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], ['Unsplit', '⌥⌘1'], ['Close pane', '⇧⌘W'], ['Next pane', '⌘]'], ['Next / previous tab', '⌃Tab / ⌃⇧Tab'],
     ['Find', '⌘F'], ['Clear terminal', '⌘K'], ['Zoom', '⌘= / ⌘- / ⌘0'], ['Toggle sidebar', '⌘B'], ['Sessions / SFTP / Tools / Macros', '⌘1 / ⌘2 / ⌘3 / ⌘4'],
-    ['MultiExec', '⇧⌘M'], ['Tunnels', '⇧⌘U'], ['Settings', '⌘,'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', 'Right-click'],
-    ['Newline in TUI (Claude Code 등)', '⇧Enter / ⌥Enter'],
+    ['MultiExec', '⇧⌘M'], ['Tunnels', '⇧⌘U'], ['Settings', '⌘,'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', app.settings.rightClickPaste !== false ? 'Right-click' : '⌘V'], ['Terminal menu', app.settings.rightClickPaste !== false ? '⇧Right-click' : 'Right-click'],
+    ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'],
   ];
   showModal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
 }

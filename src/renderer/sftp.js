@@ -3,6 +3,16 @@ import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 
+/** Human-readable error text: strip Electron's IPC wrapper and translate bare SFTP status codes. */
+function errMsg(e) {
+  let m = (e && e.message) || String(e);
+  m = m.replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+  if (/^Failure$/i.test(m)) m = 'The server refused the operation (does the name already exist?)';
+  else if (/^No such file$/i.test(m)) m = 'Path not found';
+  else if (/^Permission denied$/i.test(m)) m = 'Permission denied';
+  return m;
+}
+
 export class SftpPanel {
   constructor(app) {
     this.app = app;
@@ -68,7 +78,7 @@ export class SftpPanel {
   setPane(pane) {
     const browsable = pane && (pane.kind === 'ssh' || pane.kind === 'ftp');
     if (!browsable || pane.status !== 'connected' || !pane.termId) {
-      if (!browsable) this.setConnection(null);
+      this.setConnection(null);
       return;
     }
     const connId = pane.termId;
@@ -85,7 +95,8 @@ export class SftpPanel {
     this.els.ui.hidden = !st;
     if (!st) return;
     const s = st.pane.session || {};
-    this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}`);
+    const defPort = s.type === 'ftp' ? 21 : 22;
+    this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`);
     this.els.follow.checked = st.follow;
     this.els.hidden.checked = st.hidden;
     if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
@@ -116,20 +127,26 @@ export class SftpPanel {
     const st = this.state();
     if (!st || !connId) return;
     st.loading = true;
-    this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, 'Loading…'));
+    if (st.path === null) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, 'Loading…'));
     try {
+      if (path === '~' || (path || '').startsWith('~/')) path = (await window.api.sftp.home(connId)) + path.slice(1);
       const r = await window.api.sftp.list(connId, path || '.');
       if (this.connId !== connId) return;
       st.path = r.path;
       st.entries = r.entries;
       st.selected.clear();
       this.els.path.value = r.path;
+      this.els.path.scrollLeft = this.els.path.scrollWidth; // long paths: keep the tail visible
       this.renderList();
       this.app.setStatusCwd(r.path);
     } catch (e) {
       if (this.connId !== connId) return;
-      this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, `Error: ${e.message}`));
-      toast(`SFTP: ${e.message}`, 'error');
+      toast(`${path || '.'}: ${errMsg(e)}`, 'error');
+      if (st.path === null) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, errMsg(e)));
+      else {
+        this.els.path.value = st.path; // revert to the folder that is actually shown
+        this.renderList();
+      }
     } finally {
       st.loading = false;
     }
@@ -140,7 +157,22 @@ export class SftpPanel {
     if (!st) return;
     const list = this.els.list;
     list.replaceChildren();
-    const entries = st.entries.filter((e) => st.hidden || !e.name.startsWith('.'));
+    st.sort = st.sort || { key: 'name', dir: 1 };
+    const cmp = (a, b) => {
+      if (a.type !== b.type) return a.type === 'd' ? -1 : 1; // folders first, whatever the sort key
+      const k = st.sort.key;
+      const d = k === 'size' ? a.size - b.size : k === 'mtime' ? a.mtime - b.mtime : a.name.localeCompare(b.name);
+      return (d || a.name.localeCompare(b.name)) * st.sort.dir;
+    };
+    const entries = st.entries.filter((e) => st.hidden || !e.name.startsWith('.')).sort(cmp);
+    const headCell = (key, label, cls) => {
+      const active = st.sort.key === key;
+      return h('span', { class: cls + (active ? ' sorted' : ''), title: 'Sort by ' + label.toLowerCase(), onclick: () => {
+        st.sort = { key, dir: active ? -st.sort.dir : 1 };
+        this.renderList();
+      } }, label + (active ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''));
+    };
+    list.append(h('div', { class: 'sftp-row sftp-head' }, h('span', {}), headCell('name', 'Name', 'name'), headCell('size', 'Size', 'size'), headCell('mtime', 'Modified', 'date')));
     if (st.path !== '/') {
       const up = h('div', { class: 'sftp-row dir', dataset: { name: '..' } }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' }));
       up.addEventListener('dblclick', () => this.cmd('up'));
@@ -253,7 +285,7 @@ export class SftpPanel {
           await window.api.sftp.mkdir(this.connId, this.join(n.trim()));
           await this.navigate(st.path);
         } catch (err) {
-          toast(err.message, 'error');
+          toast(errMsg(err), 'error');
         }
         return;
       }
@@ -273,11 +305,36 @@ export class SftpPanel {
   async upload(paths) {
     const st = this.state();
     if (!st) return;
+    return this.uploadTo(this.connId, paths, st.path, st.entries);
+  }
+
+  /** Upload with an overwrite check (used by the panel and by drops on a terminal). */
+  async uploadTo(connId, paths, dir, entries) {
+    if (!paths || !paths.length) {
+      try {
+        const ids = await window.api.sftp.upload(connId, [], dir); // native picker
+        if (ids && ids.length) toast(`Uploading ${ids.length} item(s)`, 'info');
+      } catch (e) {
+        toast(errMsg(e), 'error');
+      }
+      return;
+    }
     try {
-      const ids = await window.api.sftp.upload(this.connId, paths, st.path);
+      if (!entries) entries = (await window.api.sftp.list(connId, dir)).entries;
+      const names = new Set(entries.map((e) => e.name));
+      const base = (p) => p.replace(/\/+$/, '').split('/').pop();
+      const conflicts = paths.filter((p) => names.has(base(p)));
+      let todo = paths;
+      if (conflicts.length) {
+        const what = conflicts.length === 1 ? `"${base(conflicts[0])}" already exists` : `${conflicts.length} items already exist`;
+        const ok = await confirmDialog(`${what} in ${dir}. Overwrite?`, { title: 'Overwrite?', okLabel: 'Overwrite', danger: true });
+        if (!ok) todo = paths.filter((p) => !names.has(base(p)));
+        if (!todo.length) return toast('Upload skipped', 'info');
+      }
+      const ids = await window.api.sftp.upload(connId, todo, dir);
       if (ids && ids.length) toast(`Uploading ${ids.length} item(s)`, 'info');
     } catch (e) {
-      toast(e.message, 'error');
+      toast(errMsg(e), 'error');
     }
   }
 
@@ -286,20 +343,22 @@ export class SftpPanel {
       try {
         await window.api.sftp.download(this.connId, this.join(e.name), null, e.type === 'd');
       } catch (err) {
-        toast(err.message, 'error');
+        toast(errMsg(err), 'error');
       }
     }
   }
 
   async remove(entries) {
-    const ok = await confirmDialog(`Delete ${entries.length === 1 ? `"${entries[0].name}"` : entries.length + ' items'} on the remote host? This cannot be undone.`, { title: 'Delete', okLabel: 'Delete', danger: true });
+    const dirs = entries.filter((e) => e.type === 'd').length;
+    const what = entries.length === 1 ? (dirs ? `folder "${entries[0].name}" and everything inside it` : `"${entries[0].name}"`) : `${entries.length} items${dirs ? ` (including ${dirs} folder${dirs > 1 ? 's' : ''} with their contents)` : ''}`;
+    const ok = await confirmDialog(`Delete ${what} on the remote host? This cannot be undone.`, { title: 'Delete', okLabel: 'Delete', danger: true });
     if (!ok) return;
     const st = this.state();
     for (const e of entries) {
       try {
         await window.api.sftp.remove(this.connId, this.join(e.name), e.type === 'd');
       } catch (err) {
-        toast(`${e.name}: ${err.message}`, 'error');
+        toast(`${e.name}: ${errMsg(err)}`, 'error');
       }
     }
     this.navigate(st.path);
@@ -312,7 +371,7 @@ export class SftpPanel {
       await window.api.sftp.rename(this.connId, this.join(e.name), this.join(n));
       this.navigate(this.state().path);
     } catch (err) {
-      toast(err.message, 'error');
+      toast(errMsg(err), 'error');
     }
   }
 
@@ -321,10 +380,11 @@ export class SftpPanel {
     const v = await promptDialog(`Permissions for ${e.name}`, { label: `Octal mode (current ${cur}, ${e.modeStr.slice(1)})`, value: cur });
     if (!v || !/^[0-7]{3,4}$/.test(v)) return;
     try {
-      await window.api.sftp.chmod(this.connId, this.join(e.name), parseInt(v, 8));
+      if (!/^[0-7]{3,4}$/.test(v.trim())) return toast('Enter an octal mode such as 755 or 0644', 'warn');
+      await window.api.sftp.chmod(this.connId, this.join(e.name), parseInt(v.trim(), 8));
       this.navigate(this.state().path);
     } catch (err) {
-      toast(err.message, 'error');
+      toast(errMsg(err), 'error');
     }
   }
 
@@ -335,7 +395,7 @@ export class SftpPanel {
     try {
       content = await window.api.sftp.read(connId, remote);
     } catch (err) {
-      return toast(err.message, 'error');
+      return toast(errMsg(err), 'error');
     }
     const ta = h('textarea', { class: 'editor-area', spellcheck: false });
     ta.value = content;
@@ -360,7 +420,7 @@ export class SftpPanel {
         toast(`Saved ${e.name}`, 'success');
         this.navigate(this.state()?.path);
       } catch (err) {
-        toast(err.message, 'error');
+        toast(errMsg(err), 'error');
       }
     };
     const m = showModal({
@@ -384,7 +444,7 @@ export class SftpPanel {
       toast(`Opened ${e.name} in editor; saves are uploaded automatically`, 'info', 5000);
       return r;
     } catch (err) {
-      toast(err.message, 'error');
+      toast(errMsg(err), 'error');
     }
   }
 
@@ -419,12 +479,15 @@ export class SftpPanel {
 
   // ---------- transfers ----------
   onTransfer(t) {
+    const prev = this.transfers.get(t.id);
+    if (t.status !== 'running' && !(prev && prev.finishedAt)) t.finishedAt = Date.now();
+    else if (prev && prev.finishedAt) t.finishedAt = prev.finishedAt;
     this.transfers.set(t.id, t);
     if (t.status !== 'running') {
       if (t.status === 'done') {
         const st = this.states.get(t.connId);
         if (st && this.connId === t.connId && t.kind === 'upload') this.navigate(st.path);
-        setTimeout(() => { this.transfers.delete(t.id); this.renderTransfers(); }, 8000);
+        setTimeout(() => { this.transfers.delete(t.id); this.renderTransfers(); }, 30000);
       } else if (t.status === 'error') toast(`${t.kind} ${t.name}: ${t.error}`, 'error', 6000);
     }
     this.renderTransfers();
@@ -437,7 +500,7 @@ export class SftpPanel {
     const list = [...this.transfers.values()].sort((a, b) => b.startedAt - a.startedAt).slice(0, 12);
     for (const t of list) {
       const pct = t.total ? Math.min(100, Math.round((t.transferred / t.total) * 100)) : t.status === 'done' ? 100 : 0;
-      const elapsed = Date.now() - t.startedAt;
+      const elapsed = (t.finishedAt || Date.now()) - t.startedAt;
       const speed = elapsed > 300 ? fmtSize((t.transferred / elapsed) * 1000) + '/s' : '';
       el.append(h('div', { class: 'xfer ' + t.status },
         h('div', { class: 'l1' }, h('span', {}, t.kind === 'upload' ? '⇪' : '⇩'), h('span', { class: 'n', title: t.remote }, t.name),

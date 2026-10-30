@@ -119,7 +119,7 @@
 
       <!-- Right: tabs + terminals -->
       <div id="workspace">
-        <div id="multiexec-banner" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> terminals</div>
+        <div id="multiexec-banner" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> terminal(s)</div>
         <div id="tabbar">
           <div id="tabs"></div>
           <button id="tab-add" title="New local terminal (⌘T)">＋</button>
@@ -127,6 +127,7 @@
         <div id="tab-content"></div>
         <div id="find-bar" hidden>
           <input id="find-input" placeholder="Find in terminal" spellcheck="false" />
+          <span id="find-count" class="find-count"></span>
           <button data-find="prev" title="Previous (⇧⏎)">▲</button>
           <button data-find="next" title="Next (⏎)">▼</button>
           <label><input type="checkbox" id="find-case" /> Aa</label>

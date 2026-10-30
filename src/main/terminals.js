@@ -78,7 +78,7 @@ class TerminalRegistry extends EventEmitter {
   stopLog(id) {
     const log = this.logs.get(id);
     if (log) {
-      log.end();
+      log.end(`\n--- log stopped ${new Date().toISOString()} ---\n`);
       this.logs.delete(id);
     }
   }

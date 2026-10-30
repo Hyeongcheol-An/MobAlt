@@ -95,7 +95,7 @@ class SshManager {
       let tries = 0;
       while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
         tries++;
-        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `Enter passphrase for key ${display}`, session: cfg });
+        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `${tries ? 'Incorrect passphrase. ' : ''}Enter passphrase for key ${display}`, session: cfg });
         if (!ans) return null;
         passphrase = ans.password;
         parsed = utils.parseKey(raw, passphrase);
@@ -455,6 +455,12 @@ class SshManager {
         if (ctx.cancelled) msg = 'authentication cancelled';
         else if (e.level === 'client-authentication') {
           msg = `authentication failed — server accepts: ${(ctx.serverMethods || []).join(', ') || 'unknown'}; tried: ${(ctx.tried || []).join(', ') || 'nothing'}`;
+          const accepts = ctx.serverMethods || [];
+          if (!(ctx.tried || []).length && cfg.authMethod === 'password' && accepts.length && !accepts.includes('password') && !accepts.includes('keyboard-interactive')) {
+            msg += '. This session is set to Password authentication but the server does not offer it — switch it to Automatic or Private key.';
+          } else if (!(ctx.tried || []).length && cfg.authMethod === 'key' && !cfg.privateKeyPath) {
+            msg += '. The session uses key authentication but no key file is set.';
+          }
         } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
           msg += ' — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.';
         } else if (/Timed out while waiting for handshake/i.test(msg)) {
@@ -464,6 +470,7 @@ class SshManager {
         } else if (/Too many authentication failures/i.test(msg)) {
           msg += ' — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.';
         }
+        if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
         this._out(id, `\r\n${RED}Connection failed: ${msg}${RESET}\r\n`);
         this.prompter.status(id, 'failed', e.message);
         if (!info.closed) {

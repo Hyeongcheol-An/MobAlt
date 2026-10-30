@@ -98,7 +98,7 @@ window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeContext
 
 // ---------- modal ----------
 const modalStack = [];
-export function showModal({ title, body, buttons = [], width, onClose, closeOnBackdrop = true }) {
+export function showModal({ title, body, buttons = [], width, onClose, closeOnBackdrop = true, beforeClose = null }) {
   const root = $('#modal-root');
   const modal = h('div', { class: 'modal' + (width ? ' ' + width : '') });
   const backdrop = h('div', { class: 'modal-backdrop' }, modal);
@@ -106,6 +106,14 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
     el: modal,
     close(result) {
       if (!backdrop.isConnected) return;
+      // a dismissal (Esc / ✕ / backdrop / Cancel) may ask for confirmation first
+      if ((result === null || result === undefined) && beforeClose && !api._closing) {
+        api._closing = true;
+        Promise.resolve(beforeClose()).then((ok) => { api._closing = false; if (ok) api.close(false); }, () => { api._closing = false; });
+        return;
+      }
+      if (result === false) result = null;
+      document.removeEventListener('keydown', onDocKey, true);
       backdrop.remove();
       modalStack.splice(modalStack.indexOf(api), 1);
       onClose && onClose(result);
@@ -115,7 +123,10 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
       else document.dispatchEvent(new CustomEvent('modal-closed'));
     },
     focusFirst() {
-      const f = modal.querySelector('input:not([type=checkbox]):not([type=hidden]), select, textarea, button.primary, button');
+      // First visible form control in the body, then the primary button, then any button (never the ✕).
+      const visible = (el) => el && !el.hidden && el.offsetParent !== null;
+      const f = [...modal.querySelectorAll('.modal-body input:not([type=checkbox]):not([type=hidden]), .modal-body select, .modal-body textarea')].find(visible)
+        || modal.querySelector('.modal-foot button.primary') || modal.querySelector('.modal-foot button') || modal.querySelector('button');
       if (f) f.focus();
     },
   };
@@ -133,12 +144,19 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
   backdrop.addEventListener('mousedown', (e) => {
     if (closeOnBackdrop && e.target === backdrop) api.close(null);
   });
+  // Esc closes the top-most dialog even when focus has wandered outside it (e.g. after clicking a label).
+  const onDocKey = (e) => {
+    if (e.key !== 'Escape' || modalStack[modalStack.length - 1] !== api || modal.contains(e.target)) return;
+    e.stopPropagation();
+    api.close(null);
+  };
+  document.addEventListener('keydown', onDocKey, true);
   modal.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       e.stopPropagation();
       api.close(null);
     }
-    if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement) && !e.isComposing) {
+    if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement) && !(e.target instanceof HTMLSelectElement) && !e.isComposing) {
       const primary = buttons.find((b) => b.primary);
       if (primary && !(e.target instanceof HTMLButtonElement)) {
         e.preventDefault();
@@ -189,9 +207,16 @@ export function promptDialog(title, { label = '', value = '', password = false, 
 // ---------- toast ----------
 export function toast(message, type = 'info', ms = 3500) {
   const root = $('#toast-root');
+  // identical message already showing: restart its timer instead of stacking copies
+  const dup = [...root.children].find((c) => c.textContent === message && c.classList.contains(type));
+  if (dup) {
+    clearTimeout(dup._timer);
+    dup._timer = setTimeout(() => dup.remove(), ms);
+    return dup;
+  }
   const el = h('div', { class: 'toast ' + type }, message);
   root.append(el);
-  setTimeout(() => el.remove(), ms);
+  el._timer = setTimeout(() => el.remove(), ms);
   return el;
 }
 
@@ -206,7 +231,7 @@ export function debounce(fn, ms) {
 export function parseQuickConnect(str) {
   const s = str.trim();
   if (!s) return null;
-  let m = /^(?:(ssh|mosh|telnet|ftp|ftps|rdp|vnc):\/\/)?(?:([^@\s]+)@)?(\[[^\]]+\]|[^:\s]+)(?::(\d+))?$/.exec(s);
+  let m = /^(?:(ssh|mosh|telnet|ftp|ftps|rdp|vnc):\/\/)?(?:([^@\s]+)@)?(\[[^\]]+\]|[^:\s@]+)(?::(\d+))?$/.exec(s);
   if (!m) return null;
   const scheme = m[1] || 'ssh';
   const type = scheme === 'ftps' ? 'ftp' : scheme;

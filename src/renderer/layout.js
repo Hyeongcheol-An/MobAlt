@@ -67,9 +67,11 @@ export class Workspace {
       h('button', { class: 'close', title: 'Close (⌘W)', onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, '✕')
     );
     el.addEventListener('mousedown', (e) => {
-      if (e.button === 1) { e.preventDefault(); this.app.closeTab(tab); return; }
-      if (e.button === 0) this.activate(tab);
+      if (e.button === 1) { e.preventDefault(); this.app.closeTab(tab); }
     });
+    // Activate on click, not mousedown: a tab being dragged onto another tab's pane must not become
+    // the visible tab mid-drag (that made tab → pane moves impossible with the mouse).
+    el.addEventListener('click', (e) => { if (e.button === 0) this.activate(tab); });
     el.addEventListener('dblclick', () => this.renameTab(tab));
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();

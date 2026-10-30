@@ -37,14 +37,25 @@ export class ToolsPanel {
       else if (tool === 'lookup') {
         this.append(`Resolving ${host}…\n`);
         const r = await window.api.tools.lookup(host);
-        this.append(JSON.stringify(r, null, 2) + '\n');
+        if (r.error) this.append(`  ${r.error}\n`);
+        for (const a of r.addresses || []) this.append(`  ${a.family === 6 ? 'AAAA' : 'A   '}  ${a.address}\n`);
+        for (const m of r.mx || []) this.append(`  MX    ${m.priority} ${m.exchange}\n`);
+        for (const t of r.txt || []) this.append(`  TXT   ${t.join('')}\n`);
+        for (const p of r.reverse || []) this.append(`  PTR   ${p}\n`);
+        if (!r.error && !(r.addresses || []).length && !(r.reverse || []).length) this.append('  no records\n');
       } else if (tool === 'netinfo') {
         const r = await window.api.tools.netinfo();
-        this.append(`Hostname: ${r.hostname}\nDNS: ${r.dns.join(', ')}\n\n`);
-        for (const i of r.interfaces) this.append(`${i.name.padEnd(8)} ${i.family.padEnd(5)} ${i.address.padEnd(40)} ${i.netmask || ''}\n`);
+        this.append(`Hostname: ${r.hostname}\nDNS: ${r.dns.join(', ')}\n`);
+        let last = null;
+        for (const i of r.interfaces) {
+          if (i.name !== last) { this.append(`\n${i.name}${i.mac && i.mac !== '00:00:00:00:00:00' ? `  (${i.mac})` : ''}\n`); last = i.name; }
+          this.append(`  ${i.family === 'IPv6' ? 'v6' : 'v4'}  ${i.address}${i.netmask ? ' / ' + i.netmask : ''}\n`);
+        }
       } else if (tool === 'portscan') {
-        const from = parseInt($('#tool-port-from').value, 10) || 1;
-        const to = parseInt($('#tool-port-to').value, 10) || 1024;
+        const from = $('#tool-port-from').value.trim() === '' ? 1 : parseInt($('#tool-port-from').value, 10);
+        const to = $('#tool-port-to').value.trim() === '' ? 1024 : parseInt($('#tool-port-to').value, 10);
+        if (!(from >= 1 && from <= 65535) || !(to >= 1 && to <= 65535)) return toast('Ports must be between 1 and 65535', 'warn');
+        if (from > to) return toast('The first port must not be greater than the last', 'warn');
         this.append(`Scanning ${host} ports ${from}-${to}…\n`);
         const t0 = Date.now();
         const open = await window.api.tools.portScan(host, from, to);
@@ -115,7 +126,11 @@ export class MacrosPanel {
         this.recBtn.classList.remove('on');
         this.recBtn.textContent = '● Rec';
         if (!text) return toast('Nothing recorded', 'warn');
-        const n = await promptDialog('Save macro', { label: `${text.length} characters recorded`, placeholder: 'macro name' });
+        let n = await promptDialog('Save macro', { label: `${text.length} characters recorded`, placeholder: 'macro name' });
+        while (n !== null && !n.trim()) {
+          toast('Give the macro a name', 'warn');
+          n = await promptDialog('Save macro', { label: `${text.length} characters recorded`, placeholder: 'macro name' });
+        }
         if (!n) return;
         this.save([...this.macros, { id: 'm' + Date.now(), name: n, text }]);
       } else {

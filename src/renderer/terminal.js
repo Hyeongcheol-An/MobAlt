@@ -70,6 +70,7 @@ export class TermPane {
     });
     this.fitAddon = new FitAddon();
     this.searchAddon = new SearchAddon();
+    this.searchAddon.onDidChangeResults((r) => this.app.onFindResults && this.app.onFindResults(this, r));
     this.term.loadAddon(this.fitAddon);
     this.term.loadAddon(this.searchAddon);
     this.term.loadAddon(new WebLinksAddon((e, uri) => window.api.shell.openExternal(uri)));
@@ -202,8 +203,7 @@ export class TermPane {
         if ((this.kind === 'ssh' || this.kind === 'ftp') && this.status === 'connected') {
           const dir = this.remoteCwd || (await window.api.sftp.home(this.termId).catch(() => null));
           if (!dir) return toast('Remote folder unknown', 'warn');
-          await window.api.sftp.upload(this.termId, paths, dir);
-          toast(`Uploading ${paths.length} item(s) to ${dir}`, 'info');
+          await this.app.sftpPanel.uploadTo(this.termId, paths, dir);
           this.app.sftpPanel.show(this.termId);
         } else {
           // local terminal: paste the paths (quoted)
@@ -220,13 +220,7 @@ export class TermPane {
     if (this.mounted) return;
     this.mounted = true;
     this.term.open(this.termEl);
-    try {
-      const webgl = new WebglAddon();
-      webgl.onContextLoss(() => webgl.dispose());
-      this.term.loadAddon(webgl);
-    } catch (e) {
-      console.warn('WebGL renderer unavailable, using DOM renderer', e);
-    }
+    if (this.kind !== 'empty') this._loadWebgl(); // placeholder panes do not need a GPU context
     this.termEl.addEventListener('contextmenu', (e) => this._contextMenu(e));
     this.ro = new ResizeObserver(() => this.fit());
     this.ro.observe(this.termEl);
@@ -242,6 +236,19 @@ export class TermPane {
 
   focus() {
     this.term.focus();
+  }
+
+  /** GPU renderer; a browser keeps only ~16 WebGL contexts, so each pane frees its own on dispose. */
+  _loadWebgl() {
+    if (this.webgl || !this.mounted) return;
+    try {
+      const webgl = new WebglAddon();
+      webgl.onContextLoss(() => { webgl.dispose(); this.webgl = null; });
+      this.term.loadAddon(webgl);
+      this.webgl = webgl;
+    } catch (e) {
+      console.warn('WebGL renderer unavailable, using DOM renderer', e);
+    }
   }
 
   updateTitle() {
@@ -283,7 +290,7 @@ export class TermPane {
   showFtpInfo() {
     this.hidePlaceholder();
     const s = this.session || {};
-    this.placeholder = h('div', { class: 'pane-placeholder' },
+    this.placeholder = h('div', { class: 'pane-placeholder ftp-info' },
       h('div', { class: 'big' }, `FTP${s.ftps ? 'S' : ''} · ${s.name || s.host}`),
       h('div', { class: 'hint' }, `${s.username ? s.username + '@' : 'anonymous@'}${s.host}${s.port && s.port !== 21 ? ':' + s.port : ''} — browse, transfer and edit files in the Sftp panel.`),
       h('div', { class: 'btns' },
@@ -308,6 +315,7 @@ export class TermPane {
     this.title = 'Local';
     this.hidePlaceholder();
     this.updateTitle();
+    this._loadWebgl();
     await this.start();
     this.focus();
   }
@@ -408,7 +416,8 @@ export class TermPane {
     this.term.write(data);
   }
 
-  onExit({ code, reason }) {
+  onExit({ id, code, reason }) {
+    if (id && this.termId && id !== this.termId) return; // stale exit of a backend we already replaced
     const wasConnecting = this.status === 'connecting';
     this.app.unregisterPane(this);
     this.termId = null;
@@ -422,7 +431,7 @@ export class TermPane {
 
   markDead() {
     this.dead = true;
-    this.term.write(`\r\n\x1b[90m── Session ended. Press Enter to reconnect, ⌘W to close. ──\x1b[0m\r\n`);
+    this.term.write(`\r\n\x1b[2m── Session ended. Press Enter to reconnect, ⌘W to close. ──\x1b[0m\r\n`);
     this.showOverlay();
   }
 
@@ -446,6 +455,10 @@ export class TermPane {
   async reconnect() {
     if (this.termId) {
       await this.disconnect();
+      // the old backend's exit event may still be in flight: forget its id now so it cannot be
+      // mistaken for the new connection (see onExit)
+      this.app.unregisterPane(this);
+      this.termId = null;
     }
     this.term.write('\r\n');
     await this.start();
@@ -497,7 +510,9 @@ export class TermPane {
     this.term.options.cursorBlink = s.cursorBlink;
     this.term.options.cursorStyle = s.cursorStyle;
     this.term.options.scrollback = s.scrollback;
-    this.term.options.theme = THEMES[this.session?.theme || s.theme] || THEMES['moba-dark'];
+    const theme = THEMES[this.session?.theme || s.theme] || THEMES['moba-dark'];
+    this.term.options.theme = theme;
+    this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the theme
     this.term.options.macOptionIsMeta = s.macOptionIsMeta !== false;
     this.fit();
   }
@@ -550,6 +565,8 @@ export class TermPane {
       this.app.unregisterPane(this);
       this.termId = null;
     }
+    try { this.webgl && this.webgl.dispose(); } catch {}
+    this.webgl = null;
     try {
       this.term.dispose();
     } catch {}

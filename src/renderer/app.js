@@ -1,11 +1,14 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
 import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, contextMenu } from './ui.js';
-import { TermPane } from './terminal.js';
+import { TermPane, THEMES } from './terminal.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
 import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog } from './dialogs.js';
+
+/** Long paths keep their tail (the leaf folder is what matters in a status bar). */
+const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
 
 /** Pane kind for a session type (rdp/vnc never get a pane). */
 const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh');
@@ -23,6 +26,7 @@ class App {
 
   async init() {
     [this.settings, this.sessions, this.info] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info()]);
+    this._applyThemeVar();
     document.documentElement.style.setProperty('--sidebar-w', (this.settings.sidebarWidth || 280) + 'px');
     this.workspace = new Workspace(this);
     this.sessionTree = new SessionTree(this);
@@ -36,6 +40,7 @@ class App {
     $('#st-x11').classList.toggle('on', !!this.info.x11Available);
     $('#st-x11').title = this.info.x11Available ? `Local X server: ${this.info.display}` : 'No X server found (install XQuartz for X11 forwarding)';
     if (!this.settings.sidebarVisible) $('#sidebar').classList.add('collapsed');
+    this._syncSidebarToggle();
     this.showPanel(this.settings.sidebarTab || 'sessions');
     let restored = false;
     if (this.settings.restoreWorkspace !== false) {
@@ -187,17 +192,35 @@ class App {
   // ---------- UI wiring ----------
   wireUi() {
     for (const b of $$('[data-action]')) b.addEventListener('click', () => this.action(b.dataset.action, b.dataset.arg));
+    // toolbar clicks must not steal keyboard focus from the terminal
+    for (const b of $$('#toolbar .tb-btn, #side-strip .strip-btn')) b.addEventListener('mousedown', (e) => e.preventDefault());
+    // empty workspace accepts a dropped session
+    const tc = $('#tab-content');
+    tc.addEventListener('dragover', (e) => { if (!this.workspace.tabs.length && e.dataTransfer.types.includes('text/x-mobalt-session')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+    tc.addEventListener('drop', (e) => {
+      if (this.workspace.tabs.length) return;
+      const id = e.dataTransfer.getData('text/x-mobalt-session');
+      const s = id && this.sessions.sessions.find((x) => x.id === id);
+      if (s) { e.preventDefault(); this.openSession(s); }
+    });
     for (const b of $$('.strip-btn[data-panel]')) b.addEventListener('click', () => this.showPanel(b.dataset.panel));
     $('#quick-connect').addEventListener('submit', (e) => {
       e.preventDefault();
-      this.quickConnect($('#qc-input').value);
+      const v = $('#qc-input').value.trim();
+      if (!v) return;
+      this.quickConnect(v);
+      $('#qc-input').blur();
+      this.activePane()?.focus();
+    });
+    $('#qc-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.target.blur(); this.activePane()?.focus(); }
     });
     // sidebar resize
     const rs = $('#sidebar-resizer');
     rs.addEventListener('mousedown', (e) => {
       e.preventDefault();
       const start = e.clientX, w0 = $('#sidebar').getBoundingClientRect().width;
-      const move = (ev) => document.documentElement.style.setProperty('--sidebar-w', Math.max(180, Math.min(700, w0 + ev.clientX - start)) + 'px');
+      const move = (ev) => document.documentElement.style.setProperty('--sidebar-w', Math.max(180, Math.min(700, window.innerWidth - 520, w0 + ev.clientX - start)) + 'px');
       const up = () => {
         document.removeEventListener('mousemove', move);
         document.removeEventListener('mouseup', up);
@@ -209,8 +232,21 @@ class App {
     });
     // find bar
     const fb = $('#find-bar'), fi = $('#find-input');
-    const opts = () => ({ caseSensitive: $('#find-case').checked, regex: $('#find-regex').checked, decorations: { matchBackground: '#515c6a', activeMatchBackground: '#e6b422', matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#e6b422' } });
-    fi.addEventListener('input', () => this.activePane()?.searchAddon.findNext(fi.value, { ...opts(), incremental: true }));
+    const opts = () => ({ caseSensitive: $('#find-case').checked, regex: $('#find-regex').checked, decorations: { matchBackground: '#515c6a', activeMatchBackground: '#e6b422', activeMatchBorder: '#e6b422', matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#e6b422' } });
+    const research = () => {
+      const p = this.activePane();
+      if (!p) return;
+      p.searchAddon.clearDecorations();
+      if (fi.value) p.searchAddon.findNext(fi.value, opts());
+      else this.onFindResults(p, { resultCount: 0, resultIndex: -1 });
+    };
+    fi.addEventListener('input', () => {
+      const p = this.activePane();
+      if (!p) return;
+      if (!fi.value) return research();
+      p.searchAddon.findNext(fi.value, { ...opts(), incremental: true });
+    });
+    for (const id of ['#find-case', '#find-regex']) $(id).addEventListener('change', research); // toggles re-run the search
     fi.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); e.shiftKey ? this.activePane()?.searchAddon.findPrevious(fi.value, opts()) : this.activePane()?.searchAddon.findNext(fi.value, opts()); }
       if (e.key === 'Escape') this.action('find-close');
@@ -247,7 +283,18 @@ class App {
     const sb = $('#sidebar');
     sb.classList.toggle('collapsed');
     this.saveSettings({ sidebarVisible: !sb.classList.contains('collapsed') }, true);
+    this._syncSidebarToggle();
     this.workspace.allPanes().forEach((p) => p.fit());
+  }
+
+  /** The strip's collapse button mirrors the sidebar state (◀ hide / ▶ show). */
+  _syncSidebarToggle() {
+    const collapsed = $('#sidebar').classList.contains('collapsed');
+    const btn = document.querySelector('.strip-btn[data-action="toggle-sidebar"]');
+    if (!btn) return;
+    btn.querySelector('span').textContent = collapsed ? '▶' : '◀';
+    btn.title = collapsed ? 'Show sidebar (⌘B)' : 'Hide sidebar (⌘B)';
+    for (const b of document.querySelectorAll('.strip-btn[data-action="sidebar"]')) b.classList.toggle('active', !collapsed && b.dataset.arg === this.settings.sidebarTab);
   }
 
   // ---------- panes / tabs ----------
@@ -268,6 +315,7 @@ class App {
   }
 
   focusPane(pane, viaTab = false) {
+    if (pane && pane.tab) queueMicrotask(() => pane.tab.tabEl && this.workspace.updateTab(pane.tab)); // tab dot follows the active pane
     if (this.focused && this.focused !== pane) this.focused.el.classList.remove('focused');
     this.focused = pane;
     pane.el.classList.add('focused');
@@ -291,8 +339,10 @@ class App {
   /** Open a saved/ad-hoc session. opts.split = 'right'|'left'|'down'|'up' opens next to opts.target (or the active pane). */
   async openSession(s, opts = {}) {
     if (!s) return;
-    if (s.type === 'rdp') return window.api.launch.rdp(s);
-    if (s.type === 'vnc') return window.api.launch.vnc(s);
+    if (s.type === 'rdp' || s.type === 'vnc') {
+      toast(`Opening ${s.name || s.host} in ${s.type === 'rdp' ? 'Windows App / Remote Desktop' : 'Screen Sharing'}…`, 'info');
+      return s.type === 'rdp' ? window.api.launch.rdp(s) : window.api.launch.vnc(s);
+    }
     const kind = kindOf(s.type);
     const pane = new TermPane(this, { kind, session: s, cwd: s.cwd || undefined });
     const target = opts.target || this.activePane();
@@ -327,7 +377,7 @@ class App {
 
   async closePane(pane, silent = false) {
     if (!silent && pane.status === 'connected' && pane.kind !== 'local' && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Close "${pane.title}"? The connection will be dropped.`, { okLabel: 'Close' }))) return;
+      if (!(await confirmDialog(`Close "${pane.title}"? The connection will be dropped.`, { okLabel: 'Close', danger: true }))) return;
     }
     const tab = pane.tab;
     pane.dispose();
@@ -347,7 +397,7 @@ class App {
     const panes = tab.panes();
     const live = panes.filter((p) => p.status === 'connected' && p.kind !== 'local');
     if (live.length && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Close tab "${tab.title}" with ${live.length} live connection(s)?`, { okLabel: 'Close' }))) return;
+      if (!(await confirmDialog(`Close tab "${tab.title}" with ${live.length} live connection(s)?`, { okLabel: 'Close', danger: true }))) return;
     }
     for (const p of panes) {
       p.dispose();
@@ -413,7 +463,7 @@ class App {
     if (!ap || !ap.tab) return;
     const others = ap.tab.panes().filter((p) => p !== ap);
     const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead);
-    if (live.length && this.settings.confirmClose && !(await confirmDialog(`Close ${others.length} other pane(s)? ${live.length} live connection(s) will be dropped.`, { okLabel: 'Close panes' }))) return;
+    if (live.length && this.settings.confirmClose && !(await confirmDialog(`Close ${others.length} other pane(s)? ${live.length} live connection(s) will be dropped.`, { okLabel: 'Close panes', danger: true }))) return;
     for (const p of others) await this.closePane(p, true);
     this.focusPane(ap, true);
   }
@@ -448,7 +498,7 @@ class App {
     if (!pane.tab || !session) return;
     if (session.type === 'rdp' || session.type === 'vnc') return this.openSession(session);
     if (!silent && pane.status === 'connected' && pane.kind !== 'local' && !pane.dead && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Replace "${pane.title}" with "${session.name}"? The current connection will be dropped.`, { okLabel: 'Replace' }))) return;
+      if (!(await confirmDialog(`Replace "${pane.title}" with "${session.name}"? The current connection will be dropped.`, { okLabel: 'Replace', danger: true }))) return;
     }
     const kind = kindOf(session.type);
     const next = new TermPane(this, { kind, session, cwd: session.cwd || undefined });
@@ -458,6 +508,7 @@ class App {
     this.sftpPanel.dropConnection(pane.termId);
     if (this.focused === pane) this.focused = null;
     this.focusPane(next, true);
+    next.updateTitle(); // the tab title follows the new session
     await next.start();
     next.focus();
     this.pushRecent(session);
@@ -483,7 +534,33 @@ class App {
     }
   }
 
+  /** Search addon result counter for the find bar (only the active pane's numbers are shown). */
+  onFindResults(pane, { resultCount, resultIndex }) {
+    if (pane !== this.activePane()) return;
+    const el = $('#find-count'), fi = $('#find-input');
+    if (!el) return;
+    el.textContent = resultCount > 0 ? `${resultIndex >= 0 ? resultIndex + 1 : '–'} / ${resultCount}` : fi.value ? 'No matches' : '';
+    $('#find-bar').classList.toggle('no-match', !!fi.value && resultCount === 0);
+  }
+
+  /** Hint panel shown in the content area while no tab is open. */
+  _syncEmptyState() {
+    const host = $('#tab-content');
+    const el = host.querySelector('.workspace-empty');
+    const empty = !this.workspace.tabs.length;
+    if (empty && !el) {
+      host.append(h('div', { class: 'workspace-empty' },
+        h('div', { class: 'big' }, 'No terminal open'),
+        h('div', { class: 'hint' }, 'Drag a session from the Sessions panel here, or:'),
+        h('div', { class: 'btns' },
+          h('button', { class: 'btn small', onclick: () => this.action('new-session') }, '＋ New session  ⌘N'),
+          h('button', { class: 'btn small', onclick: () => this.action('new-local') }, '>_ Local terminal  ⌘T'),
+          h('button', { class: 'btn small', onclick: () => this.action('quick-connect') }, 'Quick connect  ⇧⌘N'))));
+    } else if (!empty && el) el.remove();
+  }
+
   onActiveTabChanged(tab) {
+    this._syncEmptyState();
     this.updateStatus(tab ? tab.activePane : null);
     if (tab && tab.activePane) this.sftpPanel.setPane(tab.activePane);
     this.saveWorkspaceSoon();
@@ -500,11 +577,18 @@ class App {
   onPaneStatus(pane, msg) {
     if (pane.tab) this.workspace.updateTab(pane.tab);
     if (this.activePane() === pane) this.updateStatus(pane, msg);
-    if (pane.status !== 'connected') this.sessionTree.render();
+    this.sessionTree.render(); // connected dot / failure state in the tree
   }
 
   onPaneCwd(pane) {
     if (this.activePane() === pane) this.setStatusCwd(pane.remoteCwd);
+    // local shells: the tab/pane title follows the folder (until the shell or the user sets a title)
+    if (pane.kind === 'local' && !pane.session && pane.remoteCwd && (pane.title === 'Local' || pane._cwdTitled)) {
+      const cwd = pane.remoteCwd.replace(/\/+$/, '');
+      pane.title = cwd === this.info.home ? '~' : cwd.split('/').pop() || '/';
+      pane._cwdTitled = true;
+      pane.updateTitle();
+    }
     this.sftpPanel.onPaneCwd(pane);
     if (pane.kind === 'local') this.saveWorkspaceSoon(); // keep restored shells in their folder
   }
@@ -522,14 +606,15 @@ class App {
         : pane.kind === 'ftp' ? `${s?.username ? s.username + '@' : 'anonymous@'}${s?.host}${s?.port && s.port !== 21 ? ':' + s.port : ''}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
       el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${pane.status}${msg ? ' (' + msg + ')' : ''}`;
-      $('#st-cwd').textContent = pane.remoteCwd || pane.cwd || '';
+      const browsing = this.sftpPanel.states.get(pane.termId);
+      $('#st-cwd').textContent = pane.dead ? '' : shortPath(pane.remoteCwd || pane.cwd || (browsing && browsing.path) || '');
     }
     $('#st-log').textContent = pane && pane.logging ? '● LOG' : '';
     $('#st-log').classList.toggle('on', !!(pane && pane.logging));
   }
 
   setStatusCwd(p) {
-    $('#st-cwd').textContent = p || '';
+    $('#st-cwd').textContent = shortPath(p);
   }
 
   setStatusTransfers(n) {
@@ -557,14 +642,22 @@ class App {
 
   async startSessionTunnels(pane) {
     const list = (pane.session?.tunnels || []).filter((t) => t.enabled !== false);
+    const ids = [];
     for (const t of list) {
       try {
-        await window.api.tunnels.start({ ...t, connId: pane.termId });
+        ids.push(await window.api.tunnels.start({ ...t, connId: pane.termId }));
       } catch (e) {
         toast(`Tunnel ${t.bindPort}: ${e.message}`, 'error');
       }
     }
-    if (list.length) toast(`${list.length} tunnel(s) started for ${pane.title}`, 'success');
+    if (!list.length) return;
+    // start() resolves even when the bind failed; report what actually came up
+    const all = await window.api.tunnels.list().catch(() => []);
+    const mine = all.filter((x) => ids.includes(x.id));
+    const failed = mine.filter((x) => x.status === 'error');
+    const ok = mine.length - failed.length;
+    if (failed.length) toast(`${failed.length} of ${mine.length} tunnel(s) failed for ${pane.title}: ${failed.map((x) => `${x.bindPort} (${x.error || 'error'})`).join('; ')}`, 'error', 7000);
+    if (ok) toast(`${ok} tunnel(s) started for ${pane.title}`, 'success');
   }
 
   // ---------- sessions / settings persistence ----------
@@ -600,7 +693,14 @@ class App {
 
   async saveSettings(patch, quiet = false) {
     this.settings = await window.api.settings.set(patch);
+    this._applyThemeVar();
     if (!quiet) this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
+  }
+
+  /** The active tab and the content area take the terminal theme's background. */
+  _applyThemeVar() {
+    const t = THEMES[this.settings.theme] || THEMES['moba-dark'];
+    document.documentElement.style.setProperty('--term-bg', t.background || '#1e1e1e');
   }
 
   // ---------- actions ----------
@@ -690,7 +790,7 @@ class App {
         if (f) toast(`Exported to ${f}`, 'success');
         return;
       }
-      case 'shortcuts': return shortcutsDialog();
+      case 'shortcuts': return shortcutsDialog(this);
       default:
         console.warn('unknown action', name);
     }

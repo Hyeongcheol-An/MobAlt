@@ -5,7 +5,7 @@
 set -euo pipefail
 [ $# -ge 2 ] || { echo "usage: $0 <script.js> <out-dir> [auto-quit-ms]"; exit 2; }
 SCRIPT="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
-OUT="$2"
+OUT="$(mkdir -p "$2" && cd "$2" && pwd)"   # the app needs absolute paths
 DELAY="${3:-60000}"
 APP_DIR="${MOBALT_APP_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 mkdir -p "$OUT/userdata" "$OUT/shots"

@@ -553,6 +553,14 @@ function registerIpc() {
 }
 
 // ---------- lifecycle ----------
+// A bug in a background path (e.g. a library throwing synchronously after a connection dropped) must not
+// take the whole app down with Electron's crash dialog: log it and tell the renderer.
+process.on('uncaughtException', (e) => {
+  console.error('uncaught exception:', e);
+  try {
+    if (win && !win.isDestroyed()) win.webContents.send('app:notice', { level: 'error', text: `Internal error: ${e.message}` });
+  } catch {}
+});
 nativeTheme.themeSource = 'dark';
 app.whenReady().then(() => {
   registerIpc();

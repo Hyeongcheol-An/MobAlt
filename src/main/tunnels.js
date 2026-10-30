@@ -88,7 +88,8 @@ class TunnelManager extends EventEmitter {
       });
       t.stopRemote = () => {
         info.remoteForwards.delete(t.bindPort);
-        client.unforwardIn(t.bindHost || '127.0.0.1', t.bindPort, () => {});
+        // The connection may already be gone (ssh2 then throws "Not connected" synchronously).
+        try { client.unforwardIn(t.bindHost || '127.0.0.1', t.bindPort, () => {}); } catch {}
       };
     } else if (t.type === 'dynamic') {
       await new Promise((resolve, reject) => {
@@ -226,7 +227,7 @@ class TunnelManager extends EventEmitter {
     if (!t) return;
     t.status = 'stopped';
     if (t.server) { try { t.server.close(); } catch {} }
-    if (t.stopRemote) t.stopRemote();
+    if (t.stopRemote) { try { t.stopRemote(); } catch {} }
     if (t.client) { try { t.client.end(); } catch {} }
     this.tunnels.delete(id);
     this._emit();
