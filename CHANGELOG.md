@@ -1,3 +1,9 @@
+## [0.5.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.4.1...v0.5.0) (2026-10-30)
+
+### Features
+
+* Shift+Enter sends ESC+CR for newline in TUIs (Claude Code) ([942f875](https://github.com/Hyeongcheol-An/mobaXterm/commit/942f875c5b6af314a6ba8afbd1ae4e03b2ea78ff))
+
 ## [0.4.1](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.4.0...v0.4.1) (2026-10-30)
 
 ### Bug Fixes
