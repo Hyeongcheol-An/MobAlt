@@ -47,7 +47,7 @@ function expandHome(p) {
 // Prompt hook injected into the remote shell when "follow terminal folder" is on.
 const FOLLOW_HOOK =
   `if [ -n "$ZSH_VERSION" ]; then __mobalt_cwd(){ printf '\\033]7;file://%s%s\\a' "$HOST" "$PWD"; }; precmd_functions+=(__mobalt_cwd); ` +
-  `elif [ -n "$BASH_VERSION" ]; then PROMPT_COMMAND="printf '\\033]7;file://%s%s\\a' \\"\\$HOSTNAME\\" \\"\\$PWD\\"\${PROMPT_COMMAND:+;$PROMPT_COMMAND}"; fi; clear`;
+  `elif [ -n "$BASH_VERSION" ]; then PROMPT_COMMAND="printf '\\033]7;file://%s%s\\a' \\"\\$HOSTNAME\\" \\"\\$PWD\\"\${PROMPT_COMMAND:+;$PROMPT_COMMAND}"; fi; clear -x 2>/dev/null || clear`;
 
 class SshManager {
   /**
