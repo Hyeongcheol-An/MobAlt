@@ -1,3 +1,18 @@
+## [0.10.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.9.1...v0.10.0) (2026-10-30)
+
+### Features
+
+* **a11y:** keyboard access for tabs, session tree, context menus, dialogs and toolbar ([813b7d6](https://github.com/Hyeongcheol-An/MobAlt/commit/813b7d6dfa33cc3891142d509058814832cdf328))
+* **logging:** optional plain-text session logs (logPlainText) ([c64430c](https://github.com/Hyeongcheol-An/MobAlt/commit/c64430cd760b41f2189fb4d7fa054fb30709f8e8))
+* **mosh:** SFTP browser through a companion SSH connection ([bf86305](https://github.com/Hyeongcheol-An/MobAlt/commit/bf863053497c342856aa382a7f2c6ae7bc23e2e8))
+* **tabs:** overflow arrows, edge fades and an "all tabs" menu for the tab strip ([00ba49a](https://github.com/Hyeongcheol-An/MobAlt/commit/00ba49a4ca4b22d0180f71cfa46bc5e746a7d9b9))
+
+### Bug Fixes
+
+* **ssh:** follow-cwd hook keeps the login banner in scrollback (clear -x) ([a554f3f](https://github.com/Hyeongcheol-An/MobAlt/commit/a554f3f1f61f9d199fc1567178e9b2065d1f74cf))
+* **theme:** panes keep their palette across split, grid, unsplit, move and WebGL fallback ([d884ddd](https://github.com/Hyeongcheol-An/MobAlt/commit/d884dddf85a7806170d74a09ab427965aecbe230))
+* **ui:** DNS lookup names missing records; FTP panel hides "Follow terminal folder" ([e12c5c3](https://github.com/Hyeongcheol-An/MobAlt/commit/e12c5c3f3e50256b0744728af530dc1c1fcc1326))
+
 ## [0.9.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.9.0...v0.9.1) (2026-10-30)
 
 ### Bug Fixes
