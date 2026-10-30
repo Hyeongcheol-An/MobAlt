@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('api', {
     screenshot: (name) => invoke('app:screenshot', name),
     testDrag: (from, to) => invoke('test:drag', { from, to }),
     testResize: (w, h) => invoke('test:resize', w, h),
+    testKey: (keyCode) => invoke('test:key', keyCode),
     checkUpdates: () => invoke('app:check-updates'),
   },
   term: {

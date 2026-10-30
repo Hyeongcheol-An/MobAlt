@@ -334,6 +334,19 @@ function registerIpc() {
     win.setSize(Math.max(400, w | 0), Math.max(300, h | 0));
     return win.getSize();
   });
+  // Test-only: one REAL (trusted) key press, so Chromium enters keyboard mode and draws :focus-visible
+  // rings on programmatic focus the way it does once a user has touched the keyboard. :focus only
+  // matches in the active window and macOS will not let a test steal activation, so the page is told
+  // to behave as focused (what headless browsers do) instead.
+  ipcMain.handle('test:key', async (_e, keyCode) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const dbg = win.webContents.debugger;
+    if (!dbg.isAttached()) dbg.attach('1.3');
+    await dbg.sendCommand('Emulation.setFocusEmulationEnabled', { enabled: true });
+    win.webContents.sendInputEvent({ type: 'keyDown', keyCode });
+    win.webContents.sendInputEvent({ type: 'keyUp', keyCode });
+    return true;
+  });
   ipcMain.handle('test:drag', async (_e, { from, to, steps = 8 }) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const dbg = win.webContents.debugger;
