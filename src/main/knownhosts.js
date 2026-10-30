@@ -36,19 +36,25 @@ function hashedMatch(entry, host) {
   return h.equals(hash);
 }
 
+/** The app's own known_hosts (OpenSSH format, so an external ssh can be pointed at it); never ~/.ssh/known_hosts. */
+function file() {
+  return userDataFile('known_hosts');
+}
+
 function files() {
-  return [path.join(os.homedir(), '.ssh', 'known_hosts'), userDataFile('known_hosts')];
+  return [path.join(os.homedir(), '.ssh', 'known_hosts'), file()];
 }
 
 /**
+ * @param list known_hosts files to consult (default: ~/.ssh/known_hosts read-only, then the app's own file)
  * @returns {'ok'|'mismatch'|'unknown'}
  */
-function check(host, port, keyBuf) {
+function check(host, port, keyBuf, list = files()) {
   const pat = hostPattern(host, port);
   const keyType = readKeyType(keyBuf);
   const keyB64 = keyBuf.toString('base64');
   let sawHost = false;
-  for (const f of files()) {
+  for (const f of list) {
     let text;
     try {
       text = fs.readFileSync(f, 'utf8');
@@ -94,4 +100,17 @@ function forget(host, port) {
   } catch {}
 }
 
-module.exports = { check, remember, forget, fingerprint, readKeyType };
+/**
+ * Make sure the app's own file holds this (already verified) key, so a tool that only reads that file —
+ * the ssh bootstrap of a Mosh session — trusts the host too. A key known only from ~/.ssh/known_hosts is
+ * copied; a stale entry of the same type in the app file is replaced. Returns true when the file changed.
+ */
+function ensure(host, port, keyBuf) {
+  const status = check(host, port, keyBuf, [file()]);
+  if (status === 'ok') return false;
+  if (status === 'mismatch') forget(host, port);
+  remember(host, port, keyBuf);
+  return true;
+}
+
+module.exports = { check, remember, forget, ensure, file, fingerprint, readKeyType };

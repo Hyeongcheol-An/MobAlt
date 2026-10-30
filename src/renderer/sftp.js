@@ -3,14 +3,47 @@ import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 
-/** Human-readable error text: strip Electron's IPC wrapper and translate bare SFTP status codes. */
-function errMsg(e) {
+/**
+ * Human-readable error text for toasts, the status bar and a pane's failure line: strips Electron's IPC
+ * wrapper, translates bare SFTP status codes and any raw FTP reply ("FTPError: 550 …") that reaches the
+ * renderer (the main process already explains most of them, see ftp.js explainFtpError).
+ */
+export function errMsg(e) {
   let m = (e && e.message) || String(e);
-  m = m.replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+  m = m.replace(/^Error invoking remote method '[^']+': (Error: )?/, '').replace(/^FTPError:\s*/, '');
   if (/^Failure$/i.test(m)) m = 'The server refused the operation (does the name already exist?)';
   else if (/^No such file$/i.test(m)) m = 'Path not found';
   else if (/^Permission denied$/i.test(m)) m = 'Permission denied';
+  else {
+    const f = /^(\d{3})[ -]?([\s\S]*)$/.exec(m.trim()); // FTP reply code that was not explained in main
+    if (f) {
+      const code = parseInt(f[1], 10), detail = f[2].trim().replace(/[.\s]+$/, '');
+      if (code === 530) m = 'Login failed (530): check the username/password';
+      else if (code >= 500 && code <= 504 && /\bAUTH\b/i.test(detail)) m = 'The server does not support FTPS (explicit TLS); untick FTPS';
+      else if ((code === 550 || code === 553) && /exist/i.test(detail)) m = `The name already exists on the server (${code} ${detail})`;
+      else if ((code === 550 || code === 553) && /no such|not found|failed to open|does not exist/i.test(detail)) m = `Path not found on the server (${code} ${detail})`;
+      else if ((code === 550 || code === 553) && /privilege|permission|denied|not allowed/i.test(detail)) m = `Permission denied on the server (${code} ${detail})`;
+      else if (code === 550 || code === 553) m = `The server refused the operation (${code} ${detail})`;
+      else if (code === 421) m = `The server closed the connection (421 ${detail})`;
+      else if (code >= 400) m = `Server error ${code}: ${detail}`;
+    }
+  }
   return m;
+}
+
+/** Overwrite / Skip existing / Cancel for an upload that would replace files (null = cancel the whole upload). */
+function overwriteDialog(what, dir) {
+  const m = showModal({
+    title: 'Overwrite?',
+    width: 'narrow',
+    body: h('div', {}, `${what} in ${dir}.`, h('div', { style: { marginTop: '6px', color: 'var(--fg-dim)' } }, 'Overwrite replaces the existing files; "Skip existing" uploads only the others.')),
+    buttons: [
+      { label: 'Cancel', value: null },
+      { label: 'Skip existing', value: 'skip' },
+      { label: 'Overwrite', primary: true, danger: true, value: 'overwrite' },
+    ],
+  });
+  return m.promise;
 }
 
 /** Connection id the panel binds to for a pane: SSH/FTP panes own one, a Mosh pane uses its SFTP companion. */
@@ -103,9 +136,16 @@ export class SftpPanel {
     if (!st) return;
     const s = st.pane.session || {};
     const defPort = s.type === 'ftp' ? 21 : 22;
-    this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`, s.type === 'mosh' ? ' · via SSH' : '');
+    // the "via SSH" marker of a Mosh companion sits before the host as a badge, so a long host name is
+    // what gets truncated, never the marker
+    this.els.conn.replaceChildren(...[h('b', {}, s.name || st.pane.title), ' ',
+      s.type === 'mosh' ? h('span', { class: 'sftp-via', title: 'Files are browsed over a separate SSH connection to this host' }, 'via SSH') : null,
+      `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`].filter(Boolean));
     this.els.follow.checked = st.follow;
-    this.els.follow.closest('label').hidden = st.pane.kind === 'ftp'; // FTP has no terminal to follow
+    const noTerminal = st.pane.kind === 'ftp';
+    this.els.follow.closest('label').hidden = noTerminal || st.pane.kind === 'mosh'; // FTP has no terminal to follow; Mosh reports no folder
+    const cdBtn = document.querySelector('[data-sftp="terminal-cd"]');
+    if (cdBtn) cdBtn.hidden = noTerminal; // nothing to cd in
     this.els.hidden.checked = st.hidden;
     if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
     else this.renderList();
@@ -333,7 +373,7 @@ export class SftpPanel {
       case 'download': return sel.length ? this.download(sel) : toast('Select files to download', 'warn');
       case 'delete': return sel.length ? this.remove(sel) : toast('Select files to delete', 'warn');
       case 'terminal-cd': {
-        if (st.pane) {
+        if (st.pane && st.pane.kind !== 'ftp') {
           st.pane.write(`cd ${shellQuote(st.path)}\r`);
           st.pane.focus();
         }
@@ -367,9 +407,10 @@ export class SftpPanel {
       let todo = paths;
       if (conflicts.length) {
         const what = conflicts.length === 1 ? `"${base(conflicts[0])}" already exists` : `${conflicts.length} items already exist`;
-        const ok = await confirmDialog(`${what} in ${dir}. Overwrite?`, { title: 'Overwrite?', okLabel: 'Overwrite', danger: true });
-        if (!ok) todo = paths.filter((p) => !names.has(base(p)));
-        if (!todo.length) return toast('Upload skipped', 'info');
+        const choice = await overwriteDialog(what, dir);
+        if (!choice) return toast('Upload cancelled', 'info');
+        if (choice === 'skip') todo = paths.filter((p) => !names.has(base(p)));
+        if (!todo.length) return toast('Nothing to upload: every item already exists', 'info');
       }
       const ids = await window.api.sftp.upload(connId, todo, dir);
       if (ids && ids.length) toast(`Uploading ${ids.length} item(s)`, 'info');
@@ -407,8 +448,20 @@ export class SftpPanel {
   async rename(e) {
     const n = await promptDialog('Rename', { value: e.name });
     if (!n || n === e.name) return;
+    const connId = this.connId, st = this.state();
+    if (!st || !connId) return;
+    if (/\//.test(n)) return toast('A name cannot contain "/"', 'warn');
     try {
-      await window.api.sftp.rename(this.connId, this.join(e.name), this.join(n));
+      // never silently replace another entry (FTP servers overwrite on RNTO): check a fresh listing first
+      const current = await window.api.sftp.list(connId, st.path).then((r) => r.entries, () => st.entries);
+      const taken = current.find((x) => x.name === n);
+      if (taken) {
+        const what = taken.type === 'd' ? 'folder' : 'file';
+        const ok = await confirmDialog(`A ${what} named "${n}" already exists here. Replace it with "${e.name}"?${taken.type === 'd' ? ' The server may refuse this.' : ''}`, { title: 'Replace?', okLabel: 'Replace', danger: true });
+        if (!ok) return;
+      }
+      if (this.connId !== connId) return;
+      await window.api.sftp.rename(connId, this.join(e.name), this.join(n));
       this.navigate(this.state().path);
     } catch (err) {
       toast(errMsg(err), 'error');
@@ -501,7 +554,7 @@ export class SftpPanel {
         { label: 'Rename…', action: () => this.rename(e) },
         { label: 'Permissions…', action: () => this.chmod(e) },
         { label: 'Copy Path', action: () => window.api.clipboard.write(this.join(e.name)) },
-        e.type === 'd' ? { label: 'cd Terminal Here', action: () => { st.pane.write(`cd ${shellQuote(this.join(e.name))}\r`); st.pane.focus(); } } : null,
+        e.type === 'd' && st.pane && st.pane.kind !== 'ftp' ? { label: 'cd Terminal Here', action: () => { st.pane.write(`cd ${shellQuote(this.join(e.name))}\r`); st.pane.focus(); } } : null,
         '-',
         { label: `Delete${sel.length > 1 ? ` (${sel.length})` : ''}`, danger: true, action: () => this.remove(sel.length ? sel : [e]) },
         '-'

@@ -391,10 +391,13 @@ class App {
     return pane;
   }
 
-  async quickConnect(str) {
+  /** Quick connect reuses a saved session only when type, host, port AND user name agree (an empty user on
+   *  both sides counts as agreement): "ftp://host" means anonymous, not the saved "demo@host". */
+  quickConnect(str) {
     const q = parseQuickConnect(str);
     if (!q) return toast('Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://', 'warn');
-    const existing = this.sessions.sessions.find((s) => s.type === q.type && s.host === q.host && (s.port || 22) === q.port && (!q.username || s.username === q.username));
+    const defPort = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 };
+    const existing = this.sessions.sessions.find((s) => s.type === q.type && s.host === q.host && (s.port || defPort[s.type] || 22) === q.port && (s.username || '') === (q.username || ''));
     $('#qc-input').value = '';
     return this.openSession(existing || { ...q, authMethod: 'auto', sftpAuto: true });
   }
@@ -410,8 +413,9 @@ class App {
       if (!(await confirmDialog(`Close "${pane.title}"? The connection will be dropped.`, { okLabel: 'Close', danger: true }))) return;
     }
     const tab = pane.tab;
+    const connId = pane.termId; // dispose() clears it: drop the panel state by the id it had
     pane.dispose();
-    this.sftpPanel.dropConnection(pane.termId);
+    this.sftpPanel.dropConnection(connId);
     if (tab) {
       const empty = this.workspace.removePane(tab, pane);
       if (empty) this.workspace.removeTab(tab);
@@ -430,8 +434,9 @@ class App {
       if (!(await confirmDialog(`Close tab "${tab.title}" with ${live.length} live connection(s)?`, { okLabel: 'Close', danger: true }))) return;
     }
     for (const p of panes) {
+      const connId = p.termId;
       p.dispose();
-      this.sftpPanel.dropConnection(p.termId);
+      this.sftpPanel.dropConnection(connId);
     }
     this.workspace.removeTab(tab);
     const ap = this.activePane();
@@ -534,8 +539,9 @@ class App {
     const next = new TermPane(this, { kind, session, cwd: session.cwd || undefined });
     const tab = pane.tab;
     this.workspace.replace(tab, pane, next);
+    const connId = pane.termId;
     pane.dispose();
-    this.sftpPanel.dropConnection(pane.termId);
+    this.sftpPanel.dropConnection(connId);
     if (this.focused === pane) this.focused = null;
     this.focusPane(next, true);
     next.updateTitle(); // the tab title follows the new session

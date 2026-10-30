@@ -36,10 +36,54 @@ function mtimeOf(info) {
   return isNaN(d) ? 0 : d.getTime();
 }
 
+/**
+ * Turn a basic-ftp / socket error into one the user can act on. Server replies arrive as
+ * FTPError("NNN text") with a numeric .code; socket and TLS errors carry a string code. Anything not
+ * recognised keeps its message. The result is an Error (numeric .code kept) so callers can rethrow it.
+ */
+function explainFtpError(e) {
+  const raw = ((e && e.message) || String(e)).trim().replace(/^FTPError:\s*/, '');
+  const m = /^(\d{3})[ -]?([\s\S]*)$/.exec(raw);
+  const code = m ? parseInt(m[1], 10) : null;
+  const detail = m ? m[2].trim().replace(/[.\s]+$/, '') : raw;
+  const scode = e && typeof e.code === 'string' ? e.code : '';
+  let msg = null;
+  if (code === 530) msg = 'Login failed (530): check the username/password';
+  else if (code === 332) msg = 'The server wants an account name (332) — not supported';
+  else if (code !== null && code >= 500 && code <= 504 && /\bAUTH\b/i.test(detail)) msg = 'The server does not support FTPS (explicit TLS); untick FTPS';
+  else if (code === 550 || code === 553 || code === 450 || code === 452 || code === 501) {
+    if (/exist/i.test(detail)) msg = `The name already exists on the server (${code} ${detail})`;
+    else if (/no such|not found|failed to open|cannot find|does not exist|not a directory|is a directory/i.test(detail)) msg = `Path not found on the server (${code} ${detail})`;
+    else if (/not empty/i.test(detail)) msg = `The folder is not empty (${code} ${detail})`;
+    else if (/privilege|permission|denied|not allowed|forbidden/i.test(detail)) msg = `Permission denied on the server (${code} ${detail})`;
+    else if (/space|quota/i.test(detail)) msg = `No space left on the server (${code} ${detail})`;
+    else if (code === 501) msg = `The server rejected the request (501 ${detail})`;
+    else msg = `The server refused the operation (${code} ${detail})`;
+  } else if (code === 421) msg = `The server closed the connection (421 ${detail})`;
+  else if (code === 425 || code === 426) msg = `Data connection failed (${code} ${detail}) — is passive mode blocked by a firewall?`;
+  else if (code !== null && code >= 400) msg = `Server error ${code}: ${detail}`;
+  else if (scode === 'ECONNREFUSED') msg = `Connection refused (${raw.replace(/^connect ECONNREFUSED\s*/, '')}) — the host is reachable but no FTP server listens on that port`;
+  else if (scode === 'ETIMEDOUT' || /timeout \((control|data) socket\)/i.test(raw)) msg = `Connection timed out (${raw}) — check the host/port, VPN or firewall`;
+  else if (scode === 'ENOTFOUND' || scode === 'EAI_AGAIN') msg = `Host not found (${raw.replace(/^getaddrinfo \w+\s*/, '')}) — check the host name`;
+  else if (scode === 'ECONNRESET' || scode === 'EPIPE') msg = `The server dropped the connection (${scode})`;
+  else if (/certificate|altname|self.signed|^CERT_|UNABLE_TO_VERIFY/i.test(raw + ' ' + scode)) msg = `TLS certificate not trusted (${raw}) — tick "Accept untrusted / self-signed certificate" in the session if you trust this server`;
+  if (!msg) return e instanceof Error ? e : new Error(raw);
+  const out = new Error(msg);
+  if (code !== null) out.code = code;
+  else if (scode) out.code = scode;
+  out.cause = e;
+  return out;
+}
+
 class FtpManager extends EventEmitter {
-  constructor(store) {
+  /**
+   * @param store Store (saved password on request)
+   * @param prompter {password(info)->Promise<{password,save}|null>} the app's password dialog
+   */
+  constructor(store, prompter) {
     super();
     this.store = store;
+    this.prompter = prompter;
     this.conns = new Map();
     this.transfers = new Map();
     this.edits = new Map();
@@ -64,13 +108,57 @@ class FtpManager extends EventEmitter {
   async _newClient(cfg) {
     const client = new Client(30000);
     client.ftp.verbose = false;
-    await client.access(this._accessOptions(cfg));
+    try {
+      await client.access(this._accessOptions(cfg));
+    } catch (e) {
+      try { client.close(); } catch {} // a refused login must not leave its control socket open
+      throw e;
+    }
     return client;
   }
 
+  /**
+   * Open the control connection. A session with a user name but no password asks for it with the app's
+   * password dialog (up to three tries on a 530; "save in session" stores it like SSH does); no user name
+   * means anonymous. Errors are rethrown with readable text (see explainFtpError).
+   */
   async connect(cfg) {
-    const client = await this._newClient(cfg);
-    const home = await client.pwd();
+    cfg = { ...cfg };
+    let prompted = null;
+    let client;
+    for (let attempt = 1; ; attempt++) {
+      if (cfg.username && !cfg.password) {
+        if (!this.prompter) throw new Error('No password set for this FTP session');
+        const ans = await this.prompter.password({
+          kind: 'password',
+          title: 'FTP password',
+          message: `${attempt > 1 ? 'Login failed. ' : ''}${cfg.username}@${cfg.host}'s FTP password${attempt > 1 ? ' (attempt ' + attempt + ')' : ''}`,
+          session: cfg,
+        });
+        if (!ans) throw new Error('authentication cancelled');
+        prompted = ans;
+        cfg.password = ans.password;
+      }
+      try {
+        client = await this._newClient(cfg);
+        break;
+      } catch (e) {
+        const err = explainFtpError(e);
+        if (prompted && err.code === 530 && attempt < 3) { // a typed password was wrong: ask again
+          cfg.password = '';
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (prompted && prompted.save && cfg.id) this.store.upsertSession({ ...cfg }).catch(() => {});
+    let home;
+    try {
+      home = await client.pwd();
+    } catch (e) {
+      try { client.close(); } catch {}
+      throw explainFtpError(e);
+    }
     const id = 'ftp_' + crypto.randomBytes(6).toString('hex');
     this.conns.set(id, { cfg, client, home, queue: Promise.resolve() });
     return { id, home, features: { tls: !!cfg.ftps } };
@@ -92,10 +180,12 @@ class FtpManager extends EventEmitter {
   _run(id, fn) {
     const c = this.conns.get(id);
     if (!c) return Promise.reject(new Error('FTP session is closed'));
-    const task = c.queue.then(async () => {
-      if (c.client.closed) c.client = await this._newClient(c.cfg);
-      return fn(c.client, c);
-    });
+    const task = c.queue
+      .then(async () => {
+        if (c.client.closed) c.client = await this._newClient(c.cfg);
+        return fn(c.client, c);
+      })
+      .catch((e) => { throw explainFtpError(e); });
     c.queue = task.catch(() => {});
     return task;
   }
@@ -205,6 +295,10 @@ class FtpManager extends EventEmitter {
 
   async _transferClient(t, cfg) {
     const client = await this._newClient(cfg);
+    if (t.cancelled) { // cancelled while the data client was still logging in
+      try { client.close(); } catch {}
+      throw new Error('cancelled');
+    }
     t.client = client;
     client.trackProgress((info) => {
       t.transferred = info.bytesOverall;
@@ -254,7 +348,7 @@ class FtpManager extends EventEmitter {
       .then(() => { t.status = 'done'; })
       .catch((e) => {
         t.status = t.cancelled ? 'cancelled' : 'error';
-        t.error = e.message;
+        t.error = t.cancelled ? 'cancelled' : explainFtpError(e).message;
       })
       .finally(() => {
         try { t.client && t.client.close(); } catch {}
@@ -286,6 +380,7 @@ class FtpManager extends EventEmitter {
         }
       } else {
         t.total = st.size;
+        if (t.cancelled) throw new Error('cancelled');
         fs.mkdirSync(path.dirname(local), { recursive: true });
         try {
           await client.downloadTo(local, remote);
@@ -298,7 +393,11 @@ class FtpManager extends EventEmitter {
     });
   }
 
-  /** Upload a local file or directory to a remote path. */
+  /**
+   * Upload a local file or directory to a remote path. Cancelling closes the data client, which leaves
+   * the file being written truncated on the server: that partial file is deleted over the control
+   * connection so a cancel never leaves half a file behind.
+   */
   upload(connId, local, remote) {
     const c = this.conns.get(connId);
     const t = this._newTransfer(connId, 'upload', path.basename(local), remote, local);
@@ -306,23 +405,34 @@ class FtpManager extends EventEmitter {
       if (!c) throw new Error('FTP session is closed');
       const st = fs.statSync(local);
       const client = await this._transferClient(t, c.cfg);
-      if (st.isDirectory()) {
-        const plan = this._walkLocal(local);
-        t.total = plan.total;
-        t.filesTotal = plan.files.length;
-        for (const d of plan.dirs) {
-          const rp = posixJoin(remote, path.relative(local, d).split(path.sep).join('/')).replace(/\/$/, '');
-          await client.send('MKD ' + rp).catch(() => {});
-        }
-        for (const f of plan.files) {
+      let current = null; // remote path of the file in flight
+      try {
+        if (st.isDirectory()) {
+          const plan = this._walkLocal(local);
+          t.total = plan.total;
+          t.filesTotal = plan.files.length;
+          for (const d of plan.dirs) {
+            const rp = posixJoin(remote, path.relative(local, d).split(path.sep).join('/')).replace(/\/$/, '');
+            await client.send('MKD ' + rp).catch(() => {});
+          }
+          for (const f of plan.files) {
+            if (t.cancelled) throw new Error('cancelled');
+            current = posixJoin(remote, path.relative(local, f.path).split(path.sep).join('/'));
+            await client.uploadFrom(f.path, current);
+            current = null;
+            t.filesDone++;
+          }
+        } else {
+          t.total = st.size;
           if (t.cancelled) throw new Error('cancelled');
-          await client.uploadFrom(f.path, posixJoin(remote, path.relative(local, f.path).split(path.sep).join('/')));
-          t.filesDone++;
+          current = remote;
+          await client.uploadFrom(local, remote);
+          current = null;
+          t.filesDone = 1;
         }
-      } else {
-        t.total = st.size;
-        await client.uploadFrom(local, remote);
-        t.filesDone = 1;
+      } catch (e) {
+        if (t.cancelled && current) await this.remove(connId, current, false).catch(() => {});
+        throw e;
       }
     });
   }
@@ -416,4 +526,4 @@ class FtpManager extends EventEmitter {
   }
 }
 
-module.exports = { FtpManager };
+module.exports = { FtpManager, explainFtpError };

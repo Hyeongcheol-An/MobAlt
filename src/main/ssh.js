@@ -91,11 +91,14 @@ class SshManager {
         return null;
       }
       let passphrase = savePassphrase ? cfg.passphrase || undefined : undefined;
+      const hadSaved = !!passphrase;
       let parsed = utils.parseKey(raw, passphrase);
       let tries = 0;
       while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
+        // only a retry (or a saved passphrase that no longer fits) is blamed on the passphrase
+        const why = tries ? 'Incorrect passphrase. ' : hadSaved ? 'The saved passphrase does not match. ' : '';
         tries++;
-        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `${tries ? 'Incorrect passphrase. ' : ''}Enter passphrase for key ${display}`, session: cfg });
+        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `${why}Enter passphrase for key ${display}`, session: cfg });
         if (!ans) return null;
         passphrase = ans.password;
         parsed = utils.parseKey(raw, passphrase);
@@ -245,7 +248,7 @@ class SshManager {
       if (status === 'ok') return cb(true);
       const fp = knownhosts.fingerprint(key);
       this.prompter
-        .hostKey({ host: cfg.host, port: cfg.port || 22, keyType: knownhosts.readKeyType(key), fingerprint: fp, status })
+        .hostKey({ host: cfg.host, port: cfg.port || 22, keyType: knownhosts.readKeyType(key), fingerprint: fp, status, name: cfg.name || '' })
         .then((ok) => {
           if (ok) {
             if (status === 'mismatch') knownhosts.forget(cfg.host, cfg.port || 22);
@@ -255,6 +258,59 @@ class SshManager {
         })
         .catch(() => cb(false));
     };
+  }
+
+  /** Extra (legacy) algorithms for ssh2 when the session asks for them. */
+  _algorithms(cfg) {
+    return cfg.legacyAlgorithms
+      ? { kex: { append: ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha1'] },
+          serverHostKey: { append: ['ssh-rsa', 'ssh-dss'] },
+          cipher: { append: ['aes128-cbc', 'aes256-cbc', '3des-cbc'] } }
+      : undefined;
+  }
+
+  /**
+   * Check cfg.host's key through the app's own known-hosts flow (same prompt as a connection) without
+   * authenticating: the handshake stops right after the key exchange. An accepted or already-known key is
+   * also written to the app's known_hosts file (OpenSSH format), so an external ssh — the bootstrap of a
+   * Mosh session — can run with StrictHostKeyChecking=yes against that file and ~/.ssh/known_hosts stays
+   * untouched. Resolves {ok: true} or {ok: false, error}; a cancelled prompt trusts nothing.
+   */
+  verifyHost(cfg) {
+    return new Promise((resolve) => {
+      const settings = this.store.getSettings();
+      const client = new Client();
+      let settled = false;
+      const finish = (ok, error) => {
+        if (settled) return;
+        settled = true;
+        try { client.end(); } catch {}
+        resolve(ok ? { ok: true } : { ok: false, error: error || 'host key check failed' });
+      };
+      const verifier = this._hostVerifier(cfg, {});
+      client.on('error', (e) => finish(false, this._explainError(e, {}, cfg)));
+      client.on('close', () => finish(false, 'connection closed during the host key check'));
+      client.on('ready', () => finish(true));
+      try {
+        client.connect({
+          host: cfg.host,
+          port: cfg.port || 22,
+          username: cfg.username || os.userInfo().username,
+          hostVerifier: (key, cb) => verifier(key, (ok) => {
+            if (ok) {
+              try { knownhosts.ensure(cfg.host, cfg.port || 22, key); } catch {}
+            }
+            cb(ok);
+            finish(ok, 'host key not accepted');
+          }),
+          authHandler: (_methods, _partial, cb) => cb(false), // never reached: the check ends with the key exchange
+          readyTimeout: settings.readyTimeout || 20000,
+          algorithms: this._algorithms(cfg),
+        });
+      } catch (e) {
+        finish(false, e.message);
+      }
+    });
   }
 
   /** Resolve a jump host spec (session id or user@host:port) to a session cfg. */
@@ -342,11 +398,7 @@ class SshManager {
         agentForward: !!cfg.agentForward && !!process.env.SSH_AUTH_SOCK,
         agent: cfg.agentForward ? process.env.SSH_AUTH_SOCK : undefined,
         tryKeyboard: true,
-        algorithms: cfg.legacyAlgorithms
-          ? { kex: { append: ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha1'] },
-              serverHostKey: { append: ['ssh-rsa', 'ssh-dss'] },
-              cipher: { append: ['aes128-cbc', 'aes256-cbc', '3des-cbc'] } }
-          : undefined,
+        algorithms: this._algorithms(cfg),
       };
       if (sock) connectCfg.sock = sock;
       try {

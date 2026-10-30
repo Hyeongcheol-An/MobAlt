@@ -135,6 +135,13 @@ class TerminalRegistry extends EventEmitter {
     return this.map.get(id);
   }
 
+  /** Number of registered backends of a kind ('ssh', 'mosh', 'sftp', 'local', …). */
+  countKind(kind) {
+    let n = 0;
+    for (const [, h] of this.map) if (h && h.kind === kind) n++;
+    return n;
+  }
+
   data(id, data) {
     const log = this.logs.get(id);
     if (log) {
@@ -274,16 +281,23 @@ function shQuote(s) {
 }
 
 /**
- * Mosh session: runs the mosh client in a pty. It bootstraps over ssh (host-key questions and password
- * prompts appear in the terminal), then switches to the UDP state-sync protocol.
+ * Mosh session: runs the mosh client in a pty. It bootstraps over ssh (password prompts appear in the
+ * terminal), then switches to the UDP state-sync protocol. The host key is NOT left to that ssh: the caller
+ * verifies it first through the app's own known-hosts flow (SshManager.verifyHost) and passes the app's
+ * known_hosts file, which the bootstrap uses with StrictHostKeyChecking=yes — nothing is accepted blindly
+ * and ~/.ssh/known_hosts is never written. The option value is double-quoted for ssh's own parser (the
+ * user-data folder may contain spaces: "Application Support") and single-quoted for mosh's shellwords.
  */
-function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, username, privateKeyPath, moshServer, moshPredict } = {}) {
+function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, username, privateKeyPath, moshServer, moshPredict, knownHostsFile } = {}) {
   const pty = require('node-pty');
   const bin = findMosh();
   if (!bin) throw new Error('mosh client not found — install it with "brew install mosh"');
   if (!host) throw new Error('host is required');
   const keyFile = privateKeyPath ? privateKeyPath.replace(/^~(?=\/|$)/, os.homedir()) : '';
-  const sshCmd = ['ssh', '-p', String(port || 22), '-o', 'StrictHostKeyChecking=accept-new', ...(keyFile ? ['-i', shQuote(keyFile)] : [])].join(' ');
+  const hostKeyOpts = knownHostsFile
+    ? ['-o', 'StrictHostKeyChecking=yes', '-o', shQuote(`UserKnownHostsFile="${String(knownHostsFile).replace(/"/g, '')}"`)]
+    : ['-o', 'StrictHostKeyChecking=yes']; // no app file given: only keys ssh itself already knows
+  const sshCmd = ['ssh', '-p', String(port || 22), ...hostKeyOpts, ...(keyFile ? ['-i', shQuote(keyFile)] : [])].join(' ');
   const args = [`--ssh=${sshCmd}`];
   if (moshServer) args.push(`--server=${moshServer}`);
   if (moshPredict && moshPredict !== 'adaptive') args.push(`--predict=${moshPredict}`);

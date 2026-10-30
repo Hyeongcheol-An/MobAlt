@@ -4,8 +4,8 @@
 //   test/start-sshd.sh start
 //   sed 's#__MOSH_SERVER__#/opt/homebrew/bin/mosh-server#' test/e2e-mosh-sftp.js > /tmp/e2e-mosh-sftp.js
 //   test/qa/run.sh /tmp/e2e-mosh-sftp.js <out-dir> 120000
-// The mosh bootstrap (ssh -o StrictHostKeyChecking=accept-new) may add [127.0.0.1]:2222 to ~/.ssh/known_hosts;
-// remove it afterwards with `ssh-keygen -R '[127.0.0.1]:2222'` so e2e-ssh.js still gets its host-key prompt.
+// The host key is verified once, by the app's own prompt, before the mosh client is spawned; the SFTP companion
+// then finds it in the app's known_hosts and asks nothing. ~/.ssh/known_hosts is never written.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -36,13 +36,11 @@
     }
     return false;
   };
-  /** The companion prompts for the host key only when the test sshd's key is unknown to the app. */
-  const acceptHostKey = async () => {
-    const btn = await waitFor(() => document.querySelector('.modal .btn.primary'), 2500, 'host key').catch(() => null);
-    if (btn) {
-      results.hostKeyPrompt = true;
-      btn.click();
-    }
+  /** Accept the host-key prompt if it shows up within a moment; returns whether it did. */
+  const acceptHostKey = async (ms = 2500) => {
+    const btn = await waitFor(() => document.querySelector('.modal .btn.primary'), ms, 'host key').catch(() => null);
+    if (btn) btn.click();
+    return !!btn;
   };
   const panelActive = () => document.getElementById('panel-sftp').classList.contains('active');
   try {
@@ -53,7 +51,9 @@
 
     // 1. on-demand companion: the session does not open SFTP automatically
     const s1 = await app.saveSession({ ...base, name: 'test mosh sftp', sftpAuto: false, startupCommand: 'echo MOSH_STARTUP_$((40+2))' });
-    const pane = await app.openSession(s1);
+    const pr = app.openSession(s1);
+    results.hostKeyPrompt = await acceptHostKey(10000); // the bootstrap's check: the only prompt of this run
+    const pane = await pr;
     await waitFor(() => pane.status === 'connected', 8000, 'mosh spawned');
     await waitFor(() => /MOSH_STARTUP_42/.test(text(pane)), 20000, 'remote shell + startup command');
     results.moshShell = true;
@@ -63,7 +63,7 @@
     results.emptyStateButton = !!btn && /Open SFTP for this host \(via SSH\)/.test(btn.textContent);
     await shot('50-mosh-sftp-empty');
     btn.click();
-    await acceptHostKey();
+    results.companionNoPrompt = !(await acceptHostKey(1500)); // the key is already in the app's known_hosts
     await waitFor(() => pane.sftpStatus === 'connected' && pane.sftpConnId, 15000, 'companion connected');
     const cid = pane.sftpConnId;
     results.companionConnected = true;
@@ -74,6 +74,8 @@
     results.status = document.getElementById('st-session').textContent;
     results.statusHint = /SFTP: connected/.test(results.status);
     results.connHeader = /via SSH/.test(document.getElementById('sftp-conn').textContent);
+    results.viaBadgeBeforeHost = !!document.querySelector('#sftp-conn .sftp-via') && document.getElementById('sftp-conn').textContent.indexOf('via SSH') < document.getElementById('sftp-conn').textContent.indexOf('127.0.0.1');
+    results.followHiddenForMosh = document.getElementById('sftp-follow').closest('label').hidden === true;
     log('home listing:', st.path, st.entries.length, 'entries');
 
     // 2. file operations through the companion id (what the panel's toolbar/menus call)
@@ -101,7 +103,7 @@
     const s2 = await app.saveSession({ ...base, name: 'test mosh auto' });
     app.showPanel('sessions');
     const pane2 = await app.openSession(s2);
-    await acceptHostKey();
+    results.autoNoPrompt = !(await acceptHostKey(1500));
     await waitFor(() => pane2.sftpStatus === 'connected' && pane2.sftpConnId, 15000, 'auto companion connected');
     const cid2 = pane2.sftpConnId;
     results.autoCompanion = true;

@@ -14,6 +14,8 @@ const { TunnelManager } = require('./tunnels');
 const importers = require('./importers');
 const tools = require('./tools');
 const x11 = require('./x11');
+const knownhosts = require('./knownhosts');
+const { liveConnections, quitQuestion } = require('./live');
 
 const pkg = require('../../package.json');
 app.setName('MobAlt');
@@ -21,7 +23,28 @@ if (process.env.MOBALT_USER_DATA) app.setPath('userData', process.env.MOBALT_USE
 const store = new Store();
 const registry = new TerminalRegistry();
 let win = null;
-let quitting = false;
+let quitting = false; // a quit is under way (confirmed, test hook or update install): no more questions, tear down
+
+/**
+ * Ask before the app goes away with live connections (SSH / Mosh / SFTP companions / FTP). Shared by the
+ * window's close button and ⌘Q (app.quit → before-quit). Returns true when quitting may proceed. No
+ * dialog when the setting is off, during a confirmed quit, or in the headless test runs (their scripts
+ * must quit unattended).
+ */
+function confirmQuit() {
+  if (quitting) return true;
+  if (process.env.MOBALT_TEST_SCRIPT || process.env.MOBALT_SCREENSHOT) return true;
+  const live = liveConnections(registry, ftp);
+  if (!live.total || !store.getSettings().confirmClose) return true;
+  const r = dialog.showMessageBoxSync(win && !win.isDestroyed() ? win : undefined, {
+    type: 'question',
+    buttons: ['Quit', 'Cancel'],
+    defaultId: 1,
+    cancelId: 1,
+    message: quitQuestion(live),
+  });
+  return r === 0;
+}
 
 // ---------- renderer prompts (host key / password / keyboard-interactive) ----------
 const pendingPrompts = new Map();
@@ -54,7 +77,7 @@ const prompter = {
 
 const ssh = new SshManager(registry, store, prompter);
 const sftp = new SftpManager(ssh, store);
-const ftp = new FtpManager(store);
+const ftp = new FtpManager(store, prompter);
 let updater = null;
 const tunnels = new TunnelManager(ssh, store);
 
@@ -122,21 +145,11 @@ function createWindow() {
   win.on('move', debounce(saveBounds, 500));
   win.on('close', (e) => {
     if (quitting) return;
-    const active = ssh.conns.size;
-    if (active > 0 && store.getSettings().confirmClose) {
-      const r = dialog.showMessageBoxSync(win, {
-        type: 'question',
-        buttons: ['Quit', 'Cancel'],
-        defaultId: 1,
-        cancelId: 1,
-        message: `${active} SSH session${active > 1 ? 's are' : ' is'} still connected. Quit anyway?`,
-      });
-      if (r === 1) {
-        e.preventDefault();
-        return;
-      }
+    if (!confirmQuit()) {
+      e.preventDefault();
+      return;
     }
-    quitting = true;
+    quitting = true; // closing the only window quits the app (window-all-closed): no second question
   });
   win.on('closed', () => (win = null));
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -380,6 +393,13 @@ function registerIpc() {
       await send('Input.setInterceptDrags', { enabled: false }).catch(() => {});
     }
   });
+  // Test-only: what the quit confirmation would do right now, without showing the native dialog.
+  ipcMain.handle('test:quit-check', () => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const live = liveConnections(registry, ftp);
+    const wouldAsk = !quitting && live.total > 0 && !!store.getSettings().confirmClose;
+    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live) : null };
+  });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
@@ -393,7 +413,13 @@ function registerIpc() {
   ipcMain.handle('term:spawn-local', (_e, opts) => spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
   ipcMain.handle('term:spawn-telnet', (_e, opts) => spawnTelnet(registry, { ...opts, ...sizeOf(opts) }));
   ipcMain.handle('term:spawn-serial', (_e, opts) => spawnSerial(registry, opts));
-  ipcMain.handle('term:spawn-mosh', (_e, opts) => spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
+  // Mosh bootstraps over an external ssh: the host key goes through the app's own prompt first and the
+  // bootstrap then runs strictly against the app's known_hosts file (never ~/.ssh/known_hosts).
+  ipcMain.handle('term:spawn-mosh', async (_e, opts) => {
+    const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms });
+    if (!v.ok) throw new Error(v.error || 'host key not accepted');
+    return spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() });
+  });
   ipcMain.handle('ftp:connect', async (_e, cfg) => ftp.connect(await mergeSecrets(cfg)));
   ipcMain.handle('ftp:disconnect', (_e, id) => ftp.disconnect(id));
   ipcMain.handle('app:check-updates', () => updater && updater.check(true));
@@ -581,12 +607,18 @@ app.whenReady().then(() => {
   registerIpc();
   buildMenu();
   createWindow();
-  updater = setupUpdater(store, () => win);
+  updater = setupUpdater(store, () => win, { beforeInstall: () => { quitting = true; } }); // "Restart now" never asks again
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
-app.on('before-quit', () => {
+// ⌘Q / app.quit(): the question is asked here (the window's close handler sees `quitting` already set and
+// stays silent); declining cancels the quit and keeps every connection.
+app.on('before-quit', (e) => {
+  if (!quitting && !confirmQuit()) {
+    e.preventDefault();
+    return;
+  }
   quitting = true;
   tunnels.stopAll();
   ssh.disconnectAll();
