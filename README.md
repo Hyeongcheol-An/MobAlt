@@ -61,6 +61,7 @@ npm start            # 앱 실행
 npm test             # 단위 테스트 (importers, known_hosts, x11)
 npm run pack         # dist/mac-arm64/MobAlt.app 생성 (서명 없음)
 npm run dist         # DMG/zip 생성
+npm run install:local  # 최신 코드로 arm64 빌드 후 /Applications/MobAlt.app 설치
 ```
 
 > VS Code 통합 터미널처럼 `ELECTRON_RUN_AS_NODE=1`이 설정된 셸에서는 `env -u ELECTRON_RUN_AS_NODE npm start`로 실행하세요.

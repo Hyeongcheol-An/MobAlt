@@ -16,7 +16,8 @@
     "test:sshd": "node test/start-sshd.js",
     "test": "node --test \"test/unit/**/*.test.js\"",
     "release": "semantic-release",
-    "icon": "python3 scripts/make-icon.py"
+    "icon": "python3 scripts/make-icon.py",
+    "install:local": "bash scripts/install-local.sh"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
