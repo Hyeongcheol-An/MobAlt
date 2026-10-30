@@ -133,6 +133,7 @@ test/start-sshd.sh stop
 - `~/.zprofile` 등에서 `export DISPLAY=:0`처럼 DISPLAY를 고정하면 원격 셸의 X11 DISPLAY가 덮어써집니다. X11 포워딩이 안 되면 원격 쪽 rc 파일을 확인하세요.
 - MobaXterm.ini 형식은 비공개라 호스트/포트/사용자/폴더/X11 플래그만 가져오며 비밀번호는 가져오지 않습니다. `.ppk` 키는 `puttygen`으로 OpenSSH 형식으로 변환해야 합니다.
 - Mosh, FTP는 아직 없습니다.
+- 접속이 "Timed out while waiting for handshake" / ETIMEDOUT으로 실패하면 먼저 로컬 터미널에서 `nc -vz <host> <port>`로 TCP 도달 여부를 확인하세요. 직전에 인증 실패가 있었다면 서버의 fail2ban·sshd PerSourcePenalties가 내 IP를 일시 차단했을 수 있습니다(서버에서 `sudo fail2ban-client status sshd`, `unbanip <내 IP>`). 자동 인증 모드는 비밀번호가 저장된 세션에서는 ssh-agent 키를 시도하지 않아 실패 횟수를 줄입니다.
 
 ## 라이선스
 

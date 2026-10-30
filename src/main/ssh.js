@@ -99,7 +99,9 @@ class SshManager {
     if ((method === 'password' || method === 'auto') && cfg.password) {
       steps.push({ type: 'password', label: 'saved password', run: async () => ({ type: 'password', username, password: cfg.password }) });
     }
-    if ((method === 'agent' || method === 'auto') && process.env.SSH_AUTH_SOCK) {
+    // Agent keys: every key in the agent counts as a failed attempt on the server (MaxAuthTries,
+    // fail2ban), so in "auto" mode they are only tried when no password is saved for the session.
+    if ((method === 'agent' || (method === 'auto' && !cfg.password)) && process.env.SSH_AUTH_SOCK) {
       steps.push({ type: 'agent', label: 'ssh-agent keys', run: async () => ({ type: 'agent', username, agent: process.env.SSH_AUTH_SOCK }) });
     }
     let kbdUsedSaved = false;
