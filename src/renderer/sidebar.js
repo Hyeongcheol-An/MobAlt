@@ -218,7 +218,8 @@ export class SessionTree {
       { label: 'New Session Here…', action: () => this.app.editSession({ folder: f.path, type: 'ssh' }) },
       { label: 'New Subfolder…', action: () => this.newFolder(f.path) },
       { label: 'Rename Folder…', action: () => this.renameFolder(f) },
-      { label: 'Connect All Sessions', action: () => this.connectAll(f) },
+      { label: 'Open All in Grid (2 columns)', action: () => this.app.openSessionsInGrid(this.collectSessions(f)) },
+      { label: 'Connect All Sessions (tabs)', action: () => this.connectAll(f) },
       '-',
       { label: 'Delete Folder', danger: true, action: () => this.deleteFolder(f) },
     ]);
@@ -282,11 +283,15 @@ export class SessionTree {
     await this.app.saveAllSessions({ sessions, folders });
   }
 
-  connectAll(f) {
+  collectSessions(f) {
     const all = [];
     const walk = (n) => { all.push(...n.sessions); n.children.forEach(walk); };
     walk(f);
-    for (const s of all) this.app.openSession(s);
+    return all;
+  }
+
+  connectAll(f) {
+    for (const s of this.collectSessions(f)) this.app.openSession(s);
   }
 
   async moveDialog(s) {

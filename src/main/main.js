@@ -242,6 +242,17 @@ function buildMenu() {
         { type: 'separator' },
         { label: 'Split Right', accelerator: 'Cmd+D', click: () => sendAction('split', 'right') },
         { label: 'Split Down', accelerator: 'Cmd+Shift+D', click: () => sendAction('split', 'down') },
+        {
+          label: 'Grid Layout',
+          submenu: [
+            { label: '1 × 2 (2 side by side)', accelerator: 'Cmd+Alt+2', click: () => sendAction('layout', '2x1') },
+            { label: '2 × 1 (2 stacked)', click: () => sendAction('layout', '1x2') },
+            { label: '2 × 2 (4 panes)', accelerator: 'Cmd+Alt+4', click: () => sendAction('layout', '2x2') },
+            { label: '2 × 3 (6 panes)', accelerator: 'Cmd+Alt+6', click: () => sendAction('layout', '2x3') },
+            { label: '2 × 4 (8 panes)', accelerator: 'Cmd+Alt+8', click: () => sendAction('layout', '2x4') },
+          ],
+        },
+        { label: 'Unsplit (keep active pane)', accelerator: 'Cmd+Alt+1', click: () => sendAction('unsplit') },
         { label: 'Close Pane', accelerator: 'Cmd+Shift+W', click: () => sendAction('close-pane') },
         { label: 'Focus Next Pane', accelerator: 'Cmd+]', click: () => sendAction('next-pane') },
         { type: 'separator' },

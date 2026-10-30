@@ -1,5 +1,5 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen } from './ui.js';
+import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, contextMenu } from './ui.js';
 import { TermPane } from './terminal.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
@@ -265,6 +265,72 @@ class App {
     this.updateMultiexec();
   }
 
+  /** Arrange the active tab as a cols×rows grid ("2x4" = 2 per row, 4 rows = 8 panes), like MobaXterm's split modes. */
+  async applyLayout(spec) {
+    const m = /^(\d)x(\d)$/.exec(String(spec));
+    if (!m) return;
+    const cols = parseInt(m[1], 10), rows = parseInt(m[2], 10);
+    let tab = this.workspace.active;
+    if (!tab) {
+      await this.newLocalTab();
+      tab = this.workspace.active;
+    }
+    const from = this.activePane();
+    const created = this.workspace.applyGrid(tab, cols, rows, () => new TermPane(this, { kind: 'empty', from }));
+    for (const p of created) await p.start();
+    const ap = tab.activePane || tab.panes()[0];
+    if (ap) this.focusPane(ap, true);
+    this.updateMultiexec();
+    if (created.length) toast(`${created.length} empty pane(s) added — drag sessions onto them`, 'info');
+  }
+
+  /** Open several sessions at once in a new tab laid out as a 2-column grid. */
+  async openSessionsInGrid(sessions, cols = 2) {
+    const list = sessions.filter((s) => s && s.type !== 'rdp' && s.type !== 'vnc');
+    if (!list.length) return;
+    const first = await this.openSession(list[0]);
+    const tab = first.tab;
+    tab.title = `${list.length} sessions`;
+    tab.autoTitle = false;
+    this.workspace.updateTab(tab);
+    const empties = this.workspace.applyGrid(tab, cols, Math.ceil(list.length / cols), () => new TermPane(this, { kind: 'empty' }));
+    for (let i = 0; i < empties.length; i++) {
+      if (list[i + 1]) await this.replacePane(empties[i], list[i + 1], true);
+      else await empties[i].start();
+    }
+    this.focusPane(first, true);
+  }
+
+  /** Close every other pane in the active tab. */
+  async unsplit() {
+    const ap = this.activePane();
+    if (!ap || !ap.tab) return;
+    const others = ap.tab.panes().filter((p) => p !== ap);
+    const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead);
+    if (live.length && this.settings.confirmClose && !(await confirmDialog(`Close ${others.length} other pane(s)? ${live.length} live connection(s) will be dropped.`, { okLabel: 'Close panes' }))) return;
+    for (const p of others) await this.closePane(p, true);
+    this.focusPane(ap, true);
+  }
+
+  splitMenu(anchor) {
+    const r = anchor.getBoundingClientRect();
+    const ap = this.activePane();
+    const n = ap && ap.tab ? ap.tab.panes().length : 0;
+    contextMenu(r.left, r.bottom + 4, [
+      { label: 'Split Right (side by side)', key: '⌘D', action: () => this.action('split', 'right') },
+      { label: 'Split Down (top / bottom)', key: '⇧⌘D', action: () => this.action('split', 'down') },
+      '-',
+      { label: 'Layout 1 × 2  (2 side by side)', action: () => this.applyLayout('2x1') },
+      { label: 'Layout 2 × 1  (2 stacked)', action: () => this.applyLayout('1x2') },
+      { label: 'Layout 2 × 2  (4 panes)', action: () => this.applyLayout('2x2') },
+      { label: 'Layout 2 × 3  (6 panes)', action: () => this.applyLayout('2x3') },
+      { label: 'Layout 2 × 4  (8 panes)', action: () => this.applyLayout('2x4') },
+      '-',
+      { label: 'Re-arrange current panes as grid', action: () => this.applyLayout(`2x${Math.max(1, Math.ceil(n / 2))}`), disabled: n < 2 },
+      { label: 'Unsplit (keep active pane)', action: () => this.unsplit(), disabled: n < 2 },
+    ]);
+  }
+
   /** Fill an empty pane with a copy of another pane's session (or a local shell). */
   async duplicateInto(pane, from) {
     if (!from || from.kind === 'empty' || from.kind === 'local') return pane.becomeLocal(from && from.cwd);
@@ -445,6 +511,9 @@ class App {
       case 'close': return ap ? (ap.tab.panes().length > 1 ? this.closePane(ap) : this.closeTab(ap.tab)) : null;
       case 'close-pane': return ap && this.closePane(ap);
       case 'split': return this.splitActive(arg || 'right', pane);
+      case 'split-menu': return this.splitMenu($('#btn-split'));
+      case 'layout': return this.applyLayout(arg);
+      case 'unsplit': return this.unsplit();
       case 'next-pane': {
         if (!ap || !ap.tab) return;
         const panes = ap.tab.panes();

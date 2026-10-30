@@ -135,6 +135,21 @@
     await sleep(800);
     results.tabMoved = app.workspace.tabs.length === 2 && app.workspace.active.panes().length === 4;
     await sleep(700);
+    // 7. grid layouts: 2x4 adds empty panes up to 8, then unsplit back to 1
+    await app.applyLayout('2x4');
+    await sleep(800);
+    const grid = app.workspace.active.panes();
+    results.grid8 = grid.length === 8 && grid.filter((p) => p.kind === 'empty').length === 4 && !!app.workspace.active.root && app.workspace.active.root.dir === 'v';
+    await shot('08-grid-2x4');
+    app.settings.confirmClose = false; // unsplit would otherwise ask before dropping live panes
+    await app.unsplit();
+    await sleep(500);
+    results.unsplit = app.workspace.active.panes().length === 1;
+    // 8. open a folder's sessions in a grid (Test folder has 2 sessions + bad ones? only s1,s2 saved in Test/*)
+    await app.openSessionsInGrid(app.sessions.sessions.filter((x) => (x.folder || '').startsWith('Test')));
+    await waitFor(() => app.workspace.active.panes().every((p) => p.status === 'connected'), 20000, 'grid sessions connected');
+    results.folderGrid = app.workspace.active.panes().length;
+    await shot('09-folder-grid');
     await shot('07-local-split');
     results.tabs = app.workspace.tabs.map((t) => `${t.title}[${t.panes().length}]`);
     log('RESULTS ' + JSON.stringify(results));

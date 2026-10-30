@@ -244,6 +244,31 @@ export class Workspace {
     return false;
   }
 
+  /**
+   * Arrange the tab's panes into a cols×rows grid (row-major), creating empty panes for the
+   * missing cells with `makeEmpty()`. Extra panes beyond cols×rows add rows. Returns the new panes.
+   */
+  applyGrid(tab, cols, rows, makeEmpty) {
+    const existing = tab.panes();
+    const total = Math.max(cols * rows, existing.length);
+    rows = Math.ceil(total / cols);
+    const cells = [...existing];
+    const created = [];
+    while (cells.length < cols * rows) {
+      const p = makeEmpty();
+      p.tab = tab;
+      cells.push(p);
+      created.push(p);
+    }
+    const chain = (items, dir) => (items.length === 1 ? items[0] : { type: 'split', dir, children: [items[0], chain(items.slice(1), dir)], ratio: 1 / items.length });
+    const rowNodes = [];
+    for (let r = 0; r < rows; r++) rowNodes.push(chain(cells.slice(r * cols, (r + 1) * cols).map((p) => ({ type: 'pane', pane: p })), 'h'));
+    tab.root = chain(rowNodes, 'v');
+    if (!tab.activePane || !cells.includes(tab.activePane)) tab.activePane = cells[0];
+    this.render(tab);
+    return created;
+  }
+
   /** Move a live pane from its tab next to `targetPane` in another tab (drag a tab onto a pane). */
   movePane(pane, targetPane, dir) {
     const srcTab = pane.tab, dstTab = targetPane.tab;
