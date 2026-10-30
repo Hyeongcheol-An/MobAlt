@@ -5,9 +5,11 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-// Outside Electron (unit tests) require('electron') yields the binary path string.
-const electron = require('electron');
-const { app, safeStorage } = typeof electron === 'object' ? electron : {};
+// Outside Electron (unit tests) require('electron') yields the binary path string, or throws when the
+// Electron binary is not installed (CI runners without the download); neither is needed there.
+let electron = null;
+try { electron = require('electron'); } catch { electron = null; }
+const { app, safeStorage } = electron && typeof electron === 'object' ? electron : {};
 
 const SECRET_FIELDS = ['password', 'passphrase', 'jumpPassword'];
 
