@@ -1,3 +1,9 @@
+## [0.6.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.5.0...v0.6.0) (2026-10-30)
+
+### Features
+
+* workspace restore, per-session icons/colours, folder drag-move ([df3aaa7](https://github.com/Hyeongcheol-An/mobaXterm/commit/df3aaa7df2a6f2334fbac75ebe3b2ea3d4ff7411))
+
 ## [0.5.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.4.1...v0.5.0) (2026-10-30)
 
 ### Features
