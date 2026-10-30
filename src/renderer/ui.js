@@ -51,6 +51,47 @@ export function fmtDuration(ms) {
   return `${m}m ${s % 60}s`;
 }
 
+// ---------- monochrome UI icons (16px inline SVG, currentColor) ----------
+// Toolbar, side strip and panel buttons share this set so the chrome never mixes emoji with text glyphs.
+// Each entry is a path `d` (24×24 grid, stroked) or, when it starts with '<', raw inner SVG markup.
+const gearTicks = [0, 45, 90, 135, 180, 225, 270, 315].map((deg) => {
+  const a = (deg * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
+  return `M${(12 + 6.2 * c).toFixed(2)} ${(12 + 6.2 * s).toFixed(2)}L${(12 + 9.6 * c).toFixed(2)} ${(12 + 9.6 * s).toFixed(2)}`;
+}).join('');
+const ICONS = {
+  plus: 'M12 5v14M5 12h14',
+  terminal: 'm4 17 6-6-6-6M12 19h8',
+  tunnel: 'M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4',
+  multiexec: 'M5 3v5a7 7 0 0 0 14 0V3M12 3v18',
+  split: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/>',
+  tools: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+  settings: `<circle cx="12" cy="12" r="6.2"/><circle cx="12" cy="12" r="2.2"/><path stroke-width="2.6" d="${gearTicks}"/>`,
+  'chevron-left': 'm15 6-6 6 6 6',
+  'chevron-right': 'm9 6 6 6-6 6',
+  'chevron-up': 'm6 15 6-6 6 6',
+  'chevron-down': 'm6 9 6 6 6-6',
+  x: 'M18 6 6 18M6 6l12 12',
+  'arrow-up': 'M12 19V5M5 12l7-7 7 7',
+  home: 'M3 11l9-8 9 8M5 10v10h14V10M10 20v-6h4v6',
+  refresh: 'M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8M21 3v5h-5',
+  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  'folder-plus': 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM12 10v6M9 13h6',
+  upload: 'M12 16V4M6 10l6-6 6 6M4 20h16',
+  download: 'M12 4v12M6 10l6 6 6-6M4 20h16',
+  trash: 'M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6',
+};
+/** An inline SVG icon element (class "i"); unknown names render an empty 16px box rather than throwing. */
+export function icon(name) {
+  const d = ICONS[name] || '';
+  const t = document.createElement('template');
+  t.innerHTML = `<svg class="i" viewBox="0 0 24 24" aria-hidden="true" data-name="${name}">${d.startsWith('<') ? d : `<path d="${d}"/>`}</svg>`;
+  return t.content.firstElementChild;
+}
+/** Fill every `[data-icon]` element under root with its icon (static markup in index.html). */
+export function applyIcons(root = document) {
+  for (const el of root.querySelectorAll('[data-icon]')) el.replaceChildren(icon(el.dataset.icon));
+}
+
 export const TYPE_ICON = { ssh: '●', local: '●', telnet: '●', rdp: '●', vnc: '●', serial: '●' };
 export const TYPE_LABEL = { ssh: 'SSH', mosh: 'Mosh', local: 'Local', telnet: 'Telnet', serial: 'Serial', ftp: 'FTP', rdp: 'RDP', vnc: 'VNC' };
 
@@ -189,7 +230,7 @@ export function confirmDialog(message, { title = 'Confirm', okLabel = 'OK', dang
 }
 
 export function promptDialog(title, { label = '', value = '', password = false, checkbox = null, okLabel = 'OK', placeholder = '' } = {}) {
-  const input = h('input', { type: password ? 'password' : 'text', value, placeholder, spellcheck: false, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' } });
+  const input = h('input', { type: password ? 'password' : 'text', value, placeholder, spellcheck: false, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
   const cb = checkbox ? h('input', { type: 'checkbox', checked: !!checkbox.checked }) : null;
   const m = showModal({
     title,

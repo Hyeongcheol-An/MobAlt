@@ -1,5 +1,5 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, contextMenu } from './ui.js';
+import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, contextMenu, icon, applyIcons } from './ui.js';
 import { TermPane, THEMES } from './terminal.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
@@ -25,6 +25,7 @@ class App {
   }
 
   async init() {
+    applyIcons(); // static toolbar / panel buttons carry data-icon hooks
     [this.settings, this.sessions, this.info] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info()]);
     this._applyThemeVar();
     document.documentElement.style.setProperty('--sidebar-w', (this.settings.sidebarWidth || 280) + 'px');
@@ -287,12 +288,12 @@ class App {
     this.workspace.allPanes().forEach((p) => p.fit());
   }
 
-  /** The strip's collapse button mirrors the sidebar state (◀ hide / ▶ show). */
+  /** The strip's collapse button mirrors the sidebar state (‹ hide / › show). */
   _syncSidebarToggle() {
     const collapsed = $('#sidebar').classList.contains('collapsed');
     const btn = document.querySelector('.strip-btn[data-action="toggle-sidebar"]');
     if (!btn) return;
-    btn.querySelector('span').textContent = collapsed ? '▶' : '◀';
+    btn.querySelector('span').replaceChildren(icon(collapsed ? 'chevron-right' : 'chevron-left'));
     btn.title = collapsed ? 'Show sidebar (⌘B)' : 'Hide sidebar (⌘B)';
     for (const b of document.querySelectorAll('.strip-btn[data-action="sidebar"]')) b.classList.toggle('active', !collapsed && b.dataset.arg === this.settings.sidebarTab);
   }
@@ -701,6 +702,7 @@ class App {
   _applyThemeVar() {
     const t = THEMES[this.settings.theme] || THEMES['moba-dark'];
     document.documentElement.style.setProperty('--term-bg', t.background || '#1e1e1e');
+    document.documentElement.style.setProperty('--term-fg', t.foreground || '#ececec'); // empty-state text stays readable on light themes
   }
 
   // ---------- actions ----------

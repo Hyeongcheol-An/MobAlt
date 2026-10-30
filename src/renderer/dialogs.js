@@ -181,7 +181,7 @@ export function sessionEditor(app, initial = {}) {
   tabBtns.basic.classList.add('active');
 
   const typeBtns = {};
-  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '>_', telnet: '☎️', serial: '⌁', ftp: '📁', rdp: '🪟', vnc: '🖥️' }[t]), TYPE_LABEL[t]))));
+  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '💻', telnet: '☎️', serial: '🔌', ftp: '📁', rdp: '🪟', vnc: '🖥️' }[t]), TYPE_LABEL[t]))));
 
   const buildBasic = () => {
     const b = pages.basic;
@@ -495,7 +495,7 @@ export function hostKeyDialog(p) {
 }
 
 export function passwordDialog(p) {
-  const input = h('input', { type: 'password', autocomplete: 'current-password', style: { width: '100%', height: '30px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)' } });
+  const input = h('input', { type: 'password', autocomplete: 'current-password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
   const save = h('input', { type: 'checkbox', checked: false });
   const m = showModal({
     title: p.title || 'Password',
@@ -513,7 +513,7 @@ export function passwordDialog(p) {
 }
 
 export function kbdIntDialog(p) {
-  const inputs = (p.prompts || []).map((pr) => h('input', { type: pr.echo ? 'text' : 'password', style: { width: '100%', height: '30px', padding: '0 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--bg)', marginBottom: '8px' } }));
+  const inputs = (p.prompts || []).map((pr) => h('input', { type: pr.echo ? 'text' : 'password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)', marginBottom: '8px' } }));
   const m = showModal({
     title: p.name || 'Authentication',
     width: 'narrow',
