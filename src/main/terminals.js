@@ -105,6 +105,13 @@ class TerminalRegistry extends EventEmitter {
     return this.map.get(id);
   }
 
+  /** Number of registered backends of a kind ('ssh', 'mosh', 'sftp', 'local', …). */
+  countKind(kind) {
+    let n = 0;
+    for (const [, h] of this.map) if (h && h.kind === kind) n++;
+    return n;
+  }
+
   data(id, data) {
     const log = this.logs.get(id);
     if (log) {

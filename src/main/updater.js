@@ -11,7 +11,11 @@ try {
   autoUpdater = null;
 }
 
-function setupUpdater(store, getWin) {
+/**
+ * @param hooks {beforeInstall?: () => void} called right before quitAndInstall, so the app can skip its
+ *              quit confirmation (the user already chose "Restart now").
+ */
+function setupUpdater(store, getWin, hooks = {}) {
   const win = () => {
     const w = getWin();
     return w && !w.isDestroyed() ? w : undefined;
@@ -59,7 +63,10 @@ function setupUpdater(store, getWin) {
       detail: 'Restart now to install it, or keep working: it is installed when you quit.',
       buttons: ['Restart now', 'Later'], defaultId: 0, cancelId: 1,
     });
-    if (r.response === 0) setImmediate(() => autoUpdater.quitAndInstall());
+    if (r.response === 0) {
+      try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}
+      setImmediate(() => autoUpdater.quitAndInstall());
+    }
   });
   autoUpdater.on('error', (e) => {
     if (state.manual) dialog.showMessageBox(win(), { type: 'error', message: 'Update check failed', detail: e.message });
