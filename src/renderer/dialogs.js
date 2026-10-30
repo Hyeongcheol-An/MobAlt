@@ -2,7 +2,8 @@
 import { h, showModal, toast, confirmDialog, TYPE_LABEL } from './ui.js';
 import { THEMES } from './terminal.js';
 
-const DEFAULT_PORT = { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900, local: 0 };
+const DEFAULT_PORT = { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
+const BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
 
 function field(label, input, help) {
   // Element.append() would render a literal "null", so only include the help node when present.
@@ -73,6 +74,30 @@ export function sessionEditor(app, initial = {}) {
   const shell = text(s.shell, { placeholder: app.settings.localShell || '(default login shell)' });
   const cwd = text(s.cwd, { placeholder: '~' });
 
+  // --- serial
+  const serialSel = select([['', '(scanning…)']], '');
+  const serialCustom = text(s.serialPath || '', { placeholder: 'or type a device path, e.g. /dev/cu.usbserial-1410' });
+  const loadPorts = async () => {
+    let ports = [];
+    try {
+      ports = await window.api.term.listSerialPorts();
+    } catch {}
+    const cur = serialCustom.value.trim() || s.serialPath || '';
+    serialSel.replaceChildren(
+      h('option', { value: '' }, ports.length ? '(select a port)' : '(no serial devices found)'),
+      ports.map((p) => h('option', { value: p.path, selected: p.path === cur }, `${p.path}${p.manufacturer ? ' — ' + p.manufacturer : ''}`))
+    );
+  };
+  serialSel.addEventListener('change', () => { if (serialSel.value) serialCustom.value = serialSel.value; });
+  const serialRefresh = h('button', { class: 'btn small', type: 'button', title: 'Rescan ports', onclick: () => loadPorts() }, '⟳');
+  const baud = select(BAUD_RATES.map((b) => [String(b), String(b)]), String(s.baudRate || 115200));
+  const dataBits = select([['8', '8 data bits'], ['7', '7 data bits'], ['6', '6'], ['5', '5']], String(s.dataBits || 8));
+  const parity = select([['none', 'No parity'], ['even', 'Even'], ['odd', 'Odd']], s.parity || 'none');
+  const stopBits = select([['1', '1 stop bit'], ['2', '2 stop bits']], String(s.stopBits || 1));
+  const flow = select([['none', 'No flow control'], ['rtscts', 'RTS/CTS'], ['xonxoff', 'XON/XOFF']], s.flow || 'none');
+  const localEcho = check('Local echo', s.localEcho);
+  const newline = select([['cr', 'CR'], ['lf', 'LF'], ['crlf', 'CR+LF']], s.newline || 'cr');
+
   // --- tunnels
   const tunnels = (s.tunnels || []).map((t) => ({ ...t }));
   const tunnelTable = h('div');
@@ -110,7 +135,7 @@ export function sessionEditor(app, initial = {}) {
   tabBtns.basic.classList.add('active');
 
   const typeBtns = {};
-  const picker = h('div', { class: 'type-picker' }, ['ssh', 'local', 'telnet', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', local: '>_', telnet: '☎', rdp: '🖥', vnc: '🖵' }[t]), TYPE_LABEL[t]))));
+  const picker = h('div', { class: 'type-picker' }, ['ssh', 'local', 'telnet', 'serial', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', local: '>_', telnet: '☎', serial: '⌁', rdp: '🖥', vnc: '🖵' }[t]), TYPE_LABEL[t]))));
 
   const buildBasic = () => {
     const b = pages.basic;
@@ -118,6 +143,16 @@ export function sessionEditor(app, initial = {}) {
     b.append(...field('Name', name), ...field('Folder', h('div', { class: 'inline' }, folder, dl)));
     if (type === 'local') {
       b.append(...field('Shell', shell, 'Leave blank for your login shell'), ...field('Start folder', cwd));
+    } else if (type === 'serial') {
+      b.append(
+        ...field('Serial port', h('div', { class: 'inline' }, serialSel, serialRefresh)),
+        ...field('Device path', serialCustom),
+        ...field('Baud rate', baud),
+        h('label', {}, 'Framing'), h('div', { class: 'inline' }, dataBits, parity, stopBits, flow),
+        h('label', {}, 'Options'), h('div', { class: 'checks' }, localEcho.el),
+        ...field('Enter sends', newline)
+      );
+      loadPorts();
     } else {
       b.append(...field('Host', host), ...field('Port', port), ...field('Username', username));
     }
@@ -147,6 +182,7 @@ export function sessionEditor(app, initial = {}) {
     tabBtns.advanced.hidden = t !== 'ssh';
     tabBtns.tunnels.hidden = t !== 'ssh';
     tabBtns.terminal.hidden = t === 'rdp' || t === 'vnc';
+    sftpAuto.el.hidden = followCwd.el.hidden = t !== 'ssh';
     buildBasic();
     showPage('basic');
   };
@@ -165,7 +201,13 @@ export function sessionEditor(app, initial = {}) {
     ],
   });
   function collect() {
-    if (type !== 'local' && !host.value.trim()) {
+    const serialPath = serialCustom.value.trim() || serialSel.value;
+    if (type === 'serial' && !serialPath) {
+      serialCustom.focus();
+      toast('Serial device path is required', 'warn');
+      throw new Error('validation');
+    }
+    if (type !== 'local' && type !== 'serial' && !host.value.trim()) {
       host.focus();
       toast('Host is required', 'warn');
       throw new Error('validation');
@@ -173,7 +215,15 @@ export function sessionEditor(app, initial = {}) {
     const out = {
       ...s,
       type,
-      name: name.value.trim() || (type === 'local' ? 'Local' : `${username.value ? username.value + '@' : ''}${host.value.trim()}`),
+      name: name.value.trim() || (type === 'local' ? 'Local' : type === 'serial' ? `${serialPath.replace('/dev/', '')} @ ${baud.value}` : `${username.value ? username.value + '@' : ''}${host.value.trim()}`),
+      serialPath,
+      baudRate: parseInt(baud.value, 10) || 115200,
+      dataBits: parseInt(dataBits.value, 10) || 8,
+      stopBits: parseInt(stopBits.value, 10) || 1,
+      parity: parity.value,
+      flow: flow.value,
+      localEcho: localEcho.cb.checked,
+      newline: newline.value,
       folder: folder.value.trim().replace(/^\/+|\/+$/g, ''),
       host: host.value.trim(),
       port: parseInt(port.value, 10) || DEFAULT_PORT[type],

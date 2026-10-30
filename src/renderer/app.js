@@ -189,7 +189,7 @@ class App {
     if (!s) return;
     if (s.type === 'rdp') return window.api.launch.rdp(s);
     if (s.type === 'vnc') return window.api.launch.vnc(s);
-    const kind = s.type === 'local' ? 'local' : s.type === 'telnet' ? 'telnet' : 'ssh';
+    const kind = s.type === 'local' ? 'local' : s.type === 'telnet' ? 'telnet' : s.type === 'serial' ? 'serial' : 'ssh';
     const pane = new TermPane(this, { kind, session: s, cwd: s.cwd || undefined });
     if (opts.split && this.activePane()) {
       const target = this.activePane();
@@ -297,7 +297,9 @@ class App {
       $('#st-cwd').textContent = '';
     } else {
       const s = pane.session;
-      const where = pane.kind === 'local' ? 'local shell' : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
+      const where = pane.kind === 'local' ? 'local shell'
+        : pane.kind === 'serial' ? `${s?.serialPath} @ ${s?.baudRate}`
+        : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
       el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${pane.status}${msg ? ' (' + msg + ')' : ''}`;
       $('#st-cwd').textContent = pane.remoteCwd || pane.cwd || '';
     }

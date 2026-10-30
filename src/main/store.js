@@ -1,6 +1,6 @@
 'use strict';
 // Persistence for sessions, settings, macros. Secrets are encrypted at rest
-// with Electron safeStorage (backed by the macOS Keychain).
+// with Electron safeStorage (backed by the macOS Keychain) using the async API.
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -31,20 +31,41 @@ function writeJson(file, data) {
   fs.renameSync(tmp, file);
 }
 
-function encrypt(plain) {
+let encryptionAvailable = null;
+async function canEncrypt() {
+  if (!safeStorage) return false;
+  if (encryptionAvailable === null) {
+    try {
+      encryptionAvailable = typeof safeStorage.isAsyncEncryptionAvailable === 'function'
+        ? await safeStorage.isAsyncEncryptionAvailable()
+        : safeStorage.isEncryptionAvailable();
+    } catch {
+      encryptionAvailable = false;
+    }
+  }
+  return encryptionAvailable;
+}
+
+async function encrypt(plain) {
   if (!plain) return '';
-  if (safeStorage && safeStorage.isEncryptionAvailable()) {
-    return 'enc:' + safeStorage.encryptString(plain).toString('base64');
+  if (await canEncrypt()) {
+    const buf = typeof safeStorage.encryptStringAsync === 'function' ? await safeStorage.encryptStringAsync(plain) : safeStorage.encryptString(plain);
+    return 'enc:' + buf.toString('base64');
   }
   return 'b64:' + Buffer.from(plain, 'utf8').toString('base64');
 }
 
-function decrypt(stored) {
+async function decrypt(stored) {
   if (!stored) return '';
   if (stored.startsWith('enc:')) {
     if (!safeStorage) return '';
     try {
-      return safeStorage.decryptString(Buffer.from(stored.slice(4), 'base64'));
+      const buf = Buffer.from(stored.slice(4), 'base64');
+      if (typeof safeStorage.decryptStringAsync === 'function') {
+        const r = await safeStorage.decryptStringAsync(buf);
+        return typeof r === 'string' ? r : r.result;
+      }
+      return safeStorage.decryptString(buf);
     } catch {
       return '';
     }
@@ -97,7 +118,7 @@ class Store {
     return userDataFile('settings.json');
   }
 
-  // ---- sessions ----
+  // ---- sessions (stored form: secrets encrypted) ----
   loadSessions() {
     if (!this._sessions) {
       const data = readJson(this.sessionsFile, { sessions: [], folders: [] });
@@ -109,32 +130,33 @@ class Store {
     return this._sessions;
   }
 
-  /** Returns sessions with secrets decrypted (for in-memory use). */
-  getSessions() {
+  /** Sessions with secrets decrypted (for in-memory use). */
+  async getSessions() {
     const d = this.loadSessions();
     return {
       folders: d.folders.slice(),
-      sessions: d.sessions.map((s) => this._decryptSession(s)),
+      sessions: await Promise.all(d.sessions.map((s) => this._decryptSession(s))),
     };
   }
 
-  getSession(id) {
+  async getSession(id) {
     const s = this.loadSessions().sessions.find((x) => x.id === id);
     return s ? this._decryptSession(s) : null;
   }
 
-  saveSessions({ sessions, folders }) {
-    const enc = sessions.map((s) => this._encryptSession(s));
+  /** Replace all sessions/folders. Input sessions carry plain secrets (or none). */
+  async saveSessions({ sessions, folders }) {
+    const enc = await Promise.all(sessions.map((s) => this._encryptSession(s)));
     this._sessions = { sessions: enc, folders: folders || [] };
     writeJson(this.sessionsFile, this._sessions);
     return this.getSessions();
   }
 
-  upsertSession(session) {
+  async upsertSession(session) {
     const d = this.loadSessions();
     if (!session.id) session.id = crypto.randomUUID();
     const idx = d.sessions.findIndex((s) => s.id === session.id);
-    const enc = this._encryptSession(session);
+    const enc = await this._encryptSession(session);
     if (idx >= 0) d.sessions[idx] = enc;
     else d.sessions.push(enc);
     writeJson(this.sessionsFile, d);
@@ -147,24 +169,24 @@ class Store {
     writeJson(this.sessionsFile, d);
   }
 
-  _encryptSession(s) {
+  async _encryptSession(s) {
     const out = { ...s };
     for (const f of SECRET_FIELDS) {
-      if (out[f]) out[f] = encrypt(out[f]);
+      if (out[f]) out[f] = await encrypt(out[f]);
       else delete out[f];
     }
     return out;
   }
 
-  _decryptSession(s) {
+  async _decryptSession(s) {
     const out = { ...s };
     for (const f of SECRET_FIELDS) {
-      if (out[f]) out[f] = decrypt(out[f]);
+      if (out[f]) out[f] = await decrypt(out[f]);
     }
     return out;
   }
 
-  // ---- settings ----
+  // ---- settings (no secrets, synchronous) ----
   getSettings() {
     if (!this._settings) {
       this._settings = { ...DEFAULT_SETTINGS, ...readJson(this.settingsFile, {}) };

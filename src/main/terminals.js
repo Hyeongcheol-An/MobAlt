@@ -223,4 +223,65 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
   return { id };
 }
 
-module.exports = { TerminalRegistry, spawnLocal, spawnTelnet, defaultShell };
+// ---------------- Serial ----------------
+/**
+ * Open a serial console (USB-serial adapters, routers, embedded boards).
+ * opts: {path, baudRate, dataBits, stopBits, parity, flow:'none'|'rtscts'|'xonxoff', localEcho, newline:'cr'|'lf'|'crlf'}
+ */
+function spawnSerial(registry, opts) {
+  const { SerialPort } = require('serialport');
+  const { StringDecoder } = require('string_decoder');
+  const id = registry.newId();
+  const baudRate = parseInt(opts.baudRate, 10) || 9600;
+  const port = new SerialPort({
+    path: opts.path,
+    baudRate,
+    dataBits: parseInt(opts.dataBits, 10) || 8,
+    stopBits: parseFloat(opts.stopBits) || 1,
+    parity: opts.parity || 'none',
+    rtscts: opts.flow === 'rtscts',
+    xon: opts.flow === 'xonxoff',
+    xoff: opts.flow === 'xonxoff',
+    autoOpen: false,
+  });
+  const decoder = new StringDecoder('utf8');
+  const nl = { cr: '\r', lf: '\n', crlf: '\r\n' }[opts.newline || 'cr'];
+  let closed = false;
+  const finish = (code, reason) => {
+    if (closed) return;
+    closed = true;
+    registry.exit(id, code, reason);
+  };
+  port.open((err) => {
+    if (err) {
+      registry.data(id, `\r\n\x1b[31mCannot open ${opts.path}: ${err.message}\x1b[0m\r\n`);
+      return finish(1, 'failed');
+    }
+    registry.data(id, `\x1b[90mConnected to ${opts.path} @ ${baudRate} ${port.settings.dataBits}${(port.settings.parity || 'none')[0].toUpperCase()}${port.settings.stopBits}\x1b[0m\r\n`);
+  });
+  port.on('data', (b) => registry.data(id, decoder.write(b)));
+  port.on('error', (e) => registry.data(id, `\r\n\x1b[31mSerial error: ${e.message}\x1b[0m\r\n`));
+  port.on('close', () => finish(0, 'closed'));
+  registry.register(id, {
+    kind: 'serial',
+    write: (d) => {
+      if (!port.isOpen) return;
+      if (opts.localEcho) registry.data(id, d.replace(/\r/g, '\r\n'));
+      port.write(d.replace(/\r/g, nl));
+    },
+    resize: () => {},
+    kill: () => (port.isOpen ? port.close(() => finish(0, 'closed')) : finish(0, 'closed')),
+  });
+  return { id };
+}
+
+async function listSerialPorts() {
+  const { SerialPort } = require('serialport');
+  const ports = await SerialPort.list();
+  return ports
+    .filter((p) => !/Bluetooth-Incoming|debug-console/.test(p.path))
+    .map((p) => ({ path: p.path.replace('/dev/tty.', '/dev/cu.'), manufacturer: p.manufacturer || '', serialNumber: p.serialNumber || '', vendorId: p.vendorId, productId: p.productId }))
+    .filter((p, i, a) => a.findIndex((x) => x.path === p.path) === i);
+}
+
+module.exports = { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, defaultShell };

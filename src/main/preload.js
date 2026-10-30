@@ -26,6 +26,8 @@ contextBridge.exposeInMainWorld('api', {
   term: {
     spawnLocal: (opts) => invoke('term:spawn-local', opts),
     spawnTelnet: (opts) => invoke('term:spawn-telnet', opts),
+    spawnSerial: (opts) => invoke('term:spawn-serial', opts),
+    listSerialPorts: () => invoke('serial:list'),
     write: (id, data) => send('term:write', id, data),
     resize: (id, cols, rows) => send('term:resize', id, cols, rows),
     kill: (id) => send('term:kill', id),

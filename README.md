@@ -1,7 +1,7 @@
 # MobAlt — MobaXterm alternative for macOS
 
 MobaXterm을 쓰던 사람이 macOS에서 같은 방식으로 일할 수 있도록 만든 **탭형 SSH/SFTP/로컬 터미널 앱**입니다.
-세션 매니저, 접속과 동시에 열리는 SFTP 브라우저, X11 포워딩, 포트 포워딩(터널), MultiExec, 분할 창, 매크로, 네트워크 도구를 한 창에 담았습니다.
+세션 매니저, 접속과 동시에 열리는 SFTP 브라우저, X11 포워딩, 포트 포워딩(터널), MultiExec, 분할 창, 매크로, 네트워크 도구, Serial 콘솔을 한 창에 담았습니다.
 
 - 저장소: https://github.com/Hyeongcheol-An/mobaXterm
 - 배포: [GitHub Releases](https://github.com/Hyeongcheol-An/mobaXterm/releases) — `main`에 커밋이 올라가면 semantic-release가 버전을 올리고 DMG/zip(arm64·x64)을 자동으로 첨부합니다.
@@ -29,7 +29,8 @@ MobaXterm을 쓰던 사람이 macOS에서 같은 방식으로 일할 수 있도�
 | 로컬 터미널 (Cygwin) | ✅ 네이티브 zsh/bash | macOS 로그인 셸을 그대로 사용, 폴더 추종 셸 통합 |
 | 세션 로그 저장 | ✅ | 세션 옵션 또는 우클릭 → Session Log |
 | MobaXterm.ini 가져오기 | ✅ | Bookmarks 섹션(SSH/Telnet/RDP/VNC) best-effort 파싱, `~/.ssh/config` 가져오기도 지원 |
-| Serial, Mosh, FTP | ❌ 미구현 | 필요 시 `serialport` 등으로 추가 가능 |
+| Serial 콘솔 | ✅ | USB-시리얼 장치 자동 검색, baud/framing/flow, 로컬 에코, Enter→CR/LF/CRLF |
+| Mosh, FTP | ❌ 미구현 | 필요 시 추가 가능 |
 
 ## 설치
 
@@ -93,7 +94,10 @@ src/renderer/       렌더러 (프레임워크 없이 ES 모듈)
 test/
   unit/             node --test 단위 테스트
   start-sshd.sh     포트 2222 사용자 권한 테스트 sshd(키 인증, SFTP, X11, 포워딩)
-  e2e-ssh.js        앱 안에서 실행되는 E2E 스크립트
+  e2e-ssh.js        앱 안에서 실행되는 E2E 스크립트 (SSH/SFTP/X11/터널)
+  e2e-ui.js         다이얼로그·패널 UI E2E
+  e2e-serial.js     가상 시리얼 장치(mock-serial.py) E2E
+  e2e-auth.js       인증 실패 진단·포트 거부 힌트·키 접속 E2E
 ```
 
 ### E2E 테스트 (로컬 sshd)
@@ -125,10 +129,10 @@ test/start-sshd.sh stop
 
 ## 알려진 제약
 
-- 코드 서명/공증이 없어 첫 실행 시 Gatekeeper 우회가 필요합니다.
+- 코드 서명/공증이 없어 첫 실행 시 Gatekeeper 우회가 필요합니다. 배포용 서명에는 Apple Developer Program의 "Developer ID Application" 인증서가 필요합니다(Apple Development 인증서로는 불가).
 - `~/.zprofile` 등에서 `export DISPLAY=:0`처럼 DISPLAY를 고정하면 원격 셸의 X11 DISPLAY가 덮어써집니다. X11 포워딩이 안 되면 원격 쪽 rc 파일을 확인하세요.
 - MobaXterm.ini 형식은 비공개라 호스트/포트/사용자/폴더/X11 플래그만 가져오며 비밀번호는 가져오지 않습니다. `.ppk` 키는 `puttygen`으로 OpenSSH 형식으로 변환해야 합니다.
-- Serial, Mosh, FTP는 아직 없습니다.
+- Mosh, FTP는 아직 없습니다.
 
 ## 라이선스
 

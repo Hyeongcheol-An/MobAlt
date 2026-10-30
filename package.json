@@ -27,6 +27,7 @@
     "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^6.0.0",
     "node-pty": "^1.1.0",
+    "serialport": "^13.0.0",
     "ssh2": "^1.17.0"
   },
   "devDependencies": {
@@ -54,7 +55,8 @@
       "!**/*.map"
     ],
     "asarUnpack": [
-      "node_modules/node-pty/**"
+      "node_modules/node-pty/**",
+      "node_modules/@serialport/bindings-cpp/**"
     ],
     "mac": {
       "category": "public.app-category.developer-tools",

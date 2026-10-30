@@ -188,7 +188,7 @@ class TunnelManager extends EventEmitter {
 
   /** Start a standalone tunnel with its own SSH connection to a saved session. */
   async startStandalone(spec) {
-    const cfg = this.store.getSession(spec.sessionId);
+    const cfg = await this.store.getSession(spec.sessionId);
     if (!cfg) throw new Error('Session not found');
     const t = { ...spec, id: spec.id || 'tn_' + crypto.randomBytes(4).toString('hex'), status: 'connecting', sessionName: cfg.name, sessionId: cfg.id, log: '' };
     this.tunnels.set(t.id, t);

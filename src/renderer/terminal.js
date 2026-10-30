@@ -223,6 +223,16 @@ export class TermPane {
         this.termId = r.id;
         this.app.registerPane(this);
         this.setStatus('connected');
+      } else if (this.kind === 'serial') {
+        this.setStatus('connecting');
+        const s = this.session;
+        const r = await window.api.term.spawnSerial({
+          path: s.serialPath, baudRate: s.baudRate, dataBits: s.dataBits, stopBits: s.stopBits, parity: s.parity,
+          flow: s.flow, localEcho: s.localEcho, newline: s.newline,
+        });
+        this.termId = r.id;
+        this.app.registerPane(this);
+        this.setStatus('connected');
       }
       if (this.session?.logging) this.toggleLog(true);
     } catch (e) {

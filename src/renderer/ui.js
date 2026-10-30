@@ -52,7 +52,7 @@ export function fmtDuration(ms) {
 }
 
 export const TYPE_ICON = { ssh: '●', local: '●', telnet: '●', rdp: '●', vnc: '●', serial: '●' };
-export const TYPE_LABEL = { ssh: 'SSH', local: 'Local', telnet: 'Telnet', rdp: 'RDP', vnc: 'VNC' };
+export const TYPE_LABEL = { ssh: 'SSH', local: 'Local', telnet: 'Telnet', serial: 'Serial', rdp: 'RDP', vnc: 'VNC' };
 
 // ---------- context menu ----------
 let ctxOpen = null;

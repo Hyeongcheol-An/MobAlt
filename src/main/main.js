@@ -5,7 +5,7 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const { Store } = require('./store');
-const { TerminalRegistry, spawnLocal, spawnTelnet } = require('./terminals');
+const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts } = require('./terminals');
 const { SshManager } = require('./ssh');
 const { SftpManager } = require('./sftp');
 const { TunnelManager } = require('./tunnels');
@@ -282,8 +282,8 @@ function sizeOf(size) {
 }
 
 /** Merge secrets from the stored copy when the renderer sends a session without them. */
-function mergeSecrets(incoming) {
-  const stored = incoming.id ? store.getSession(incoming.id) : null;
+async function mergeSecrets(incoming) {
+  const stored = incoming.id ? await store.getSession(incoming.id) : null;
   const out = { ...incoming };
   for (const f of ['password', 'passphrase', 'jumpPassword']) {
     if (out[f] === undefined && stored) out[f] = stored[f];
@@ -319,6 +319,8 @@ function registerIpc() {
 
   ipcMain.handle('term:spawn-local', (_e, opts) => spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
   ipcMain.handle('term:spawn-telnet', (_e, opts) => spawnTelnet(registry, { ...opts, ...sizeOf(opts) }));
+  ipcMain.handle('term:spawn-serial', (_e, opts) => spawnSerial(registry, opts));
+  ipcMain.handle('serial:list', () => listSerialPorts());
   ipcMain.on('term:write', (_e, id, data) => registry.write(id, data));
   ipcMain.on('term:resize', (_e, id, cols, rows) => registry.resize(id, cols, rows));
   ipcMain.on('term:kill', (_e, id) => registry.kill(id));
@@ -331,7 +333,7 @@ function registerIpc() {
   });
   ipcMain.handle('term:log-stop', (_e, id) => registry.stopLog(id));
 
-  ipcMain.handle('ssh:connect', (_e, cfg, size) => ssh.openShell(mergeSecrets(cfg), sizeOf(size)));
+  ipcMain.handle('ssh:connect', async (_e, cfg, size) => ssh.openShell(await mergeSecrets(cfg), sizeOf(size)));
   ipcMain.handle('ssh:disconnect', (_e, id) => ssh.disconnect(id));
   ipcMain.handle('ssh:exec', (_e, id, cmd) => ssh.exec(id, cmd));
 
@@ -378,25 +380,25 @@ function registerIpc() {
   ipcMain.handle('tunnel:stop', (_e, id) => tunnels.stop(id));
   ipcMain.handle('tunnel:list', () => tunnels.list());
 
-  ipcMain.handle('sessions:list', () => {
-    const d = store.getSessions();
+  ipcMain.handle('sessions:list', async () => {
+    const d = await store.getSessions();
     return { folders: d.folders, sessions: d.sessions.map(publicSession) };
   });
-  ipcMain.handle('sessions:save', (_e, s) => publicSession(store.upsertSession(mergeSecrets(s))));
-  ipcMain.handle('sessions:save-all', (_e, { sessions, folders }) => {
-    const merged = sessions.map((s) => mergeSecrets(s));
-    const d = store.saveSessions({ sessions: merged, folders });
+  ipcMain.handle('sessions:save', async (_e, s) => publicSession(await store.upsertSession(await mergeSecrets(s))));
+  ipcMain.handle('sessions:save-all', async (_e, { sessions, folders }) => {
+    const merged = await Promise.all(sessions.map((s) => mergeSecrets(s)));
+    const d = await store.saveSessions({ sessions: merged, folders });
     return { folders: d.folders, sessions: d.sessions.map(publicSession) };
   });
   ipcMain.handle('sessions:delete', (_e, id) => store.deleteSession(id));
-  ipcMain.handle('sessions:import-sshconfig', () => {
+  ipcMain.handle('sessions:import-sshconfig', async () => {
     const found = importers.parseSshConfig();
     const d = store.loadSessions();
     const existing = new Set(d.sessions.map((s) => `${s.folder}|${s.name}`));
     let n = 0;
     for (const s of found) {
       if (existing.has(`${s.folder}|${s.name}`)) continue;
-      store.upsertSession(s);
+      await store.upsertSession(s);
       n++;
     }
     return { imported: n, found: found.length };
@@ -407,7 +409,7 @@ function registerIpc() {
     const found = importers.parseMobaXtermIni(r.filePaths[0]);
     let n = 0;
     for (const s of found) {
-      store.upsertSession(s);
+      await store.upsertSession(s);
       n++;
     }
     return { imported: n, found: found.length };
@@ -415,7 +417,7 @@ function registerIpc() {
   ipcMain.handle('sessions:export', async () => {
     const r = await dialog.showSaveDialog(win, { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
     if (r.canceled || !r.filePath) return null;
-    const d = store.getSessions();
+    const d = await store.getSessions();
     fs.writeFileSync(r.filePath, JSON.stringify({ folders: d.folders, sessions: d.sessions.map(publicSession) }, null, 2));
     return r.filePath;
   });
@@ -426,12 +428,12 @@ function registerIpc() {
     let n = 0;
     for (const s of data.sessions || []) {
       if (!s.name) continue;
-      store.upsertSession({ ...s, id: s.id || crypto.randomUUID() });
+      await store.upsertSession({ ...s, id: s.id || crypto.randomUUID() });
       n++;
     }
-    const d = store.loadSessions();
+    const d = await store.getSessions();
     const folders = new Set([...(d.folders || []), ...((data.folders || []).filter(Boolean))]);
-    store.saveSessions({ sessions: d.sessions.map((s) => store._decryptSession(s)), folders: [...folders] });
+    await store.saveSessions({ sessions: d.sessions, folders: [...folders] });
     return { imported: n };
   });
 

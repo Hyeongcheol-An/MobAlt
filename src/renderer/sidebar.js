@@ -132,7 +132,9 @@ export class SessionTree {
 
   sessionRow(s) {
     const open = this.app.workspace.allPanes().some((p) => p.session && p.session.id === s.id && p.status === 'connected');
-    const sub = s.type === 'local' ? 'local' : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
+    const sub = s.type === 'local' ? 'local'
+      : s.type === 'serial' ? `${(s.serialPath || '').replace('/dev/', '')} @ ${s.baudRate || ''}`
+      : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
     const row = h('div', { class: 'tree-row' + (this.selected === s.id ? ' selected' : ''), dataset: { session: s.id }, draggable: true, title: `${s.name}\n${sub}` },
       h('span', { class: 'ico ' + (ICON[s.type] || '') }, '●'),
       h('span', { class: 'label' }, s.name),
