@@ -350,3 +350,10 @@ input::placeholder, textarea::placeholder { color: #8b9098; }
 .panel-head button, #macro-record { white-space: nowrap; flex: none; }
 .macro-row .size, .macro-row .badge { flex: none; white-space: nowrap; }
 .pane .pane-placeholder.ftp-info { border: none; }
+
+/* ---- keyboard accessibility ---- */
+/* Rings are inset where the container clips (#tabs scrolls, .tree-row hides overflow, the side strip is flush). */
+.tab:focus-visible, .tree-row:focus-visible, .strip-btn:focus-visible, #tab-add:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tree-row.selected:focus-visible { outline-color: #fff; } /* the keyboard cursor stays visible on the blue selected fill */
+.ctx-item:focus-visible { background: var(--accent-2); color: #fff; outline: none; }
+.ctx-item:focus-visible .k { color: #dbe9ff; }

@@ -174,8 +174,12 @@ workspace restore and the update check. "Open config folder" shows where everyth
 | Sidebar, Sessions / SFTP / Tools / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, tunnels, settings | ⇧⌘M, ⇧⌘U, ⌘, |
 | Newline in TUI apps | ⇧Enter or ⌥Enter |
+| Focused tab: move / activate / close, context menu | ← → / ⏎ / ⌫, ⇧F10 |
+| Focused session row: move / fold / open / open in split / delete | ↑ ↓ / ← → / ⏎ / ⌘⏎ / ⌫ |
 
-Help → Keyboard Shortcuts shows the same list inside the app.
+Help → Keyboard Shortcuts shows the same list inside the app. Tab reaches the toolbar, the side
+strip, the session tree and the tab strip; dialogs keep Tab inside them, and context menus take
+↑ ↓ / ⏎ / Esc.
 
 ## Data and privacy
 

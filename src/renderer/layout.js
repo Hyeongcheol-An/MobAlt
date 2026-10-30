@@ -12,7 +12,7 @@ export class Tab {
     this.icon = null;
     this.root = null;
     this.activePane = null;
-    this.pageEl = h('div', { class: 'tab-page' });
+    this.pageEl = h('div', { class: 'tab-page', role: 'tabpanel' });
     this.tabEl = null;
   }
 
@@ -42,6 +42,14 @@ export class Workspace {
     this.tabsEl.addEventListener('dblclick', (e) => {
       if (e.target === this.tabsEl) app.action('new-local');
     });
+    // keyboard: the tab strip is one Tab stop (roving tabindex); arrows move between tabs
+    this.tabsEl.setAttribute('role', 'tablist');
+    this.tabsEl.setAttribute('aria-label', 'Terminal tabs');
+    this.tabsEl.addEventListener('keydown', (e) => this._onTabKey(e));
+    this.tabsEl.addEventListener('focusin', (e) => {
+      const t = this.tabs.find((t) => t.tabEl === e.target);
+      if (t) this._rove(t);
+    });
   }
 
   // ---------- tabs ----------
@@ -60,11 +68,11 @@ export class Workspace {
   }
 
   _buildTabEl(tab) {
-    const el = h('div', { class: 'tab', draggable: true, dataset: { tab: tab.id } },
+    const el = h('div', { class: 'tab', draggable: true, dataset: { tab: tab.id }, role: 'tab', tabindex: -1, 'aria-selected': 'false' },
       h('span', { class: 'dot' }),
       h('span', { class: 'tabico', hidden: !tab.icon }, tab.icon || ''),
       h('span', { class: 'title' }, tab.title),
-      h('button', { class: 'close', title: 'Close (⌘W)', onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, '✕')
+      h('button', { class: 'close', title: 'Close (⌘W)', 'aria-label': 'Close tab', tabindex: -1, onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, '✕')
     );
     el.addEventListener('mousedown', (e) => {
       if (e.button === 1) { e.preventDefault(); this.app.closeTab(tab); }
@@ -76,18 +84,7 @@ export class Workspace {
     el.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       this.activate(tab);
-      contextMenu(e.clientX, e.clientY, [
-        { label: 'Rename Tab…', action: () => this.renameTab(tab) },
-        { label: 'Duplicate', key: '⇧⌘T', action: () => this.app.action('duplicate') },
-        { label: 'Tab Color', action: () => this.pickColor(tab) },
-        '-',
-        { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right') },
-        { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down') },
-        '-',
-        { label: 'Close', key: '⌘W', action: () => this.app.closeTab(tab) },
-        { label: 'Close Others', action: () => this.tabs.filter((t) => t !== tab).forEach((t) => this.app.closeTab(t)) },
-        { label: 'Close All', action: () => [...this.tabs].forEach((t) => this.app.closeTab(t)) },
-      ]);
+      this.tabMenu(tab, e.clientX, e.clientY);
     });
     // drag reorder
     el.addEventListener('dragstart', (e) => {
@@ -117,6 +114,60 @@ export class Workspace {
       this.app.saveWorkspaceSoon?.();
     });
     return el;
+  }
+
+  tabMenu(tab, x, y) {
+    contextMenu(x, y, [
+      { label: 'Rename Tab…', action: () => this.renameTab(tab) },
+      { label: 'Duplicate', key: '⇧⌘T', action: () => this.app.action('duplicate') },
+      { label: 'Tab Color', action: () => this.pickColor(tab) },
+      '-',
+      { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right') },
+      { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down') },
+      '-',
+      { label: 'Close', key: '⌘W', action: () => this.app.closeTab(tab) },
+      { label: 'Close Others', action: () => this.tabs.filter((t) => t !== tab).forEach((t) => this.app.closeTab(t)) },
+      { label: 'Close All', action: () => [...this.tabs].forEach((t) => this.app.closeTab(t)) },
+    ]);
+  }
+
+  /** Roving tabindex: only `tab` is reachable with the Tab key; arrows move between the others. */
+  _rove(tab) {
+    for (const t of this.tabs) if (t.tabEl) t.tabEl.tabIndex = t === tab ? 0 : -1;
+  }
+
+  /** Keys on a focused tab: ←/→ (↑/↓) move, Home/End, Enter/Space activate, ⌫/Delete close, ⇧F10 menu. */
+  _onTabKey(e) {
+    const el = e.target;
+    const tab = el.classList?.contains('tab') && this.tabs.find((t) => t.tabEl === el);
+    if (!tab || e.metaKey || e.ctrlKey || e.altKey) return;
+    const i = this.tabs.indexOf(tab), n = this.tabs.length;
+    const focusTab = (t) => { t.tabEl.focus(); t.tabEl.scrollIntoView({ inline: 'nearest', block: 'nearest' }); };
+    switch (e.key) {
+      case 'ArrowLeft': case 'ArrowUp': focusTab(this.tabs[(i - 1 + n) % n]); break;
+      case 'ArrowRight': case 'ArrowDown': focusTab(this.tabs[(i + 1) % n]); break;
+      case 'Home': focusTab(this.tabs[0]); break;
+      case 'End': focusTab(this.tabs[n - 1]); break;
+      case 'Enter': case ' ': this.activate(tab); break;
+      case 'Backspace': case 'Delete': this._closeTabFromKeyboard(tab); break;
+      case 'F10': case 'ContextMenu': { // ⇧F10 and the Menu key open the tab's context menu
+        if (e.key === 'F10' && !e.shiftKey) return;
+        const r = el.getBoundingClientRect();
+        this.activate(tab);
+        el.focus(); // the menu returns focus to the tab, not to the terminal
+        this.tabMenu(tab, r.left + 8, r.bottom);
+        break;
+      }
+      default: return;
+    }
+    e.preventDefault();
+  }
+
+  async _closeTabFromKeyboard(tab) {
+    const i = this.tabs.indexOf(tab);
+    await this.app.closeTab(tab); // may ask for confirmation (live connections)
+    const next = this.tabs.includes(tab) ? tab : this.tabs[Math.min(i, this.tabs.length - 1)];
+    if (next) next.tabEl.focus();
   }
 
   async renameTab(tab) {
@@ -158,11 +209,14 @@ export class Workspace {
     }
     if (this.active) {
       this.active.tabEl.classList.remove('active');
+      this.active.tabEl.setAttribute('aria-selected', 'false');
       this.active.pageEl.classList.remove('active');
     }
     this.active = tab;
     tab.tabEl.classList.add('active');
+    tab.tabEl.setAttribute('aria-selected', 'true');
     tab.pageEl.classList.add('active');
+    this._rove(tab);
     tab.tabEl.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     for (const p of tab.panes()) p.fit();
     if (tab.activePane) this.app.focusPane(tab.activePane, true);

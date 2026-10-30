@@ -536,6 +536,8 @@ export function shortcutsDialog(app) {
     ['Find', '⌘F'], ['Clear terminal', '⌘K'], ['Zoom', '⌘= / ⌘- / ⌘0'], ['Toggle sidebar', '⌘B'], ['Sessions / SFTP / Tools / Macros', '⌘1 / ⌘2 / ⌘3 / ⌘4'],
     ['MultiExec', '⇧⌘M'], ['Tunnels', '⇧⌘U'], ['Settings', '⌘,'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', app.settings.rightClickPaste !== false ? 'Right-click' : '⌘V'], ['Terminal menu', app.settings.rightClickPaste !== false ? '⇧Right-click' : 'Right-click'],
     ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'],
+    ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'], ['Focused session row: move / fold / open', '↑ ↓ / ← → / ⏎'],
+    ['Focused session row: open in split / delete', '⌘⏎ / ⌫'], ['Context menu for focused tab or row', '⇧F10'],
   ];
   showModal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
 }
