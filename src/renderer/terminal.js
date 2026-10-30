@@ -39,12 +39,13 @@ export class TermPane {
   constructor(app, opts) {
     this.app = app;
     this.id = 'p' + ++seq;
-    this.kind = opts.kind;
+    this.kind = opts.kind; // 'local' | 'ssh' | 'telnet' | 'serial' | 'empty'
     this.session = opts.session || null;
+    this.from = opts.from || null; // pane this one was split from (for "duplicate")
     this.cwd = opts.cwd || null;
     this.termId = null;
     this.status = 'idle';
-    this.title = this.session ? this.session.name : 'Local';
+    this.title = this.session ? this.session.name : this.kind === 'empty' ? 'Empty' : 'Local';
     this.remoteCwd = null;
     this.logging = false;
     this.tab = null;
@@ -123,20 +124,68 @@ export class TermPane {
     });
   }
 
+  /** Which drop zone the pointer is in: center (replace) or an edge (split in that direction). */
+  _dropZone(e) {
+    const r = this.el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    if (this.kind === 'empty') return 'center';
+    const edge = 0.22;
+    if (x < edge) return 'left';
+    if (x > 1 - edge) return 'right';
+    if (y < edge) return 'up';
+    if (y > 1 - edge) return 'down';
+    return 'center';
+  }
+
+  _showZone(zone, label) {
+    if (!this.zoneEl) {
+      this.zoneEl = h('div', { class: 'drop-zone' }, h('span'));
+      this.el.append(this.zoneEl);
+    }
+    this.zoneEl.className = 'drop-zone ' + zone;
+    this.zoneEl.firstChild.textContent = label;
+  }
+
+  _hideZone() {
+    if (this.zoneEl) {
+      this.zoneEl.remove();
+      this.zoneEl = null;
+    }
+  }
+
   _wireDnD() {
     const el = this.el;
+    const isPaneDrag = (e) => e.dataTransfer.types.includes('text/x-mobalt-session') || e.dataTransfer.types.includes('text/x-mobalt-tab');
     el.addEventListener('dragover', (e) => {
+      if (isPaneDrag(e)) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        const zone = this._dropZone(e);
+        const what = e.dataTransfer.types.includes('text/x-mobalt-tab') ? 'Move terminal' : 'Open session';
+        this._showZone(zone, zone === 'center' ? (this.kind === 'empty' ? `${what} here` : `${what} here (replace)`) : `${what} ${zone}`);
+        return;
+      }
       if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/plain')) {
         e.preventDefault();
         el.classList.add('drop-hover');
       }
     });
     el.addEventListener('dragleave', (e) => {
-      if (!el.contains(e.relatedTarget)) el.classList.remove('drop-hover');
+      if (!el.contains(e.relatedTarget)) {
+        el.classList.remove('drop-hover');
+        this._hideZone();
+      }
     });
     el.addEventListener('drop', async (e) => {
       e.preventDefault();
       el.classList.remove('drop-hover');
+      this._hideZone();
+      const sessionId = e.dataTransfer.getData('text/x-mobalt-session');
+      const tabId = e.dataTransfer.getData('text/x-mobalt-tab');
+      if (sessionId || tabId) {
+        this.app.dropOnPane(this, { sessionId, tabId }, this._dropZone(e));
+        return;
+      }
       const files = Array.from(e.dataTransfer.files || []);
       if (files.length) {
         const paths = files.map((f) => window.api.getPathForFile(f)).filter(Boolean);
@@ -201,8 +250,50 @@ export class TermPane {
     this.app.onPaneStatus(this, msg);
   }
 
+  // ---------- empty pane (split target) ----------
+  showPlaceholder() {
+    this.hidePlaceholder();
+    const from = this.from;
+    const dupLabel = from && from.kind !== 'empty' ? `Duplicate "${from.session ? from.session.name : 'Local'}"` : null;
+    this.placeholder = h('div', { class: 'pane-placeholder' },
+      h('div', { class: 'big' }, 'Empty pane'),
+      h('div', { class: 'hint' }, 'Drag a session from the Sessions panel here, or:'),
+      h('div', { class: 'btns' },
+        h('button', { class: 'btn small', onclick: () => this.becomeLocal() }, '>_ Local terminal'),
+        dupLabel ? h('button', { class: 'btn small', onclick: () => this.app.duplicateInto(this, from) }, dupLabel) : null,
+        h('button', { class: 'btn small', onclick: () => this.app.showPanel('sessions') }, 'Show sessions'),
+        h('button', { class: 'btn small', onclick: () => this.app.closePane(this, true) }, 'Close')
+      )
+    );
+    this.el.append(this.placeholder);
+    this.app.onPaneStatus(this);
+  }
+
+  hidePlaceholder() {
+    if (this.placeholder) {
+      this.placeholder.remove();
+      this.placeholder = null;
+    }
+  }
+
+  async becomeLocal(cwd) {
+    this.kind = 'local';
+    this.session = null;
+    this.cwd = cwd || (this.from && this.from.kind === 'local' ? this.from.cwd : null);
+    this.title = 'Local';
+    this.hidePlaceholder();
+    this.updateTitle();
+    await this.start();
+    this.focus();
+  }
+
   // ---------- backend ----------
   async start() {
+    if (this.kind === 'empty') {
+      this.setStatus('idle');
+      this.showPlaceholder();
+      return;
+    }
     const size = { cols: this.term.cols, rows: this.term.rows };
     this.dead = false;
     this.hideOverlay();
@@ -243,7 +334,7 @@ export class TermPane {
   }
 
   _onInput(d) {
-    if (this.dead) return;
+    if (this.dead || this.kind === 'empty') return;
     if (this.app.macroRecorder) this.app.macroRecorder.text += d;
     if (this.app.multiexec) this.app.broadcast(d, this);
     else this.write(d);

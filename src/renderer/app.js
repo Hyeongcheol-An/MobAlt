@@ -184,15 +184,15 @@ class App {
     return pane;
   }
 
-  /** Open a saved/ad-hoc session. opts.split = 'right'|'down' to open next to the active pane. */
+  /** Open a saved/ad-hoc session. opts.split = 'right'|'left'|'down'|'up' opens next to opts.target (or the active pane). */
   async openSession(s, opts = {}) {
     if (!s) return;
     if (s.type === 'rdp') return window.api.launch.rdp(s);
     if (s.type === 'vnc') return window.api.launch.vnc(s);
     const kind = s.type === 'local' ? 'local' : s.type === 'telnet' ? 'telnet' : s.type === 'serial' ? 'serial' : 'ssh';
     const pane = new TermPane(this, { kind, session: s, cwd: s.cwd || undefined });
-    if (opts.split && this.activePane()) {
-      const target = this.activePane();
+    const target = opts.target || this.activePane();
+    if (opts.split && target && target.tab) {
       this.workspace.split(target.tab, target, opts.split, pane);
     } else {
       const tab = this.workspace.newTab(pane, s.name);
@@ -254,17 +254,61 @@ class App {
     this.updateMultiexec();
   }
 
+  /** Split the active pane and open an empty pane next to it (drop a session onto it to connect). */
   async splitActive(dir, fromPane) {
     const target = fromPane || this.activePane();
     if (!target) return this.newLocalTab();
-    let pane;
-    if (target.kind === 'local') pane = new TermPane(this, { kind: 'local', cwd: target.cwd || undefined });
-    else pane = new TermPane(this, { kind: target.kind, session: target.session });
+    const pane = new TermPane(this, { kind: 'empty', from: target });
     this.workspace.split(target.tab, target, dir, pane);
-    this.focusPane(pane);
+    this.focusPane(pane, true);
     await pane.start();
-    pane.focus();
     this.updateMultiexec();
+  }
+
+  /** Fill an empty pane with a copy of another pane's session (or a local shell). */
+  async duplicateInto(pane, from) {
+    if (!from || from.kind === 'empty' || from.kind === 'local') return pane.becomeLocal(from && from.cwd);
+    return this.replacePane(pane, from.session, true);
+  }
+
+  /** Replace a pane's terminal with a new one for `session` (confirming if a live connection would drop). */
+  async replacePane(pane, session, silent = false) {
+    if (!pane.tab || !session) return;
+    if (session.type === 'rdp' || session.type === 'vnc') return this.openSession(session);
+    if (!silent && pane.status === 'connected' && pane.kind !== 'local' && !pane.dead && this.settings.confirmClose) {
+      if (!(await confirmDialog(`Replace "${pane.title}" with "${session.name}"? The current connection will be dropped.`, { okLabel: 'Replace' }))) return;
+    }
+    const kind = session.type === 'local' ? 'local' : session.type === 'telnet' ? 'telnet' : session.type === 'serial' ? 'serial' : 'ssh';
+    const next = new TermPane(this, { kind, session, cwd: session.cwd || undefined });
+    const tab = pane.tab;
+    this.workspace.replace(tab, pane, next);
+    pane.dispose();
+    this.sftpPanel.dropConnection(pane.termId);
+    if (this.focused === pane) this.focused = null;
+    this.focusPane(next, true);
+    await next.start();
+    next.focus();
+    this.pushRecent(session);
+    this.updateMultiexec();
+    return next;
+  }
+
+  /** A session (from the sidebar) or a tab was dropped on a pane. zone: center|left|right|up|down. */
+  async dropOnPane(pane, { sessionId, tabId }, zone) {
+    if (sessionId) {
+      const s = this.sessionTree.sessionById(sessionId);
+      if (!s) return;
+      if (zone === 'center' || pane.kind === 'empty') return this.replacePane(pane, s);
+      return this.openSession(s, { split: zone, target: pane });
+    }
+    if (tabId) {
+      const tab = this.workspace.tabs.find((t) => t.id === tabId);
+      if (!tab || tab === pane.tab) return;
+      const src = tab.activePane || tab.panes()[0];
+      if (!src) return;
+      this.workspace.movePane(src, pane, zone);
+      this.updateMultiexec();
+    }
   }
 
   onActiveTabChanged(tab) {
@@ -298,6 +342,7 @@ class App {
     } else {
       const s = pane.session;
       const where = pane.kind === 'local' ? 'local shell'
+        : pane.kind === 'empty' ? 'empty pane — drag a session here'
         : pane.kind === 'serial' ? `${s?.serialPath} @ ${s?.baudRate}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
       el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${pane.status}${msg ? ' (' + msg + ')' : ''}`;
@@ -330,7 +375,7 @@ class App {
   updateMultiexec() {
     $('#multiexec-banner').hidden = !this.multiexec;
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
-    $('#multiexec-count').textContent = String(this.workspace.allPanes().filter((p) => !p.dead).length);
+    $('#multiexec-count').textContent = String(this.workspace.allPanes().filter((p) => !p.dead && p.termId).length);
     this.workspace.allPanes().forEach((p) => p.fit());
   }
 
@@ -390,7 +435,7 @@ class App {
       case 'new-local': return this.newLocalTab();
       case 'quick-connect': return $('#qc-input').focus();
       case 'duplicate': {
-        if (!ap) return;
+        if (!ap || ap.kind === 'empty') return;
         if (ap.kind === 'local') return this.newLocalTab({ cwd: ap.cwd || undefined });
         return this.openSession(ap.session);
       }

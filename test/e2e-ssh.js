@@ -99,9 +99,13 @@
     await app.reloadSessions();
     results.passphraseSaved = !!app.sessions.sessions.find((s) => s.id === s2.id)?.hasPassphrase;
 
-    // 5. split (duplicates the session; saved passphrase means no prompt) + multiexec
+    // 5. split -> empty pane -> "drop" the enc-key session onto it (saved passphrase means no prompt) + multiexec
     await app.action('split', 'down');
+    const emptyPane = app.workspace.active.panes().find((p) => p.kind === 'empty');
+    results.splitEmpty = !!emptyPane && !!emptyPane.el.querySelector('.pane-placeholder');
+    await app.dropOnPane(emptyPane, { sessionId: s2.id }, 'center');
     await waitFor(() => app.workspace.active.panes().every((p) => p.status === 'connected'), 15000, 'split pane connected');
+    results.splitPanes = app.workspace.active.panes().length;
     await sleep(1500);
     app.action('multiexec');
     app.activePane().term.input('echo MULTI_OK_$$\r');
@@ -115,10 +119,22 @@
     results.multiexec = texts.every((t) => /MULTI_OK_\d+/.test(t));
     app.action('multiexec');
 
-    // 6. local terminal split right + tab switching
+    // 6. local tab: split right -> empty pane -> make it a local shell; then drag-drop a session on its left edge
     app.workspace.activate(app.workspace.tabs[0]);
     await app.action('split', 'right');
-    await sleep(1500);
+    const e2 = app.workspace.active.panes().find((p) => p.kind === 'empty');
+    await e2.becomeLocal();
+    await sleep(800);
+    results.becomeLocal = e2.kind === 'local' && e2.status === 'connected';
+    await app.dropOnPane(e2, { sessionId: s1.id }, 'left');
+    await waitFor(() => app.workspace.active.panes().length === 3 && app.workspace.active.panes().every((p) => p.status === 'connected'), 20000, 'edge split connected');
+    results.edgeSplit = app.workspace.active.panes().length;
+    // move the local-sshd tab's pane into this tab via "tab drop"
+    const srcTab = app.workspace.tabs.find((t) => t.title === 'local-sshd');
+    await app.dropOnPane(app.activePane(), { tabId: srcTab.id }, 'down');
+    await sleep(800);
+    results.tabMoved = app.workspace.tabs.length === 2 && app.workspace.active.panes().length === 4;
+    await sleep(700);
     await shot('07-local-split');
     results.tabs = app.workspace.tabs.map((t) => `${t.title}[${t.panes().length}]`);
     log('RESULTS ' + JSON.stringify(results));

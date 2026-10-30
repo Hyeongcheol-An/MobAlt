@@ -198,16 +198,29 @@ export class Workspace {
     return found;
   }
 
+  /** Split `pane` and place `newPane` to the right/left/down/up of it. */
   split(tab, pane, dir, newPane) {
     const node = this._nodeOf(tab, pane);
     if (!node) return;
     const parent = this._findParent(tab.root, node);
     const newNode = { type: 'pane', pane: newPane };
-    const splitNode = { type: 'split', dir: dir === 'right' ? 'h' : 'v', children: [node, newNode], ratio: 0.5 };
+    const before = dir === 'left' || dir === 'up';
+    const splitNode = { type: 'split', dir: dir === 'right' || dir === 'left' ? 'h' : 'v', children: before ? [newNode, node] : [node, newNode], ratio: 0.5 };
     if (!parent) tab.root = splitNode;
     else parent.children[parent.children.indexOf(node)] = splitNode;
     newPane.tab = tab;
     this.render(tab);
+  }
+
+  /** Swap a pane in place (used when a session is dropped onto a pane). */
+  replace(tab, pane, newPane) {
+    const node = this._nodeOf(tab, pane);
+    if (!node) return false;
+    node.pane = newPane;
+    newPane.tab = tab;
+    if (tab.activePane === pane) tab.activePane = newPane;
+    this.render(tab);
+    return true;
   }
 
   removePane(tab, pane) {
@@ -229,6 +242,23 @@ export class Workspace {
       if (first) this.app.focusPane(first, true);
     }
     return false;
+  }
+
+  /** Move a live pane from its tab next to `targetPane` in another tab (drag a tab onto a pane). */
+  movePane(pane, targetPane, dir) {
+    const srcTab = pane.tab, dstTab = targetPane.tab;
+    if (!srcTab || !dstTab || pane === targetPane) return;
+    pane.el.remove();
+    const empty = this.removePane(srcTab, pane);
+    if (empty) this.removeTab(srcTab);
+    if (dir === 'center' && targetPane.kind === 'empty') {
+      this.replace(dstTab, targetPane, pane);
+      targetPane.dispose();
+    } else {
+      this.split(dstTab, targetPane, dir === 'center' ? 'right' : dir, pane);
+    }
+    this.activate(dstTab);
+    this.app.focusPane(pane, true);
   }
 
   render(tab) {
