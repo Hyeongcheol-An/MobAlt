@@ -8,7 +8,7 @@
   const text = (pane) => { const b = []; for (let i = 0; i < pane.term.buffer.active.length; i++) b.push(pane.term.buffer.active.getLine(i)?.translateToString(true)); return b.join('\n'); };
   try {
     const home = app.info.home; const user = home.split('/').pop();
-    const keyDir = home + '/src/MobAlt/test/sshd-runtime';
+    const keyDir = app.info.appPath + '/test/sshd-runtime';
     // 1) password-only session against a key-only server -> must fail fast with diagnostics, no dialog hang
     const bad = await app.saveSession({ name: 'bad-auth', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'password', password: 'wrong' });
     const p1 = app.openSession(bad);

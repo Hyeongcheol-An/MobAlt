@@ -6,6 +6,17 @@ on:
     branches-ignore: [main]
 
 jobs:
+  secrets-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   test:
     runs-on: macos-latest
     steps:
@@ -16,7 +27,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - name: Package (no release)
+      - name: Package (unsigned, no release)
         run: npm run pack
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"

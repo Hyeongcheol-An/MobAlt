@@ -311,6 +311,7 @@ function registerIpc() {
     version: pkg.version,
     platform: process.platform,
     home: os.homedir(),
+    appPath: app.getAppPath(),
     userData: app.getPath('userData'),
     x11Available: x11.isAvailable(),
     display: x11.findDisplay(),

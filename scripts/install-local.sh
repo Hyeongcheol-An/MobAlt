@@ -4,8 +4,11 @@
 #        scripts/install-local.sh --no-dmg   (unpacked .app only, faster)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-export CSC_IDENTITY_AUTO_DISCOVERY=false
 unset ELECTRON_RUN_AS_NODE
+# Signing: electron-builder picks up a "Developer ID Application" identity from the keychain automatically
+# (MOBALT_SKIP_SIGN=1 builds unsigned). Notarization runs when APPLE_API_KEY/APPLE_API_KEY_ID/APPLE_API_ISSUER
+# (or APPLE_ID/APPLE_APP_SPECIFIC_PASSWORD/APPLE_TEAM_ID, or APPLE_KEYCHAIN_PROFILE) are exported; otherwise it is skipped.
+if [ "${MOBALT_SKIP_SIGN:-}" = "1" ]; then export CSC_IDENTITY_AUTO_DISCOVERY=false; fi
 
 # Targets given on the command line override package.json (which lists arm64+x64), so only arm64 is built here.
 if [ "${1:-}" = "--no-dmg" ]; then
@@ -25,6 +28,7 @@ fi
 rm -rf /Applications/MobAlt.app
 ditto "$APP" /Applications/MobAlt.app
 echo "installed /Applications/MobAlt.app ($(defaults read /Applications/MobAlt.app/Contents/Info.plist CFBundleShortVersionString))"
+codesign -dv /Applications/MobAlt.app 2>&1 | grep -E "^(Authority|Signature)=" | head -1 | sed "s/^/signature: /"
 ls dist/*.dmg 2>/dev/null | sed 's/^/dmg: /' || true
 
 # running from source afterwards needs node-pty rebuilt for the host arch

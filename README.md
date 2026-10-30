@@ -1,112 +1,150 @@
-# MobAlt — MobaXterm alternative for macOS
+# MobAlt
 
-MobaXterm을 쓰던 사람이 macOS에서 같은 방식으로 일할 수 있도록 만든 **탭형 SSH/SFTP/로컬 터미널 앱**입니다.
-세션 매니저, 접속과 동시에 열리는 SFTP 브라우저, X11 포워딩, 포트 포워딩(터널), MultiExec, 분할 창, 매크로, 네트워크 도구, Serial 콘솔을 한 창에 담았습니다.
+**A MobaXterm-style SSH / SFTP / terminal workbench for macOS.**
 
-- 저장소: https://github.com/Hyeongcheol-An/mobaXterm
-- 배포: [GitHub Releases](https://github.com/Hyeongcheol-An/mobaXterm/releases) — `main`에 커밋이 올라가면 semantic-release가 버전을 올리고 DMG/zip(arm64·x64)을 자동으로 첨부합니다.
+[![Release](https://img.shields.io/github/v/release/Hyeongcheol-An/MobAlt?display_name=tag)](https://github.com/Hyeongcheol-An/MobAlt/releases)
+[![Release workflow](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml/badge.svg)](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-## MobaXterm 기능 대응표
+[한국어 README](README.ko.md)
 
-| MobaXterm | MobAlt | 비고 |
+If you lived in MobaXterm on Windows and miss it on a Mac, MobAlt gives you the same workflow in one
+window: a session tree, tabbed and split terminals, an SFTP browser that opens with every SSH
+connection, port forwarding, MultiExec, X11 forwarding, macros, network tools and serial consoles.
+It is a native-feeling Electron app built on xterm.js, ssh2 and node-pty.
+
+## Features
+
+| MobaXterm | MobAlt | Notes |
 |---|---|---|
-| Sessions 사이드바 (폴더, 검색) | ✅ Sessions 패널 | 폴더 드래그 이동, 필터, 우클릭 메뉴, 세션 복제 |
-| SSH 세션 (비밀번호/키/에이전트) | ✅ | 자동(키→에이전트→비밀번호) 순서, keyboard-interactive(2FA), 암호화 키 패스프레이즈 프롬프트 |
-| 비밀번호 저장(마스터 암호) | ✅ | macOS Keychain 기반 `safeStorage`로 암호화 저장 |
-| Host key 확인 | ✅ | `~/.ssh/known_hosts` + 앱 자체 known_hosts, 변경 시 경고 |
-| SFTP 브라우저 (접속 시 자동) | ✅ Sftp 패널 | 업로드/다운로드(폴더 재귀, 진행률, 취소), 새 폴더, 이름 변경, 권한(chmod), 삭제, 숨김 파일 |
-| "Follow terminal folder" | ✅ | OSC 7 셸 훅(bash/zsh) 주입 — 세션 옵션에서 켜기 |
-| 원격 파일 편집 (MobaTextEditor) | ✅ | 내장 편집기(⌘S 저장) + 외부 편집기(저장 시 자동 업로드) |
-| 드래그 앤 드롭 업로드 | ✅ | Finder → SFTP 목록 또는 터미널 위로 드롭 |
-| 내장 X 서버 | ✅ XQuartz 연동 | 세션 옵션 X11 켜면 XQuartz 자동 기동·쿠키 교체 프록시 |
-| MobaSSHTunnel (포트 포워딩) | ✅ Tunneling | Local(-L), Remote(-R), Dynamic SOCKS5(-D). 세션별 자동 터널 + 독립 터널 |
-| MultiExec | ✅ | 모든 터미널에 동시 입력 (⇧⌘M) |
-| 분할 터미널 | ✅ | 가로/세로 분할(⌘D / ⇧⌘D)과 격자 레이아웃(1×2·2×1·2×2·2×3·2×4=8개, ⌥⌘2/4/6/8)으로 빈 페인 생성 → 세션을 드래그해 연결. 폴더 우클릭 "Open All in Grid"로 여러 서버를 한 화면에. 페인 가장자리에 드롭하면 그 방향으로 분할, 가운데 드롭은 교체. 탭을 페인에 드롭하면 그 터미널을 분할 영역으로 이동 |
-| Macros | ✅ | 키 입력 녹화/재생, 텍스트 매크로, 모든 터미널에 재생 |
-| Tools (ping, traceroute, port scan…) | ✅ Tools 패널 | Ping, Traceroute, DNS 조회, 포트 스캔, 네트워크 정보 |
-| Telnet | ✅ | NAWS/TTYPE 협상 포함 |
-| RDP / VNC | ⚠️ 외부 앱 실행 | RDP는 `.rdp` 파일 생성 후 Windows App으로, VNC는 macOS 화면 공유(`vnc://`)로 |
-| 로컬 터미널 (Cygwin) | ✅ 네이티브 zsh/bash | macOS 로그인 셸을 그대로 사용, 폴더 추종 셸 통합 |
-| 세션 로그 저장 | ✅ | 세션 옵션 또는 우클릭 → Session Log |
-| MobaXterm.ini 가져오기 | ✅ | Bookmarks 섹션(SSH/Telnet/RDP/VNC) best-effort 파싱, `~/.ssh/config` 가져오기도 지원 |
-| Serial 콘솔 | ✅ | USB-시리얼 장치 자동 검색, baud/framing/flow, 로컬 에코, Enter→CR/LF/CRLF |
-| Mosh, FTP | ❌ 미구현 | 필요 시 추가 가능 |
+| Sessions sidebar (folders, search) | ✅ Sessions panel | Nested folders, drag to move, filter, context menu, duplicate |
+| SSH (password / key / agent) | ✅ | Automatic order key → agent → password, keyboard-interactive (2FA), passphrase prompts, `~/.ssh/config` and ProxyJump |
+| Saved passwords (master password) | ✅ | Encrypted with Electron `safeStorage` (macOS Keychain) |
+| Host key checking | ✅ | `~/.ssh/known_hosts` plus the app's own list; changed keys are flagged |
+| SFTP browser on connect | ✅ Sftp panel | Upload/download (recursive, progress, cancel), mkdir, rename, chmod, delete, hidden files |
+| Follow terminal folder | ✅ | OSC 7 shell hook for bash/zsh, per session |
+| Remote file editing | ✅ | Built-in editor (⌘S saves back) or your external editor with auto-upload |
+| Drag & drop upload | ✅ | Drop Finder items on the SFTP list or on a terminal |
+| Built-in X server | ✅ via XQuartz | Starts XQuartz on demand and proxies the X11 channel with cookie replacement |
+| MobaSSHTunnel | ✅ Tunneling | Local (-L), remote (-R) and dynamic SOCKS5 (-D); per-session auto-start or standalone |
+| MultiExec | ✅ | Type into every terminal at once (⇧⌘M) |
+| Split terminals | ✅ | Right/down splits and grids up to 2 × 4 (8 panes); drag sessions onto empty panes or pane edges; drag tabs between panes |
+| Macros | ✅ | Record/replay keystrokes, text macros, play to all terminals |
+| Tools | ✅ Tools panel | Ping, traceroute, DNS lookup, port scan, network info |
+| Telnet | ✅ | NAWS/TTYPE negotiation |
+| Serial console | ✅ | USB-serial discovery, baud/framing/flow control, local echo, CR/LF/CRLF |
+| Local terminal | ✅ | Your login shell (zsh/bash) with folder-following integration |
+| Session logging | ✅ | Per session or from the tab menu |
+| RDP / VNC | ⚠️ hands off | RDP writes a `.rdp` file for Windows App; VNC opens macOS Screen Sharing |
+| MobaXterm.ini import | ✅ | Best-effort import of the Bookmarks section; `~/.ssh/config` import too |
+| Mosh, FTP | ❌ | Not implemented yet |
 
-## 설치
+Workspace restore brings back your tabs, splits and sessions (local shells keep their folder) on
+the next launch and reconnects SSH automatically.
 
-1. [Releases](https://github.com/Hyeongcheol-An/mobaXterm/releases)에서 `MobAlt-<버전>-arm64.dmg`(Apple Silicon) 또는 `-x64.dmg`(Intel)를 받습니다.
-2. DMG를 열어 `MobAlt.app`을 응용 프로그램 폴더로 끕니다.
-3. 코드 서명이 없는 앱이므로 첫 실행 시 Gatekeeper가 막습니다. 아래 중 하나로 열어 주세요.
-   - Finder에서 앱을 **우클릭 → 열기 → 열기**
-   - 또는 터미널에서 `xattr -dr com.apple.quarantine /Applications/MobAlt.app`
-4. X11 포워딩을 쓰려면 [XQuartz](https://www.xquartz.org/)를 설치합니다. 앱이 필요할 때 자동으로 띄웁니다.
+## Install
 
-## 사용법 요약
+**Requirements**: macOS 13 Ventura or later, Apple Silicon or Intel. Optional: [XQuartz](https://www.xquartz.org/)
+for X11 forwarding, [Windows App](https://apps.apple.com/app/windows-app/id1295203466) for RDP.
 
-- **세션 만들기**: 툴바 `＋ Session`(⌘N) → 종류(SSH/Local/Telnet/RDP/VNC) 선택 → 저장 & 접속. 사이드바에서 더블클릭으로 접속합니다.
-- **빠른 접속**: 우측 상단 `user@host[:port]` 입력 후 Enter. `telnet://`, `rdp://`, `vnc://` 접두사도 됩니다.
-- **SFTP**: SSH 접속 시 Sftp 패널이 자동으로 열립니다. 더블클릭으로 폴더 이동/파일 편집, `>_` 버튼으로 터미널을 현재 폴더로 `cd`.
-- **터널**: 툴바 `Tunneling`(⇧⌘U)에서 열린 연결 또는 저장된 세션을 통해 터널을 시작합니다. 세션 편집기의 Tunnels 탭에 등록하면 접속 시 자동 시작됩니다.
-- **분할**: 툴바 Split ▾ 메뉴에서 오른쪽/아래 분할 또는 격자(최대 2열×4줄=8개)를 고르면 빈 페인이 생기고, Sessions 패널의 세션을 끌어다 놓으면 그 자리에 접속됩니다. 빈 페인의 버튼으로 로컬 터미널이나 현재 세션 복제도 가능합니다. 이미 터미널이 있는 페인의 가장자리(좌/우/상/하)에 드롭하면 그 방향으로 새로 분할되고, 가운데 드롭은 교체(연결 중이면 확인)입니다. 탭을 페인 위로 끌면 그 터미널이 분할 영역으로 옮겨집니다.
-- **작업대 저장/복원**: 탭·분할 레이아웃·각 페인의 세션(로컬 셸은 현재 폴더까지)이 자동 저장되고, 다음 실행 때 그대로 복원되며 SSH는 자동 재접속합니다. 저장 위치는 사용자 데이터 폴더(`workspace.json`)라 앱을 업데이트해도 유지됩니다. Settings → Behaviour의 "Restore tabs & split layout at startup"으로 끌 수 있습니다. (로컬 터미널에서 돌던 프로세스 자체는 복원되지 않고 새 셸이 열립니다.)
-- **세션 트리**: 사이드바에서 폴더(중첩 가능)로 정리합니다 — 📁+ 버튼 또는 우클릭 → New Subfolder, 세션을 폴더로 드래그해 이동, 폴더 자체도 드래그로 다른 폴더/루트로 이동. 우클릭 메뉴에서 폴더 전체를 격자로 한꺼번에 열 수 있습니다.
-- **세션 아이콘·색상**: 세션 편집기 Basic 탭에서 아이콘(이모지 프리셋)과 색상을 고르면 MobaXterm처럼 사이드바·탭·페인 머리글에 표시됩니다. 탭 우클릭 → Tab Color로 탭별 색만 바꿀 수도 있습니다.
-- **시작 명령(Execute command at startup)**: 세션 편집기 Terminal 탭의 "Startup commands"에 적은 명령은 터미널이 준비되면 자동으로 입력됩니다. SSH/Telnet은 로그인 직후, 로컬·시리얼 세션은 셸/포트가 열린 직후에 보내며 여러 줄은 차례로 실행됩니다. 예: 로컬 세션에 Start folder를 프로젝트 폴더로, Startup commands에 `claude --resume <세션 ID>`를 넣어 두면 그 세션을 열 때마다 Claude Code가 이어서 뜹니다.
-- **MultiExec**: 툴바 버튼 또는 ⇧⌘M. 켜져 있는 동안 입력이 모든 터미널에 전달됩니다.
-- **단축키**: Help → Keyboard Shortcuts. 터미널 우클릭은 붙여넣기(⇧+우클릭은 메뉴), 선택하면 자동 복사됩니다(설정에서 변경 가능).
-- **Shift+Enter**: ESC+CR을 전송합니다(iTerm2 프리셋과 동일). Claude Code 같은 TUI에서 제출 대신 줄바꿈으로 동작하며, Option+Enter도 같습니다. 한글 IME 조합 중에는 개입하지 않습니다.
-
-## 개발
-
-요구 사항: macOS, Node.js 22+, Xcode Command Line Tools(네이티브 모듈 `node-pty` 빌드), Python 3.
+### Homebrew
 
 ```bash
-git clone git@github.com:Hyeongcheol-An/mobaXterm.git
-cd mobaXterm
-npm install          # postinstall에서 node-pty를 Electron ABI로 리빌드
-npm start            # 앱 실행
-npm test             # 단위 테스트 (importers, known_hosts, x11)
-npm run pack         # dist/mac-arm64/MobAlt.app 생성 (서명 없음)
-npm run dist         # DMG/zip 생성
-npm run install:local  # 최신 코드로 arm64 빌드 후 /Applications/MobAlt.app 설치
+brew install --cask Hyeongcheol-An/tap/mobalt
 ```
 
-> VS Code 통합 터미널처럼 `ELECTRON_RUN_AS_NODE=1`이 설정된 셸에서는 `env -u ELECTRON_RUN_AS_NODE npm start`로 실행하세요.
+The cask is also kept in this repository (`Casks/mobalt.rb`), so
+`brew tap Hyeongcheol-An/mobalt https://github.com/Hyeongcheol-An/MobAlt && brew install --cask mobalt` works too.
 
-### 구조
+### DMG
+
+1. Download `MobAlt-<version>-arm64.dmg` (Apple Silicon) or `MobAlt-<version>-x64.dmg` (Intel) from
+   [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases).
+2. Open it and drag **MobAlt** to **Applications**.
+
+Release builds are signed with a Developer ID certificate and notarized, so they open without
+Gatekeeper warnings. If you run a build you made yourself, right-click the app → **Open** the first
+time, or clear quarantine with `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
+
+## Using MobAlt
+
+- **Sessions**: `＋ Session` (⌘N) → choose SSH / Local / Telnet / Serial / RDP / VNC → save & connect.
+  Double-click a session in the sidebar to connect; drag sessions into folders and folders into each other.
+- **Quick connect**: type `user@host[:port]` in the toolbar field and press Enter. `telnet://`, `rdp://`
+  and `vnc://` prefixes work too.
+- **SFTP**: opens automatically for SSH sessions. Double-click to navigate or edit, `>_` sends `cd` to
+  the terminal, the terminal can follow your shell's folder (session option).
+- **Tunnels**: `Tunneling` (⇧⌘U) starts tunnels over an open connection or a saved session; tunnels
+  listed in a session's Tunnels tab start with the session.
+- **Splits**: `Split ▾` creates an empty pane on the right/bottom or a grid (up to 2 columns × 4 rows).
+  Drop a session from the sidebar onto an empty pane to connect there; drop on a pane edge to split in
+  that direction; drop in the centre to replace. Drag a tab onto a pane to move that terminal.
+  A folder's context menu can open all of its sessions in a grid.
+- **Icons & colours**: pick an emoji and a colour in the session editor; they show in the sidebar, tab
+  and pane header.
+- **Startup commands** (MobaXterm's *Execute command*): lines in the session editor's Terminal tab are
+  typed into the terminal once it is ready, for every session type. Example: a local session with
+  *Start folder* set to a project and `claude --resume <id>` as the startup command.
+- **MultiExec**: toolbar button or ⇧⌘M; while on, keystrokes go to every terminal.
+- **Keyboard**: Help → Keyboard Shortcuts. Right-click pastes (⇧-right-click for the menu), selecting
+  copies. Shift+Enter and Option+Enter send ESC+CR, which TUI apps such as Claude Code treat as a newline.
+
+## Data and privacy
+
+Everything lives in `~/Library/Application Support/MobAlt/`: `sessions.json` (passwords and
+passphrases encrypted through the macOS Keychain), `settings.json`, `known_hosts`, `workspace.json`.
+Session logs default to `~/Documents/MobAlt Logs/`. MobAlt talks only to the hosts you configure;
+there is no telemetry and no update check. Details in [SECURITY.md](SECURITY.md).
+
+## Development
+
+Requirements: Node.js 22+, Xcode Command Line Tools (for `node-pty`), Python 3 (icon/DMG assets).
+
+```bash
+git clone https://github.com/Hyeongcheol-An/MobAlt.git
+cd MobAlt
+npm install            # rebuilds node-pty for Electron
+npm start              # run from source
+npm test               # unit tests
+npm run pack           # dist/mac-arm64/MobAlt.app (unsigned)
+npm run dist           # DMG + zip for arm64 and x64
+npm run install:local  # build arm64, sign if a Developer ID identity is available, install to /Applications
+```
+
+In shells that export `ELECTRON_RUN_AS_NODE=1` (VS Code's integrated terminal), run
+`env -u ELECTRON_RUN_AS_NODE npm start`.
+
+### Layout
 
 ```
-src/main/           Electron 메인 프로세스
-  main.js           창, 메뉴, IPC 라우팅, 테스트 훅
-  preload.js        contextBridge로 노출되는 window.api
-  store.js          sessions.json / settings.json (비밀은 safeStorage 암호화)
-  terminals.js      터미널 레지스트리, 로컬 pty(node-pty), telnet
-  ssh.js            ssh2 연결(인증 핸들러, 점프 호스트, X11, 셸)
-  sftp.js           SFTP 목록/파일 작업/전송(진행률·취소)/원격 편집
-  tunnels.js        -L/-R/-D(SOCKS5) 포트 포워딩
-  x11.js            XQuartz 탐색·기동, X11 채널 프록시(쿠키 교체)
-  knownhosts.js     호스트 키 검증
-  importers.js      ~/.ssh/config, MobaXterm.ini 가져오기
-  tools.js          ping/traceroute/port scan/DNS
-  zdotdir.js        로컬 zsh 셸 통합(OSC 7)
-src/renderer/       렌더러 (프레임워크 없이 ES 모듈)
-  app.js            컨트롤러(이벤트, 액션, 상태 표시줄)
-  terminal.js       xterm.js 페인(테마, 검색, DnD, 재접속)
-  layout.js         탭 + 분할 트리
-  sidebar.js        세션 트리
-  sftp.js           SFTP 패널
-  panels.js         Tools / Macros 패널
-  dialogs.js        세션 편집기, 설정, 터널, 호스트키/비밀번호 프롬프트
+src/main/        Electron main process
+  main.js        window, menu, IPC routing, test hooks
+  preload.js     window.api (contextBridge)
+  store.js       sessions.json / settings.json / workspace.json (secrets via safeStorage)
+  terminals.js   terminal registry, local pty (node-pty), telnet, serial
+  ssh.js         ssh2 connection: auth handler, jump hosts, X11, shell
+  sftp.js        SFTP listing, file operations, transfers, remote edit
+  tunnels.js     -L / -R / -D (SOCKS5) forwarding
+  x11.js         XQuartz discovery/start and X11 channel proxy
+  knownhosts.js  host key verification
+  importers.js   ~/.ssh/config and MobaXterm.ini import
+  tools.js       ping / traceroute / port scan / DNS
+  zdotdir.js     zsh integration for local shells (OSC 7)
+src/renderer/    renderer (plain ES modules, no framework)
+  app.js         controller: actions, events, status bar
+  terminal.js    xterm.js pane: themes, search, drag & drop, reconnect
+  layout.js      tabs and the split tree
+  sidebar.js     session tree
+  sftp.js        SFTP panel
+  panels.js      Tools / Macros panels
+  dialogs.js     session editor, settings, tunnels, host key and password prompts
 test/
-  unit/             node --test 단위 테스트
-  start-sshd.sh     포트 2222 사용자 권한 테스트 sshd(키 인증, SFTP, X11, 포워딩)
-  e2e-ssh.js        앱 안에서 실행되는 E2E 스크립트 (SSH/SFTP/X11/터널)
-  e2e-ui.js         다이얼로그·패널 UI E2E
-  e2e-serial.js     가상 시리얼 장치(mock-serial.py) E2E
-  e2e-auth.js       인증 실패 진단·포트 거부 힌트·키 접속 E2E
+  unit/          node --test unit tests
+  start-sshd.sh  user-level test sshd on port 2222 (keys, SFTP, X11, forwarding)
+  e2e-*.js       scripts executed inside the app (SSH/SFTP/X11/tunnels, UI, auth, serial, workspace)
 ```
 
-### E2E 테스트 (로컬 sshd)
+### End-to-end tests
 
 ```bash
 test/start-sshd.sh start
@@ -116,31 +154,43 @@ MOBALT_SCREENSHOT=$S/shots/final.png MOBALT_SCREENSHOT_DELAY=120000 npx electron
 test/start-sshd.sh stop
 ```
 
-호스트키 프롬프트 → 키 인증 → 폴더 추종 → X11 → 세션 터널 → SFTP 업/다운로드·편집 → 암호화 키 패스프레이즈 → 분할 → MultiExec 순으로 검증하고 `RESULTS {...}`를 출력합니다.
+Each script prints a `RESULTS {...}` line and saves screenshots to `MOBALT_SHOT_DIR`. The test hooks
+only exist while `MOBALT_TEST_SCRIPT` is set.
 
-## 릴리스 / 버저닝
+## Releasing
 
-- 커밋 메시지는 [Conventional Commits](https://www.conventionalcommits.org/)를 따릅니다. `feat:` → minor, `fix:` → patch, `feat!:`/`BREAKING CHANGE` → major.
-- `main`에 push되면 `.github/workflows/release.yml`이 macOS 러너에서 `npm test` → `semantic-release`를 실행합니다.
-  1. 커밋 분석 → 다음 버전 결정
-  2. `CHANGELOG.md` 생성, `package.json` 버전 갱신
-  3. `npm run dist`로 DMG/zip 빌드
-  4. GitHub Release 생성 + 산출물 첨부, `chore(release): vX.Y.Z [skip ci]` 커밋
-- PR과 비-main 브랜치는 `ci.yml`에서 테스트와 패키징만 수행합니다.
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`feat:` → minor,
+`fix:` → patch, `feat!:` → major). Every push to `main` runs `.github/workflows/release.yml`:
+gitleaks secret scan → unit tests → `semantic-release`, which bumps the version, writes
+`CHANGELOG.md`, builds and signs the DMG/zip for both architectures, notarizes them, publishes a
+GitHub Release and pushes the updated cask to
+[Hyeongcheol-An/homebrew-tap](https://github.com/Hyeongcheol-An/homebrew-tap).
 
-## 데이터 위치
+Signing and notarization use these repository secrets (the build still succeeds without them, but
+unsigned):
 
-`~/Library/Application Support/MobAlt/` — `sessions.json`(비밀은 Keychain 암호화), `settings.json`, `known_hosts`, `zdotdir/`.
-세션 로그 기본 위치는 `~/Documents/MobAlt Logs/` 입니다.
+| Secret | Value |
+|---|---|
+| `MAC_CERT_P12` | Developer ID Application certificate exported as `.p12`, base64-encoded |
+| `MAC_CERT_PASSWORD` | Password of that `.p12` |
+| `APPLE_API_KEY_P8` | Contents of the App Store Connect API key (`AuthKey_XXXXXXXXXX.p8`) |
+| `APPLE_API_KEY_ID` | Key ID of that API key |
+| `APPLE_API_ISSUER` | Issuer ID (App Store Connect → Users and Access → Integrations) |
+| `HOMEBREW_TAP_DEPLOY_KEY` | SSH private key registered as a write deploy key on the tap repository |
 
-## 알려진 제약
+Local builds (`npm run install:local`) sign automatically with a Developer ID identity from the
+keychain and notarize when `APPLE_API_KEY`, `APPLE_API_KEY_ID` and `APPLE_API_ISSUER` are exported.
 
-- 코드 서명/공증이 없어 첫 실행 시 Gatekeeper 우회가 필요합니다. 배포용 서명에는 Apple Developer Program의 "Developer ID Application" 인증서가 필요합니다(Apple Development 인증서로는 불가).
-- `~/.zprofile` 등에서 `export DISPLAY=:0`처럼 DISPLAY를 고정하면 원격 셸의 X11 DISPLAY가 덮어써집니다. X11 포워딩이 안 되면 원격 쪽 rc 파일을 확인하세요.
-- MobaXterm.ini 형식은 비공개라 호스트/포트/사용자/폴더/X11 플래그만 가져오며 비밀번호는 가져오지 않습니다. `.ppk` 키는 `puttygen`으로 OpenSSH 형식으로 변환해야 합니다.
-- Mosh, FTP는 아직 없습니다.
-- 접속이 "Timed out while waiting for handshake" / ETIMEDOUT으로 실패하면 먼저 로컬 터미널에서 `nc -vz <host> <port>`로 TCP 도달 여부를 확인하세요. 직전에 인증 실패가 있었다면 서버의 fail2ban·sshd PerSourcePenalties가 내 IP를 일시 차단했을 수 있습니다(서버에서 `sudo fail2ban-client status sshd`, `unbanip <내 IP>`). 자동 인증 모드는 비밀번호가 저장된 세션에서는 ssh-agent 키를 시도하지 않아 실패 횟수를 줄입니다.
+## Known limitations
 
-## 라이선스
+- Setting `DISPLAY` in `~/.zprofile` or similar on the remote side overrides the forwarded X11 display.
+- MobaXterm.ini is an undocumented format: hosts, ports, users, folders and the X11 flag are imported,
+  passwords are not. Convert `.ppk` keys with `puttygen` to OpenSSH format.
+- Mosh and FTP are not implemented.
+- If a connection fails with *Timed out while waiting for handshake* or `ETIMEDOUT`, check reachability
+  with `nc -vz <host> <port>` first; repeated authentication failures can get your IP banned by
+  fail2ban or sshd `PerSourcePenalties` on the server.
 
-MIT
+## License
+
+[MIT](LICENSE) © Hyeongcheol An

@@ -4,3 +4,11 @@ test/sshd-runtime/
 *.log
 .DS_Store
 build/icon.iconset/
+# never commit signing material or credentials
+*.p12
+*.p8
+*.pem
+*.key
+.env
+.env.*
+test/shots/

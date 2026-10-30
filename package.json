@@ -77,17 +77,38 @@
         }
       ],
       "icon": "build/icon.icns",
-      "hardenedRuntime": false,
-      "identity": null,
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "hardenedRuntime": true,
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
+      "minimumSystemVersion": "13.0"
     },
     "publish": {
       "provider": "github",
       "owner": "Hyeongcheol-An",
-      "repo": "mobaXterm"
+      "repo": "MobAlt"
     },
     "dmg": {
-      "sign": false
+      "background": "build/dmg-background.png",
+      "iconSize": 110,
+      "window": {
+        "width": 600,
+        "height": 400
+      },
+      "contents": [
+        {
+          "x": 150,
+          "y": 190
+        },
+        {
+          "x": 450,
+          "y": 190,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
     },
     "electronFuses": {
       "runAsNode": false,
@@ -99,10 +120,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Hyeongcheol-An/mobaXterm.git"
+    "url": "https://github.com/Hyeongcheol-An/MobAlt.git"
   },
-  "homepage": "https://github.com/Hyeongcheol-An/mobaXterm#readme",
+  "homepage": "https://github.com/Hyeongcheol-An/MobAlt#readme",
   "bugs": {
-    "url": "https://github.com/Hyeongcheol-An/mobaXterm/issues"
+    "url": "https://github.com/Hyeongcheol-An/MobAlt/issues"
   }
 }

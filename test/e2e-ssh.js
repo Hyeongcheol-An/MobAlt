@@ -20,7 +20,7 @@
   const results = {};
   try {
     const home = app.info.home;
-    const root = home + '/src/MobAlt';
+    const root = app.info.appPath;
     const keyDir = root + '/test/sshd-runtime';
     const user = home.split('/').pop();
 

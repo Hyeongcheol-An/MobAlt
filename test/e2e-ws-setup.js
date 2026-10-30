@@ -17,7 +17,7 @@
   const results = {};
   try {
     const home = app.info.home;
-    const keyDir = home + '/src/MobAlt/test/sshd-runtime';
+    const keyDir = app.info.appPath + '/test/sshd-runtime';
     const user = home.split('/').pop();
 
     const s1 = await app.saveSession({
