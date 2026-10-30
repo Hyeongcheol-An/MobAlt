@@ -7,10 +7,11 @@ cd "$(dirname "$0")/.."
 export CSC_IDENTITY_AUTO_DISCOVERY=false
 unset ELECTRON_RUN_AS_NODE
 
+# Targets given on the command line override package.json (which lists arm64+x64), so only arm64 is built here.
 if [ "${1:-}" = "--no-dmg" ]; then
-  npx electron-builder --mac --arm64 --dir
+  npx electron-builder --mac dir --arm64
 else
-  npx electron-builder --mac --arm64
+  npx electron-builder --mac dmg --arm64
 fi
 
 APP="dist/mac-arm64/MobAlt.app"
