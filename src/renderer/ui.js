@@ -169,12 +169,28 @@ window.addEventListener('keydown', (e) => {
 
 // ---------- modal ----------
 const modalStack = [];
+let modalSeq = 0; // dialogs shown so far: callers can tell whether an action opened (and closed) one
+export function modalsShown() {
+  return modalSeq;
+}
+/**
+ * Hand focus back to the element that opened a dialog or menu, if it is still there (and visible, enabled);
+ * otherwise run `fallback`. A terminal opener is left to the fallback too: the app decides which pane is active.
+ */
+export function focusBack(el, fallback) {
+  const ok = el && el.isConnected && el !== document.body && !el.hidden && !el.disabled && el.offsetParent !== null && !el.closest('.xterm');
+  if (ok) el.focus({ preventScroll: true });
+  else fallback && fallback();
+}
 export function showModal({ title, body, buttons = [], width, onClose, closeOnBackdrop = true, beforeClose = null }) {
   const root = $('#modal-root');
   const modal = h('div', { class: 'modal' + (width ? ' ' + width : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': typeof title === 'string' ? title : null });
   const backdrop = h('div', { class: 'modal-backdrop' }, modal);
+  const opener = document.activeElement; // where the keyboard was: a tab, a tree row, the button that opened this dialog…
+  modalSeq++;
   const api = {
     el: modal,
+    opener,
     close(result) {
       if (!backdrop.isConnected) return;
       // a dismissal (Esc / ✕ / backdrop / Cancel) may ask for confirmation first
@@ -190,8 +206,10 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
       onClose && onClose(result);
       api.resolve && api.resolve(result);
       const top = modalStack[modalStack.length - 1];
-      if (top) top.focusFirst();
-      else document.dispatchEvent(new CustomEvent('modal-closed'));
+      // focus goes back to what opened this dialog: a control of the parent dialog (sub-dialogs), a tab, a tree
+      // row, a toolbar/panel button…; the parent's first control / the terminal only when that is gone
+      if (top) focusBack(top.el.contains(opener) ? opener : null, () => top.focusFirst());
+      else focusBack(opener, () => document.dispatchEvent(new CustomEvent('modal-closed'))); // app.js hands focus to the terminal
     },
     focusFirst() {
       // First visible form control in the body, then the primary button, then any button (never the ✕).
@@ -225,7 +243,13 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
     e.preventDefault();
     const list = focusables();
     if (!list.length) return;
-    const i = list.indexOf(document.activeElement), n = list.length;
+    const a = document.activeElement;
+    let i = list.indexOf(a), n = list.length;
+    if (i < 0 && modal.contains(a)) {
+      // focus is on a control outside the Tab order (a roving pick reached with the arrows): continue from its place
+      const after = list.findIndex((el) => a.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+      i = e.shiftKey ? (after < 0 ? n : after) : (after < 0 ? n - 1 : after - 1);
+    }
     (i < 0 ? (e.shiftKey ? list[n - 1] : list[0]) : list[(i + (e.shiftKey ? -1 : 1) + n) % n]).focus();
   };
   // Esc closes the top-most dialog even when focus has wandered outside it (e.g. after clicking a label);

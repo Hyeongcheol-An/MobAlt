@@ -1,5 +1,5 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, contextMenu, icon, applyIcons } from './ui.js';
+import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons } from './ui.js';
 import { TermPane, THEMES } from './terminal.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
@@ -198,8 +198,10 @@ class App {
   wireUi() {
     for (const b of $$('[data-action]')) b.addEventListener('click', async (e) => {
       const viaKeyboard = e.detail === 0; // Enter/Space on the focused button
+      const shown = modalsShown();
       await this.action(b.dataset.action, b.dataset.arg);
-      if (!viaKeyboard || anyModalOpen() || document.activeElement !== b) return;
+      // a dialog that opened (and maybe already closed) during the action placed focus itself (back on this button)
+      if (!viaKeyboard || anyModalOpen() || modalsShown() !== shown || document.activeElement !== b) return;
       // keyboard flow: an action that opened no dialog/menu hands focus to the panel it showed, else to the terminal
       const panelInput = b.dataset.action === 'sidebar' && $(`#panel-${b.dataset.arg} input`);
       if (panelInput) panelInput.focus();
@@ -226,7 +228,7 @@ class App {
       this.activePane()?.focus();
     });
     $('#qc-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { e.target.blur(); this.activePane()?.focus(); }
+      if (e.key === 'Escape') { e.target.value = ''; e.target.blur(); this.activePane()?.focus(); } // like the session filter: Esc clears and leaves
     });
     // sidebar resize
     const rs = $('#sidebar-resizer');

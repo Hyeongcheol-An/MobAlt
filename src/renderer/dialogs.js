@@ -26,6 +26,43 @@ function check(label, checked, attrs = {}) {
 function select(options, value) {
   return h('select', {}, options.map(([v, l]) => h('option', { value: v, selected: v === value }, l)));
 }
+/** One pick of a picker row (role=radio): only the chosen one (or `extra.stop`) is in the Tab order, see pickRow(). */
+function pick(content, checked, title, onclick, extra = {}) {
+  return h('button', { type: 'button', class: 'pick' + (extra.class ? ' ' + extra.class : '') + (checked ? ' active' : ''), role: 'radio', 'aria-checked': String(checked), tabindex: checked || extra.stop ? 0 : -1, title, style: extra.style, onclick }, content);
+}
+/**
+ * A picker row is ONE Tab stop (roving tabindex): ←/→/↑/↓ move between the picks (wrapping), Home/End jump,
+ * Enter/Space choose (the button's own click). The Tab stop follows the focus; a re-render keeps the focus.
+ */
+function pickRow(label) {
+  const row = h('div', { class: 'pick-row', role: 'radiogroup', 'aria-label': label });
+  row.addEventListener('keydown', (e) => {
+    const picks = [...row.querySelectorAll('.pick')];
+    const i = picks.indexOf(e.target), n = picks.length;
+    if (i < 0 || e.metaKey || e.ctrlKey || e.altKey) return;
+    let to;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = picks[(i + 1) % n];
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = picks[(i - 1 + n) % n];
+    else if (e.key === 'Home') to = picks[0];
+    else if (e.key === 'End') to = picks[n - 1];
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.target.click(); return; } // one click: the prevented keydown cancels the button's own activation
+    else return;
+    e.preventDefault();
+    to.focus();
+  });
+
+  row.addEventListener('focusin', (e) => {
+    if (!e.target.classList.contains('pick')) return;
+    for (const p of row.querySelectorAll('.pick')) p.tabIndex = p === e.target ? 0 : -1;
+  });
+  /** Replace the picks; focus (if it was in the row) lands on the chosen one. */
+  row.fill = (...picks) => {
+    const had = row.contains(document.activeElement);
+    row.replaceChildren(...picks);
+    if (had) row.querySelector('.pick[tabindex="0"]')?.focus();
+  };
+  return row;
+}
 
 /** Session editor. Resolves with the session object to save, or null. */
 export function sessionEditor(app, initial = {}) {
@@ -41,20 +78,21 @@ export function sessionEditor(app, initial = {}) {
   const COLOR_CHOICES = ['#e5534b', '#f08c3a', '#e6b422', '#4caf50', '#2fbfa7', '#4ea1ff', '#7a7dff', '#bd93f9', '#ff79c6', '#8a93a2'];
   let iconVal = s.icon || '';
   let colorVal = s.color || '';
-  const iconRow = h('div', { class: 'pick-row' });
+  const iconRow = pickRow('Icon');
   const renderIcons = () => {
-    iconRow.replaceChildren(
-      h('button', { type: 'button', class: 'pick' + (iconVal ? '' : ' active'), title: 'Default (by session type)', onclick: () => { iconVal = ''; renderIcons(); } }, '—'),
-      ...ICON_CHOICES.map((ic) => h('button', { type: 'button', class: 'pick' + (ic === iconVal ? ' active' : ''), onclick: () => { iconVal = ic; renderIcons(); } }, ic))
+    iconRow.fill(
+      pick('—', !iconVal, 'Default (by session type)', () => { iconVal = ''; renderIcons(); }),
+      ...ICON_CHOICES.map((ic) => pick(ic, ic === iconVal, ic, () => { iconVal = ic; renderIcons(); }))
     );
   };
   renderIcons();
   const customColor = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(colorVal) ? colorVal : '#4ea1ff', title: 'Custom colour' });
-  const colorRow = h('div', { class: 'pick-row' });
+  const colorRow = pickRow('Colour');
   const renderColors = () => {
-    colorRow.replaceChildren(
-      h('button', { type: 'button', class: 'pick' + (colorVal ? '' : ' active'), title: 'No colour', onclick: () => { colorVal = ''; renderColors(); } }, '—'),
-      ...COLOR_CHOICES.map((c) => h('button', { type: 'button', class: 'pick swatch' + (c === colorVal ? ' active' : ''), style: { background: c }, title: c, onclick: () => { colorVal = c; renderColors(); } })),
+    // a custom colour (the colour input) is none of the swatches: "—" then holds the group's Tab stop without being chosen
+    colorRow.fill(
+      pick('—', !colorVal, 'No colour', () => { colorVal = ''; renderColors(); }, { stop: !COLOR_CHOICES.includes(colorVal) }),
+      ...COLOR_CHOICES.map((c) => pick('', c === colorVal, c, () => { colorVal = c; renderColors(); }, { class: 'swatch', style: { background: c } })),
       customColor
     );
   };
@@ -146,9 +184,12 @@ export function sessionEditor(app, initial = {}) {
 
   // --- tunnels
   const tunnels = (s.tunnels || []).map((t) => ({ ...t }));
-  const tunnelTable = h('div');
+  const tunnelRows = h('div');
+  // the button stays the same element across re-renders: the Tunnel sub-dialog hands focus back to it when it closes
+  const addTunnel = h('button', { class: 'btn small', type: 'button', onclick: async () => { const t = await tunnelForm(); if (t) { tunnels.push({ ...t, enabled: true }); renderTunnels(); } } }, '＋ Add tunnel');
+  const tunnelTable = h('div', {}, tunnelRows, h('div', { style: { marginTop: '8px' } }, addTunnel));
   const renderTunnels = () => {
-    tunnelTable.replaceChildren(
+    tunnelRows.replaceChildren(
       h('table', { class: 'list-table' },
         h('thead', {}, h('tr', {}, h('th', {}, 'Type'), h('th', {}, 'Bind'), h('th', {}, 'Destination'), h('th', {}, 'On'), h('th', {}))),
         h('tbody', {}, tunnels.map((t, i) => h('tr', {},
@@ -156,10 +197,14 @@ export function sessionEditor(app, initial = {}) {
           h('td', { class: 'mono' }, `${t.bindHost || '127.0.0.1'}:${t.bindPort}`),
           h('td', { class: 'mono' }, t.type === 'dynamic' ? '—' : `${t.destHost}:${t.destPort}`),
           h('td', {}, h('input', { type: 'checkbox', checked: t.enabled !== false, onchange: (e) => (t.enabled = e.target.checked) })),
-          h('td', {}, h('button', { class: 'btn small', onclick: () => { tunnels.splice(i, 1); renderTunnels(); } }, '✕'))
+          h('td', {}, h('button', { class: 'btn small', type: 'button', 'aria-label': `Remove tunnel ${t.bindPort}`, onclick: (e) => {
+            const viaKeyboard = e.currentTarget === document.activeElement;
+            tunnels.splice(i, 1);
+            renderTunnels();
+            if (viaKeyboard) (tunnelRows.querySelectorAll('tbody button')[Math.min(i, tunnels.length - 1)] || addTunnel).focus(); // the removed ✕ had the focus
+          } }, '✕'))
         )))
-      ),
-      h('div', { style: { marginTop: '8px' } }, h('button', { class: 'btn small', onclick: async () => { const t = await tunnelForm(); if (t) { tunnels.push({ ...t, enabled: true }); renderTunnels(); } } }, '＋ Add tunnel'))
+      )
     );
   };
   renderTunnels();
@@ -541,6 +586,7 @@ export function shortcutsDialog(app) {
     ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'],
     ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'], ['Focused session row: move / fold / open', '↑ ↓ / ← → / ⏎'],
     ['Focused session row: open in split / delete', '⌘⏎ / ⌫'], ['Context menu for focused tab or row', '⇧F10'],
+    ['Focused macro: play / delete', '⏎ / ⌫'], ['SFTP list: open / parent / delete', '⏎ / ⌫ / Del'], ['Icon & colour picks: move / choose', '← → / ⏎'],
   ];
   showModal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
 }
