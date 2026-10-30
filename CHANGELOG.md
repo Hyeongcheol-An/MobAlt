@@ -1,3 +1,9 @@
+## [0.8.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.8.0...v0.8.1) (2026-10-30)
+
+### Bug Fixes
+
+* install:local waits for MobAlt to quit instead of replacing a running app ([7ad1ca5](https://github.com/Hyeongcheol-An/MobAlt/commit/7ad1ca5ee812014bbf095eba735e4d50701022ec))
+
 ## [0.8.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.7.0...v0.8.0) (2026-10-30)
 
 ### Features
