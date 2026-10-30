@@ -43,7 +43,7 @@ export function sessionEditor(app, initial = {}) {
   const renderIcons = () => {
     iconRow.replaceChildren(
       h('button', { type: 'button', class: 'pick' + (iconVal ? '' : ' active'), title: 'Default (by session type)', onclick: () => { iconVal = ''; renderIcons(); } }, '—'),
-      ICON_CHOICES.map((ic) => h('button', { type: 'button', class: 'pick' + (ic === iconVal ? ' active' : ''), onclick: () => { iconVal = ic; renderIcons(); } }, ic))
+      ...ICON_CHOICES.map((ic) => h('button', { type: 'button', class: 'pick' + (ic === iconVal ? ' active' : ''), onclick: () => { iconVal = ic; renderIcons(); } }, ic))
     );
   };
   renderIcons();
@@ -52,7 +52,7 @@ export function sessionEditor(app, initial = {}) {
   const renderColors = () => {
     colorRow.replaceChildren(
       h('button', { type: 'button', class: 'pick' + (colorVal ? '' : ' active'), title: 'No colour', onclick: () => { colorVal = ''; renderColors(); } }, '—'),
-      COLOR_CHOICES.map((c) => h('button', { type: 'button', class: 'pick swatch' + (c === colorVal ? ' active' : ''), style: { background: c }, title: c, onclick: () => { colorVal = c; renderColors(); } })),
+      ...COLOR_CHOICES.map((c) => h('button', { type: 'button', class: 'pick swatch' + (c === colorVal ? ' active' : ''), style: { background: c }, title: c, onclick: () => { colorVal = c; renderColors(); } })),
       customColor
     );
   };
@@ -111,7 +111,7 @@ export function sessionEditor(app, initial = {}) {
     const cur = serialCustom.value.trim() || s.serialPath || '';
     serialSel.replaceChildren(
       h('option', { value: '' }, ports.length ? '(select a port)' : '(no serial devices found)'),
-      ports.map((p) => h('option', { value: p.path, selected: p.path === cur }, `${p.path}${p.manufacturer ? ' — ' + p.manufacturer : ''}`))
+      ...ports.map((p) => h('option', { value: p.path, selected: p.path === cur }, `${p.path}${p.manufacturer ? ' — ' + p.manufacturer : ''}`))
     );
   };
   serialSel.addEventListener('change', () => { if (serialSel.value) serialCustom.value = serialSel.value; });

@@ -12,6 +12,9 @@
     app.action('new-session');
     await sleep(400);
     results.editorOpen = !!document.querySelector('.modal .type-picker');
+    // icon/colour pickers must render buttons, not "[object HTMLButtonElement]" text
+    results.editorNoObjectText = !document.querySelector('.modal').textContent.includes('[object ');
+    results.editorPickButtons = document.querySelectorAll('.modal .pick-row button').length;
     document.querySelector('.modal input[placeholder^="hostname"]').value = 'example.com';
     document.querySelectorAll('.modal .mtabs button')[1].click(); // Advanced SSH
     await sleep(200);
