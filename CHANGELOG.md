@@ -1,3 +1,9 @@
+## [0.2.1](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.0...v0.2.1) (2026-10-30)
+
+### Bug Fixes
+
+* **build:** flip Electron fuses so the packaged app ignores ELECTRON_RUN_AS_NODE ([719ada6](https://github.com/Hyeongcheol-An/mobaXterm/commit/719ada65664e9d2be5604199579ece40a484ecc7))
+
 ## [0.2.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.1.0...v0.2.0) (2026-10-30)
 
 ### Features
