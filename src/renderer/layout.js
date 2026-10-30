@@ -121,6 +121,11 @@ export class Workspace {
     return menu;
   }
 
+  /** Every pane of the tab repaints with its own palette (a re-mounted terminal must never keep a stale one). */
+  syncThemes(tab) {
+    for (const p of tab.panes()) if (typeof p.applyTheme === 'function') p.applyTheme(this.app.settings);
+  }
+
   // ---------- tabs ----------
   newTab(pane, title) {
     const tab = new Tab(title || pane.title);
@@ -417,6 +422,7 @@ export class Workspace {
       p.mount();
       p.fit();
     }
+    this.syncThemes(tab);
     this.app.saveWorkspaceSoon?.();
   }
 
