@@ -318,6 +318,41 @@ function registerIpc() {
     electron: process.versions.electron,
   }));
   ipcMain.on('app:quit', () => app.quit());
+  // Test-only: perform a REAL drag-and-drop through the Chrome DevTools Protocol so that the
+  // browser's own drop rules (effectAllowed/dropEffect, dragover preventDefault) are exercised.
+  ipcMain.handle('test:drag', async (_e, { from, to, steps = 8 }) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const dbg = win.webContents.debugger;
+    if (!dbg.isAttached()) dbg.attach('1.3');
+    const send = (m, p) => dbg.sendCommand(m, p);
+    let data = null;
+    const onEvent = (_ev, method, params) => {
+      if (method === 'Input.dragIntercepted') data = params.data;
+    };
+    dbg.on('message', onEvent);
+    try {
+      await send('Input.setInterceptDrags', { enabled: true });
+      await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: from.x, y: from.y });
+      await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: from.x, y: from.y, button: 'left', clickCount: 1 });
+      for (let i = 1; i <= steps && !data; i++) {
+        const x = from.x + ((to.x - from.x) * i) / steps, y = from.y + ((to.y - from.y) * i) / steps;
+        await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'left' });
+        await new Promise((r) => setTimeout(r, 30));
+      }
+      if (!data) {
+        await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: to.x, y: to.y, button: 'left', clickCount: 1 });
+        return { ok: false, reason: 'drag did not start (no dragIntercepted event)' };
+      }
+      await send('Input.dispatchDragEvent', { type: 'dragEnter', x: to.x, y: to.y, data });
+      await send('Input.dispatchDragEvent', { type: 'dragOver', x: to.x, y: to.y, data });
+      await new Promise((r) => setTimeout(r, 50));
+      await send('Input.dispatchDragEvent', { type: 'drop', x: to.x, y: to.y, data });
+      return { ok: true, items: data.items.map((i) => i.mimeType), ops: data.dragOperationsMask };
+    } finally {
+      dbg.off('message', onEvent);
+      await send('Input.setInterceptDrags', { enabled: false }).catch(() => {});
+    }
+  });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();

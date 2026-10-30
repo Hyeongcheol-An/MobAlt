@@ -88,12 +88,15 @@ export class Workspace {
     // drag reorder
     el.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/x-mobalt-tab', tab.id);
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.effectAllowed = 'copyMove';
       el.classList.add('dragging');
     });
     el.addEventListener('dragend', () => el.classList.remove('dragging'));
     el.addEventListener('dragover', (e) => {
-      if (e.dataTransfer.types.includes('text/x-mobalt-tab')) e.preventDefault();
+      if (e.dataTransfer.types.includes('text/x-mobalt-tab')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      }
     });
     el.addEventListener('drop', (e) => {
       const id = e.dataTransfer.getData('text/x-mobalt-tab');

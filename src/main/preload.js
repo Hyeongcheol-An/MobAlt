@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('api', {
     info: () => invoke('app:info'),
     quit: () => send('app:quit'),
     screenshot: (name) => invoke('app:screenshot', name),
+    testDrag: (from, to) => invoke('test:drag', { from, to }),
   },
   term: {
     spawnLocal: (opts) => invoke('term:spawn-local', opts),

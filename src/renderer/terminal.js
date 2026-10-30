@@ -159,9 +159,10 @@ export class TermPane {
     el.addEventListener('dragover', (e) => {
       if (isPaneDrag(e)) {
         e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
+        const isTab = e.dataTransfer.types.includes('text/x-mobalt-tab');
+        e.dataTransfer.dropEffect = isTab ? 'move' : 'copy';
         const zone = this._dropZone(e);
-        const what = e.dataTransfer.types.includes('text/x-mobalt-tab') ? 'Move terminal' : 'Open session';
+        const what = isTab ? 'Move terminal' : 'Open session';
         this._showZone(zone, zone === 'center' ? (this.kind === 'empty' ? `${what} here` : `${what} here (replace)`) : `${what} ${zone}`);
         return;
       }

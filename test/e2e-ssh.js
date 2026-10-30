@@ -103,7 +103,16 @@
     await app.action('split', 'down');
     const emptyPane = app.workspace.active.panes().find((p) => p.kind === 'empty');
     results.splitEmpty = !!emptyPane && !!emptyPane.el.querySelector('.pane-placeholder');
-    await app.dropOnPane(emptyPane, { sessionId: s2.id }, 'center');
+    // REAL drag (CDP) of the enc-key row from the Sessions panel onto the empty pane
+    app.showPanel('sessions');
+    await sleep(300);
+    const row = document.querySelector(`.tree-row[data-session="${s2.id}"]`);
+    const rr = row.getBoundingClientRect(), pr = emptyPane.el.getBoundingClientRect();
+    const drag = await window.api.app.testDrag({ x: rr.left + rr.width / 2, y: rr.top + rr.height / 2 }, { x: pr.left + pr.width / 2, y: pr.top + pr.height / 2 });
+    log('real drag result: ' + JSON.stringify(drag));
+    await sleep(800);
+    results.realDragConnected = app.workspace.active.panes().some((p) => p.session && p.session.id === s2.id && p.kind === 'ssh');
+    if (!results.realDragConnected) await app.dropOnPane(emptyPane, { sessionId: s2.id }, 'center'); // keep the rest of the suite going
     await waitFor(() => app.workspace.active.panes().every((p) => p.status === 'connected'), 15000, 'split pane connected');
     results.splitPanes = app.workspace.active.panes().length;
     await sleep(1500);

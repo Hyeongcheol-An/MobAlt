@@ -100,6 +100,7 @@ export class SessionTree {
         row.addEventListener('dragover', (e) => {
           if (e.dataTransfer.types.includes('text/x-mobalt-session')) {
             e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
             row.classList.add('drop-target');
           }
         });
@@ -151,7 +152,8 @@ export class SessionTree {
     });
     row.addEventListener('dragstart', (e) => {
       e.dataTransfer.setData('text/x-mobalt-session', s.id);
-      e.dataTransfer.effectAllowed = 'move';
+      // folders accept "move", panes accept "copy": both must be allowed or Chromium refuses the drop
+      e.dataTransfer.effectAllowed = 'copyMove';
     });
     return row;
   }
