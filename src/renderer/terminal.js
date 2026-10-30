@@ -299,6 +299,7 @@ export class TermPane {
       )
     );
     this.el.append(this.placeholder);
+    this.termEl.style.visibility = 'hidden'; // no stray cursor behind the info card
   }
 
   hidePlaceholder() {
