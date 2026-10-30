@@ -14,7 +14,8 @@ MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트�
 
 ## 설치
 
-- **Homebrew**: `brew install --cask Hyeongcheol-An/tap/mobalt`
+- **Homebrew**: `brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
+  (Homebrew 7부터 외부 tap은 한 번 신뢰 처리가 필요하며, 이후 `brew upgrade --cask mobalt`로 업데이트)
 - **DMG**: [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases)에서 Apple Silicon(`arm64`) 또는
   Intel(`x64`) DMG를 받아 MobAlt를 Applications로 끌어다 놓습니다.
 

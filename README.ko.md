@@ -63,11 +63,12 @@ GitHub Releases에서 새 버전을 확인하며(Settings → Updates, Help → 
 ### Homebrew
 
 ```bash
-brew install --cask Hyeongcheol-An/tap/mobalt
+brew tap Hyeongcheol-An/tap
+brew trust Hyeongcheol-An/tap      # Homebrew 7부터 외부 tap은 한 번 신뢰 처리가 필요합니다
+brew install --cask mobalt
 ```
 
-cask 파일은 이 저장소에도 있으므로(`Casks/mobalt.rb`)
-`brew tap Hyeongcheol-An/mobalt https://github.com/Hyeongcheol-An/MobAlt && brew install --cask mobalt`로도 설치됩니다.
+이후 업데이트는 `brew upgrade --cask mobalt`. cask 파일은 이 저장소에도 있습니다(`Casks/mobalt.rb`).
 
 ### DMG
 

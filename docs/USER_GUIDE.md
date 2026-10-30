@@ -15,7 +15,8 @@ Contents: [Install](#install) · [Sessions](#sessions) · [Connecting](#connecti
 
 ## Install
 
-- **Homebrew**: `brew install --cask Hyeongcheol-An/tap/mobalt`
+- **Homebrew**: `brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
+  (Homebrew 7 asks you to trust a third-party tap once; `brew upgrade --cask mobalt` updates later)
 - **DMG**: download the Apple Silicon (`arm64`) or Intel (`x64`) DMG from
   [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) and drag MobAlt to Applications.
 

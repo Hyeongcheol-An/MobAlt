@@ -65,11 +65,12 @@ for X11 forwarding, [Windows App](https://apps.apple.com/app/windows-app/id12952
 ### Homebrew
 
 ```bash
-brew install --cask Hyeongcheol-An/tap/mobalt
+brew tap Hyeongcheol-An/tap
+brew trust Hyeongcheol-An/tap      # Homebrew 7+ asks you to trust third-party taps once
+brew install --cask mobalt
 ```
 
-The cask is also kept in this repository (`Casks/mobalt.rb`), so
-`brew tap Hyeongcheol-An/mobalt https://github.com/Hyeongcheol-An/MobAlt && brew install --cask mobalt` works too.
+Later updates: `brew upgrade --cask mobalt`. The cask is also kept in this repository (`Casks/mobalt.rb`).
 
 ### DMG
 
