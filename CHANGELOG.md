@@ -1,3 +1,9 @@
+## [0.2.2](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.1...v0.2.2) (2026-10-30)
+
+### Bug Fixes
+
+* **ssh:** explain handshake timeouts with a reachability hint ([18b288a](https://github.com/Hyeongcheol-An/mobaXterm/commit/18b288a915ba1390e9db5a20fa40772ea140c555))
+
 ## [0.2.1](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.0...v0.2.1) (2026-10-30)
 
 ### Bug Fixes
