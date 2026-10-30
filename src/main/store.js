@@ -99,6 +99,8 @@ const DEFAULT_SETTINGS = {
   restoreWorkspace: true,
   autoUpdate: true,
   downloadDir: '',
+  logDir: '',
+  logPlainText: false,
   keepAliveInterval: 30,
   readyTimeout: 20000,
   macros: [],

@@ -42,6 +42,88 @@ export class Workspace {
     this.tabsEl.addEventListener('dblclick', (e) => {
       if (e.target === this.tabsEl) app.action('new-local');
     });
+    this._wireTabOverflow();
+  }
+
+  // ---------- tab strip overflow (scroll arrows, edge fades, "all tabs" menu) ----------
+  _wireTabOverflow() {
+    this.barEl = document.getElementById('tabbar');
+    this.scrollLeftBtn = document.getElementById('tab-scroll-left');
+    this.scrollRightBtn = document.getElementById('tab-scroll-right');
+    this.tabListBtn = document.getElementById('tab-list');
+    if (!this.barEl || !this.scrollLeftBtn || !this.scrollRightBtn || !this.tabListBtn) return;
+    // the "all tabs" button toggles its menu: remember whether the menu was open before the global
+    // mousedown handler of the context menu closes it (registered first, so this capture runs first)
+    document.addEventListener('mousedown', (e) => {
+      if (this.tabListBtn.contains(e.target)) this._tabListWasOpen = !!(this._tabListMenu && this._tabListMenu.isConnected);
+    }, true);
+    for (const b of [this.scrollLeftBtn, this.scrollRightBtn, this.tabListBtn]) b.addEventListener('mousedown', (e) => e.preventDefault()); // keep keyboard focus in the terminal
+    this.scrollLeftBtn.addEventListener('click', () => this.scrollTabs(-1));
+    this.scrollRightBtn.addEventListener('click', () => this.scrollTabs(1));
+    this.tabListBtn.addEventListener('click', () => {
+      if (this._tabListWasOpen) { this._tabListWasOpen = false; return; }
+      this.showTabList();
+    });
+    this.tabsEl.addEventListener('scroll', () => this.syncTabOverflow(), { passive: true });
+    new ResizeObserver(() => this.syncTabOverflow()).observe(this.tabsEl); // window / sidebar resizes
+    new MutationObserver(() => this.syncTabOverflow()).observe(this.tabsEl, { childList: true, subtree: true, characterData: true }); // tabs added, removed, retitled
+    this.syncTabOverflow();
+  }
+
+  /** Arrows and fades exist only while the strip overflows; an arrow is disabled at its end. */
+  syncTabOverflow() {
+    if (!this.barEl || !this.scrollLeftBtn) return;
+    const el = this.tabsEl;
+    const max = el.scrollWidth - el.clientWidth;
+    const overflow = max > 1;
+    const atStart = el.scrollLeft <= 1, atEnd = el.scrollLeft >= max - 1;
+    this.scrollLeftBtn.hidden = this.scrollRightBtn.hidden = !overflow;
+    this.scrollLeftBtn.disabled = !overflow || atStart;
+    this.scrollRightBtn.disabled = !overflow || atEnd;
+    this.barEl.classList.toggle('ovf-left', overflow && !atStart);
+    this.barEl.classList.toggle('ovf-right', overflow && !atEnd);
+    this.tabListBtn.hidden = this.tabs.length === 0;
+  }
+
+  /** Scroll the strip by one tab: the first tab cut off on that side becomes fully visible. */
+  scrollTabs(dir) {
+    const el = this.tabsEl;
+    const base = el.getBoundingClientRect().left - el.scrollLeft; // content x → scroll offset
+    const tabs = [...el.querySelectorAll('.tab')].map((t) => { const r = t.getBoundingClientRect(); return { left: r.left - base, right: r.right - base }; });
+    const left = el.scrollLeft, right = left + el.clientWidth;
+    let target;
+    if (dir > 0) {
+      const t = tabs.find((t) => t.right > right + 1);
+      target = t ? t.right - el.clientWidth : left + el.clientWidth;
+    } else {
+      const t = [...tabs].reverse().find((t) => t.left < left - 1);
+      target = t ? t.left : left - el.clientWidth;
+    }
+    el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }
+
+  /** Menu listing every tab (status dot, icon, title; ✓ marks the active one); picking one activates it. */
+  showTabList(anchor = this.tabListBtn) {
+    if (!this.tabs.length || !anchor) return null;
+    const items = this.tabs.map((t) => ({
+      label: h('span', { class: 'tab-menu-item' },
+        h('span', { class: 'dot ' + (t.activePane ? t.activePane.status : '') }),
+        t.icon ? h('span', { class: 'tabico' }, t.icon) : null,
+        h('span', { class: 'title' }, t.title)),
+      key: t === this.active ? '✓' : '',
+      action: () => this.activate(t),
+    }));
+    const r = anchor.getBoundingClientRect();
+    const menu = contextMenu(r.left, r.bottom + 4, items);
+    menu.classList.add('tab-list');
+    menu.style.left = Math.max(6, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 6)) + 'px'; // right-aligned under the button
+    this._tabListMenu = menu;
+    return menu;
+  }
+
+  /** Every pane of the tab repaints with its own palette (a re-mounted terminal must never keep a stale one). */
+  syncThemes(tab) {
+    for (const p of tab.panes()) if (typeof p.applyTheme === 'function') p.applyTheme(this.app.settings);
   }
 
   // ---------- tabs ----------
@@ -340,6 +422,7 @@ export class Workspace {
       p.mount();
       p.fit();
     }
+    this.syncThemes(tab);
     this.app.saveWorkspaceSoon?.();
   }
 

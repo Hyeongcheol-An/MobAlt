@@ -90,7 +90,8 @@ MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트�
 - **키**: Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈이 됩니다.
   Option은 기본적으로 Meta로 동작합니다.
 - **로그**: Terminal → Start/Stop Session Log 또는 세션 옵션으로 출력을 `~/Documents/MobAlt Logs/`에
-  기록합니다.
+  기록합니다. Settings → Logging의 *Strip colours and control sequences*를 켜면 ANSI 색상·제어
+  시퀀스·폴더 추적 훅을 걷어낸 일반 텍스트로 저장합니다.
 - **테마·글꼴**: Settings의 Theme/Font가 모든 터미널에 적용되고, 세션별로 Terminal 탭에서 덮어쓸 수
   있습니다.
 

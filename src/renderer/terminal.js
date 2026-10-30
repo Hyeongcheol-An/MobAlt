@@ -57,6 +57,7 @@ export class TermPane {
     this.sftpStatus = 'idle'; // idle | connecting | connected | failed | disconnected
 
     const s = app.settings;
+    const theme = this.themeFor(s);
     this.term = new Terminal({
       allowProposedApi: true,
       fontFamily: s.fontFamily,
@@ -65,7 +66,7 @@ export class TermPane {
       cursorBlink: s.cursorBlink,
       cursorStyle: s.cursorStyle || 'block',
       scrollback: s.scrollback || 10000,
-      theme: THEMES[this.session?.theme || s.theme] || THEMES['moba-dark'],
+      theme: { ...theme },
       macOptionIsMeta: s.macOptionIsMeta !== false,
       rightClickSelectsWord: false,
       allowTransparency: false,
@@ -94,6 +95,7 @@ export class TermPane {
       (this.termEl = h('div', { class: 'pane-term' }))
     );
     if (this.session?.color) this.el.style.setProperty('--pane-color', this.session.color);
+    this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the palette from the first paint
     this.el.addEventListener('mousedown', () => app.focusPane(this), true);
     this._wireDnD();
 
@@ -249,7 +251,11 @@ export class TermPane {
     if (this.webgl || !this.mounted) return;
     try {
       const webgl = new WebglAddon();
-      webgl.onContextLoss(() => { webgl.dispose(); this.webgl = null; });
+      webgl.onContextLoss(() => {
+        webgl.dispose();
+        this.webgl = null;
+        this.applyTheme(); // the DOM renderer that takes over must paint with this pane's palette, not a stale one
+      });
       this.term.loadAddon(webgl);
       this.webgl = webgl;
     } catch (e) {
@@ -591,8 +597,27 @@ export class TermPane {
     this.term.options.theme = theme;
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the theme
     this.el.style.setProperty('--term-fg', theme.foreground || '#ececec');
+    this.applyTheme(s);
     this.term.options.macOptionIsMeta = s.macOptionIsMeta !== false;
     this.fit();
+  }
+
+  /** The palette this pane should show: the session's own theme, else the global one. */
+  themeFor(s = this.app.settings) {
+    return THEMES[this.session?.theme || s.theme] || THEMES['moba-dark'];
+  }
+
+  /**
+   * (Re)apply the palette to xterm and the pane chrome (`--term-bg`) so the two always agree. A fresh
+   * theme object is handed to xterm on purpose: it only repaints when the object changes, and after a
+   * re-mount (split / layout change) or a WebGL → DOM renderer fallback we want a repaint even when the
+   * theme did not change.
+   */
+  applyTheme(s = this.app.settings) {
+    if (this.disposed) return;
+    const theme = this.themeFor(s);
+    this.term.options.theme = { ...theme };
+    this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e');
   }
 
   async paste() {

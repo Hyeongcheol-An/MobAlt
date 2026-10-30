@@ -393,7 +393,7 @@ function registerIpc() {
     const dir = s.logDir || path.join(app.getPath('documents'), 'MobAlt Logs');
     const safe = (name || id).replace(/[^\w.-]+/g, '_');
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    return registry.startLog(id, path.join(dir, `${safe}_${stamp}.log`));
+    return registry.startLog(id, path.join(dir, `${safe}_${stamp}.log`), { plain: !!s.logPlainText });
   });
   ipcMain.handle('term:log-stop', (_e, id) => registry.stopLog(id));
 
