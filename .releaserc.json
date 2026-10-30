@@ -52,15 +52,24 @@
       {
         "assets": [
           {
-            "path": "dist/*.dmg",
-            "label": "MobAlt ${nextRelease.version} (macOS DMG)"
+            "path": "dist/*-arm64.dmg",
+            "label": "MobAlt ${nextRelease.version} \u2014 macOS Apple Silicon (arm64) DMG"
           },
           {
-            "path": "dist/*.zip",
-            "label": "MobAlt ${nextRelease.version} (macOS zip)"
+            "path": "dist/*-x64.dmg",
+            "label": "MobAlt ${nextRelease.version} \u2014 macOS Intel (x64) DMG"
           },
           {
-            "path": "dist/latest-mac.yml"
+            "path": "dist/*-arm64.zip",
+            "label": "MobAlt ${nextRelease.version} \u2014 macOS Apple Silicon (arm64) zip"
+          },
+          {
+            "path": "dist/*-x64.zip",
+            "label": "MobAlt ${nextRelease.version} \u2014 macOS Intel (x64) zip"
+          },
+          {
+            "path": "dist/latest-mac.yml",
+            "label": "latest-mac.yml (auto-update manifest)"
           }
         ]
       }

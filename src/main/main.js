@@ -5,9 +5,11 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const { Store } = require('./store');
-const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts } = require('./terminals');
+const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, spawnMosh } = require('./terminals');
 const { SshManager } = require('./ssh');
 const { SftpManager } = require('./sftp');
+const { FtpManager } = require('./ftp');
+const { setupUpdater } = require('./updater');
 const { TunnelManager } = require('./tunnels');
 const importers = require('./importers');
 const tools = require('./tools');
@@ -52,6 +54,8 @@ const prompter = {
 
 const ssh = new SshManager(registry, store, prompter);
 const sftp = new SftpManager(ssh, store);
+const ftp = new FtpManager(store);
+let updater = null;
 const tunnels = new TunnelManager(ssh, store);
 
 // ---------- terminal output: coalesce chunks per terminal before IPC ----------
@@ -83,6 +87,8 @@ registry.on('exit', (id, code, reason) => {
 });
 sftp.on('transfer', (t) => win && !win.isDestroyed() && win.webContents.send('sftp:transfer', t));
 sftp.on('edit-synced', (e) => win && !win.isDestroyed() && win.webContents.send('sftp:edit-synced', e));
+ftp.on('transfer', (t) => win && !win.isDestroyed() && win.webContents.send('sftp:transfer', t));
+ftp.on('edit-synced', (e) => win && !win.isDestroyed() && win.webContents.send('sftp:edit-synced', e));
 tunnels.on('changed', (list) => win && !win.isDestroyed() && win.webContents.send('tunnels:changed', list));
 
 // ---------- window ----------
@@ -279,6 +285,8 @@ function buildMenu() {
     {
       role: 'help',
       submenu: [
+        { label: 'Check for Updates…', click: () => updater && updater.check(true) },
+        { type: 'separator' },
         { label: 'MobAlt on disk', click: () => shell.showItemInFolder(app.getPath('userData')) },
         { label: 'Keyboard Shortcuts', click: () => sendAction('shortcuts') },
       ],
@@ -321,6 +329,11 @@ function registerIpc() {
   ipcMain.on('app:quit', () => app.quit());
   // Test-only: perform a REAL drag-and-drop through the Chrome DevTools Protocol so that the
   // browser's own drop rules (effectAllowed/dropEffect, dragover preventDefault) are exercised.
+  ipcMain.handle('test:resize', (_e, w, h) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
+    win.setSize(Math.max(400, w | 0), Math.max(300, h | 0));
+    return win.getSize();
+  });
   ipcMain.handle('test:drag', async (_e, { from, to, steps = 8 }) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const dbg = win.webContents.debugger;
@@ -367,6 +380,10 @@ function registerIpc() {
   ipcMain.handle('term:spawn-local', (_e, opts) => spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
   ipcMain.handle('term:spawn-telnet', (_e, opts) => spawnTelnet(registry, { ...opts, ...sizeOf(opts) }));
   ipcMain.handle('term:spawn-serial', (_e, opts) => spawnSerial(registry, opts));
+  ipcMain.handle('term:spawn-mosh', (_e, opts) => spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
+  ipcMain.handle('ftp:connect', async (_e, cfg) => ftp.connect(await mergeSecrets(cfg)));
+  ipcMain.handle('ftp:disconnect', (_e, id) => ftp.disconnect(id));
+  ipcMain.handle('app:check-updates', () => updater && updater.check(true));
   ipcMain.handle('serial:list', () => listSerialPorts());
   ipcMain.on('term:write', (_e, id, data) => registry.write(id, data));
   ipcMain.on('term:resize', (_e, id, cols, rows) => registry.resize(id, cols, rows));
@@ -384,16 +401,18 @@ function registerIpc() {
   ipcMain.handle('ssh:disconnect', (_e, id) => ssh.disconnect(id));
   ipcMain.handle('ssh:exec', (_e, id, cmd) => ssh.exec(id, cmd));
 
-  ipcMain.handle('sftp:list', (_e, id, dir) => sftp.list(id, dir));
-  ipcMain.handle('sftp:home', (_e, id) => sftp.home(id));
-  ipcMain.handle('sftp:realpath', (_e, id, p) => sftp.realpath(id, p));
-  ipcMain.handle('sftp:stat', (_e, id, p) => sftp.stat(id, p));
-  ipcMain.handle('sftp:mkdir', (_e, id, p) => sftp.mkdir(id, p));
-  ipcMain.handle('sftp:rename', (_e, id, a, b) => sftp.rename(id, a, b));
-  ipcMain.handle('sftp:remove', (_e, id, p, isDir) => sftp.remove(id, p, isDir));
-  ipcMain.handle('sftp:chmod', (_e, id, p, mode) => sftp.chmod(id, p, mode));
-  ipcMain.handle('sftp:read', (_e, id, p) => sftp.readFile(id, p));
-  ipcMain.handle('sftp:write', (_e, id, p, c) => sftp.writeFile(id, p, c));
+  // FTP sessions share the sftp:* API; the connection id decides which backend serves it.
+  const files = (id) => (ftp.has(id) ? ftp : sftp);
+  ipcMain.handle('sftp:list', (_e, id, dir) => files(id).list(id, dir));
+  ipcMain.handle('sftp:home', (_e, id) => files(id).home(id));
+  ipcMain.handle('sftp:realpath', (_e, id, p) => files(id).realpath(id, p));
+  ipcMain.handle('sftp:stat', (_e, id, p) => files(id).stat(id, p));
+  ipcMain.handle('sftp:mkdir', (_e, id, p) => files(id).mkdir(id, p));
+  ipcMain.handle('sftp:rename', (_e, id, a, b) => files(id).rename(id, a, b));
+  ipcMain.handle('sftp:remove', (_e, id, p, isDir) => files(id).remove(id, p, isDir));
+  ipcMain.handle('sftp:chmod', (_e, id, p, mode) => files(id).chmod(id, p, mode));
+  ipcMain.handle('sftp:read', (_e, id, p) => files(id).readFile(id, p));
+  ipcMain.handle('sftp:write', (_e, id, p, c) => files(id).writeFile(id, p, c));
   ipcMain.handle('sftp:download', async (_e, id, remote, local, isDir) => {
     if (!local) {
       const s = store.getSettings();
@@ -409,7 +428,7 @@ function registerIpc() {
         local = r.filePath;
       }
     }
-    return sftp.download(id, remote, local);
+    return files(id).download(id, remote, local);
   });
   ipcMain.handle('sftp:upload', async (_e, id, locals, remoteDir) => {
     if (!locals || !locals.length) {
@@ -417,11 +436,11 @@ function registerIpc() {
       if (r.canceled) return [];
       locals = r.filePaths;
     }
-    return locals.map((l) => sftp.upload(id, l, remoteDir.replace(/\/$/, '') + '/' + path.basename(l)));
+    return locals.map((l) => files(id).upload(id, l, remoteDir.replace(/\/$/, '') + '/' + path.basename(l)));
   });
-  ipcMain.handle('sftp:cancel', (_e, tid) => sftp.cancel(tid));
-  ipcMain.handle('sftp:transfers', () => sftp.listTransfers());
-  ipcMain.handle('sftp:edit', (_e, id, remote) => sftp.editRemote(id, remote));
+  ipcMain.handle('sftp:cancel', (_e, tid) => { sftp.cancel(tid); ftp.cancel(tid); });
+  ipcMain.handle('sftp:transfers', () => [...sftp.listTransfers(), ...ftp.listTransfers()]);
+  ipcMain.handle('sftp:edit', (_e, id, remote) => files(id).editRemote(id, remote));
 
   ipcMain.handle('tunnel:start', (_e, spec) => (spec.connId ? tunnels.startForConnection(spec.connId, spec) : tunnels.startStandalone(spec)));
   ipcMain.handle('tunnel:stop', (_e, id) => tunnels.stop(id));
@@ -539,6 +558,7 @@ app.whenReady().then(() => {
   registerIpc();
   buildMenu();
   createWindow();
+  updater = setupUpdater(store, () => win);
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -547,6 +567,7 @@ app.on('before-quit', () => {
   quitting = true;
   tunnels.stopAll();
   ssh.disconnectAll();
+  ftp.disconnectAll();
   registry.killAll();
 });
 app.on('window-all-closed', () => app.quit());

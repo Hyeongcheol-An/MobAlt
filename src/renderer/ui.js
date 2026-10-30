@@ -52,7 +52,7 @@ export function fmtDuration(ms) {
 }
 
 export const TYPE_ICON = { ssh: '●', local: '●', telnet: '●', rdp: '●', vnc: '●', serial: '●' };
-export const TYPE_LABEL = { ssh: 'SSH', local: 'Local', telnet: 'Telnet', serial: 'Serial', rdp: 'RDP', vnc: 'VNC' };
+export const TYPE_LABEL = { ssh: 'SSH', mosh: 'Mosh', local: 'Local', telnet: 'Telnet', serial: 'Serial', ftp: 'FTP', rdp: 'RDP', vnc: 'VNC' };
 
 // ---------- context menu ----------
 let ctxOpen = null;
@@ -206,10 +206,11 @@ export function debounce(fn, ms) {
 export function parseQuickConnect(str) {
   const s = str.trim();
   if (!s) return null;
-  let m = /^(?:(ssh|telnet|rdp|vnc):\/\/)?(?:([^@\s]+)@)?(\[[^\]]+\]|[^:\s]+)(?::(\d+))?$/.exec(s);
+  let m = /^(?:(ssh|mosh|telnet|ftp|ftps|rdp|vnc):\/\/)?(?:([^@\s]+)@)?(\[[^\]]+\]|[^:\s]+)(?::(\d+))?$/.exec(s);
   if (!m) return null;
-  const type = m[1] || 'ssh';
+  const scheme = m[1] || 'ssh';
+  const type = scheme === 'ftps' ? 'ftp' : scheme;
   const host = m[3].replace(/^\[|\]$/g, '');
-  const port = m[4] ? parseInt(m[4], 10) : { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900 }[type];
-  return { type, username: m[2] || '', host, port, name: `${m[2] ? m[2] + '@' : ''}${host}` };
+  const port = m[4] ? parseInt(m[4], 10) : { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 }[type];
+  return { type, username: m[2] || '', host, port, ftps: scheme === 'ftps', name: `${m[2] ? m[2] + '@' : ''}${host}` };
 }

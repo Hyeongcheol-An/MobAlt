@@ -37,10 +37,12 @@ It is a native-feeling Electron app built on xterm.js, ssh2 and node-pty.
 | Session logging | ✅ | Per session or from the tab menu |
 | RDP / VNC | ⚠️ hands off | RDP writes a `.rdp` file for Windows App; VNC opens macOS Screen Sharing |
 | MobaXterm.ini import | ✅ | Best-effort import of the Bookmarks section; `~/.ssh/config` import too |
-| Mosh, FTP | ❌ | Not implemented yet |
+| Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts |
+| FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |
 
 Workspace restore brings back your tabs, splits and sessions (local shells keep their folder) on
-the next launch and reconnects SSH automatically.
+the next launch and reconnects SSH automatically. MobAlt checks GitHub Releases for updates at
+startup (Settings → Updates, or Help → Check for Updates…) and installs them only when you agree.
 
 ## Install
 
@@ -68,10 +70,10 @@ time, or clear quarantine with `xattr -dr com.apple.quarantine /Applications/Mob
 
 ## Using MobAlt
 
-- **Sessions**: `＋ Session` (⌘N) → choose SSH / Local / Telnet / Serial / RDP / VNC → save & connect.
+- **Sessions**: `＋ Session` (⌘N) → choose SSH / Mosh / Local / Telnet / Serial / FTP / RDP / VNC → save & connect.
   Double-click a session in the sidebar to connect; drag sessions into folders and folders into each other.
-- **Quick connect**: type `user@host[:port]` in the toolbar field and press Enter. `telnet://`, `rdp://`
-  and `vnc://` prefixes work too.
+- **Quick connect**: type `user@host[:port]` in the toolbar field and press Enter. `mosh://`, `telnet://`,
+  `ftp://`, `ftps://`, `rdp://` and `vnc://` prefixes work too.
 - **SFTP**: opens automatically for SSH sessions. Double-click to navigate or edit, `>_` sends `cd` to
   the terminal, the terminal can follow your shell's folder (session option).
 - **Tunnels**: `Tunneling` (⇧⌘U) starts tunnels over an open connection or a saved session; tunnels
@@ -94,7 +96,7 @@ time, or clear quarantine with `xattr -dr com.apple.quarantine /Applications/Mob
 Everything lives in `~/Library/Application Support/MobAlt/`: `sessions.json` (passwords and
 passphrases encrypted through the macOS Keychain), `settings.json`, `known_hosts`, `workspace.json`.
 Session logs default to `~/Documents/MobAlt Logs/`. MobAlt talks only to the hosts you configure;
-there is no telemetry and no update check. Details in [SECURITY.md](SECURITY.md).
+there is no telemetry; the optional update check only downloads the release manifest from GitHub. Details in [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -141,7 +143,9 @@ src/renderer/    renderer (plain ES modules, no framework)
 test/
   unit/          node --test unit tests
   start-sshd.sh  user-level test sshd on port 2222 (keys, SFTP, X11, forwarding)
-  e2e-*.js       scripts executed inside the app (SSH/SFTP/X11/tunnels, UI, auth, serial, workspace)
+  e2e-*.js       scripts executed inside the app (SSH/SFTP/X11/tunnels, UI, auth, serial, workspace, FTP, Mosh)
+  ftpd.py        throwaway FTP server for e2e-ftp.js (pip install pyftpdlib)
+  qa/            harness for driving the real app with a script and taking screenshots
 ```
 
 ### End-to-end tests
@@ -166,27 +170,16 @@ gitleaks secret scan → unit tests → `semantic-release`, which bumps the vers
 GitHub Release and pushes the updated cask to
 [Hyeongcheol-An/homebrew-tap](https://github.com/Hyeongcheol-An/homebrew-tap).
 
-Signing and notarization use these repository secrets (the build still succeeds without them, but
-unsigned):
-
-| Secret | Value |
-|---|---|
-| `MAC_CERT_P12` | Developer ID Application certificate exported as `.p12`, base64-encoded |
-| `MAC_CERT_PASSWORD` | Password of that `.p12` |
-| `APPLE_API_KEY_P8` | Contents of the App Store Connect API key (`AuthKey_XXXXXXXXXX.p8`) |
-| `APPLE_API_KEY_ID` | Key ID of that API key |
-| `APPLE_API_ISSUER` | Issuer ID (App Store Connect → Users and Access → Integrations) |
-| `HOMEBREW_TAP_DEPLOY_KEY` | SSH private key registered as a write deploy key on the tap repository |
-
-Local builds (`npm run install:local`) sign automatically with a Developer ID identity from the
-keychain and notarize when `APPLE_API_KEY`, `APPLE_API_KEY_ID` and `APPLE_API_ISSUER` are exported.
+Release builds are signed with the maintainer's Developer ID certificate and notarized by Apple inside
+the workflow. Local builds (`npm run install:local`) sign with a Developer ID identity from your own
+keychain when one is present; otherwise they are unsigned and need right-click → Open once.
 
 ## Known limitations
 
 - Setting `DISPLAY` in `~/.zprofile` or similar on the remote side overrides the forwarded X11 display.
 - MobaXterm.ini is an undocumented format: hosts, ports, users, folders and the X11 flag are imported,
   passwords are not. Convert `.ppk` keys with `puttygen` to OpenSSH format.
-- Mosh and FTP are not implemented.
+- Mosh needs the `mosh` client on this Mac and `mosh-server` on the remote host (UDP 60000-61000).
 - If a connection fails with *Timed out while waiting for handshake* or `ETIMEDOUT`, check reachability
   with `nc -vz <host> <port>` first; repeated authentication failures can get your IP banned by
   fail2ban or sshd `PerSourcePenalties` on the server.

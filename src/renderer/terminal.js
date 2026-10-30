@@ -199,7 +199,7 @@ export class TermPane {
       const files = Array.from(e.dataTransfer.files || []);
       if (files.length) {
         const paths = files.map((f) => window.api.getPathForFile(f)).filter(Boolean);
-        if (this.kind === 'ssh' && this.status === 'connected') {
+        if ((this.kind === 'ssh' || this.kind === 'ftp') && this.status === 'connected') {
           const dir = this.remoteCwd || (await window.api.sftp.home(this.termId).catch(() => null));
           if (!dir) return toast('Remote folder unknown', 'warn');
           await window.api.sftp.upload(this.termId, paths, dir);
@@ -279,6 +279,21 @@ export class TermPane {
     this.app.onPaneStatus(this);
   }
 
+  /** FTP sessions have no terminal: the pane explains where the files are. */
+  showFtpInfo() {
+    this.hidePlaceholder();
+    const s = this.session || {};
+    this.placeholder = h('div', { class: 'pane-placeholder' },
+      h('div', { class: 'big' }, `FTP${s.ftps ? 'S' : ''} · ${s.name || s.host}`),
+      h('div', { class: 'hint' }, `${s.username ? s.username + '@' : 'anonymous@'}${s.host}${s.port && s.port !== 21 ? ':' + s.port : ''} — browse, transfer and edit files in the Sftp panel.`),
+      h('div', { class: 'btns' },
+        h('button', { class: 'btn small', onclick: () => this.app.sftpPanel.show(this.termId) }, 'Open file browser'),
+        h('button', { class: 'btn small', onclick: () => this.app.closePane(this) }, 'Disconnect & close')
+      )
+    );
+    this.el.append(this.placeholder);
+  }
+
   hidePlaceholder() {
     if (this.placeholder) {
       this.placeholder.remove();
@@ -347,8 +362,26 @@ export class TermPane {
         this.app.registerPane(this);
         this.setStatus('connected');
         this._sendStartup();
+      } else if (this.kind === 'mosh') {
+        this.setStatus('connecting');
+        const s = this.session;
+        const r = await window.api.term.spawnMosh({ host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, ...size });
+        this.termId = r.id;
+        this.app.registerPane(this);
+        this.setStatus('connected');
+        this._startupOnData = !!s.startupCommand; // typed once mosh-client has drawn the remote screen
+      } else if (this.kind === 'ftp') {
+        this.setStatus('connecting');
+        const r = await window.api.ftp.connect(this.session);
+        this.termId = r.id;
+        this.app.registerPane(this);
+        this.remoteCwd = r.home;
+        this.setStatus('connected');
+        this.showFtpInfo();
+        if (this.session?.sftpAuto !== false && this.app.settings.sftpAutoOpen !== false) this.app.sftpPanel.show(this.termId);
+        else if (this.app.activePane() === this) this.app.sftpPanel.setPane(this);
       }
-      if (this.session?.logging) this.toggleLog(true);
+      if (this.session?.logging && this.kind !== 'ftp') this.toggleLog(true);
     } catch (e) {
       this.term.write(`\r\n\x1b[31mFailed to start: ${e.message}\x1b[0m\r\n`);
       this.setStatus('failed', e.message);
@@ -368,6 +401,10 @@ export class TermPane {
   }
 
   onData(data) {
+    if (this._startupOnData) {
+      this._startupOnData = false;
+      setTimeout(() => this._sendStartup(), 800);
+    }
     this.term.write(data);
   }
 
@@ -419,7 +456,11 @@ export class TermPane {
     if (!this.termId) return;
     const id = this.termId;
     if (this.kind === 'ssh') await window.api.ssh.disconnect(id);
-    else window.api.term.kill(id);
+    else if (this.kind === 'ftp') {
+      await window.api.ftp.disconnect(id);
+      this.app.sftpPanel.dropConnection(id);
+      this.markDead();
+    } else window.api.term.kill(id);
   }
 
   async toggleLog(force) {
@@ -491,7 +532,7 @@ export class TermPane {
       { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down', this) },
       '-',
       { label: this.logging ? 'Stop Session Log' : 'Start Session Log…', action: () => this.toggleLog() },
-      this.kind === 'ssh' ? { label: 'Open SFTP Browser', action: () => this.app.sftpPanel.show(this.termId) } : null,
+      this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? 'Open file browser' : 'Open SFTP Browser', action: () => this.app.sftpPanel.show(this.termId) } : null,
       this.kind !== 'local' ? { label: this.dead ? 'Reconnect' : 'Disconnect', action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
       '-',
       { label: 'Close Pane', key: '⇧⌘W', action: () => this.app.closePane(this) },

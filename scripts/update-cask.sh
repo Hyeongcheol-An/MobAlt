@@ -65,8 +65,9 @@ if [ -n "${HOMEBREW_TAP_DEPLOY_KEY:-}" ]; then
   git clone -q --depth 1 "$TAP_REPO" "$TAP"
   mkdir -p "$TAP/Casks"
   cp "$CASK" "$TAP/Casks/mobalt.rb"
+  git -C "$TAP" add Casks/mobalt.rb
   git -C "$TAP" -c user.name="mobalt-release-bot" -c user.email="mobalt-release-bot@users.noreply.github.com" \
-    commit -q -am "mobalt ${VERSION}" || { echo "cask unchanged"; exit 0; }
+    commit -q -m "mobalt ${VERSION}" || { echo "cask unchanged"; exit 0; }
   git -C "$TAP" push -q origin HEAD
   echo "pushed Casks/mobalt.rb ${VERSION} to homebrew-tap"
 fi

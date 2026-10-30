@@ -2,7 +2,7 @@
 import { h, showModal, toast, confirmDialog, TYPE_LABEL } from './ui.js';
 import { THEMES } from './terminal.js';
 
-const DEFAULT_PORT = { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
+const DEFAULT_PORT = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
 const BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
 
 function field(label, input, help) {
@@ -83,6 +83,11 @@ export function sessionEditor(app, initial = {}) {
   const agentFwd = check('Agent forwarding', s.agentForward);
   const compression = check('Compression', s.compression);
   const legacy = check('Legacy algorithms (old devices)', s.legacyAlgorithms);
+  // --- mosh / ftp
+  const moshServer = text(s.moshServer, { placeholder: 'mosh-server (path on the remote host, optional)' });
+  const moshPredict = select([['adaptive', 'Adaptive (default)'], ['always', 'Always'], ['never', 'Never'], ['experimental', 'Experimental']], s.moshPredict || 'adaptive');
+  const ftps = check('FTPS: explicit TLS (AUTH TLS)', s.ftps);
+  const ftpsInsecure = check('Accept untrusted / self-signed certificate', s.ftpsInsecure);
   const keepAlive = num(s.keepAliveInterval ?? app.settings.keepAliveInterval ?? 30, { min: 0, max: 3600 });
 
   // --- terminal / behaviour
@@ -161,7 +166,7 @@ export function sessionEditor(app, initial = {}) {
   tabBtns.basic.classList.add('active');
 
   const typeBtns = {};
-  const picker = h('div', { class: 'type-picker' }, ['ssh', 'local', 'telnet', 'serial', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', local: '>_', telnet: '☎', serial: '⌁', rdp: '🖥', vnc: '🖵' }[t]), TYPE_LABEL[t]))));
+  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '>_', telnet: '☎', serial: '⌁', ftp: '📁', rdp: '🖥', vnc: '🖵' }[t]), TYPE_LABEL[t]))));
 
   const buildBasic = () => {
     const b = pages.basic;
@@ -187,6 +192,16 @@ export function sessionEditor(app, initial = {}) {
       b.append(...field('Authentication', authMethod), ...field('Password', password), h('div', {}), h('div', { class: 'checks' }, clearPw.el),
         ...field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse)), ...field('Key passphrase', passphrase));
     }
+    if (type === 'mosh') {
+      b.append(...field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse), 'Used by the ssh bootstrap; agent keys and password prompts work in the terminal'),
+        ...field('mosh-server', moshServer), ...field('Prediction', moshPredict),
+        h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, 'Needs the mosh client on this Mac (brew install mosh) and mosh-server on the remote host; UDP ports 60000-61000 must be reachable.'));
+    }
+    if (type === 'ftp') {
+      b.append(...field('Password', password), h('div', {}), h('div', { class: 'checks' }, clearPw.el),
+        h('label', {}, 'Security'), h('div', { class: 'checks' }, ftps.el, ftpsInsecure.el),
+        h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, 'Leave the username empty for anonymous FTP. Files are browsed, transferred and edited in the Sftp panel.'));
+    }
     if (type === 'rdp' || type === 'vnc') {
       b.append(h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, type === 'rdp' ? 'Opens in Windows App / Microsoft Remote Desktop via a generated .rdp file.' : 'Opens in macOS Screen Sharing (vnc:// URL).'));
     }
@@ -208,7 +223,7 @@ export function sessionEditor(app, initial = {}) {
     if (!port.value || +port.value === DEFAULT_PORT[s.type] || +port.value === 0) port.value = DEFAULT_PORT[t] || '';
     tabBtns.advanced.hidden = t !== 'ssh';
     tabBtns.tunnels.hidden = t !== 'ssh';
-    tabBtns.terminal.hidden = t === 'rdp' || t === 'vnc';
+    tabBtns.terminal.hidden = t === 'rdp' || t === 'vnc' || t === 'ftp';
     sftpAuto.el.hidden = followCwd.el.hidden = t !== 'ssh';
     buildBasic();
     showPage('basic');
@@ -275,6 +290,10 @@ export function sessionEditor(app, initial = {}) {
       notes: notes.value,
       shell: shell.value.trim(),
       cwd: cwd.value.trim(),
+      moshServer: moshServer.value.trim(),
+      moshPredict: moshPredict.value,
+      ftps: ftps.cb.checked,
+      ftpsInsecure: ftpsInsecure.cb.checked,
       tunnels,
     };
     delete out._connect;
@@ -402,6 +421,7 @@ export function settingsDialog(app) {
   const downloadDir = text(s.downloadDir, { placeholder: '~/Downloads' });
   const logDir = text(s.logDir, { placeholder: '~/Documents/MobAlt Logs' });
   const keepAlive = num(s.keepAliveInterval, { min: 0, max: 3600 });
+  const autoUpdate = check('Check for updates at startup', s.autoUpdate !== false);
   const m = showModal({
     title: 'Settings',
     width: 'wide',
@@ -414,6 +434,7 @@ export function settingsDialog(app) {
       ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
       ...field('Download folder', downloadDir), ...field('Log folder', logDir), ...field('SSH keep-alive (s)', keepAlive),
       h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
+      h('label', {}, 'Updates'), h('div', { class: 'checks' }, autoUpdate.el, h('button', { class: 'btn small', type: 'button', onclick: () => window.api.app.checkUpdates() }, 'Check now')),
       h('label', {}, 'Data'), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, 'Open config folder'))
     ),
     buttons: [
@@ -424,7 +445,7 @@ export function settingsDialog(app) {
         rightClickPaste: rightClickPaste.cb.checked, copyOnSelect: copyOnSelect.cb.checked, macOptionIsMeta: optMeta.cb.checked,
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
         confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(),
-        keepAliveInterval: parseInt(keepAlive.value, 10) || 0,
+        keepAliveInterval: parseInt(keepAlive.value, 10) || 0, autoUpdate: autoUpdate.cb.checked,
       }) },
     ],
   });

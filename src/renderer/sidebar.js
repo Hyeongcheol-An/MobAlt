@@ -1,7 +1,7 @@
 // Sessions tree (left panel): folders, filter, drag to folder, context menus.
 import { $, h, contextMenu, confirmDialog, promptDialog, toast } from './ui.js';
 
-const ICON = { ssh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
+const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
 
 export class SessionTree {
   constructor(app) {
@@ -146,7 +146,7 @@ export class SessionTree {
     const open = this.app.workspace.allPanes().some((p) => p.session && p.session.id === s.id && p.status === 'connected');
     const sub = s.type === 'local' ? 'local'
       : s.type === 'serial' ? `${(s.serialPath || '').replace('/dev/', '')} @ ${s.baudRate || ''}`
-      : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
+      : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
     const row = h('div', { class: 'tree-row' + (this.selected === s.id ? ' selected' : ''), dataset: { session: s.id }, draggable: true, title: `${s.name}\n${sub}` },
       s.icon
         ? h('span', { class: 'ico emoji', style: s.color ? { color: s.color } : null }, s.icon)

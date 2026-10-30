@@ -7,6 +7,9 @@ import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
 import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog } from './dialogs.js';
 
+/** Pane kind for a session type (rdp/vnc never get a pane). */
+const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh');
+
 class App {
   constructor() {
     this.settings = null;
@@ -290,7 +293,7 @@ class App {
     if (!s) return;
     if (s.type === 'rdp') return window.api.launch.rdp(s);
     if (s.type === 'vnc') return window.api.launch.vnc(s);
-    const kind = s.type === 'local' ? 'local' : s.type === 'telnet' ? 'telnet' : s.type === 'serial' ? 'serial' : 'ssh';
+    const kind = kindOf(s.type);
     const pane = new TermPane(this, { kind, session: s, cwd: s.cwd || undefined });
     const target = opts.target || this.activePane();
     if (opts.split && target && target.tab) {
@@ -447,7 +450,7 @@ class App {
     if (!silent && pane.status === 'connected' && pane.kind !== 'local' && !pane.dead && this.settings.confirmClose) {
       if (!(await confirmDialog(`Replace "${pane.title}" with "${session.name}"? The current connection will be dropped.`, { okLabel: 'Replace' }))) return;
     }
-    const kind = session.type === 'local' ? 'local' : session.type === 'telnet' ? 'telnet' : session.type === 'serial' ? 'serial' : 'ssh';
+    const kind = kindOf(session.type);
     const next = new TermPane(this, { kind, session, cwd: session.cwd || undefined });
     const tab = pane.tab;
     this.workspace.replace(tab, pane, next);
@@ -516,6 +519,7 @@ class App {
       const where = pane.kind === 'local' ? 'local shell'
         : pane.kind === 'empty' ? 'empty pane — drag a session here'
         : pane.kind === 'serial' ? `${s?.serialPath} @ ${s?.baudRate}`
+        : pane.kind === 'ftp' ? `${s?.username ? s.username + '@' : 'anonymous@'}${s?.host}${s?.port && s.port !== 21 ? ':' + s.port : ''}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
       el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${pane.status}${msg ? ' (' + msg + ')' : ''}`;
       $('#st-cwd').textContent = pane.remoteCwd || pane.cwd || '';

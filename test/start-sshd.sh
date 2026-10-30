@@ -25,6 +25,10 @@ PidFile $DIR/sshd.pid
 AuthorizedKeysFile $DIR/authorized_keys
 PubkeyAuthentication yes
 PasswordAuthentication no
+# OpenSSH 9.8+ penalises sources that connect without authenticating (port scans in the Tools E2E);
+# never throttle the test clients.
+PerSourcePenalties no
+MaxStartups 100:30:200
 KbdInteractiveAuthentication no
 UsePAM no
 StrictModes no

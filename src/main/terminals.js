@@ -145,6 +145,55 @@ function spawnLocal(registry, settings, { cols = 80, rows = 24, cwd, shell, args
   return { id, pid: proc.pid, shell: sh };
 }
 
+// ---------------- Mosh ----------------
+function findMosh() {
+  const fs = require('fs');
+  for (const p of ['/opt/homebrew/bin/mosh', '/usr/local/bin/mosh', '/opt/local/bin/mosh', '/usr/bin/mosh']) if (fs.existsSync(p)) return p;
+  try {
+    const env = { ...process.env };
+    delete env.ELECTRON_RUN_AS_NODE;
+    const out = require('child_process').execFileSync('/bin/zsh', ['-lc', 'command -v mosh'], { encoding: 'utf8', timeout: 5000, env }).trim();
+    if (out && fs.existsSync(out)) return out;
+  } catch {}
+  return null;
+}
+
+function shQuote(s) {
+  return `'${String(s).replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * Mosh session: runs the mosh client in a pty. It bootstraps over ssh (host-key questions and password
+ * prompts appear in the terminal), then switches to the UDP state-sync protocol.
+ */
+function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, username, privateKeyPath, moshServer, moshPredict } = {}) {
+  const pty = require('node-pty');
+  const bin = findMosh();
+  if (!bin) throw new Error('mosh client not found — install it with "brew install mosh"');
+  if (!host) throw new Error('host is required');
+  const keyFile = privateKeyPath ? privateKeyPath.replace(/^~(?=\/|$)/, os.homedir()) : '';
+  const sshCmd = ['ssh', '-p', String(port || 22), '-o', 'StrictHostKeyChecking=accept-new', ...(keyFile ? ['-i', shQuote(keyFile)] : [])].join(' ');
+  const args = [`--ssh=${sshCmd}`];
+  if (moshServer) args.push(`--server=${moshServer}`);
+  if (moshPredict && moshPredict !== 'adaptive') args.push(`--predict=${moshPredict}`);
+  args.push(`${username ? username + '@' : ''}${host}`);
+  const env = buildEnv({ ...settings, localShellIntegration: false }, '/bin/sh');
+  env.PATH = [require('path').dirname(bin), '/usr/bin', '/bin', '/usr/sbin', '/sbin', env.PATH || ''].filter(Boolean).join(':');
+  env.MOSH_TITLE_NOPREFIX = '1';
+  const id = registry.newId();
+  const proc = pty.spawn(bin, args, { name: 'xterm-256color', cols, rows, cwd: os.homedir(), env });
+  proc.onData((d) => registry.data(id, d));
+  proc.onExit(({ exitCode }) => registry.exit(id, exitCode, 'exit'));
+  registry.register(id, {
+    kind: 'mosh',
+    write: (d) => proc.write(d),
+    resize: (c, r) => proc.resize(c, r),
+    kill: () => proc.kill(),
+    pid: proc.pid,
+  });
+  return { id, pid: proc.pid, client: bin };
+}
+
 // ---------------- Telnet ----------------
 const IAC = 255, DONT = 254, DO = 253, WONT = 252, WILL = 251, SB = 250, SE = 240;
 const OPT_ECHO = 1, OPT_SGA = 3, OPT_TTYPE = 24, OPT_NAWS = 31;
@@ -288,4 +337,4 @@ async function listSerialPorts() {
     .filter((p, i, a) => a.findIndex((x) => x.path === p.path) === i);
 }
 
-module.exports = { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, defaultShell };
+module.exports = { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, defaultShell, spawnMosh, findMosh };

@@ -66,8 +66,9 @@ export class SftpPanel {
 
   /** Called by the app whenever the active pane changes. */
   setPane(pane) {
-    if (!pane || pane.kind !== 'ssh' || pane.status !== 'connected' || !pane.termId) {
-      if (!pane || pane.kind !== 'ssh') this.setConnection(null);
+    const browsable = pane && (pane.kind === 'ssh' || pane.kind === 'ftp');
+    if (!browsable || pane.status !== 'connected' || !pane.termId) {
+      if (!browsable) this.setConnection(null);
       return;
     }
     const connId = pane.termId;

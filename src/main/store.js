@@ -97,6 +97,7 @@ const DEFAULT_SETTINGS = {
   sidebarTab: 'sessions',
   sftpAutoOpen: true,
   restoreWorkspace: true,
+  autoUpdate: true,
   downloadDir: '',
   keepAliveInterval: 30,
   readyTimeout: 20000,

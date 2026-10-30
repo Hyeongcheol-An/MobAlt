@@ -23,7 +23,9 @@ Session logs (optional) go to `~/Documents/MobAlt Logs/`.
 ## Network behaviour
 
 MobAlt only connects to the hosts you configure (SSH, SFTP, Telnet, tunnels, ping/traceroute/port
-scan targets you type in). There is no telemetry, no crash reporting and no update check.
+scan targets you type in). There is no telemetry and no crash reporting. The optional update check
+(on by default, Settings → Updates) fetches the release manifest from GitHub and downloads an
+update only after you confirm.
 SSH host keys are verified against `~/.ssh/known_hosts` and the app's own `known_hosts`; a changed
 key is reported and never accepted silently.
 
