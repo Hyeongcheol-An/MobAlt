@@ -248,28 +248,34 @@ class App {
     // find bar
     const fb = $('#find-bar'), fi = $('#find-input');
     const opts = () => ({ caseSensitive: $('#find-case').checked, regex: $('#find-regex').checked, decorations: { matchBackground: '#515c6a', activeMatchBackground: '#e6b422', activeMatchBorder: '#e6b422', matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#e6b422' } });
+    // an unfinished regex (e.g. "h[ae") throws inside the search addon: show it as an invalid pattern instead
+    const safeFind = (fn) => {
+      try { fn(); fb.classList.remove('bad-pattern'); return true; }
+      catch { fb.classList.add('bad-pattern'); $('#find-count').textContent = 'Invalid pattern'; return false; }
+    };
     const research = () => {
       const p = this.activePane();
       if (!p) return;
       p.searchAddon.clearDecorations();
-      if (fi.value) p.searchAddon.findNext(fi.value, opts());
+      if (fi.value) safeFind(() => p.searchAddon.findNext(fi.value, opts()));
       else this.onFindResults(p, { resultCount: 0, resultIndex: -1 });
     };
+    this._findResearch = () => { if (!fb.hidden) research(); };
     fi.addEventListener('input', () => {
       const p = this.activePane();
       if (!p) return;
       if (!fi.value) return research();
-      p.searchAddon.findNext(fi.value, { ...opts(), incremental: true });
+      safeFind(() => p.searchAddon.findNext(fi.value, { ...opts(), incremental: true }));
     });
     for (const id of ['#find-case', '#find-regex']) $(id).addEventListener('change', research); // toggles re-run the search
     fi.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); e.shiftKey ? this.activePane()?.searchAddon.findPrevious(fi.value, opts()) : this.activePane()?.searchAddon.findNext(fi.value, opts()); }
+      if (e.key === 'Enter') { e.preventDefault(); safeFind(() => (e.shiftKey ? this.activePane()?.searchAddon.findPrevious(fi.value, opts()) : this.activePane()?.searchAddon.findNext(fi.value, opts()))); }
       if (e.key === 'Escape') this.action('find-close');
     });
     for (const b of $$('[data-find]')) b.addEventListener('click', () => {
       const k = b.dataset.find;
-      if (k === 'next') this.activePane()?.searchAddon.findNext(fi.value, opts());
-      else if (k === 'prev') this.activePane()?.searchAddon.findPrevious(fi.value, opts());
+      if (k === 'next') safeFind(() => this.activePane()?.searchAddon.findNext(fi.value, opts()));
+      else if (k === 'prev') safeFind(() => this.activePane()?.searchAddon.findPrevious(fi.value, opts()));
       else this.action('find-close');
     });
     window.addEventListener('resize', () => this.workspace.allPanes().forEach((p) => p.fit()));
@@ -293,6 +299,8 @@ class App {
     this.saveSettings({ sidebarTab: name, sidebarVisible: true }, true);
     if (name === 'sftp') this.sftpPanel.setPane(this.activePane());
     this.workspace.allPanes().forEach((p) => p.fit());
+
+    this._syncSidebarToggle();
   }
 
   toggleSidebar() {
@@ -337,6 +345,7 @@ class App {
 
   focusPane(pane, viaTab = false) {
     if (pane && pane.tab) queueMicrotask(() => pane.tab.tabEl && this.workspace.updateTab(pane.tab)); // tab dot follows the active pane
+    if (pane && !pane.webgl && pane.mounted && pane.kind !== 'empty' && pane.kind !== 'ftp' && this.workspace.allPanes().length <= 12) pane._loadWebgl(); // regain GPU rendering after a context-limit burst
     if (this.focused && this.focused !== pane) this.focused.el.classList.remove('focused');
     this.focused = pane;
     pane.el.classList.add('focused');
@@ -384,7 +393,7 @@ class App {
 
   async quickConnect(str) {
     const q = parseQuickConnect(str);
-    if (!q) return toast('Use user@host[:port] (optionally ssh:// telnet:// rdp:// vnc://)', 'warn');
+    if (!q) return toast('Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://', 'warn');
     const existing = this.sessions.sessions.find((s) => s.type === q.type && s.host === q.host && (s.port || 22) === q.port && (!q.username || s.username === q.username));
     $('#qc-input').value = '';
     return this.openSession(existing || { ...q, authMethod: 'auto', sftpAuto: true });
@@ -582,6 +591,7 @@ class App {
 
   onActiveTabChanged(tab) {
     this._syncEmptyState();
+    if (this._findResearch) this._findResearch(); // the find counter belongs to the new terminal
     this.updateStatus(tab ? tab.activePane : null);
     if (tab && tab.activePane) this.sftpPanel.setPane(tab.activePane);
     this.saveWorkspaceSoon();

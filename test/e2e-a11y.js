@@ -491,7 +491,8 @@
       results.tunnelRemoveKeepsFocus = !m.querySelector('tbody tr') && active() === addBtn;
       await press('Escape');
       await sleep(250);
-      if (modal() && /Discard/.test(modal().textContent)) { modal().querySelector('.modal-foot .btn.primary').click(); await sleep(250); }
+      const top = [...document.querySelectorAll('.modal')].pop(); // tunnel edits make the editor dirty → discard prompt on top
+      if (top && /Discard/.test(top.textContent)) { top.querySelector('.modal-foot .btn.primary').click(); await sleep(250); }
       results.editorClosed = !modal();
     }
 

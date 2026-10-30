@@ -404,6 +404,7 @@ export class SessionTree {
     const path = (parent ? parent + '/' : '') + name.trim();
     const folders = new Set(this.app.sessions.folders || []);
     folders.add(path);
+    if (parent && this.collapsed.delete(parent)) this.saveCollapsed(); // show where the new folder went
     await this.app.saveAllSessions({ sessions: this.app.sessions.sessions, folders: [...folders] });
   }
 

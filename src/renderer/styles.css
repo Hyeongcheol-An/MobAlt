@@ -443,3 +443,19 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 .sftp-list:focus-visible .sftp-row.selected { box-shadow: inset 0 0 0 1px #fff; }
 /* Icon / colour pickers (one Tab stop each): the ring sits outside the chosen pick's own 1px accent ring. */
 .pick-row .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- regression-sweep follow-ups ---- */
+.tab.active { color: var(--term-fg); }                                  /* readable on a light terminal theme */
+.tab.active .close { color: var(--term-fg); opacity: .75; }
+#find-bar.bad-pattern #find-input { border-color: var(--yellow); }
+#find-bar.bad-pattern .find-count { color: var(--yellow); }
+#tool-output { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pane-term { container-type: size; }
+.pane .pane-placeholder { overflow: hidden; }
+@container (max-height: 180px) {                                         /* tiny grid cells: keep the card inside */
+  .pane .pane-placeholder { gap: 6px; padding: 8px; }
+  .pane .pane-placeholder .big { font-size: 13px; }
+  .pane .pane-placeholder .hint { display: none; }
+  .pane .pane-placeholder .btns { gap: 4px; }
+}
+@container (max-height: 110px) { .pane .pane-placeholder .btns { display: none; } }

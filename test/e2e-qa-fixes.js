@@ -48,6 +48,48 @@
     await sleep(250);
     results.editorClosedAfterDiscard = !document.querySelector('.modal');
 
+    // --- editor: shared rows survive a type round-trip; tunnel edits mark the editor dirty; ports are integers
+    app.action('new-session');
+    await sleep(300);
+    {
+      const btns = [...document.querySelectorAll('.modal .type-picker button')];
+      const click = (label) => btns.find((b) => b.textContent.includes(label)).click();
+      click('Mosh'); click('SSH');
+      const keyInput = document.querySelector('.modal input[placeholder="~/.ssh/id_ed25519"]');
+      results.keyRowAfterMoshRoundTrip = !!keyInput && keyInput.offsetParent !== null && !!keyInput.closest('.mpage.active');
+      click('FTP'); click('SSH');
+      const clearCb = [...document.querySelectorAll('.modal .mpage.active label')].find((l) => l.textContent.includes('Clear saved password'));
+      results.clearPwAfterFtpRoundTrip = !!clearCb && clearCb.offsetParent !== null;
+      document.querySelector('.modal input[placeholder^="hostname"]').value = 'h.example.com';
+      const portInput = [...document.querySelectorAll('.modal label')].find((l) => l.textContent === 'Port')?.nextElementSibling;
+      portInput.value = '12.5';
+      document.querySelector('.modal .modal-foot .btn.primary').click();
+      await sleep(150);
+      results.fractionalPortRejected = !!document.querySelector('.modal .type-picker');
+      portInput.value = '22';
+      document.querySelector('.modal').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(250);
+      document.querySelector('.modal.narrow .btn.primary')?.click(); // discard the typed host
+      await sleep(200);
+    }
+    // removing a tunnel row marks the editor dirty → Esc asks before discarding
+    {
+      const withTunnel = await app.saveSession({ name: 'tun', type: 'ssh', host: 't.example.com', username: 'u', tunnels: [{ type: 'local', bindHost: '127.0.0.1', bindPort: 18080, destHost: 'localhost', destPort: 80, enabled: true }] });
+      app.editSession(withTunnel);
+      await sleep(300);
+      document.querySelectorAll('.modal .mtabs button')[3].click();
+      await sleep(100);
+      document.querySelector('.modal .mpage.active tbody button')?.click();
+      await sleep(100);
+      document.querySelector('.modal').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(250);
+      results.tunnelRemoveMarksDirty = document.querySelectorAll('.modal').length === 2;
+      document.querySelector('.modal.narrow .btn.primary')?.click();
+      await sleep(200);
+      results.tunnelKeptAfterDiscard = (app.sessions.sessions.find((x) => x.id === withTunnel.id)?.tunnels || []).length === 1;
+      await app.deleteSession(withTunnel.id); // keeps the renderer session list in sync
+    }
+
     // --- tunnel form: host inputs usable
     app.action('tunnels');
     await sleep(300);

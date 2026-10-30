@@ -102,6 +102,10 @@ export class Workspace {
     this.barEl.classList.toggle('ovf-right', overflow && !atEnd);
     this.tabListBtn.hidden = this.tabs.length === 0;
     if (focused === this.scrollLeftBtn || focused === this.scrollRightBtn) this._keepArrowFocus(focused);
+    if (overflow !== this._wasOverflow) {
+      this._wasOverflow = overflow;
+      if (overflow && this.active && this.active.tabEl) this.revealTab(this.active); // the arrows just took space: keep the active tab in view
+    }
   }
 
   /** A focused arrow that just got disabled or hidden must not drop focus on <body>: the other arrow if it can scroll, else the active tab, else ＋. */

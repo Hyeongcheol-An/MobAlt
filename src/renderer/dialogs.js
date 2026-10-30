@@ -67,6 +67,8 @@ function pickRow(label) {
 /** Session editor. Resolves with the session object to save, or null. */
 export function sessionEditor(app, initial = {}) {
   const s = { type: 'ssh', port: 22, authMethod: 'auto', sftpAuto: true, followCwd: false, tunnels: [], ...initial };
+  let dirty = false; // any edit, incl. tunnel rows and picker clicks, asks before discarding
+  const markDirty = () => { dirty = true; };
   let type = s.type;
   const folders = app.sessionTree.collectFolders().sort();
 
@@ -186,7 +188,7 @@ export function sessionEditor(app, initial = {}) {
   const tunnels = (s.tunnels || []).map((t) => ({ ...t }));
   const tunnelRows = h('div');
   // the button stays the same element across re-renders: the Tunnel sub-dialog hands focus back to it when it closes
-  const addTunnel = h('button', { class: 'btn small', type: 'button', onclick: async () => { const t = await tunnelForm(); if (t) { tunnels.push({ ...t, enabled: true }); renderTunnels(); } } }, '＋ Add tunnel');
+  const addTunnel = h('button', { class: 'btn small', type: 'button', onclick: async () => { const t = await tunnelForm(); if (t) { tunnels.push({ ...t, enabled: true }); markDirty(); renderTunnels(); } } }, '＋ Add tunnel');
   const tunnelTable = h('div', {}, tunnelRows, h('div', { style: { marginTop: '8px' } }, addTunnel));
   const renderTunnels = () => {
     tunnelRows.replaceChildren(
@@ -200,6 +202,7 @@ export function sessionEditor(app, initial = {}) {
           h('td', {}, h('button', { class: 'btn small icon-only', type: 'button', title: 'Remove', 'aria-label': `Remove tunnel ${t.bindPort}`, onclick: (e) => {
             const viaKeyboard = e.currentTarget === document.activeElement;
             tunnels.splice(i, 1);
+            markDirty();
             renderTunnels();
             if (viaKeyboard) (tunnelRows.querySelectorAll('tbody button')[Math.min(i, tunnels.length - 1)] || addTunnel).focus(); // the removed ✕ had the focus
           } }, icon('x')))
@@ -253,15 +256,18 @@ export function sessionEditor(app, initial = {}) {
       applyAuth();
     }
     if (type === 'mosh') {
-      b.append(...field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse), 'Used by the ssh bootstrap; agent keys and password prompts work in the terminal'),
+      // the same key row as SSH (moving the inputs into a new wrapper would empty the SSH row after a type round-trip)
+      b.append(...keyRow, h('div', { class: 'form-help' }, 'Used by the ssh bootstrap; agent keys and password prompts work in the terminal'),
         ...field('mosh-server', moshServer), ...field('Prediction', moshPredict),
         h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, 'Needs the mosh client on this Mac (brew install mosh) and mosh-server on the remote host; UDP ports 60000-61000 must be reachable.'));
     }
     if (type === 'ftp') {
-      b.append(...field('Password', password), h('div', {}), h('div', { class: 'checks' }, clearPw.el),
+      b.append(...pwRow, ...clearRow,
         h('label', {}, 'Security'), h('div', { class: 'checks' }, ftps.el, ftpsInsecure.el),
         h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, 'Leave the username empty for anonymous FTP. Files are browsed, transferred and edited in the Sftp panel.'));
     }
+    if (type === 'mosh') for (const el of keyRow) el.hidden = false;
+    if (type === 'ftp') for (const el of [...pwRow, ...clearRow]) el.hidden = false;
     if (type === 'rdp' || type === 'vnc') {
       b.append(h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, type === 'rdp' ? 'Opens in Windows App / Microsoft Remote Desktop via a generated .rdp file.' : 'Opens in macOS Screen Sharing (vnc:// URL).'));
     }
@@ -295,7 +301,6 @@ export function sessionEditor(app, initial = {}) {
   setType(type);
 
   const body = h('div', {}, tabs, picker, ...Object.values(pages));
-  let dirty = false;
   body.addEventListener('input', () => { dirty = true; });
   body.addEventListener('change', () => { dirty = true; });
   body.addEventListener('click', (e) => { if (e.target.closest('.pick-row, .type-picker')) dirty = true; });
@@ -324,7 +329,7 @@ export function sessionEditor(app, initial = {}) {
       return null;
     }
     if (type !== 'local' && type !== 'serial') {
-      const pn = parseInt(port.value, 10);
+      const pn = /^\d+$/.test(port.value.trim()) ? parseInt(port.value, 10) : NaN; // integers only (12.5 / 1e3 are not ports)
       if (!(pn >= 1 && pn <= 65535)) {
         toast('Port must be between 1 and 65535', 'warn');
         showPage('basic');
