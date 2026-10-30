@@ -14,15 +14,15 @@
       <div class="drag-region"></div>
       <div class="brand">MobAlt</div>
       <div class="tb-group">
-        <button class="tb-btn" data-action="new-session" title="New session (⌘N)"><span class="ico">＋</span>Session</button>
-        <button class="tb-btn" data-action="new-local" title="New local terminal (⌘T)"><span class="ico">&gt;_</span>Terminal</button>
-        <button class="tb-btn" data-action="tunnels" title="SSH tunnels / port forwarding (⇧⌘U)"><span class="ico">⇄</span>Tunneling</button>
-        <button class="tb-btn toggle" id="btn-multiexec" data-action="multiexec" title="Broadcast keystrokes to all terminals (⇧⌘M)"><span class="ico">⋔</span>MultiExec</button>
+        <button class="tb-btn" data-action="new-session" title="New session (⌘N)"><span class="ico" data-icon="plus"></span>Session</button>
+        <button class="tb-btn" data-action="new-local" title="New local terminal (⌘T)"><span class="ico" data-icon="terminal"></span>Terminal</button>
+        <button class="tb-btn" data-action="tunnels" title="SSH tunnels / port forwarding (⇧⌘U)"><span class="ico" data-icon="tunnel"></span>Tunneling</button>
+        <button class="tb-btn toggle" id="btn-multiexec" data-action="multiexec" title="Broadcast keystrokes to all terminals (⇧⌘M)"><span class="ico" data-icon="multiexec"></span>MultiExec</button>
         <div class="tb-split">
-          <button class="tb-btn" id="btn-split" data-action="split-menu" title="Split / grid layouts (⌘D right, ⇧⌘D down)"><span class="ico">◫</span>Split ▾</button>
+          <button class="tb-btn" id="btn-split" data-action="split-menu" title="Split / grid layouts (⌘D right, ⇧⌘D down)"><span class="ico" data-icon="split"></span>Split ▾</button>
         </div>
-        <button class="tb-btn" data-action="sidebar" data-arg="tools" title="Network tools"><span class="ico">🛠</span>Tools</button>
-        <button class="tb-btn" data-action="settings" title="Settings (⌘,)"><span class="ico">⚙</span>Settings</button>
+        <button class="tb-btn" data-action="sidebar" data-arg="tools" title="Network tools"><span class="ico" data-icon="tools"></span>Tools</button>
+        <button class="tb-btn" data-action="settings" title="Settings (⌘,)"><span class="ico" data-icon="settings"></span>Settings</button>
       </div>
       <form id="quick-connect" class="quick" autocomplete="off">
         <input id="qc-input" placeholder="quick connect: user@host[:port]" spellcheck="false" />
@@ -38,7 +38,7 @@
         <button class="strip-btn" data-panel="tools" title="Tools (⌘3)"><span>Tools</span></button>
         <button class="strip-btn" data-panel="macros" title="Macros (⌘4)"><span>Macros</span></button>
         <div class="strip-spacer"></div>
-        <button class="strip-btn" data-action="toggle-sidebar" title="Hide sidebar (⌘B)"><span>◀</span></button>
+        <button class="strip-btn" data-action="toggle-sidebar" title="Hide sidebar (⌘B)"><span data-icon="chevron-left"></span></button>
       </nav>
 
       <aside id="sidebar">
@@ -46,8 +46,8 @@
         <section class="panel active" id="panel-sessions">
           <div class="panel-head">
             <input id="session-filter" placeholder="Filter sessions…" spellcheck="false" />
-            <button class="icon-btn" data-action="new-folder" title="New folder">📁+</button>
-            <button class="icon-btn" data-action="new-session" title="New session">＋</button>
+            <button class="icon-btn" data-action="new-folder" data-icon="folder-plus" title="New folder"></button>
+            <button class="icon-btn" data-action="new-session" data-icon="plus" title="New session"></button>
           </div>
           <div id="session-tree" class="tree"></div>
           <div class="panel-foot">
@@ -65,14 +65,14 @@
           <div id="sftp-ui" hidden>
             <div class="sftp-conn" id="sftp-conn"></div>
             <div class="sftp-toolbar">
-              <button class="icon-btn" data-sftp="up" title="Parent folder">⬆</button>
-              <button class="icon-btn" data-sftp="home" title="Home">🏠</button>
-              <button class="icon-btn" data-sftp="refresh" title="Refresh">⟳</button>
-              <button class="icon-btn" data-sftp="mkdir" title="New folder">📁+</button>
-              <button class="icon-btn" data-sftp="upload" title="Upload…">⇪</button>
-              <button class="icon-btn" data-sftp="download" title="Download selected">⇩</button>
-              <button class="icon-btn" data-sftp="delete" title="Delete selected">🗑</button>
-              <button class="icon-btn" data-sftp="terminal-cd" title="cd terminal to this folder">&gt;_</button>
+              <button class="icon-btn" data-sftp="up" data-icon="arrow-up" title="Parent folder"></button>
+              <button class="icon-btn" data-sftp="home" data-icon="home" title="Home"></button>
+              <button class="icon-btn" data-sftp="refresh" data-icon="refresh" title="Refresh"></button>
+              <button class="icon-btn" data-sftp="mkdir" data-icon="folder-plus" title="New folder"></button>
+              <button class="icon-btn" data-sftp="upload" data-icon="upload" title="Upload…"></button>
+              <button class="icon-btn" data-sftp="download" data-icon="download" title="Download selected"></button>
+              <button class="icon-btn" data-sftp="delete" data-icon="trash" title="Delete selected"></button>
+              <button class="icon-btn" data-sftp="terminal-cd" data-icon="terminal" title="cd terminal to this folder"></button>
             </div>
             <form class="sftp-path" id="sftp-path-form"><input id="sftp-path" spellcheck="false" /></form>
             <div class="sftp-opts">
@@ -109,8 +109,8 @@
         <section class="panel" id="panel-macros">
           <div class="panel-head">
             <button class="icon-btn" data-macro="record" id="macro-record" title="Record keystrokes of the active terminal">● Rec</button>
-            <button class="icon-btn" data-macro="new" title="New macro from text">＋</button>
-            <span class="hint">Double-click to play in the active terminal</span>
+            <button class="icon-btn" data-macro="new" data-icon="plus" title="New macro from text"></button>
+            <span class="hint" title="Double-click to play in the active terminal">Double-click to play in the active terminal</span>
           </div>
           <div id="macro-list" class="tree"></div>
         </section>
@@ -128,11 +128,11 @@
         <div id="find-bar" hidden>
           <input id="find-input" placeholder="Find in terminal" spellcheck="false" />
           <span id="find-count" class="find-count"></span>
-          <button data-find="prev" title="Previous (⇧⏎)">▲</button>
-          <button data-find="next" title="Next (⏎)">▼</button>
+          <button data-find="prev" data-icon="chevron-up" title="Previous (⇧⏎)"></button>
+          <button data-find="next" data-icon="chevron-down" title="Next (⏎)"></button>
           <label><input type="checkbox" id="find-case" /> Aa</label>
           <label><input type="checkbox" id="find-regex" /> .*</label>
-          <button data-find="close" title="Close (Esc)">✕</button>
+          <button data-find="close" data-icon="x" title="Close (Esc)"></button>
         </div>
       </div>
     </div>

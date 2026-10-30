@@ -590,6 +590,7 @@ export class TermPane {
     const theme = THEMES[this.session?.theme || s.theme] || THEMES['moba-dark'];
     this.term.options.theme = theme;
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the theme
+    this.el.style.setProperty('--term-fg', theme.foreground || '#ececec');
     this.term.options.macOptionIsMeta = s.macOptionIsMeta !== false;
     this.fit();
   }

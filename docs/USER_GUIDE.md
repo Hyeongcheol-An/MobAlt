@@ -46,7 +46,7 @@ and fill in the Basic tab. Double-click a session to connect; right-click for th
 | FTP | FTP / FTPS (explicit TLS) file browser in the Sftp panel |
 | RDP / VNC | Hands off to Windows App or macOS Screen Sharing |
 
-**Folders**: `📁+` creates a folder; drag sessions and folders to move them (drop on the empty area
+**Folders**: the folder button in the panel header (New folder) creates a folder; drag sessions and folders to move them (drop on the empty area
 for the root). A folder's context menu can open every session inside it in a grid or in tabs.
 
 **Icons and colours**: pick an emoji and a colour in the editor. They show on the row, the tab and the

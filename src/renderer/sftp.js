@@ -1,5 +1,5 @@
 // SFTP browser panel (left sidebar "Sftp" tab) bound to the active SSH pane's connection.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon } from './ui.js';
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 
@@ -105,6 +105,7 @@ export class SftpPanel {
     const defPort = s.type === 'ftp' ? 21 : 22;
     this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`, s.type === 'mosh' ? ' · via SSH' : '');
     this.els.follow.checked = st.follow;
+    this.els.follow.closest('label').hidden = st.pane.kind === 'ftp'; // FTP has no terminal to follow
     this.els.hidden.checked = st.hidden;
     if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
     else this.renderList();
@@ -531,7 +532,7 @@ export class SftpPanel {
       el.append(h('div', { class: 'xfer ' + t.status },
         h('div', { class: 'l1' }, h('span', {}, t.kind === 'upload' ? '⇪' : '⇩'), h('span', { class: 'n', title: t.remote }, t.name),
           t.status === 'running' ? h('button', { title: 'Cancel', onclick: () => window.api.sftp.cancel(t.id) }, '✕') : null,
-          t.status === 'done' && t.kind === 'download' ? h('button', { title: 'Show in Finder', onclick: () => window.api.shell.showItem(t.local) }, '📂') : null),
+          t.status === 'done' && t.kind === 'download' ? h('button', { title: 'Show in Finder', onclick: () => window.api.shell.showItem(t.local) }, icon('folder')) : null),
         h('div', { class: 'bar' }, h('i', { style: { width: pct + '%' } })),
         h('div', { class: 'l2' }, h('span', {}, t.status === 'running' ? `${fmtSize(t.transferred)} / ${fmtSize(t.total)}${t.filesTotal > 1 ? ` · ${t.filesDone}/${t.filesTotal} files` : ''}` : t.status === 'error' ? t.error : t.status), h('span', {}, t.status === 'running' ? speed : fmtDuration(elapsed)))
       ));
@@ -540,8 +541,9 @@ export class SftpPanel {
 }
 
 function fileGlyph(name) {
-  if (/\.(png|jpe?g|gif|svg|webp|bmp|ico)$/i.test(name)) return '🖼';
-  if (/\.(zip|tar|gz|tgz|bz2|xz|7z|rar)$/i.test(name)) return '🗜';
+  // U+FE0F forces colour-emoji presentation for the two glyphs that default to text style
+  if (/\.(png|jpe?g|gif|svg|webp|bmp|ico)$/i.test(name)) return '🖼️';
+  if (/\.(zip|tar|gz|tgz|bz2|xz|7z|rar)$/i.test(name)) return '🗜️';
   if (/\.(sh|bash|zsh|py|js|ts|go|rs|rb|java|c|cpp|h)$/i.test(name)) return '📜';
   if (/\.(pdf|docx?|xlsx?|pptx?)$/i.test(name)) return '📑';
   return '📄';
