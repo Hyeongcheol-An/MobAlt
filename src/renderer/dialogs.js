@@ -480,8 +480,9 @@ export function settingsDialog(app) {
 }
 
 export function hostKeyDialog(p) {
+  const forName = p.name ? ` — ${p.name}` : '';
   const m = showModal({
-    title: p.status === 'mismatch' ? '⚠️ Host key changed!' : 'Unknown host key',
+    title: (p.status === 'mismatch' ? '⚠️ Host key changed!' : 'Unknown host key') + forName,
     closeOnBackdrop: false,
     body: h('div', {},
       p.status === 'mismatch' ? h('div', { class: 'warn' }, 'The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.') : h('p', {}, `The authenticity of host ${p.host}:${p.port} can't be established.`),

@@ -414,6 +414,8 @@ svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; strok
 .ctx-item:focus-visible { background: var(--accent-2); color: #fff; outline: none; }
 .ctx-item:focus-visible .k { color: #dbe9ff; }
 /* ---- net follow-ups ---- */
+/* Sftp panel header: the Mosh companion's "via SSH" badge sits before the host so truncation never eats it. */
+.sftp-conn .sftp-via { display: inline-block; margin: 0 5px 0 1px; padding: 0 5px; border: 1px solid var(--border); border-radius: 9px; font-size: 10px; line-height: 15px; color: var(--fg-dim); vertical-align: 1px; white-space: nowrap; }
 /* FTP pane card: states other than connected have no buttons; the dead overlay offers Reconnect / Close. */
 .pane .pane-placeholder.ftp-info.connecting .big::after { content: " · connecting…"; font-weight: 400; opacity: .7; }
 .pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: var(--fg-dim); }

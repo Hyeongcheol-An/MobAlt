@@ -413,7 +413,13 @@ function registerIpc() {
   ipcMain.handle('term:spawn-local', (_e, opts) => spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
   ipcMain.handle('term:spawn-telnet', (_e, opts) => spawnTelnet(registry, { ...opts, ...sizeOf(opts) }));
   ipcMain.handle('term:spawn-serial', (_e, opts) => spawnSerial(registry, opts));
-  ipcMain.handle('term:spawn-mosh', (_e, opts) => spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
+  // Mosh bootstraps over an external ssh: the host key goes through the app's own prompt first and the
+  // bootstrap then runs strictly against the app's known_hosts file (never ~/.ssh/known_hosts).
+  ipcMain.handle('term:spawn-mosh', async (_e, opts) => {
+    const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms });
+    if (!v.ok) throw new Error(v.error || 'host key not accepted');
+    return spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() });
+  });
   ipcMain.handle('ftp:connect', async (_e, cfg) => ftp.connect(await mergeSecrets(cfg)));
   ipcMain.handle('ftp:disconnect', (_e, id) => ftp.disconnect(id));
   ipcMain.handle('app:check-updates', () => updater && updater.check(true));

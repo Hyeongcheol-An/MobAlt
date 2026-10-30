@@ -43,3 +43,19 @@ test('default port entries are stored without brackets and matched', () => {
   assert.equal(kh.check('plain.test', 22, k), 'ok');
   assert.equal(kh.check('plain.test', undefined, k), 'ok');
 });
+
+test('ensure() copies a key into the app file only when it is missing there, replacing a stale one', () => {
+  const file = path.join(process.env.MOBALT_USER_DATA, 'known_hosts');
+  const k1 = fakeKey();
+  const k2 = fakeKey();
+  assert.equal(kh.file(), file);
+  assert.equal(kh.ensure('mosh.test', 2200, k1), true);
+  assert.equal(kh.ensure('mosh.test', 2200, k1), false, 'already there: nothing appended');
+  const lines = () => fs.readFileSync(file, 'utf8').split('\n').filter((l) => l.startsWith('[mosh.test]:2200 '));
+  assert.equal(lines().length, 1);
+  assert.match(lines()[0], /^\[mosh\.test\]:2200 ssh-ed25519 [A-Za-z0-9+/=]+$/, 'OpenSSH known_hosts line');
+  assert.equal(kh.ensure('mosh.test', 2200, k2), true, 'a changed key replaces the old entry');
+  assert.equal(lines().length, 1);
+  assert.equal(kh.check('mosh.test', 2200, k2, [file]), 'ok');
+  assert.equal(kh.check('mosh.test', 2200, k1, [file]), 'mismatch');
+});

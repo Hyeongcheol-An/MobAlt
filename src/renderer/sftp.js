@@ -136,10 +136,14 @@ export class SftpPanel {
     if (!st) return;
     const s = st.pane.session || {};
     const defPort = s.type === 'ftp' ? 21 : 22;
-    this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`, s.type === 'mosh' ? ' · via SSH' : '');
+    // the "via SSH" marker of a Mosh companion sits before the host as a badge, so a long host name is
+    // what gets truncated, never the marker
+    this.els.conn.replaceChildren(...[h('b', {}, s.name || st.pane.title), ' ',
+      s.type === 'mosh' ? h('span', { class: 'sftp-via', title: 'Files are browsed over a separate SSH connection to this host' }, 'via SSH') : null,
+      `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`].filter(Boolean));
     this.els.follow.checked = st.follow;
     const noTerminal = st.pane.kind === 'ftp';
-    this.els.follow.closest('label').hidden = noTerminal; // FTP has no terminal to follow
+    this.els.follow.closest('label').hidden = noTerminal || st.pane.kind === 'mosh'; // FTP has no terminal to follow; Mosh reports no folder
     const cdBtn = document.querySelector('[data-sftp="terminal-cd"]');
     if (cdBtn) cdBtn.hidden = noTerminal; // nothing to cd in
     this.els.hidden.checked = st.hidden;

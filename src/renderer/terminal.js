@@ -402,9 +402,13 @@ export class TermPane {
       } else if (this.kind === 'mosh') {
         this.setStatus('connecting');
         const s = this.session;
-        const r = await window.api.term.spawnMosh({ host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, ...size });
+        // main verifies the host key (app prompt) before the client is spawned; a declined key rejects here
+        const r = await window.api.term.spawnMosh({ name: s.name, host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, legacyAlgorithms: !!s.legacyAlgorithms, ...size });
         this.termId = r.id;
         this.app.registerPane(this);
+        this._moshStartedAt = Date.now();
+        this._moshScreen = false; // set once mosh-client takes over the terminal (alternate screen)
+        this._killed = false;
         this.setStatus('connected');
         this._startupOnData = !!s.startupCommand; // typed once mosh-client has drawn the remote screen
         // files: a companion SSH connection feeds the Sftp panel — automatically like SSH sessions, else on demand
@@ -444,6 +448,7 @@ export class TermPane {
   }
 
   onData(data) {
+    if (this.kind === 'mosh' && !this._moshScreen && data.includes('\x1b[?1049h')) this._moshScreen = true; // mosh-client is up
     if (this._startupOnData) {
       this._startupOnData = false;
       setTimeout(() => this._sendStartup(), 800);
@@ -457,7 +462,16 @@ export class TermPane {
     this.app.unregisterPane(this);
     this.termId = null;
     this.closeSftpCompanion();
-    this.setStatus(reason === 'failed' ? 'failed' : 'disconnected');
+    let failed = reason === 'failed';
+    let msg;
+    // A Mosh client that quits without ever drawing the remote screen (or within seconds of its spawn)
+    // never connected: that is a failure, not a session that ended.
+    if (this.kind === 'mosh' && !this._killed && (!this._moshScreen || Date.now() - (this._moshStartedAt || 0) < MOSH_BOOTSTRAP_MS)) {
+      failed = true;
+      msg = `mosh exited${code ? ' with code ' + code : ''}`;
+      this.term.write('\r\n\x1b[31mMosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?\x1b[0m\r\n');
+    }
+    this.setStatus(failed ? 'failed' : 'disconnected', msg);
     if (this.kind === 'local' && code === 0 && !wasConnecting) {
       this.app.closePane(this, true);
       return;
@@ -566,7 +580,7 @@ export class TermPane {
       if (id) this.app.sftpPanel.dropConnection(id);
       if (state === 'failed') {
         this.sftpError = msg || 'connection failed';
-        toast(`SFTP for ${this.session?.name || this.title}: ${this.sftpError}`, 'error', 6000);
+        toast(`SFTP for Mosh session "${this.session?.name || this.title}" (via SSH): ${this.sftpError}`, 'error', 6000);
       }
       if (this.app.activePane() === this) this.app.sftpPanel.setPane(this);
     }
