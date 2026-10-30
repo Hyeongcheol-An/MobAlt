@@ -1,7 +1,8 @@
 #!/bin/bash
 # Build MobAlt from the current checkout and install it into /Applications.
-# Usage: scripts/install-local.sh            (arm64 .app + DMG, then install)
-#        scripts/install-local.sh --no-dmg   (unpacked .app only, faster)
+# Usage: scripts/install-local.sh                 (arm64 .app + DMG, then install)
+#        scripts/install-local.sh --no-dmg        (unpacked .app only, faster)
+#        scripts/install-local.sh --install-only  (skip the build, install dist/mac-arm64/MobAlt.app)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 unset ELECTRON_RUN_AS_NODE
@@ -11,7 +12,9 @@ unset ELECTRON_RUN_AS_NODE
 if [ "${MOBALT_SKIP_SIGN:-}" = "1" ]; then export CSC_IDENTITY_AUTO_DISCOVERY=false; fi
 
 # Targets given on the command line override package.json (which lists arm64+x64), so only arm64 is built here.
-if [ "${1:-}" = "--no-dmg" ]; then
+if [ "${1:-}" = "--install-only" ]; then
+  :
+elif [ "${1:-}" = "--no-dmg" ]; then
   npx electron-builder --mac dir --arm64
 else
   npx electron-builder --mac dmg --arm64
@@ -21,9 +24,14 @@ APP="dist/mac-arm64/MobAlt.app"
 [ -d "$APP" ] || { echo "build failed: $APP not found"; exit 1; }
 
 if pgrep -x MobAlt >/dev/null; then
-  echo "MobAlt is running; quitting it first"
+  echo "MobAlt is running; asking it to quit"
   osascript -e 'tell application "MobAlt" to quit' || true
-  sleep 1
+  for _ in $(seq 1 30); do pgrep -x MobAlt >/dev/null || break; sleep 0.5; done
+  if pgrep -x MobAlt >/dev/null; then
+    echo "MobAlt did not quit (a close-confirmation dialog is probably open)."
+    echo "Quit it, then run: scripts/install-local.sh --install-only"
+    exit 1
+  fi
 fi
 rm -rf /Applications/MobAlt.app
 ditto "$APP" /Applications/MobAlt.app
