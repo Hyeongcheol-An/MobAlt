@@ -45,8 +45,8 @@ cask "mobalt" do
 
   zap trash: [
     "~/Library/Application Support/MobAlt",
-    "~/Library/Caches/MobAlt",
     "~/Library/Caches/io.github.hyeongcheol-an.mobalt",
+    "~/Library/Caches/MobAlt",
     "~/Library/Logs/MobAlt",
     "~/Library/Preferences/io.github.hyeongcheol-an.mobalt.plist",
     "~/Library/Saved Application State/io.github.hyeongcheol-an.mobalt.savedState",
