@@ -51,6 +51,7 @@ MobaXterm을 쓰던 사람이 macOS에서 같은 방식으로 일할 수 있도�
 - **작업대 저장/복원**: 탭·분할 레이아웃·각 페인의 세션(로컬 셸은 현재 폴더까지)이 자동 저장되고, 다음 실행 때 그대로 복원되며 SSH는 자동 재접속합니다. 저장 위치는 사용자 데이터 폴더(`workspace.json`)라 앱을 업데이트해도 유지됩니다. Settings → Behaviour의 "Restore tabs & split layout at startup"으로 끌 수 있습니다. (로컬 터미널에서 돌던 프로세스 자체는 복원되지 않고 새 셸이 열립니다.)
 - **세션 트리**: 사이드바에서 폴더(중첩 가능)로 정리합니다 — 📁+ 버튼 또는 우클릭 → New Subfolder, 세션을 폴더로 드래그해 이동, 폴더 자체도 드래그로 다른 폴더/루트로 이동. 우클릭 메뉴에서 폴더 전체를 격자로 한꺼번에 열 수 있습니다.
 - **세션 아이콘·색상**: 세션 편집기 Basic 탭에서 아이콘(이모지 프리셋)과 색상을 고르면 MobaXterm처럼 사이드바·탭·페인 머리글에 표시됩니다. 탭 우클릭 → Tab Color로 탭별 색만 바꿀 수도 있습니다.
+- **시작 명령(Execute command at startup)**: 세션 편집기 Terminal 탭의 "Startup commands"에 적은 명령은 터미널이 준비되면 자동으로 입력됩니다. SSH/Telnet은 로그인 직후, 로컬·시리얼 세션은 셸/포트가 열린 직후에 보내며 여러 줄은 차례로 실행됩니다. 예: 로컬 세션에 Start folder를 프로젝트 폴더로, Startup commands에 `claude --resume <세션 ID>`를 넣어 두면 그 세션을 열 때마다 Claude Code가 이어서 뜹니다.
 - **MultiExec**: 툴바 버튼 또는 ⇧⌘M. 켜져 있는 동안 입력이 모든 터미널에 전달됩니다.
 - **단축키**: Help → Keyboard Shortcuts. 터미널 우클릭은 붙여넣기(⇧+우클릭은 메뉴), 선택하면 자동 복사됩니다(설정에서 변경 가능).
 - **Shift+Enter**: ESC+CR을 전송합니다(iTerm2 프리셋과 동일). Claude Code 같은 TUI에서 제출 대신 줄바꿈으로 동작하며, Option+Enter도 같습니다. 한글 IME 조합 중에는 개입하지 않습니다.

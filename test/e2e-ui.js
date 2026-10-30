@@ -89,6 +89,20 @@
     app.toggleSidebar();
     app.showPanel('sessions');
 
+    // local session: start folder + startup commands must apply (not only for SSH)
+    {
+      const s = await app.saveSession({ name: 'startup-test', type: 'local', cwd: '/private/tmp', startupCommand: 'echo MOBALT_STARTUP_$((20+22)); pwd' });
+      const pane = await app.openSession(s);
+      await sleep(3000);
+      const lines = [];
+      for (let i = 0; i < pane.term.buffer.active.length; i++) lines.push(pane.term.buffer.active.getLine(i)?.translateToString(true));
+      const text = lines.join('\n');
+      results.localStartupRan = /MOBALT_STARTUP_42/.test(text);
+      results.localStartFolder = /^\/private\/tmp$/m.test(text);
+      await shot('18-local-startup');
+      await window.api.sessions.remove(s.id);
+    }
+
     log('RESULTS ' + JSON.stringify(results));
     log('DONE');
   } catch (e) {

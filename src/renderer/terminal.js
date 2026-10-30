@@ -297,6 +297,16 @@ export class TermPane {
     this.focus();
   }
 
+  /** Type the session's startup commands into a local/telnet/serial terminal once it is up (SSH does this in main). */
+  _sendStartup() {
+    const cmd = this.session?.startupCommand;
+    if (!cmd) return;
+    const id = this.termId;
+    setTimeout(() => {
+      if (this.termId === id && !this.dead) window.api.term.write(id, cmd + '\r');
+    }, 700);
+  }
+
   // ---------- backend ----------
   async start() {
     if (this.kind === 'empty') {
@@ -309,10 +319,11 @@ export class TermPane {
     this.hideOverlay();
     try {
       if (this.kind === 'local') {
-        const r = await window.api.term.spawnLocal({ ...size, cwd: this.cwd || undefined });
+        const r = await window.api.term.spawnLocal({ ...size, cwd: this.cwd || undefined, shell: this.session?.shell || undefined });
         this.termId = r.id;
         this.app.registerPane(this);
         this.setStatus('connected');
+        this._sendStartup();
       } else if (this.kind === 'ssh') {
         this.setStatus('connecting');
         const r = await window.api.ssh.connect(this.session, size);
@@ -324,6 +335,7 @@ export class TermPane {
         this.termId = r.id;
         this.app.registerPane(this);
         this.setStatus('connected');
+        this._sendStartup();
       } else if (this.kind === 'serial') {
         this.setStatus('connecting');
         const s = this.session;
@@ -334,6 +346,7 @@ export class TermPane {
         this.termId = r.id;
         this.app.registerPane(this);
         this.setStatus('connected');
+        this._sendStartup();
       }
       if (this.session?.logging) this.toggleLog(true);
     } catch (e) {

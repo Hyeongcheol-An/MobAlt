@@ -86,7 +86,7 @@ export function sessionEditor(app, initial = {}) {
   const keepAlive = num(s.keepAliveInterval ?? app.settings.keepAliveInterval ?? 30, { min: 0, max: 3600 });
 
   // --- terminal / behaviour
-  const startup = h('textarea', { spellcheck: false, placeholder: 'Commands sent after login, e.g.\nsudo -i\ncd /var/log' });
+  const startup = h('textarea', { spellcheck: false, placeholder: 'Typed into the terminal once it is ready (after login for SSH/Telnet), e.g.\nsudo -i\ncd /var/log' });
   startup.value = s.startupCommand || '';
   const sftpAuto = check('Open SFTP browser automatically', s.sftpAuto !== false);
   const followCwd = check('SFTP follows terminal folder (injects prompt hook)', s.followCwd);
