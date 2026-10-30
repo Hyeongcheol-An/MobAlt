@@ -88,6 +88,13 @@
     },
     "dmg": {
       "sign": false
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableCookieEncryption": true,
+      "resetAdHocDarwinSignature": true
     }
   },
   "repository": {
