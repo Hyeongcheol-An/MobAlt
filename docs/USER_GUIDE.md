@@ -182,10 +182,15 @@ workspace restore and the update check. "Open config folder" shows where everyth
 | Newline in TUI apps | ⇧Enter or ⌥Enter |
 | Focused tab: move / activate / close, context menu | ← → / ⏎ / ⌫, ⇧F10 |
 | Focused session row: move / fold / open / open in split / delete | ↑ ↓ / ← → / ⏎ / ⌘⏎ / ⌫ |
+| Focused macro: move / play / delete, context menu | ↑ ↓ / ⏎ / ⌫, ⇧F10 |
+| SFTP list: move / open / parent folder / delete, context menu | ↑ ↓ / ⏎ / ⌫ / Del, ⇧F10 |
+| Icon and colour picks in the session editor: move / choose | ← → ↑ ↓ / ⏎ or Space |
 
 Help → Keyboard Shortcuts shows the same list inside the app. Tab reaches the toolbar, the side
-strip, the session tree and the tab strip; dialogs keep Tab inside them, and context menus take
-↑ ↓ / ⏎ / Esc.
+strip, the session tree, the macros list, the SFTP list and the tab strip (each list is one Tab
+stop; the arrows move inside it); dialogs keep Tab inside them and hand focus back to the tab,
+row or button that opened them when they close; context menus take ↑ ↓ / ⏎ / Esc.
+
 
 ## Data and privacy
 
