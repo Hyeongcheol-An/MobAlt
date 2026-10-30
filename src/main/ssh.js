@@ -91,11 +91,14 @@ class SshManager {
         return null;
       }
       let passphrase = savePassphrase ? cfg.passphrase || undefined : undefined;
+      const hadSaved = !!passphrase;
       let parsed = utils.parseKey(raw, passphrase);
       let tries = 0;
       while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
+        // only a retry (or a saved passphrase that no longer fits) is blamed on the passphrase
+        const why = tries ? 'Incorrect passphrase. ' : hadSaved ? 'The saved passphrase does not match. ' : '';
         tries++;
-        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `${tries ? 'Incorrect passphrase. ' : ''}Enter passphrase for key ${display}`, session: cfg });
+        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `${why}Enter passphrase for key ${display}`, session: cfg });
         if (!ans) return null;
         passphrase = ans.password;
         parsed = utils.parseKey(raw, passphrase);
