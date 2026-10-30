@@ -1,3 +1,13 @@
+## [0.8.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.7.0...v0.8.0) (2026-10-30)
+
+### Features
+
+* open-source release pipeline: code signing, notarization, Homebrew cask, new README ([580e24f](https://github.com/Hyeongcheol-An/MobAlt/commit/580e24f52912509324716b3a260736eaf1e4c509))
+
+### Bug Fixes
+
+* unit tests no longer need the Electron binary ([ac146cf](https://github.com/Hyeongcheol-An/MobAlt/commit/ac146cf8929ac4250ae1bf4e6d53fe44bd1b1240))
+
 ## [0.7.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.6.1...v0.7.0) (2026-10-30)
 
 ### Features
