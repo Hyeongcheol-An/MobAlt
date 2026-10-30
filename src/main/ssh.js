@@ -83,7 +83,7 @@ class SshManager {
             passphrase = ans.password;
             parsed = utils.parseKey(raw, passphrase);
             if (!(parsed instanceof Error) && ans.save && cfg.id) {
-              this.store.upsertSession({ ...cfg, passphrase });
+              this.store.upsertSession({ ...cfg, passphrase }).catch(() => {});
             }
           }
           if (parsed instanceof Error) {
@@ -94,54 +94,84 @@ class SshManager {
         },
       });
     }
-    if ((method === 'agent' || method === 'auto') && process.env.SSH_AUTH_SOCK) {
-      steps.push({ type: 'agent', run: async () => ({ type: 'agent', username, agent: process.env.SSH_AUTH_SOCK }) });
-    }
+    // "auto" order: key file → saved password → ssh-agent keys → keyboard-interactive with the
+    // saved password → interactive prompts (password dialog or keyboard-interactive dialog).
     if ((method === 'password' || method === 'auto') && cfg.password) {
-      steps.push({ type: 'password', run: async () => ({ type: 'password', username, password: cfg.password }) });
+      steps.push({ type: 'password', label: 'saved password', run: async () => ({ type: 'password', username, password: cfg.password }) });
     }
-    // keyboard-interactive (PAM / 2FA). Try the saved password first for a lone password prompt.
+    if ((method === 'agent' || method === 'auto') && process.env.SSH_AUTH_SOCK) {
+      steps.push({ type: 'agent', label: 'ssh-agent keys', run: async () => ({ type: 'agent', username, agent: process.env.SSH_AUTH_SOCK }) });
+    }
     let kbdUsedSaved = false;
-    steps.push({
+    let promptCount = 0;
+    const MAX_PROMPTS = 3;
+    // keyboard-interactive (PAM / 2FA): a lone hidden prompt gets the saved password once, else ask the user.
+    const kbdStep = (stepLabel) => ({
       type: 'keyboard-interactive',
+      label: stepLabel,
+      guard: () => promptCount < MAX_PROMPTS,
       run: async () => ({
         type: 'keyboard-interactive',
         username,
         prompt: (name, instructions, lang, prompts, finish) => {
-          if (prompts.length === 1 && /pass/i.test(prompts[0].prompt) && cfg.password && !kbdUsedSaved) {
+          const lonePassword = prompts.length === 1 && prompts[0].echo === false;
+          if (lonePassword && cfg.password && !kbdUsedSaved) {
             kbdUsedSaved = true;
             return finish([cfg.password]);
           }
+          if (!prompts.length) return finish([]);
+          promptCount++;
           prompter
             .keyboardInteractive({ name, instructions, prompts, session: cfg, label })
-            .then((answers) => finish(answers || []))
+            .then((answers) => {
+              if (!answers) ctx.cancelled = true;
+              finish(answers || []);
+            })
             .catch(() => finish([]));
         },
       }),
     });
-    for (let i = 0; i < 3; i++) {
+    if (cfg.password) steps.push(kbdStep('keyboard-interactive (saved password)'));
+    for (let i = 0; i < MAX_PROMPTS; i++) {
       steps.push({
         type: 'password',
+        label: 'password prompt',
+        guard: () => promptCount < MAX_PROMPTS,
         run: async () => {
+          promptCount++;
           const ans = await prompter.password({
             kind: 'password',
             title: 'SSH password',
-            message: `${label}'s password${i > 0 ? ' (retry ' + i + ')' : ''}`,
+            message: `${label}'s password${promptCount > 1 ? ' (attempt ' + promptCount + ')' : ''}`,
             session: cfg,
           });
-          if (!ans) return false; // abort
+          if (!ans) {
+            ctx.cancelled = true;
+            return false; // abort
+          }
           ctx.lastPrompted = ans;
           return { type: 'password', username, password: ans.password };
         },
       });
+      steps.push(kbdStep('keyboard-interactive prompt'));
     }
 
+    // ssh2 reports the server's remaining methods by SSH name; agent auth is "publickey" on the wire.
+    const WIRE = { none: 'none', publickey: 'publickey', agent: 'publickey', password: 'password', 'keyboard-interactive': 'keyboard-interactive' };
+    ctx.tried = ctx.tried || [];
     let idx = 0;
     return (methodsLeft, partialSuccess, cb) => {
+      if (Array.isArray(methodsLeft) && !ctx.serverMethods) {
+        ctx.serverMethods = methodsLeft.slice();
+        ctx.out(`${GREY}Server accepts: ${methodsLeft.join(', ')}${RESET}\r\n`);
+      }
+      if (ctx.currentLabel && ctx.currentLabel !== 'none') ctx.tried.push(ctx.currentLabel); // previous attempt was rejected
       const next = async () => {
+        if (ctx.cancelled) return cb(false);
         while (idx < steps.length) {
           const step = steps[idx++];
-          if (Array.isArray(methodsLeft) && step.type !== 'none' && !methodsLeft.includes(step.type)) continue;
+          if (Array.isArray(methodsLeft) && step.type !== 'none' && !methodsLeft.includes(WIRE[step.type])) continue;
+          if (step.guard && !step.guard()) continue;
           let res;
           try {
             res = await step.run();
@@ -151,6 +181,7 @@ class SshManager {
           if (res === false) return cb(false);
           if (res) {
             ctx.currentAuth = step.type;
+            ctx.currentLabel = step.label || step.type;
             return cb(res);
           }
         }
@@ -179,9 +210,9 @@ class SshManager {
   }
 
   /** Resolve a jump host spec (session id or user@host:port) to a session cfg. */
-  _resolveJump(cfg) {
+  async _resolveJump(cfg) {
     if (cfg.jumpSessionId) {
-      const s = this.store.getSession(cfg.jumpSessionId);
+      const s = await this.store.getSession(cfg.jumpSessionId);
       if (s) return s;
     }
     if (cfg.jumpHost) {
@@ -217,7 +248,7 @@ class SshManager {
         reject(e);
       };
 
-      const jumpCfg = depth < 3 ? this._resolveJump(cfg) : null;
+      const jumpCfg = depth < 3 ? await this._resolveJump(cfg) : null;
       let jump = null;
       let sock;
       if (jumpCfg) {
@@ -317,8 +348,8 @@ class SshManager {
         info.jump = jump;
         // Remember a prompted password if the user asked to save it.
         if (ctx.lastPrompted && ctx.lastPrompted.save && cfg.id && ctx.currentAuth === 'password') {
-          this.store.upsertSession({ ...cfg, password: ctx.lastPrompted.password });
           cfg.password = ctx.lastPrompted.password;
+          this.store.upsertSession({ ...cfg }).catch(() => {});
         }
         const shellOpts = { term: 'xterm-256color', cols: info.cols, rows: info.rows };
         if (cfg.x11) {
@@ -372,7 +403,18 @@ class SshManager {
         });
       })
       .catch((e) => {
-        this._out(id, `\r\n${RED}Connection failed: ${e.message}${RESET}\r\n`);
+        let msg = e.message;
+        if (ctx.cancelled) msg = 'authentication cancelled';
+        else if (e.level === 'client-authentication') {
+          msg = `authentication failed — server accepts: ${(ctx.serverMethods || []).join(', ') || 'unknown'}; tried: ${(ctx.tried || []).join(', ') || 'nothing'}`;
+        } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
+          msg += ' — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.';
+        } else if (e.code === 'ECONNREFUSED' || /ECONNREFUSED/.test(msg)) {
+          msg += ' — the host is reachable but nothing listens on that port.';
+        } else if (/Too many authentication failures/i.test(msg)) {
+          msg += ' — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.';
+        }
+        this._out(id, `\r\n${RED}Connection failed: ${msg}${RESET}\r\n`);
         this.prompter.status(id, 'failed', e.message);
         if (!info.closed) {
           info.closed = true;
