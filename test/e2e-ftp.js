@@ -1,5 +1,5 @@
 // Renderer-side FTP check against test/ftpd.py (pyftpdlib) on 127.0.0.1:2121. The data channel is throttled
-// so the 120 MB upload the cancel check needs (<root>/e2e-big.bin, create it with dd) is still running when it
+// so the 120 MB upload the cancel check needs (<local>/e2e-big.bin where <local> replaces __FTP_ROOT__ below; create it with dd) is still running when it
 // is cancelled:
 //   dd if=/dev/urandom of=<root>/e2e-big.bin bs=1m count=120
 //   python3 test/ftpd.py <root> 2121 mobalt secret 16000000 &
