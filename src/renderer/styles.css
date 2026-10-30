@@ -350,3 +350,29 @@ input::placeholder, textarea::placeholder { color: #8b9098; }
 .panel-head button, #macro-record { white-space: nowrap; flex: none; }
 .macro-row .size, .macro-row .badge { flex: none; white-space: nowrap; }
 .pane .pane-placeholder.ftp-info { border: none; }
+
+/* ---- tab bar overflow / logging ---- */
+/* Scroll arrows exist only while #tabs overflows (hidden otherwise: no layout shift); disabled at an end. */
+#tabbar .tab-scroll { width: 22px; flex: none; padding: 0; border: 0; background: var(--bg-2); color: var(--fg-dim); font-size: 18px; line-height: 1; }
+#tab-scroll-left { border-right: 1px solid var(--border); }
+#tab-scroll-right { border-left: 1px solid var(--border); }
+#tabbar .tab-scroll:hover:not(:disabled) { background: var(--bg-3); color: var(--fg); }
+#tabbar .tab-scroll:disabled { opacity: .3; cursor: default; }
+/* Fades on the overflowing edge: sticky pseudo-elements inside the scroller, so no wrapper element is needed. */
+#tabs::before, #tabs::after { content: ""; position: sticky; flex: none; width: 18px; align-self: stretch; pointer-events: none; z-index: 2; opacity: 0; transition: opacity .15s; }
+#tabs::before { left: 0; margin-right: -18px; background: linear-gradient(to right, var(--bg-2), transparent); }
+#tabs::after { right: 0; margin-left: -18px; background: linear-gradient(to left, var(--bg-2), transparent); }
+#tabbar.ovf-left #tabs::before { opacity: 1; }
+#tabbar.ovf-right #tabs::after { opacity: 1; }
+/* "All tabs" menu button (right of +) and its menu */
+#tab-list { width: 26px; flex: none; padding: 0; border: 0; background: transparent; color: var(--fg-dim); font-size: 14px; }
+#tab-list:hover { background: var(--bg-3); color: var(--fg); }
+.ctx.tab-list { max-height: 60vh; overflow-y: auto; min-width: 220px; max-width: 420px; }
+.ctx.tab-list .ctx-item { align-items: center; }
+.tab-menu-item { display: inline-flex; align-items: center; gap: 7px; min-width: 0; flex: 1; }
+.tab-menu-item .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--fg-faint); }
+.tab-menu-item .dot.connecting { background: var(--yellow); }
+.tab-menu-item .dot.connected { background: var(--green); }
+.tab-menu-item .dot.disconnected, .tab-menu-item .dot.failed { background: var(--red); }
+.tab-menu-item .tabico { flex: none; font-size: 12px; line-height: 1; }
+.tab-menu-item .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
