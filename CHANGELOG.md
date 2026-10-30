@@ -1,3 +1,9 @@
+## [0.7.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.6.1...v0.7.0) (2026-10-30)
+
+### Features
+
+* startup commands and custom shell for local, telnet and serial sessions ([967b7f8](https://github.com/Hyeongcheol-An/mobaXterm/commit/967b7f8ff0b92db24af4ea7efb8a26c67b0545d2))
+
 ## [0.6.1](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.6.0...v0.6.1) (2026-10-30)
 
 ### Bug Fixes
