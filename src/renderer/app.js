@@ -196,7 +196,15 @@ class App {
 
   // ---------- UI wiring ----------
   wireUi() {
-    for (const b of $$('[data-action]')) b.addEventListener('click', () => this.action(b.dataset.action, b.dataset.arg));
+    for (const b of $$('[data-action]')) b.addEventListener('click', async (e) => {
+      const viaKeyboard = e.detail === 0; // Enter/Space on the focused button
+      await this.action(b.dataset.action, b.dataset.arg);
+      if (!viaKeyboard || anyModalOpen() || document.activeElement !== b) return;
+      // keyboard flow: an action that opened no dialog/menu hands focus to the panel it showed, else to the terminal
+      const panelInput = b.dataset.action === 'sidebar' && $(`#panel-${b.dataset.arg} input`);
+      if (panelInput) panelInput.focus();
+      else this.activePane()?.focus();
+    });
     // toolbar clicks must not steal keyboard focus from the terminal
     for (const b of $$('#toolbar .tb-btn, #side-strip .strip-btn')) b.addEventListener('mousedown', (e) => e.preventDefault());
     // empty workspace accepts a dropped session
@@ -264,6 +272,7 @@ class App {
     });
     window.addEventListener('resize', () => this.workspace.allPanes().forEach((p) => p.fit()));
     document.addEventListener('modal-closed', () => this.activePane()?.focus());
+    document.addEventListener('ctx-closed', () => { if (document.activeElement === document.body) this.activePane()?.focus(); }); // menu opened from a non-focusable spot
     // keyboard shortcuts not covered by the menu
     window.addEventListener('keydown', (e) => {
       if (anyModalOpen()) return;

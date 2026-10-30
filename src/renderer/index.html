@@ -32,7 +32,7 @@
 
     <div id="main">
       <!-- Left: vertical tab strip + panel -->
-      <nav id="side-strip">
+      <nav id="side-strip" aria-label="Panels">
         <button class="strip-btn active" data-panel="sessions" title="Sessions (⌘1)"><span>Sessions</span></button>
         <button class="strip-btn" data-panel="sftp" title="SFTP browser (⌘2)"><span>Sftp</span></button>
         <button class="strip-btn" data-panel="tools" title="Tools (⌘3)"><span>Tools</span></button>
@@ -46,8 +46,8 @@
         <section class="panel active" id="panel-sessions">
           <div class="panel-head">
             <input id="session-filter" placeholder="Filter sessions…" spellcheck="false" />
-            <button class="icon-btn" data-action="new-folder" data-icon="folder-plus" title="New folder"></button>
-            <button class="icon-btn" data-action="new-session" data-icon="plus" title="New session"></button>
+            <button class="icon-btn" data-action="new-folder" data-icon="folder-plus" title="New folder" aria-label="New folder"></button>
+            <button class="icon-btn" data-action="new-session" data-icon="plus" title="New session" aria-label="New session"></button>
           </div>
           <div id="session-tree" class="tree"></div>
           <div class="panel-foot">
@@ -121,11 +121,11 @@
       <div id="workspace">
         <div id="multiexec-banner" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> terminal(s)</div>
         <div id="tabbar">
-          <button id="tab-scroll-left" class="tab-scroll" title="Scroll tabs left" hidden>‹</button>
+          <button id="tab-scroll-left" class="tab-scroll" title="Scroll tabs left" aria-label="Scroll tabs left" hidden>‹</button>
           <div id="tabs"></div>
-          <button id="tab-scroll-right" class="tab-scroll" title="Scroll tabs right" hidden>›</button>
-          <button id="tab-add" title="New local terminal (⌘T)">＋</button>
-          <button id="tab-list" title="All tabs" hidden>▾</button>
+          <button id="tab-scroll-right" class="tab-scroll" title="Scroll tabs right" aria-label="Scroll tabs right" hidden>›</button>
+          <button id="tab-add" title="New local terminal (⌘T)" aria-label="New local terminal">＋</button>
+          <button id="tab-list" title="All tabs" aria-label="All tabs" hidden>▾</button>
         </div>
         <div id="tab-content"></div>
         <div id="find-bar" hidden>

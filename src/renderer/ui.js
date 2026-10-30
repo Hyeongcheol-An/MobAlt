@@ -97,32 +97,56 @@ export const TYPE_LABEL = { ssh: 'SSH', mosh: 'Mosh', local: 'Local', telnet: 'T
 
 // ---------- context menu ----------
 let ctxOpen = null;
+let ctxOpener = null; // element that had focus when the menu opened; focus goes back to it on close
 export function closeContextMenu() {
   if (ctxOpen) {
-    ctxOpen.remove();
+    const menu = ctxOpen;
     ctxOpen = null;
+    const a = document.activeElement;
+    const inMenu = !a || a === document.body || menu.contains(a);
+    menu.remove();
+    const back = ctxOpener;
+    ctxOpener = null;
+    if (!inMenu) return; // focus already went somewhere else (e.g. into a dialog)
+    if (back && back.isConnected && back !== document.body) back.focus({ preventScroll: true });
+    else document.dispatchEvent(new CustomEvent('ctx-closed')); // app.js hands focus to the terminal
   }
 }
 /** items: [{label, key, action, disabled, danger}] or '-' separators */
 export function contextMenu(x, y, items) {
   closeContextMenu();
   const root = $('#ctx-root');
-  const menu = h('div', { class: 'ctx' });
+  const menu = h('div', { class: 'ctx', role: 'menu', tabindex: -1 });
   for (const it of items) {
     if (it === '-') {
-      menu.append(h('div', { class: 'ctx-sep' }));
+      menu.append(h('div', { class: 'ctx-sep', role: 'separator' }));
       continue;
     }
     if (!it) continue;
-    const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : ''), onclick: () => { closeContextMenu(); it.action && it.action(); } }, it.label, it.key ? h('span', { class: 'k' }, it.key) : null);
+    const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : ''), role: 'menuitem', tabindex: -1, 'aria-disabled': it.disabled ? 'true' : null, onclick: () => { closeContextMenu(); it.action && it.action(); } }, it.label, it.key ? h('span', { class: 'k' }, it.key) : null);
     if (it.danger) row.style.color = '#ffb3ae';
     menu.append(row);
   }
   root.append(menu);
   ctxOpen = menu;
+  ctxOpener = document.activeElement;
   const r = menu.getBoundingClientRect();
   menu.style.left = Math.min(x, window.innerWidth - r.width - 6) + 'px';
   menu.style.top = Math.min(y, window.innerHeight - r.height - 6) + 'px';
+  // keyboard: ↑/↓ cycle through enabled items, Home/End, Enter/Space activate, Esc (global) / Tab close
+  const enabled = () => [...menu.querySelectorAll('.ctx-item:not(.disabled)')];
+  menu.addEventListener('keydown', (e) => {
+    const list = enabled();
+    const i = list.indexOf(document.activeElement);
+    const go = (n) => { e.preventDefault(); if (list.length) list[((n % list.length) + list.length) % list.length].focus(); };
+    if (e.key === 'ArrowDown') go(i + 1);
+    else if (e.key === 'ArrowUp') go(i < 0 ? -1 : i - 1);
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(-1);
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (i >= 0) list[i].click(); }
+    else if (e.key === 'Tab') { e.preventDefault(); closeContextMenu(); }
+  });
+  enabled()[0]?.focus({ preventScroll: true });
   setTimeout(() => {
     const off = (e) => {
       if (!menu.contains(e.target)) {
@@ -135,13 +159,19 @@ export function contextMenu(x, y, items) {
   return menu;
 }
 window.addEventListener('blur', closeContextMenu);
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeContextMenu(); });
+// Esc closes an open menu and nothing else (a dialog underneath stays open).
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !ctxOpen) return;
+  e.stopPropagation();
+  e.preventDefault();
+  closeContextMenu();
+}, true);
 
 // ---------- modal ----------
 const modalStack = [];
 export function showModal({ title, body, buttons = [], width, onClose, closeOnBackdrop = true, beforeClose = null }) {
   const root = $('#modal-root');
-  const modal = h('div', { class: 'modal' + (width ? ' ' + width : '') });
+  const modal = h('div', { class: 'modal' + (width ? ' ' + width : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': typeof title === 'string' ? title : null });
   const backdrop = h('div', { class: 'modal-backdrop' }, modal);
   const api = {
     el: modal,
@@ -172,7 +202,7 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
     },
   };
   modal.append(
-    h('div', { class: 'modal-title' }, title, h('button', { class: 'close', onclick: () => api.close(null) }, '✕')),
+    h('div', { class: 'modal-title' }, title, h('button', { class: 'close', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => api.close(null) }, '✕')),
     h('div', { class: 'modal-body' }, body)
   );
   if (buttons.length) {
@@ -185,9 +215,25 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
   backdrop.addEventListener('mousedown', (e) => {
     if (closeOnBackdrop && e.target === backdrop) api.close(null);
   });
-  // Esc closes the top-most dialog even when focus has wandered outside it (e.g. after clicking a label).
+  // Tab / ⇧Tab cycle through this dialog's own controls only (hidden, disabled and tabindex=-1 ones skipped;
+  // an unchecked radio yields to the checked one of its group, like the browser's own order).
+  const focusables = () => [...modal.querySelectorAll('a[href], button, input, select, textarea, [tabindex]')].filter((el) =>
+    !el.disabled && !el.hidden && el.tabIndex >= 0 && el.type !== 'hidden' && el.offsetParent !== null
+    && !(el.type === 'radio' && !el.checked && el.name && modal.querySelector(`input[type=radio][name="${CSS.escape(el.name)}"]:checked`)));
+  const trapTab = (e) => {
+    if (ctxOpen) return; // a context menu above the dialog owns the keyboard
+    e.preventDefault();
+    const list = focusables();
+    if (!list.length) return;
+    const i = list.indexOf(document.activeElement), n = list.length;
+    (i < 0 ? (e.shiftKey ? list[n - 1] : list[0]) : list[(i + (e.shiftKey ? -1 : 1) + n) % n]).focus();
+  };
+  // Esc closes the top-most dialog even when focus has wandered outside it (e.g. after clicking a label);
+  // Tab is trapped inside it for the same reason.
   const onDocKey = (e) => {
-    if (e.key !== 'Escape' || modalStack[modalStack.length - 1] !== api || modal.contains(e.target)) return;
+    if (modalStack[modalStack.length - 1] !== api) return;
+    if (e.key === 'Tab') return trapTab(e);
+    if (e.key !== 'Escape' || modal.contains(e.target)) return;
     e.stopPropagation();
     api.close(null);
   };

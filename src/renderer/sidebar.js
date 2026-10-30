@@ -24,6 +24,10 @@ export class SessionTree {
         this.filterEl.value = '';
         this.render();
       }
+      if (e.key === 'ArrowDown') {
+        this.focusRow(this.visibleRows()[0]);
+        e.preventDefault();
+      }
     });
     // Rows stop propagation, so anything that reaches here (background, gutter, empty state) is "root".
     this.el.addEventListener('contextmenu', (e) => {
@@ -31,8 +35,14 @@ export class SessionTree {
       e.preventDefault();
       this.rootMenu(e.clientX, e.clientY);
     });
+    // keyboard: rows are tree items with a roving tabindex (one Tab stop), see onKey()
+    this.el.setAttribute('role', 'tree');
+    this.el.setAttribute('aria-label', 'Saved sessions');
     this.el.addEventListener('keydown', (e) => this.onKey(e));
-    this.el.tabIndex = 0;
+    this.el.addEventListener('focusin', (e) => {
+      const r = e.target.closest('.tree-row');
+      if (r) this._rove(r);
+    });
     // drop onto root (empty area) -> move to root folder
     this.el.addEventListener('dragover', (e) => {
       const t = e.dataTransfer.types;
@@ -79,6 +89,9 @@ export class SessionTree {
 
   render() {
     const root = this.buildTree();
+    // a re-render while the keyboard is in the tree (status dot, delete…) must not drop focus on <body>
+    const fa = document.activeElement;
+    const focused = fa && fa.classList.contains('tree-row') && this.el.contains(fa) ? { session: fa.dataset.session, folder: fa.dataset.folder, index: this.visibleRows().indexOf(fa) } : null;
     this.el.replaceChildren();
     const q = this.filterEl.value.trim();
     const renderNode = (node, depth, container) => {
@@ -87,12 +100,13 @@ export class SessionTree {
         if (q && !this.countSessions(f)) continue; // filtering: only folders with matching sessions
         const collapsed = !q && this.collapsed.has(f.path);
         const wrap = h('div', { class: 'tree-folder' + (collapsed ? ' collapsed' : '') });
-        const row = h('div', { class: 'tree-row folder', dataset: { folder: f.path }, draggable: true },
+        const row = h('div', { class: 'tree-row folder', dataset: { folder: f.path }, draggable: true, role: 'treeitem', tabindex: -1, 'aria-expanded': String(!collapsed) },
           h('span', { class: 'caret' }, '▼'),
           h('span', { class: 'ico' }, '📁'),
           h('span', { class: 'label' }, f.name),
           h('span', { class: 'sub' }, String(this.countSessions(f)))
         );
+        row._folder = f;
         row.addEventListener('click', () => this.toggleFolder(f.path, wrap));
         row.addEventListener('contextmenu', (e) => {
           e.preventDefault();
@@ -124,7 +138,7 @@ export class SessionTree {
           if (id) return this.moveToFolder(id, f.path);
           this.moveFolder(src, f.path);
         });
-        const children = h('div', { class: 'tree-children' });
+        const children = h('div', { class: 'tree-children', role: 'group' });
         wrap.append(row, children);
         container.append(wrap);
         renderNode(f, depth + 1, children);
@@ -135,6 +149,36 @@ export class SessionTree {
     if (!this.el.children.length) {
       this.el.append(h('div', { class: 'tree-empty' }, q ? 'No sessions match.' : 'No saved sessions yet.', h('br'), h('button', { class: 'link-btn', onclick: () => this.app.action('new-session') }, 'Create a session'), ' or ', h('button', { class: 'link-btn', onclick: () => this.app.action('import-sshconfig') }, 'import ~/.ssh/config')));
     }
+    this._syncRoving();
+    if (focused) {
+      const rows = this.visibleRows();
+      const again = rows.find((r) => (focused.session ? r.dataset.session === focused.session : r.dataset.folder === focused.folder)) || rows[Math.min(focused.index, rows.length - 1)];
+      if (again) { again.focus({ preventScroll: true }); this._rove(again); }
+    }
+  }
+
+  /** Rows the keyboard can reach: every row not inside a collapsed folder, in display order. */
+  visibleRows() {
+    const hidden = (r) => !!(r.classList.contains('folder') ? r.parentElement.parentElement : r.parentElement).closest('.tree-folder.collapsed');
+    return [...this.el.querySelectorAll('.tree-row')].filter((r) => !hidden(r));
+  }
+
+  /** Roving tabindex: `row` is the tree's single Tab stop. */
+  _rove(row) {
+    for (const r of this.el.querySelectorAll('.tree-row')) r.tabIndex = r === row ? 0 : -1;
+  }
+
+  _syncRoving() {
+    const rows = this.visibleRows();
+    this._rove(rows.find((r) => r.dataset.session && r.dataset.session === this.selected) || rows[0] || null);
+  }
+
+  /** Keyboard cursor: focus the row (the ring is drawn by :focus-visible); selection follows it. */
+  focusRow(row) {
+    if (!row) return;
+    row.focus();
+    row.scrollIntoView({ block: 'nearest' });
+    this.select(row.dataset.session || null);
   }
 
   countSessions(node) {
@@ -148,7 +192,7 @@ export class SessionTree {
     const sub = s.type === 'local' ? 'local'
       : s.type === 'serial' ? `${(s.serialPath || '').replace('/dev/', '')} @ ${s.baudRate || ''}`
       : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
-    const row = h('div', { class: 'tree-row' + (this.selected === s.id ? ' selected' : ''), dataset: { session: s.id }, draggable: true, title: `${s.name}\n${sub}` },
+    const row = h('div', { class: 'tree-row' + (this.selected === s.id ? ' selected' : ''), dataset: { session: s.id }, draggable: true, title: `${s.name}\n${sub}`, role: 'treeitem', tabindex: -1 },
       s.icon
         ? h('span', { class: 'ico emoji', style: s.color ? { color: s.color } : null }, s.icon)
         : h('span', { class: 'ico ' + (ICON[s.type] || ''), style: s.color ? { color: s.color } : null }, '●'),
@@ -156,6 +200,7 @@ export class SessionTree {
       open ? h('span', { class: 'dot', title: 'connected' }) : null,
       h('span', { class: 'sub' }, sub)
     );
+    row._session = s;
     row.addEventListener('click', () => this.select(s.id));
     row.addEventListener('dblclick', () => this.app.openSession(s));
     row.addEventListener('contextmenu', (e) => {
@@ -181,24 +226,74 @@ export class SessionTree {
     if (this.collapsed.has(path)) this.collapsed.delete(path);
     else this.collapsed.add(path);
     wrap.classList.toggle('collapsed', this.collapsed.has(path));
+    wrap.firstElementChild.setAttribute('aria-expanded', String(!this.collapsed.has(path)));
     this.saveCollapsed();
   }
 
+  /**
+   * Keys on a focused row: ↑/↓ move over folders and sessions alike, → expands a folder / enters it,
+   * ← collapses / goes to the parent folder, Enter opens a session (⌘/⌃/⇧Enter: in a split right) or
+   * toggles a folder, Space toggles a folder, ⌫/Delete deletes (with the usual confirmation), ⇧F10 menu.
+   */
   onKey(e) {
-    if (!this.selected) return;
-    const s = this.sessionById(this.selected);
-    if (!s) return;
-    if (e.key === 'Enter') this.app.openSession(s);
-    else if (e.key === 'Backspace' || e.key === 'Delete') this.deleteSession(s);
-    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      const rows = [...this.el.querySelectorAll('.tree-row[data-session]')];
-      const i = rows.findIndex((r) => r.dataset.session === this.selected);
-      const n = rows[i + (e.key === 'ArrowDown' ? 1 : -1)];
-      if (n) {
-        this.select(n.dataset.session);
-        n.scrollIntoView({ block: 'nearest' });
+    if (e.altKey) return;
+    const rows = this.visibleRows();
+    const row = e.target.closest('.tree-row');
+    const i = rows.indexOf(row);
+    if (i < 0) {
+      // no row focused yet: ↓/Home start at the first row, ↑/End at the last one
+      if (e.key === 'ArrowDown' || e.key === 'Home') this.focusRow(rows[0]);
+      else if (e.key === 'ArrowUp' || e.key === 'End') this.focusRow(rows[rows.length - 1]);
+      else return;
+      return e.preventDefault();
+    }
+    const f = row._folder, s = row._session;
+    const wrap = f ? row.parentElement : null; // .tree-folder
+    const parentFolderRow = () => (f ? wrap.parentElement : row.parentElement).closest('.tree-folder')?.firstElementChild || null;
+    switch (e.key) {
+      case 'ArrowDown': this.focusRow(rows[i + 1]); break;
+      case 'ArrowUp': this.focusRow(rows[i - 1]); break;
+      case 'Home': this.focusRow(rows[0]); break;
+      case 'End': this.focusRow(rows[rows.length - 1]); break;
+      case 'ArrowRight':
+        if (!f) return;
+        if (wrap.classList.contains('collapsed')) this.toggleFolder(f.path, wrap);
+        else if (rows[i + 1] && wrap.contains(rows[i + 1])) this.focusRow(rows[i + 1]);
+        break;
+      case 'ArrowLeft':
+        if (f && !wrap.classList.contains('collapsed')) this.toggleFolder(f.path, wrap);
+        else this.focusRow(parentFolderRow());
+        break;
+      case 'Enter':
+        if (f) this.toggleFolder(f.path, wrap);
+        else this.app.openSession(s, e.metaKey || e.ctrlKey || e.shiftKey ? { split: 'right' } : {});
+        break;
+      case ' ':
+        if (f) this.toggleFolder(f.path, wrap);
+        else this.select(s.id);
+        break;
+      case 'Backspace': case 'Delete':
+        this._deleteFromKeyboard(row, i);
+        break;
+      case 'F10': case 'ContextMenu': { // ⇧F10 and the Menu key open the row's context menu
+        if (e.key === 'F10' && !e.shiftKey) return;
+        const r = row.getBoundingClientRect();
+        if (f) this.folderMenu(r.left + 24, r.bottom, f);
+        else { this.select(s.id); this.sessionMenu(r.left + 24, r.bottom, s); }
+        break;
       }
-      e.preventDefault();
+      default: return;
+    }
+    e.preventDefault();
+  }
+
+  async _deleteFromKeyboard(row, i) {
+    if (row._folder) await this.deleteFolder(row._folder);
+    else await this.deleteSession(row._session);
+    // the tree re-rendered (or the dialog moved focus): keep the keyboard on a neighbouring row
+    if (!this.el.contains(document.activeElement)) {
+      const rows = this.visibleRows();
+      this.focusRow(rows[Math.min(i, rows.length - 1)]);
     }
   }
 

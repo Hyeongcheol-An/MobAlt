@@ -407,3 +407,9 @@ svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; strok
 .tab-menu-item .dot.disconnected, .tab-menu-item .dot.failed { background: var(--red); }
 .tab-menu-item .tabico { flex: none; font-size: 12px; line-height: 1; }
 .tab-menu-item .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ---- keyboard accessibility ---- */
+/* Rings are inset where the container clips (#tabs scrolls, .tree-row hides overflow, the side strip is flush). */
+.tab:focus-visible, .tree-row:focus-visible, .strip-btn:focus-visible, #tab-add:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tree-row.selected:focus-visible { outline-color: #fff; } /* the keyboard cursor stays visible on the blue selected fill */
+.ctx-item:focus-visible { background: var(--accent-2); color: #fff; outline: none; }
+.ctx-item:focus-visible .k { color: #dbe9ff; }
