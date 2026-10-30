@@ -1,3 +1,18 @@
+## [0.10.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.10.0...v0.10.1) (2026-10-30)
+
+### Bug Fixes
+
+* **a11y:** dialogs hand focus back to their opener; one Tab stop per picker ([96d3cfc](https://github.com/Hyeongcheol-An/MobAlt/commit/96d3cfcba6b837cd36ac80f4937f4a73ab236124))
+* **a11y:** keyboard follow-ups in the session tree, macros list and SFTP list ([9b8349b](https://github.com/Hyeongcheol-An/MobAlt/commit/9b8349bd798bd76aa13220821c406340a02213f3))
+* **a11y:** tab strip never drops keyboard focus on <body> ([1f1f68a](https://github.com/Hyeongcheol-An/MobAlt/commit/1f1f68aeb4c49af6937db3a50e3394f71a5f8bb3))
+* **a11y:** unclipped focus rings for the toolbar, tab bar arrows, SFTP list and pickers ([93073a7](https://github.com/Hyeongcheol-An/MobAlt/commit/93073a73aa3b324df63fc0da60c1bd2b530046bb)), closes [#sftp-list](https://github.com/Hyeongcheol-An/MobAlt/issues/sftp-list)
+* **app:** quit confirmation for ⌘Q counts every live connection ([ad84806](https://github.com/Hyeongcheol-An/MobAlt/commit/ad848067ec5582b6fd894aa858db2bc5d4551b77))
+* **ftp:** disconnect on close, readable errors, password prompt, safe rename and cancel ([fff4863](https://github.com/Hyeongcheol-An/MobAlt/commit/fff4863d23c0c40248e7a1f5794e3f7d49507d94))
+* **mosh:** verify the host key in the app before the bootstrap; failures read as failed ([954fb40](https://github.com/Hyeongcheol-An/MobAlt/commit/954fb40935538d4ecc9fc3644084fd62a9b8d22d))
+* **ssh:** only a retry of the passphrase prompt says "Incorrect passphrase" ([7f7725f](https://github.com/Hyeongcheol-An/MobAlt/commit/7f7725fe87c2ca47c0ae1a670c41913b94714497))
+* **ui:** regression-sweep follow-ups — editor rows survive type changes, tunnel edits mark it dirty, find bar tolerates bad patterns ([7b1b819](https://github.com/Hyeongcheol-An/MobAlt/commit/7b1b81981c27873658343a377eae7bfa79fcd338))
+* **ui:** visual QA follow-ups — plain logs mirror the terminal line, toasts clear the find bar, last glyph icons replaced ([edc2e43](https://github.com/Hyeongcheol-An/MobAlt/commit/edc2e435a965325e11544bef197abc50934a8c49))
+
 ## [0.10.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.9.1...v0.10.0) (2026-10-30)
 
 ### Features

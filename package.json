@@ -1,7 +1,7 @@
 {
   "name": "mobalt",
   "productName": "MobAlt",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "MobaXterm alternative for macOS - tabbed SSH/SFTP/local terminal with session manager, tunnels, MultiExec, X11 forwarding",
   "main": "src/main/main.js",
   "author": "Hyeongcheol An (https://github.com/Hyeongcheol-An)",
