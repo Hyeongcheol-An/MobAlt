@@ -461,6 +461,7 @@ export function shortcutsDialog() {
     ['Split right / down', '⌘D / ⇧⌘D'], ['Grid 2 / 4 / 6 / 8 panes', '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], ['Unsplit', '⌥⌘1'], ['Close pane', '⇧⌘W'], ['Next pane', '⌘]'], ['Next / previous tab', '⌃Tab / ⌃⇧Tab'],
     ['Find', '⌘F'], ['Clear terminal', '⌘K'], ['Zoom', '⌘= / ⌘- / ⌘0'], ['Toggle sidebar', '⌘B'], ['Sessions / SFTP / Tools / Macros', '⌘1 / ⌘2 / ⌘3 / ⌘4'],
     ['MultiExec', '⇧⌘M'], ['Tunnels', '⇧⌘U'], ['Settings', '⌘,'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', 'Right-click'],
+    ['Newline in TUI (Claude Code 등)', '⇧Enter / ⌥Enter'],
   ];
   showModal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
 }

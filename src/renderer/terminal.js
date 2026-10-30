@@ -120,6 +120,13 @@ export class TermPane {
       }
       // Let macOS menu accelerators (⌘…) through; xterm ignores them anyway.
       if (e.metaKey) return false;
+      // Shift+Enter → ESC CR (iTerm2-style): newline in Claude Code and other TUIs
+      // instead of submitting. Skip while an IME composition (Korean etc.) is active.
+      if (e.key === 'Enter' && e.shiftKey && !e.altKey && !e.ctrlKey
+          && !e.isComposing && e.keyCode !== 229) {
+        this._onInput('\x1b\r');
+        return false;
+      }
       return true;
     });
   }
