@@ -78,19 +78,38 @@ export class Workspace {
     this.syncTabOverflow();
   }
 
-  /** Arrows and fades exist only while the strip overflows; an arrow is disabled at its end. */
+  /**
+   * Arrows and fades exist only while the strip overflows; an arrow is disabled at its end. The DOM writes are
+   * deferred to the next frame (coalesced): showing/hiding an arrow resizes #tabs, and doing that inside the
+   * ResizeObserver callback itself logs "ResizeObserver loop completed with undelivered notifications".
+   */
   syncTabOverflow() {
+    if (this._ovfRaf) return;
+    this._ovfRaf = requestAnimationFrame(() => { this._ovfRaf = 0; this._syncTabOverflowNow(); });
+  }
+
+  _syncTabOverflowNow() {
     if (!this.barEl || !this.scrollLeftBtn) return;
     const el = this.tabsEl;
     const max = el.scrollWidth - el.clientWidth;
     const overflow = max > 1;
     const atStart = el.scrollLeft <= 1, atEnd = el.scrollLeft >= max - 1;
+    const focused = document.activeElement;
     this.scrollLeftBtn.hidden = this.scrollRightBtn.hidden = !overflow;
     this.scrollLeftBtn.disabled = !overflow || atStart;
     this.scrollRightBtn.disabled = !overflow || atEnd;
     this.barEl.classList.toggle('ovf-left', overflow && !atStart);
     this.barEl.classList.toggle('ovf-right', overflow && !atEnd);
     this.tabListBtn.hidden = this.tabs.length === 0;
+    if (focused === this.scrollLeftBtn || focused === this.scrollRightBtn) this._keepArrowFocus(focused);
+  }
+
+  /** A focused arrow that just got disabled or hidden must not drop focus on <body>: the other arrow if it can scroll, else the active tab, else ＋. */
+  _keepArrowFocus(arrow) {
+    if (!arrow.disabled && !arrow.hidden) return;
+    const other = arrow === this.scrollLeftBtn ? this.scrollRightBtn : this.scrollLeftBtn;
+    const to = !other.hidden && !other.disabled ? other : this.active?.tabEl || document.getElementById('tab-add');
+    to?.focus({ preventScroll: true });
   }
 
   /** Scroll the strip by one tab: the first tab cut off on that side becomes fully visible. */
@@ -199,6 +218,9 @@ export class Workspace {
   }
 
   tabMenu(tab, x, y) {
+    // opened from the focused tab (⇧F10): closing keeps the keyboard in the strip instead of dropping it on <body>
+    const fromStrip = document.activeElement === tab.tabEl, i = this.tabs.indexOf(tab);
+    const closing = (fn) => async () => { await fn(); if (fromStrip) this._refocusStrip(tab, i); };
     contextMenu(x, y, [
       { label: 'Rename Tab…', action: () => this.renameTab(tab) },
       { label: 'Duplicate', key: '⇧⌘T', action: () => this.app.action('duplicate') },
@@ -207,10 +229,23 @@ export class Workspace {
       { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right') },
       { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down') },
       '-',
-      { label: 'Close', key: '⌘W', action: () => this.app.closeTab(tab) },
-      { label: 'Close Others', action: () => this.tabs.filter((t) => t !== tab).forEach((t) => this.app.closeTab(t)) },
-      { label: 'Close All', action: () => [...this.tabs].forEach((t) => this.app.closeTab(t)) },
+      { label: 'Close', key: '⌘W', action: closing(() => this.app.closeTab(tab)) },
+      { label: 'Close Others', action: closing(() => this.tabs.filter((t) => t !== tab).forEach((t) => this.app.closeTab(t))) },
+      { label: 'Close All', action: closing(() => [...this.tabs].forEach((t) => this.app.closeTab(t))) },
     ]);
+  }
+
+  /** After closing from the strip: `tab` if it survived (cancelled), else the tab now at its place, else ＋. */
+  _refocusStrip(tab, i) {
+    const next = this.tabs.includes(tab) ? tab : this.tabs[Math.min(i, this.tabs.length - 1)];
+    (next ? next.tabEl : document.getElementById('tab-add')).focus();
+  }
+
+  /** Scroll a tab fully into view, clear of the 18px edge fades (scrollIntoView alone leaves it under the fade). */
+  revealTab(tab) {
+    const el = this.tabsEl, r = tab.tabEl.getBoundingClientRect(), b = el.getBoundingClientRect(), fade = 18;
+    if (r.left < b.left + fade) el.scrollLeft -= b.left + fade - r.left;
+    else if (r.right > b.right - fade) el.scrollLeft += r.right - (b.right - fade);
   }
 
   /** Roving tabindex: only `tab` is reachable with the Tab key; arrows move between the others. */
@@ -224,7 +259,7 @@ export class Workspace {
     const tab = el.classList?.contains('tab') && this.tabs.find((t) => t.tabEl === el);
     if (!tab || e.metaKey || e.ctrlKey || e.altKey) return;
     const i = this.tabs.indexOf(tab), n = this.tabs.length;
-    const focusTab = (t) => { t.tabEl.focus(); t.tabEl.scrollIntoView({ inline: 'nearest', block: 'nearest' }); };
+    const focusTab = (t) => { t.tabEl.focus({ preventScroll: true }); this.revealTab(t); };
     switch (e.key) {
       case 'ArrowLeft': case 'ArrowUp': focusTab(this.tabs[(i - 1 + n) % n]); break;
       case 'ArrowRight': case 'ArrowDown': focusTab(this.tabs[(i + 1) % n]); break;
@@ -248,8 +283,7 @@ export class Workspace {
   async _closeTabFromKeyboard(tab) {
     const i = this.tabs.indexOf(tab);
     await this.app.closeTab(tab); // may ask for confirmation (live connections)
-    const next = this.tabs.includes(tab) ? tab : this.tabs[Math.min(i, this.tabs.length - 1)];
-    if (next) next.tabEl.focus();
+    this._refocusStrip(tab, i); // the last tab closed: ＋ gets the focus, never <body>
   }
 
   async renameTab(tab) {
