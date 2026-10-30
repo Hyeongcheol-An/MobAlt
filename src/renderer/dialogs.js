@@ -5,7 +5,10 @@ import { THEMES } from './terminal.js';
 const DEFAULT_PORT = { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900, local: 0 };
 
 function field(label, input, help) {
-  return [h('label', {}, label), input, help ? h('div', { class: 'form-help' }, help) : null];
+  // Element.append() would render a literal "null", so only include the help node when present.
+  const out = [h('label', {}, label), input];
+  if (help) out.push(h('div', { class: 'form-help' }, help));
+  return out;
 }
 function text(value, attrs = {}) {
   return h('input', { type: 'text', value: value ?? '', spellcheck: false, ...attrs });

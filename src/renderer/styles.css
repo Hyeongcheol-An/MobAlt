@@ -83,19 +83,21 @@ input, select, textarea { user-select: text; }
 .link-btn:hover { text-decoration: underline; }
 
 /* ---------- session tree ---------- */
-.tree { flex: 1; overflow: auto; padding: 4px 0; }
+.tree { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.modal-title .close:focus, .xterm textarea:focus { outline: none; }
 .tree-folder { }
 .tree-folder > .tree-row .caret { width: 14px; text-align: center; color: var(--fg-dim); font-size: 10px; transition: transform .12s; }
 .tree-folder.collapsed > .tree-row .caret { transform: rotate(-90deg); }
 .tree-folder.collapsed > .tree-children { display: none; }
 .tree-children { padding-left: 12px; }
-.tree-row { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: default; border-radius: 4px; margin: 0 4px; }
+.tree-row { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: default; border-radius: 4px; margin: 0 4px; min-width: 0; overflow: hidden; }
 .tree-row:hover { background: var(--bg-3); }
 .tree-row.selected { background: var(--accent-2); color: #fff; }
 .tree-row.drop-target { outline: 1px dashed var(--accent); }
 .tree-row .ico { width: 16px; text-align: center; font-size: 12px; flex: none; }
-.tree-row .label { overflow: hidden; text-overflow: ellipsis; flex: 1; }
-.tree-row .sub { color: var(--fg-faint); font-size: 11px; }
+.tree-row .label { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 48px; }
+.tree-row .sub { color: var(--fg-faint); font-size: 11px; flex: 0 1 auto; min-width: 0; max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
 .tree-row.selected .sub { color: #dbe9ff; }
 .tree-row .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex: none; }
 .tree-empty { padding: 20px 14px; color: var(--fg-faint); text-align: center; line-height: 1.6; }
