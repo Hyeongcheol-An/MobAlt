@@ -409,6 +409,8 @@ class SshManager {
           msg = `authentication failed — server accepts: ${(ctx.serverMethods || []).join(', ') || 'unknown'}; tried: ${(ctx.tried || []).join(', ') || 'nothing'}`;
         } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
           msg += ' — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.';
+        } else if (/Timed out while waiting for handshake/i.test(msg)) {
+          msg += ` — no SSH banner within ${Math.round((this.store.getSettings().readyTimeout || 20000) / 1000)}s. Usually the host/port is unreachable from this network (try "nc -vz ${cfg.host} ${cfg.port || 22}" in a local terminal), or the port is not an SSH service.`;
         } else if (e.code === 'ECONNREFUSED' || /ECONNREFUSED/.test(msg)) {
           msg += ' — the host is reachable but nothing listens on that port.';
         } else if (/Too many authentication failures/i.test(msg)) {
