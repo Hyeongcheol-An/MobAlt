@@ -1,3 +1,13 @@
+## [0.2.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.1.0...v0.2.0) (2026-10-30)
+
+### Features
+
+* serial console sessions and async Keychain secret storage ([9901d41](https://github.com/Hyeongcheol-An/mobaXterm/commit/9901d4191191a044a44b860ba37f385561d809d3))
+
+### Bug Fixes
+
+* **ssh:** robust auth method selection and clear failure diagnostics ([7532e3d](https://github.com/Hyeongcheol-An/mobaXterm/commit/7532e3d55164d7b221b9b0a0e67007840a6d1a9e))
+
 ## [0.1.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.0.0...v0.1.0) (2026-10-30)
 
 ### Features
