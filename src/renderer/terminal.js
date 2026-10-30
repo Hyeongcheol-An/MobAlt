@@ -1,5 +1,6 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
 import { h, contextMenu, toast } from './ui.js';
+import { connIdOf } from './sftp.js';
 
 const { Terminal } = window;
 const FitAddon = window.FitAddon.FitAddon;
@@ -52,6 +53,8 @@ export class TermPane {
     this.dead = false;
     this.disposed = false;
     this.connectedAt = null;
+    this.sftpConnId = null; // Mosh: companion SSH connection the Sftp panel browses through
+    this.sftpStatus = 'idle'; // idle | connecting | connected | failed | disconnected
 
     const s = app.settings;
     this.term = new Terminal({
@@ -200,11 +203,14 @@ export class TermPane {
       const files = Array.from(e.dataTransfer.files || []);
       if (files.length) {
         const paths = files.map((f) => window.api.getPathForFile(f)).filter(Boolean);
-        if ((this.kind === 'ssh' || this.kind === 'ftp') && this.status === 'connected') {
-          const dir = this.remoteCwd || (await window.api.sftp.home(this.termId).catch(() => null));
+        const connId = connIdOf(this);
+        if (connId) {
+          const dir = this.remoteCwd || (this.kind === 'mosh' && this.app.sftpPanel.states.get(connId)?.path) || (await window.api.sftp.home(connId).catch(() => null));
           if (!dir) return toast('Remote folder unknown', 'warn');
-          await this.app.sftpPanel.uploadTo(this.termId, paths, dir);
-          this.app.sftpPanel.show(this.termId);
+          await this.app.sftpPanel.uploadTo(connId, paths, dir);
+          this.app.sftpPanel.show(connId);
+        } else if (this.kind === 'mosh' && this.status === 'connected') {
+          toast('Open the SFTP browser for this Mosh session first (Sftp panel)', 'warn');
         } else {
           // local terminal: paste the paths (quoted)
           this.write(paths.map((p) => (/[\s'"]/.test(p) ? `'${p.replace(/'/g, `'\\''`)}'` : p)).join(' '));
@@ -379,6 +385,9 @@ export class TermPane {
         this.app.registerPane(this);
         this.setStatus('connected');
         this._startupOnData = !!s.startupCommand; // typed once mosh-client has drawn the remote screen
+        // files: a companion SSH connection feeds the Sftp panel — automatically like SSH sessions, else on demand
+        if (s.sftpAuto !== false && this.app.settings.sftpAutoOpen !== false) this.openSftpCompanion();
+        else if (this.app.activePane() === this) this.app.sftpPanel.setPane(this);
       } else if (this.kind === 'ftp') {
         this.setStatus('connecting');
         const r = await window.api.ftp.connect(this.session);
@@ -422,6 +431,7 @@ export class TermPane {
     const wasConnecting = this.status === 'connecting';
     this.app.unregisterPane(this);
     this.termId = null;
+    this.closeSftpCompanion();
     this.setStatus(reason === 'failed' ? 'failed' : 'disconnected');
     if (this.kind === 'local' && code === 0 && !wasConnecting) {
       this.app.closePane(this, true);
@@ -474,7 +484,73 @@ export class TermPane {
       await window.api.ftp.disconnect(id);
       this.app.sftpPanel.dropConnection(id);
       this.markDead();
-    } else window.api.term.kill(id);
+    } else {
+      this.closeSftpCompanion();
+      window.api.term.kill(id);
+    }
+  }
+
+  // ---------- Mosh: files through a companion SSH connection ----------
+  /**
+   * A Mosh pane has no SSH channel in the app, so the Sftp panel uses a separate shell-less SSH
+   * connection to the same host (same key/agent/prompts as an SSH session). The panel is shown
+   * once it is connected; calling this again while connected just shows the panel.
+   */
+  async openSftpCompanion() {
+    if (this.kind !== 'mosh' || this.dead || this.disposed || !this.session) return;
+    if (this.sftpConnId || this.sftpStatus === 'connecting') {
+      if (this.sftpStatus === 'connected') this.app.sftpPanel.show(this.sftpConnId);
+      return;
+    }
+    const s = this.session;
+    // id lets main merge the stored passphrase/password; ssh.js drops it before connecting, so this
+    // SSH-typed copy can never be written back over the Mosh session
+    const cfg = { id: s.id, name: s.name, type: 'ssh', host: s.host, port: s.port || 22, username: s.username, authMethod: s.authMethod || 'auto', privateKeyPath: s.privateKeyPath };
+    const gen = (this._sftpGen = (this._sftpGen || 0) + 1);
+    this.sftpStatus = 'connecting';
+    this.sftpError = null;
+    this.app.onPaneStatus(this);
+    if (this.app.activePane() === this) this.app.sftpPanel.setPane(this); // empty state shows "connecting"
+    try {
+      const r = await window.api.ssh.connectSftp(cfg);
+      if (this._sftpGen !== gen || this.disposed) { // pane closed or reconnected meanwhile
+        window.api.ssh.disconnect(r.id);
+        return;
+      }
+      this.sftpConnId = r.id;
+    } catch (e) {
+      if (this._sftpGen === gen) this.onCompanionStatus('failed', e.message);
+    }
+  }
+
+  /** ssh:status of the companion connection (routed here by the app). */
+  onCompanionStatus(state, msg) {
+    if (state === 'connecting') return;
+    this.sftpStatus = state;
+    if (state === 'connected') this.app.sftpPanel.show(this.sftpConnId);
+    else {
+      const id = this.sftpConnId;
+      this.sftpConnId = null;
+      if (id) this.app.sftpPanel.dropConnection(id);
+      if (state === 'failed') {
+        this.sftpError = msg || 'connection failed';
+        toast(`SFTP for ${this.session?.name || this.title}: ${this.sftpError}`, 'error', 6000);
+      }
+      if (this.app.activePane() === this) this.app.sftpPanel.setPane(this);
+    }
+    this.app.onPaneStatus(this);
+  }
+
+  /** Drop the companion connection (pane closed, disconnected or reconnecting). */
+  closeSftpCompanion() {
+    this._sftpGen = (this._sftpGen || 0) + 1; // a connect still in flight is discarded on arrival
+    const id = this.sftpConnId;
+    this.sftpConnId = null;
+    this.sftpStatus = 'idle';
+    this.sftpError = null;
+    if (!id) return;
+    this.app.sftpPanel.dropConnection(id);
+    window.api.ssh.disconnect(id);
   }
 
   async toggleLog(force) {
@@ -549,6 +625,7 @@ export class TermPane {
       '-',
       { label: this.logging ? 'Stop Session Log' : 'Start Session Log…', action: () => this.toggleLog() },
       this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? 'Open file browser' : 'Open SFTP Browser', action: () => this.app.sftpPanel.show(this.termId) } : null,
+      this.kind === 'mosh' ? { label: 'Open SFTP Browser', action: () => this.openSftpCompanion(), disabled: this.dead } : null,
       this.kind !== 'local' ? { label: this.dead ? 'Reconnect' : 'Disconnect', action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
       '-',
       { label: 'Close Pane', key: '⇧⌘W', action: () => this.app.closePane(this) },
@@ -559,6 +636,7 @@ export class TermPane {
     if (this.disposed) return;
     this.disposed = true;
     if (this.ro) this.ro.disconnect();
+    this.closeSftpCompanion();
     if (this.termId) {
       const id = this.termId;
       if (this.kind === 'ssh') window.api.ssh.disconnect(id);

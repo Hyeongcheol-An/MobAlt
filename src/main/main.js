@@ -398,6 +398,8 @@ function registerIpc() {
   ipcMain.handle('term:log-stop', (_e, id) => registry.stopLog(id));
 
   ipcMain.handle('ssh:connect', async (_e, cfg, size) => ssh.openShell(await mergeSecrets(cfg), sizeOf(size)));
+  // shell-less connection for the Sftp panel of a Mosh pane (same prompts; ssh:status events carry its state)
+  ipcMain.handle('ssh:connect-sftp', async (_e, cfg) => ssh.openSftpOnly(await mergeSecrets(cfg)));
   ipcMain.handle('ssh:disconnect', (_e, id) => ssh.disconnect(id));
   ipcMain.handle('ssh:exec', (_e, id, cmd) => ssh.exec(id, cmd));
 

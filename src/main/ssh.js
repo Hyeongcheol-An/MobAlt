@@ -451,28 +451,88 @@ class SshManager {
         });
       })
       .catch((e) => {
-        let msg = e.message;
-        if (ctx.cancelled) msg = 'authentication cancelled';
-        else if (e.level === 'client-authentication') {
-          msg = `authentication failed — server accepts: ${(ctx.serverMethods || []).join(', ') || 'unknown'}; tried: ${(ctx.tried || []).join(', ') || 'nothing'}`;
-          const accepts = ctx.serverMethods || [];
-          if (!(ctx.tried || []).length && cfg.authMethod === 'password' && accepts.length && !accepts.includes('password') && !accepts.includes('keyboard-interactive')) {
-            msg += '. This session is set to Password authentication but the server does not offer it — switch it to Automatic or Private key.';
-          } else if (!(ctx.tried || []).length && cfg.authMethod === 'key' && !cfg.privateKeyPath) {
-            msg += '. The session uses key authentication but no key file is set.';
-          }
-        } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
-          msg += ' — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.';
-        } else if (/Timed out while waiting for handshake/i.test(msg)) {
-          msg += ` — no SSH banner within ${Math.round((this.store.getSettings().readyTimeout || 20000) / 1000)}s. Usually the host/port is unreachable from this network (try "nc -vz ${cfg.host} ${cfg.port || 22}" in a local terminal), or the port is not an SSH service.`;
-        } else if (e.code === 'ECONNREFUSED' || /ECONNREFUSED/.test(msg)) {
-          msg += ' — the host is reachable but nothing listens on that port.';
-        } else if (/Too many authentication failures/i.test(msg)) {
-          msg += ' — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.';
-        }
-        if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
+        const msg = this._explainError(e, ctx, cfg);
         this._out(id, `\r\n${RED}Connection failed: ${msg}${RESET}\r\n`);
         this.prompter.status(id, 'failed', e.message);
+        if (!info.closed) {
+          info.closed = true;
+          this.conns.delete(id);
+          registry.exit(id, 1, 'failed');
+        }
+      });
+    return { id };
+  }
+
+  /** Turn a connect/auth failure into the message shown to the user (hints for the usual causes). */
+  _explainError(e, ctx, cfg) {
+    let msg = e.message;
+    if (ctx.cancelled) msg = 'authentication cancelled';
+    else if (e.level === 'client-authentication') {
+      msg = `authentication failed — server accepts: ${(ctx.serverMethods || []).join(', ') || 'unknown'}; tried: ${(ctx.tried || []).join(', ') || 'nothing'}`;
+      const accepts = ctx.serverMethods || [];
+      if (!(ctx.tried || []).length && cfg.authMethod === 'password' && accepts.length && !accepts.includes('password') && !accepts.includes('keyboard-interactive')) {
+        msg += '. This session is set to Password authentication but the server does not offer it — switch it to Automatic or Private key.';
+      } else if (!(ctx.tried || []).length && cfg.authMethod === 'key' && !cfg.privateKeyPath) {
+        msg += '. The session uses key authentication but no key file is set.';
+      }
+    } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
+      msg += ' — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.';
+    } else if (/Timed out while waiting for handshake/i.test(msg)) {
+      msg += ` — no SSH banner within ${Math.round((this.store.getSettings().readyTimeout || 20000) / 1000)}s. Usually the host/port is unreachable from this network (try "nc -vz ${cfg.host} ${cfg.port || 22}" in a local terminal), or the port is not an SSH service.`;
+    } else if (e.code === 'ECONNREFUSED' || /ECONNREFUSED/.test(msg)) {
+      msg += ' — the host is reachable but nothing listens on that port.';
+    } else if (/Too many authentication failures/i.test(msg)) {
+      msg += ' — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.';
+    }
+    if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
+    return msg;
+  }
+
+  /**
+   * Connect for file access only — the SFTP companion of a Mosh pane, which has no SSH channel
+   * of its own in the app. Same auth handler and host-key verification (prompts included) as
+   * openShell, but no shell is opened. The connection is registered like a shell, so sftp(id),
+   * exec(id), disconnect(id)/disconnectAll() and the quit confirmation all cover it, and the
+   * renderer gets ssh:status events (connecting → connected | failed, later disconnected).
+   * Returns the connection id immediately.
+   */
+  openSftpOnly(cfg) {
+    const id = this.registry.newId();
+    const registry = this.registry;
+    // The cfg is derived from a session of another type: without its id nothing in the auth path
+    // (saved passphrase / password) can write it back over that session.
+    cfg = { ...cfg };
+    delete cfg.id;
+    const info = { id, cfg, client: null, jump: null, stream: null, sftp: null, x11: null, closed: false, remoteForwards: new Map(), sftpOnly: true, log: '' };
+    this.conns.set(id, info);
+    registry.register(id, { kind: 'sftp', write: () => {}, resize: () => {}, kill: () => this.disconnect(id) });
+
+    const ctx = {
+      out: (t) => { info.log = (info.log + t).slice(-4000); }, // no terminal: keep banners/notes for diagnostics
+      onError: (e) => ctx.out(`SSH error: ${e.message}\r\n`),
+      onClose: () => {
+        if (info.closed) return;
+        info.closed = true;
+        this.conns.delete(id);
+        this.prompter.status(id, 'disconnected');
+        registry.exit(id, 0, 'closed');
+      },
+    };
+
+    this.prompter.status(id, 'connecting');
+    this.connectClient(cfg, ctx)
+      .then(({ client, jump }) => {
+        if (info.closed) { // disconnected while still connecting
+          try { client.end(); } catch {}
+          if (jump) try { jump.end(); } catch {}
+          return;
+        }
+        info.client = client;
+        info.jump = jump;
+        this.prompter.status(id, 'connected');
+      })
+      .catch((e) => {
+        this.prompter.status(id, 'failed', this._explainError(e, ctx, cfg));
         if (!info.closed) {
           info.closed = true;
           this.conns.delete(id);

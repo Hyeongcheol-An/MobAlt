@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   ssh: {
     connect: (cfg, size) => invoke('ssh:connect', cfg, size),
+    connectSftp: (cfg) => invoke('ssh:connect-sftp', cfg),
     disconnect: (id) => invoke('ssh:disconnect', id),
     exec: (id, cmd) => invoke('ssh:exec', id, cmd),
   },

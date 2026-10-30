@@ -39,7 +39,7 @@ It is a native-feeling Electron app built on xterm.js, ssh2 and node-pty.
 | Session logging | ✅ | Per session or from the tab menu |
 | RDP / VNC | ⚠️ hands off | RDP writes a `.rdp` file for Windows App; VNC opens macOS Screen Sharing |
 | MobaXterm.ini import | ✅ | Best-effort import of the Bookmarks section; `~/.ssh/config` import too |
-| Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts |
+| Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
 | FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |
 
 Workspace restore brings back your tabs, splits and sessions (local shells keep their folder) on

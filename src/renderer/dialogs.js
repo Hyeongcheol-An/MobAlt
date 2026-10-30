@@ -242,7 +242,8 @@ export function sessionEditor(app, initial = {}) {
     tabBtns.advanced.hidden = t !== 'ssh';
     tabBtns.tunnels.hidden = t !== 'ssh';
     tabBtns.terminal.hidden = t === 'rdp' || t === 'vnc' || t === 'ftp';
-    sftpAuto.el.hidden = followCwd.el.hidden = t !== 'ssh';
+    sftpAuto.el.hidden = t !== 'ssh' && t !== 'mosh'; // Mosh: opens the SFTP companion connection automatically
+    followCwd.el.hidden = t !== 'ssh';
     buildBasic();
     showPage('basic');
   };
