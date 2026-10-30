@@ -1,0 +1,203 @@
+# MobAlt User Guide
+
+[한국어 안내서](USER_GUIDE.ko.md)
+
+MobAlt is a MobaXterm-style workbench for macOS: a session tree on the left, tabbed and split
+terminals in the middle, and an SFTP browser, network tools and macros in side panels.
+
+![MobAlt with two remote shells side by side](images/hero.png)
+
+Contents: [Install](#install) · [Sessions](#sessions) · [Connecting](#connecting) ·
+[Terminal](#terminal) · [Files (SFTP / FTP)](#files-sftp--ftp) · [Tunnels](#tunnels-port-forwarding) ·
+[X11, Mosh, Serial, RDP/VNC](#x11-mosh-serial-rdpvnc) · [Tools and macros](#tools-and-macros) ·
+[Workspace and settings](#workspace-and-settings) · [Keyboard shortcuts](#keyboard-shortcuts) ·
+[Data and privacy](#data-and-privacy) · [Troubleshooting](#troubleshooting)
+
+## Install
+
+- **Homebrew**: `brew install --cask Hyeongcheol-An/tap/mobalt`
+- **DMG**: download the Apple Silicon (`arm64`) or Intel (`x64`) DMG from
+  [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) and drag MobAlt to Applications.
+
+Releases are signed and notarized. Requirements: macOS 13 or later. Optional helpers:
+[XQuartz](https://www.xquartz.org/) for X11 forwarding, `brew install mosh` for Mosh sessions,
+Windows App for RDP.
+
+MobAlt checks GitHub Releases for a newer version at startup and offers it in a dialog; nothing is
+downloaded or installed without your confirmation. Turn the check off in Settings → Updates, or run
+it by hand with Help → Check for Updates….
+
+## Sessions
+
+The **Sessions** panel is your bookmark tree. Create a session with `＋ Session` (⌘N), pick a type
+and fill in the Basic tab. Double-click a session to connect; right-click for the context menu
+(open, split right/down, edit, duplicate, delete, start a tunnel, new session in this folder).
+
+![Session editor](images/session-editor.png)
+
+| Type | What it does |
+|---|---|
+| SSH | Terminal over SSH with an SFTP browser, tunnels, X11 and agent forwarding |
+| Mosh | Roaming terminal through the `mosh` client (bootstrapped over SSH) |
+| Local | Your macOS login shell (zsh/bash) with folder following |
+| Telnet | Classic telnet with NAWS/TTYPE negotiation |
+| Serial | USB-serial console (baud, framing, flow control, local echo) |
+| FTP | FTP / FTPS (explicit TLS) file browser in the Sftp panel |
+| RDP / VNC | Hands off to Windows App or macOS Screen Sharing |
+
+**Folders**: `📁+` creates a folder; drag sessions and folders to move them (drop on the empty area
+for the root). A folder's context menu can open every session inside it in a grid or in tabs.
+
+**Icons and colours**: pick an emoji and a colour in the editor. They show on the row, the tab and the
+pane header, so a red "production" session is hard to confuse with a green "staging" one.
+
+**Import**: the panel footer imports `~/.ssh/config` (hosts, users, ports, keys, ProxyJump) and a
+MobaXterm `MobaXterm.ini` (bookmarks). Export / import all sessions as JSON from the tree's
+context menu.
+
+**Startup commands** (Terminal tab): one command per line, typed into the terminal once it is
+ready. For SSH that is right after login; for local shells right after the prompt appears. Example:
+a local session with *Start folder* set to a project and `claude --resume <id>` as the command.
+
+## Connecting
+
+- **Quick connect**: type `user@host[:port]` in the toolbar and press Enter. Prefixes pick the
+  type: `ssh://`, `mosh://`, `telnet://`, `ftp://`, `ftps://`, `rdp://`, `vnc://`. If a saved session
+  matches, it is used.
+- **Authentication**: *Automatic* tries a configured key, saved password, the SSH agent and the
+  default keys in `~/.ssh` before prompting. Choose *Password*, *Private key* or *SSH agent* to
+  restrict it. Keys with a passphrase prompt once; tick "Save in session" to keep it.
+- **Host keys**: the first connection shows the fingerprint (SHA256 and MD5). Accepting stores the
+  key; a changed key is flagged loudly and never accepted silently.
+- **Jump hosts**: Advanced SSH → Jump host picks another saved session as the bastion (ProxyJump).
+- **When it fails**: the terminal prints what happened, for example
+  `authentication failed — server accepts: publickey; tried: ~/.ssh/id_ed25519`, or a hint that
+  nothing answered on the port. See [Troubleshooting](#troubleshooting).
+
+## Terminal
+
+![Split grid](images/split-grid.png)
+
+- **Tabs**: every session opens a tab. Drag tabs to reorder them, double-click to rename, middle-click
+  to close. Local tabs are titled after their current folder.
+- **Splits and grids**: `Split ▾` (⌘D right, ⇧⌘D down) adds an empty pane; the grid entries make
+  1×2 … 2×4 layouts (⌥⌘2/4/6/8). Drop a session from the tree onto an empty pane to connect there,
+  onto a pane's edge to split in that direction, or onto its centre to replace it. Drag a tab onto
+  a pane to move that terminal into the split. ⌥⌘1 unsplits (keeps the focused pane).
+- **MultiExec** (⇧⌘M): while on, every keystroke goes to all open terminals. Handy for updating a
+  fleet; the banner shows how many terminals listen.
+- **Find** (⌘F): incremental search with case and regex toggles and a match counter.
+- **Clipboard**: selecting copies (Settings → Copy on select); right-click pastes
+  (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
+  on a local terminal it pastes the paths.
+- **Keys**: Shift+Enter and Option+Enter send ESC+CR (a newline in TUI apps such as Claude Code);
+  Option acts as Meta by default.
+- **Logging**: Terminal → Start/Stop Session Log, or the session option, writes the raw output to
+  `~/Documents/MobAlt Logs/`.
+- **Themes and fonts**: Settings → Theme/Font apply to all terminals; a session can override them in
+  its Terminal tab.
+
+## Files (SFTP / FTP)
+
+![SFTP panel](images/sftp-panel.png)
+
+The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on connect
+(Settings → "Switch to SFTP panel when SSH connects").
+
+- Navigate by double-clicking folders, typing a path (`~` works) or using ⬆ / 🏠 / ⟳.
+  "Follow terminal folder" keeps the panel on the shell's current directory (needs the session
+  option, which injects a small prompt hook). `>_` sends `cd` to the terminal.
+- Toolbar and context menu: new folder, rename, permissions, delete, download, upload. Multi-select
+  with ⌘ / ⇧. Drag files from Finder onto the list to upload; existing names ask before overwriting.
+- Double-click a text file to edit it in the built-in editor (⌘S saves back). "Edit in external
+  editor" opens it in your editor (Settings → External editor) and re-uploads on every save.
+- Transfers show progress, speed and a cancel button; "Show in Finder" after a download.
+- Column headers sort by name, size or date. When the sidebar is narrow the date column hides.
+
+## Tunnels (port forwarding)
+
+![Tunnels](images/tunnels.png)
+
+`Tunneling` (⇧⌘U) manages SSH port forwards:
+
+- **Local (-L)**: `127.0.0.1:8080 → db.internal:5432` through the SSH host.
+- **Remote (-R)**: a port on the server forwarded back to a local service.
+- **Dynamic (-D)**: a local SOCKS5 proxy through the server.
+
+Start a tunnel over an open connection or let MobAlt open a dedicated connection to a saved
+session. Tunnels listed in a session's **Tunnels** tab start automatically when that session
+connects, and you are told if one fails to bind.
+
+## X11, Mosh, Serial, RDP/VNC
+
+- **X11**: tick "X11 forwarding" in Advanced SSH. MobAlt starts XQuartz when needed, forwards the
+  display and swaps the auth cookie, so `xeyes` or `gedit` just work. The status bar shows X11
+  availability.
+- **Mosh**: needs `brew install mosh` locally and `mosh-server` on the host (UDP 60000-61000).
+  The pane runs the mosh client; the SSH bootstrap uses your key, agent or an interactive prompt.
+  Set the `mosh-server` path if it is not on the remote PATH.
+- **Serial**: the editor lists USB-serial devices; set baud, data/stop bits, parity, flow control,
+  local echo and what Enter sends (CR, LF, CRLF).
+- **RDP / VNC**: MobAlt writes an `.rdp` file and opens Windows App, or opens `vnc://` in Screen
+  Sharing. The session keeps host, user and folder like any other bookmark.
+
+## Tools and macros
+
+- **Tools** panel: ping, traceroute, DNS lookup, port scan and local network info, with a Stop
+  button for long runs.
+- **Macros** panel: record keystrokes in a terminal (● Rec / ■ Stop), save them under a name and
+  replay them into the active terminal or into all terminals. Text macros can be typed directly;
+  escape sequences such as `\n` or `\x1b[A` are supported.
+
+## Workspace and settings
+
+MobAlt restores your tabs, splits and sessions on the next launch and reconnects SSH sessions
+(local shells reopen in their last folder). Turn this off in Settings → Behaviour.
+
+![Settings](images/settings.png)
+
+Settings cover fonts, cursor, scrollback, theme, mouse/keys, the local shell and its folder
+integration, the external editor, download and log folders, SSH keep-alive, close confirmation,
+workspace restore and the update check. "Open config folder" shows where everything is stored.
+
+## Keyboard shortcuts
+
+| Action | Keys |
+|---|---|
+| New session / local terminal / quick connect | ⌘N / ⌘T / ⇧⌘N |
+| Duplicate / reconnect / close tab / close pane | ⇧⌘T / ⌘R / ⌘W / ⇧⌘W |
+| Split right / down, unsplit | ⌘D / ⇧⌘D, ⌥⌘1 |
+| Grid 2 / 4 / 6 / 8 panes | ⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8 |
+| Next pane, next / previous tab, tab 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
+| Find, clear, zoom | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
+| Sidebar, Sessions / SFTP / Tools / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
+| MultiExec, tunnels, settings | ⇧⌘M, ⇧⌘U, ⌘, |
+| Newline in TUI apps | ⇧Enter or ⌥Enter |
+
+Help → Keyboard Shortcuts shows the same list inside the app.
+
+## Data and privacy
+
+Everything stays in `~/Library/Application Support/MobAlt/`: `sessions.json` (passwords and
+passphrases encrypted through the macOS Keychain), `settings.json`, `known_hosts`,
+`workspace.json`, and the zsh integration files. Session logs go to `~/Documents/MobAlt Logs/`.
+MobAlt connects only to the hosts you configure; the optional update check reads the release list
+on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
+
+## Troubleshooting
+
+- **"Timed out while waiting for handshake" / ETIMEDOUT**: nothing answered on that port. Check
+  the address, VPN and router forwarding; try `nc -vz host port` in a local terminal.
+- **"authentication failed — server accepts: …; tried: …"**: the server did not accept what MobAlt
+  offered. Compare the "accepts" list with your session's authentication method; for key-only
+  servers pick the right key file. Repeated failures can get your IP banned by fail2ban or sshd's
+  per-source penalties for a while.
+- **Host key changed**: the server was reinstalled, or something is intercepting the connection.
+  Only accept if you know why; the old key can be removed from `known_hosts` in the config folder.
+- **X11 app does not appear**: install XQuartz, and make sure the remote shell does not override
+  `DISPLAY` in its startup files.
+- **Mosh**: "mosh client not found" means `brew install mosh` is missing locally;
+  "mosh-server not found" means it is missing on the host or not on its PATH (set the path in the
+  session).
+- **Gatekeeper warning on a self-built app**: right-click → Open once, or
+  `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.

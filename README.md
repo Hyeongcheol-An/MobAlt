@@ -6,7 +6,9 @@
 [![Release workflow](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml/badge.svg)](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[한국어 README](README.ko.md)
+[한국어 README](README.ko.md) · [User guide](docs/USER_GUIDE.md)
+
+![MobAlt: session tree, two remote shells side by side](docs/images/hero.png)
 
 If you lived in MobaXterm on Windows and miss it on a Mac, MobAlt gives you the same workflow in one
 window: a session tree, tabbed and split terminals, an SFTP browser that opens with every SSH
@@ -44,6 +46,17 @@ Workspace restore brings back your tabs, splits and sessions (local shells keep 
 the next launch and reconnects SSH automatically. MobAlt checks GitHub Releases for updates at
 startup (Settings → Updates, or Help → Check for Updates…) and installs them only when you agree.
 
+<table>
+<tr>
+<td><img src="docs/images/split-grid.png" alt="2×2 grid with empty panes ready for drag & drop"></td>
+<td><img src="docs/images/sftp-panel.png" alt="File browser panel (SFTP / FTP)"></td>
+</tr>
+<tr>
+<td><img src="docs/images/session-editor.png" alt="Session editor with icons, colours and authentication"></td>
+<td><img src="docs/images/tunnels.png" alt="Tunnel manager"></td>
+</tr>
+</table>
+
 ## Install
 
 **Requirements**: macOS 13 Ventura or later, Apple Silicon or Intel. Optional: [XQuartz](https://www.xquartz.org/)
@@ -69,6 +82,8 @@ Gatekeeper warnings. If you run a build you made yourself, right-click the app �
 time, or clear quarantine with `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
 
 ## Using MobAlt
+
+The [user guide](docs/USER_GUIDE.md) walks through everything; the short version:
 
 - **Sessions**: `＋ Session` (⌘N) → choose SSH / Mosh / Local / Telnet / Serial / FTP / RDP / VNC → save & connect.
   Double-click a session in the sidebar to connect; drag sessions into folders and folders into each other.

@@ -6,7 +6,9 @@
 [![Release workflow](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml/badge.svg)](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[English README](README.md)
+[English README](README.md) · [사용자 안내서](docs/USER_GUIDE.ko.md)
+
+![MobAlt: 세션 트리와 나란히 띄운 원격 셸 두 개](docs/images/hero.png)
 
 Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도록 만든 앱입니다. 세션 트리, 탭·분할
 터미널, SSH 접속과 함께 열리는 SFTP 브라우저, 포트 포워딩, MultiExec, X11 포워딩, 매크로, 네트워크
@@ -42,6 +44,17 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 작업대 복원 기능이 탭·분할·세션(로컬 셸은 폴더까지)을 다음 실행 때 되살리고 SSH는 자동 재접속합니다. 시작 시
 GitHub Releases에서 새 버전을 확인하며(Settings → Updates, Help → Check for Updates…) 동의할 때만 설치합니다.
 
+<table>
+<tr>
+<td><img src="docs/images/split-grid.png" alt="드래그 앤 드롭을 기다리는 2×2 격자"></td>
+<td><img src="docs/images/sftp-panel.png" alt="파일 브라우저 패널 (SFTP / FTP)"></td>
+</tr>
+<tr>
+<td><img src="docs/images/session-editor.png" alt="아이콘·색상·인증 설정이 있는 세션 편집기"></td>
+<td><img src="docs/images/tunnels.png" alt="터널 관리자"></td>
+</tr>
+</table>
+
 ## 설치
 
 **요구 사항**: macOS 13 Ventura 이상, Apple Silicon 또는 Intel. 선택: X11 포워딩용
@@ -67,6 +80,8 @@ cask 파일은 이 저장소에도 있으므로(`Casks/mobalt.rb`)
 격리 속성을 지우세요.
 
 ## 사용법
+
+자세한 내용은 [사용자 안내서](docs/USER_GUIDE.ko.md)에 있고, 요약은 다음과 같습니다.
 
 - **세션**: `＋ Session`(⌘N) → SSH / Mosh / Local / Telnet / Serial / FTP / RDP / VNC 선택 → 저장 & 접속. 사이드바에서
   더블클릭으로 접속하고, 세션은 폴더로, 폴더는 다른 폴더로 드래그해 정리합니다.

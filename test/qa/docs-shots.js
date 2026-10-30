@@ -43,7 +43,7 @@
 
     // --- FTP session → file browser panel (looks exactly like the SFTP panel)
     const ftp = await app.openSession({ name: 'nas', type: 'ftp', host: '127.0.0.1', port: 2121, username: 'demo', password: 'demo', sftpAuto: true });
-    await sleep(1200);
+    await sleep(4000); // let earlier toasts expire
     await shot('sftp-panel');
     await ftp.disconnect();
 
