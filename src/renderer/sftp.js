@@ -284,7 +284,20 @@ export class SftpPanel {
       st.entries.forEach((x) => (st.hidden || !x.name.startsWith('.')) && st.selected.add(x.name));
       this.renderList();
       e.preventDefault();
+    } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) { // ⇧F10 / Menu key, like a right-click
+      e.preventDefault();
+      this.menuFromKeyboard();
     }
+  }
+
+  /** Context menu of the keyboard cursor's row (the last selected entry), or the background menu when nothing is selected. */
+  menuFromKeyboard() {
+    const st = this.state();
+    const sel = this.selectedEntries();
+    const cur = sel.find((x) => x.name === st.lastSel) || sel[0] || null;
+    const row = cur && this.els.list.querySelector(`.sftp-row[data-name="${CSS.escape(cur.name)}"]`);
+    const r = (row || this.els.list).getBoundingClientRect();
+    this.menu(r.left + 24, row ? r.bottom : r.top + 30, cur);
   }
 
   async open(e) {

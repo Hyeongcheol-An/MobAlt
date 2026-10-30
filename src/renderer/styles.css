@@ -435,3 +435,11 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 #macro-list .tree-row .sub { flex: none; }                           /* "17 ch" badge never truncates */
 #sidebar { container-type: inline-size; }
 @container (max-width: 239px) { .panel-head .hint { display: none; } }
+/* ---- keyboard follow-ups ---- */
+/* Inset rings where the box would clip them: .tb-group hides overflow; ‹ › ▾ sit flush against their neighbours. */
+.tb-btn:focus-visible, #tab-scroll-left:focus-visible, #tab-scroll-right:focus-visible, #tab-list:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* SFTP list: an inset ring on the list while the keyboard is in it; the cursor row keeps a thin inner ring on its blue fill. */
+.sftp-list:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sftp-list:focus-visible .sftp-row.selected { box-shadow: inset 0 0 0 1px #fff; }
+/* Icon / colour pickers (one Tab stop each): the ring sits outside the chosen pick's own 1px accent ring. */
+.pick-row .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

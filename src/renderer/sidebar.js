@@ -252,7 +252,7 @@ export class SessionTree {
     const parentFolderRow = () => (f ? wrap.parentElement : row.parentElement).closest('.tree-folder')?.firstElementChild || null;
     switch (e.key) {
       case 'ArrowDown': this.focusRow(rows[i + 1]); break;
-      case 'ArrowUp': this.focusRow(rows[i - 1]); break;
+      case 'ArrowUp': i === 0 ? this.filterEl.focus() : this.focusRow(rows[i - 1]); break; // ↑ from the first row: back to the filter (↓ from it comes here)
       case 'Home': this.focusRow(rows[0]); break;
       case 'End': this.focusRow(rows[rows.length - 1]); break;
       case 'ArrowRight':
@@ -273,7 +273,7 @@ export class SessionTree {
         else this.select(s.id);
         break;
       case 'Backspace': case 'Delete':
-        this._deleteFromKeyboard(row, i);
+        this._deleteRow(row);
         break;
       case 'F10': case 'ContextMenu': { // ⇧F10 and the Menu key open the row's context menu
         if (e.key === 'F10' && !e.shiftKey) return;
@@ -287,14 +287,27 @@ export class SessionTree {
     e.preventDefault();
   }
 
-  async _deleteFromKeyboard(row, i) {
-    if (row._folder) await this.deleteFolder(row._folder);
-    else await this.deleteSession(row._session);
-    // the tree re-rendered (or the dialog moved focus): keep the keyboard on a neighbouring row
-    if (!this.el.contains(document.activeElement)) {
-      const rows = this.visibleRows();
-      this.focusRow(rows[Math.min(i, rows.length - 1)]);
-    }
+  /** The row currently showing session `s` / folder `f` (null when filtered out or collapsed away). */
+  rowFor(s, f) {
+    return [...this.el.querySelectorAll('.tree-row')].find((r) => (s ? r._session === s || r.dataset.session === s.id : r._folder?.path === f.path)) || null;
+  }
+
+  /**
+   * Delete the row's session or folder (after the usual confirmation) and keep the keyboard in the tree: on the
+   * row that followed the deleted one — found again by identity, since a folder that only existed through the
+   * deleted session disappears with it and shifts the indexes — else the previous row, else by index.
+   */
+  async _deleteRow(row) {
+    const rows = this.visibleRows();
+    const i = rows.indexOf(row);
+    const neighbour = rows[i + 1] || rows[i - 1] || null;
+    const key = neighbour ? { session: neighbour.dataset.session, folder: neighbour.dataset.folder } : null;
+    const deleted = row._folder ? await this.deleteFolder(row._folder) : await this.deleteSession(row._session);
+    if (!deleted) return; // cancelled: the dialog handed focus back to the row
+    const now = this.visibleRows();
+    const again = (key && now.find((r) => (key.session ? r.dataset.session === key.session : r.dataset.folder === key.folder))) || now[Math.min(Math.max(i, 0), now.length - 1)];
+    if (again) this.focusRow(again);
+    else (this.el.querySelector('.tree-empty .link-btn') || this.filterEl).focus(); // the tree is empty now: its "Create a session" link
   }
 
   /** Re-parent a folder (drag-drop): "a/b" into "c" becomes "c/b"; descendants and sessions follow. */
@@ -323,9 +336,10 @@ export class SessionTree {
   }
 
   async deleteSession(s) {
-    if (!(await confirmDialog(`Delete session "${s.name}"?`, { title: 'Delete session', okLabel: 'Delete', danger: true }))) return;
+    if (!(await confirmDialog(`Delete session "${s.name}"?`, { title: 'Delete session', okLabel: 'Delete', danger: true }))) return false;
     await this.app.deleteSession(s.id);
     toast(`Deleted ${s.name}`, 'info');
+    return true;
   }
 
   sessionMenu(x, y, s) {
@@ -339,7 +353,7 @@ export class SessionTree {
       { label: 'Move to Folder…', action: () => this.moveDialog(s) },
       s.type === 'ssh' ? { label: 'Start Tunnel via this Session…', action: () => this.app.action('tunnels', { sessionId: s.id }) } : null,
       '-',
-      { label: 'Delete', key: '⌫', danger: true, action: () => this.deleteSession(s) },
+      { label: 'Delete', key: '⌫', danger: true, action: () => { const row = this.rowFor(s); return row ? this._deleteRow(row) : this.deleteSession(s); } },
     ]);
   }
 
@@ -351,7 +365,7 @@ export class SessionTree {
       { label: 'Open All in Grid (2 columns)', action: () => this.app.openSessionsInGrid(this.collectSessions(f)) },
       { label: 'Connect All Sessions (tabs)', action: () => this.connectAll(f) },
       '-',
-      { label: 'Delete Folder', danger: true, action: () => this.deleteFolder(f) },
+      { label: 'Delete Folder', danger: true, action: () => { const row = this.rowFor(null, f); return row ? this._deleteRow(row) : this.deleteFolder(f); } },
     ]);
   }
 
@@ -410,11 +424,12 @@ export class SessionTree {
   async deleteFolder(f) {
     const n = this.countSessions(f);
     const ok = await confirmDialog(n ? `Delete folder "${f.name}" and its ${n} session(s)?` : `Delete folder "${f.name}"?`, { title: 'Delete folder', okLabel: 'Delete', danger: true });
-    if (!ok) return;
+    if (!ok) return false;
     const inside = (p) => p === f.path || (p || '').startsWith(f.path + '/');
     const sessions = this.app.sessions.sessions.filter((s) => !inside(s.folder || ''));
     const folders = (this.app.sessions.folders || []).filter((p) => !inside(p));
     await this.app.saveAllSessions({ sessions, folders });
+    return true;
   }
 
   collectSessions(f) {

@@ -83,7 +83,74 @@ export class MacrosPanel {
     this.list = $('#macro-list');
     this.recBtn = $('#macro-record');
     for (const b of document.querySelectorAll('[data-macro]')) b.addEventListener('click', () => this.cmd(b.dataset.macro));
+    // keyboard: the rows are options of a listbox with one Tab stop (roving tabindex), see onKey()
+    this.list.setAttribute('role', 'listbox');
+    this.list.setAttribute('aria-label', 'Macros');
+    this.list.addEventListener('keydown', (e) => this.onKey(e));
+    this.list.addEventListener('focusin', (e) => {
+      const r = e.target.closest('.tree-row');
+      if (r) this._rove(r);
+    });
     this.render();
+  }
+
+  rows() {
+    return [...this.list.querySelectorAll('.tree-row')];
+  }
+
+  /** Roving tabindex: `row` is the list's single Tab stop. */
+  _rove(row) {
+    for (const r of this.rows()) r.tabIndex = r === row ? 0 : -1;
+  }
+
+  /** Keyboard cursor: focus the row (ring by :focus-visible) and mark it as the selected option. */
+  focusRow(row) {
+    if (!row) return;
+    row.focus();
+    row.scrollIntoView({ block: 'nearest' });
+    for (const r of this.rows()) r.setAttribute('aria-selected', String(r === row));
+  }
+
+  /** ↑/↓ move, Home/End, Enter plays in the active terminal (like a double-click), ⌫/Delete asks and deletes, ⇧F10 / Menu key open the row's menu. */
+  onKey(e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    const rows = this.rows();
+    const row = e.target.closest('.tree-row');
+    const i = rows.indexOf(row);
+    if (i < 0) return;
+    const m = row._macro;
+    switch (e.key) {
+      case 'ArrowDown': this.focusRow(rows[i + 1]); break;
+      case 'ArrowUp': this.focusRow(rows[i - 1]); break;
+      case 'Home': this.focusRow(rows[0]); break;
+      case 'End': this.focusRow(rows[rows.length - 1]); break;
+      case 'Enter': this.play(m); break;
+      case 'Backspace': case 'Delete': this.remove(m); break;
+      case 'F10': case 'ContextMenu': {
+        if (e.key === 'F10' && !e.shiftKey) return;
+        const r = row.getBoundingClientRect();
+        this.rowMenu(m, r.left + 24, r.bottom);
+        break;
+      }
+      default: return;
+    }
+    e.preventDefault();
+  }
+
+  rowMenu(m, x, y) {
+    contextMenu(x, y, [
+      { label: 'Play in Active Terminal', key: '⏎', action: () => this.play(m) },
+      { label: 'Play in All Terminals', action: () => this.play(m, true) },
+      '-',
+      { label: 'Edit…', action: () => this.edit(m) },
+      { label: 'Rename…', action: async () => { const n = await promptDialog('Rename macro', { value: m.name }); if (n) this.save(this.macros.map((x) => (x.id === m.id ? { ...x, name: n } : x))); } },
+      '-',
+      { label: 'Delete', key: '⌫', danger: true, action: () => this.remove(m) },
+    ]);
+  }
+
+  async remove(m) {
+    if (await confirmDialog(`Delete macro "${m.name}"?`, { okLabel: 'Delete', danger: true })) this.save(this.macros.filter((x) => x.id !== m.id));
   }
 
   get macros() {
@@ -96,28 +163,29 @@ export class MacrosPanel {
   }
 
   render() {
+    // a re-render while the keyboard is in the list (rename, delete…) keeps a row focused: same id, else same place
+    const fa = document.activeElement;
+    const focused = fa && fa.classList.contains('tree-row') && this.list.contains(fa) ? { id: fa._macro?.id, index: this.rows().indexOf(fa) } : null;
     this.list.replaceChildren();
     if (!this.macros.length) {
       this.list.append(h('div', { class: 'tree-empty' }, 'No macros. Press ● Rec to record keystrokes in the active terminal, or ＋ to type one.'));
+      if (focused) $('[data-macro="new"]').focus(); // the last macro was deleted from the keyboard: ＋ is the nearest control
       return;
     }
     for (const m of this.macros) {
-      const row = h('div', { class: 'tree-row', title: m.text.slice(0, 200) }, h('span', { class: 'ico' }, '▶'), h('span', { class: 'label' }, m.name), h('span', { class: 'sub' }, `${m.text.length} ch`));
+      const row = h('div', { class: 'tree-row', title: m.text.slice(0, 200), role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', { class: 'ico' }, '▶'), h('span', { class: 'label' }, m.name), h('span', { class: 'sub' }, `${m.text.length} ch`));
+      row._macro = m;
       row.addEventListener('dblclick', () => this.play(m));
       row.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        contextMenu(e.clientX, e.clientY, [
-          { label: 'Play in Active Terminal', action: () => this.play(m) },
-          { label: 'Play in All Terminals', action: () => this.play(m, true) },
-          '-',
-          { label: 'Edit…', action: () => this.edit(m) },
-          { label: 'Rename…', action: async () => { const n = await promptDialog('Rename macro', { value: m.name }); if (n) this.save(this.macros.map((x) => (x.id === m.id ? { ...x, name: n } : x))); } },
-          '-',
-          { label: 'Delete', danger: true, action: async () => { if (await confirmDialog(`Delete macro "${m.name}"?`, { okLabel: 'Delete', danger: true })) this.save(this.macros.filter((x) => x.id !== m.id)); } },
-        ]);
+        this.rowMenu(m, e.clientX, e.clientY);
       });
       this.list.append(row);
     }
+    const rows = this.rows();
+    const again = focused && (rows.find((r) => r._macro.id === focused.id) || rows[Math.min(focused.index, rows.length - 1)]);
+    this._rove(again || rows[0]);
+    if (again) this.focusRow(again);
   }
 
   play(m, all = false) {
