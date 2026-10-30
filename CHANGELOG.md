@@ -1,3 +1,9 @@
+## [0.4.1](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.4.0...v0.4.1) (2026-10-30)
+
+### Bug Fixes
+
+* session/tab drag onto panes never dropped (effectAllowed mismatch) ([a7263bd](https://github.com/Hyeongcheol-An/mobaXterm/commit/a7263bdf655c5e3887e39f0ed76354345fc17154))
+
 ## [0.4.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.3.0...v0.4.0) (2026-10-30)
 
 ### Features
