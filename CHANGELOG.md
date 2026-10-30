@@ -1,3 +1,10 @@
+## [0.2.3](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.2...v0.2.3) (2026-10-30)
+
+### Bug Fixes
+
+* **ssh:** do not burn auth attempts on agent keys when a password is saved ([7c77ca3](https://github.com/Hyeongcheol-An/mobaXterm/commit/7c77ca3ef45928a6bd05100f88a515c76c63d8e7))
+* **ssh:** try default ~/.ssh identity files like the ssh CLI ([2220928](https://github.com/Hyeongcheol-An/mobaXterm/commit/2220928b4bd05b84da69d1bf2cabeef8c61543b7))
+
 ## [0.2.2](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.1...v0.2.2) (2026-10-30)
 
 ### Bug Fixes
