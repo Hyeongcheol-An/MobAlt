@@ -1,3 +1,9 @@
+## [0.3.0](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.3...v0.3.0) (2026-10-30)
+
+### Features
+
+* drag sessions and tabs into split panes ([e0e3c79](https://github.com/Hyeongcheol-An/mobaXterm/commit/e0e3c796f237283457d883e45541340048b90388))
+
 ## [0.2.3](https://github.com/Hyeongcheol-An/mobaXterm/compare/v0.2.2...v0.2.3) (2026-10-30)
 
 ### Bug Fixes
