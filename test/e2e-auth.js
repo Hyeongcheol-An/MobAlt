@@ -25,7 +25,14 @@
     const pane2 = await app.openSession(refused);
     await waitFor(() => pane2.dead, 15000, 'refused to fail');
     results.refusedHint = /nothing listens on that port/.test(text(pane2));
-    // 3) good key session still works (agent keys are tried too; must not block)
+    // 3) no key configured + wrong saved password on a key-only server -> default ~/.ssh keys must be used
+    //    (the test sshd's authorized_keys is extended with ~/.ssh/id_ed25519.pub by the runner)
+    const dflt = await app.saveSession({ name: 'default-keys', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'auto', password: 'wrong', sftpAuto: false });
+    const paneD = await app.openSession(dflt);
+    await waitFor(() => paneD.status === 'connected' || paneD.dead, 20000, 'default-keys outcome');
+    results.defaultKeys = paneD.status === 'connected';
+    if (!results.defaultKeys) log('default-keys tail:\n' + text(paneD).trim().split('\n').slice(-4).join('\n'));
+    // 4) good key session still works (agent keys are tried too; must not block)
     const good = await app.saveSession({ name: 'good', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'auto', privateKeyPath: keyDir + '/client_ed25519', sftpAuto: false });
     const pane3 = await app.openSession(good);
     await waitFor(() => pane3.status === 'connected', 15000, 'good connected');

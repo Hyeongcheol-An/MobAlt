@@ -9,9 +9,33 @@ const { StringDecoder } = require('string_decoder');
 const knownhosts = require('./knownhosts');
 const x11 = require('./x11');
 
+const { execFile } = require('child_process');
+
 const GREY = '\x1b[90m';
 const RED = '\x1b[31m';
 const RESET = '\x1b[0m';
+const DEFAULT_IDENTITY_FILES = ['id_ed25519', 'id_ecdsa', 'id_rsa'];
+
+let agentKeysCache = null;
+/** Public keys (base64 blobs) currently held by ssh-agent; cached for 10 s. */
+function agentPublicKeys() {
+  if (agentKeysCache && Date.now() - agentKeysCache.at < 10000) return agentKeysCache.promise;
+  const promise = new Promise((resolve) => {
+    const set = new Set();
+    if (!process.env.SSH_AUTH_SOCK) return resolve(set);
+    execFile('ssh-add', ['-L'], { env: process.env, timeout: 3000 }, (err, out) => {
+      if (!err) {
+        for (const line of String(out).split('\n')) {
+          const cols = line.trim().split(/\s+/);
+          if (cols.length >= 2 && /^(ssh-|ecdsa-|sk-)/.test(cols[0])) set.add(cols[1]);
+        }
+      }
+      resolve(set);
+    });
+  });
+  agentKeysCache = { at: Date.now(), promise };
+  return promise;
+}
 
 function expandHome(p) {
   if (!p) return p;
@@ -57,52 +81,74 @@ class SshManager {
 
     steps.push({ type: 'none', run: async () => ({ type: 'none', username }) });
 
+    /** Load a private key file, prompting for its passphrase when needed. */
+    const loadKey = async (file, display, savePassphrase) => {
+      let raw;
+      try {
+        raw = fs.readFileSync(expandHome(file));
+      } catch (e) {
+        ctx.out(`${RED}Cannot read private key ${display}: ${e.message}${RESET}\r\n`);
+        return null;
+      }
+      let passphrase = savePassphrase ? cfg.passphrase || undefined : undefined;
+      let parsed = utils.parseKey(raw, passphrase);
+      let tries = 0;
+      while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
+        tries++;
+        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `Enter passphrase for key ${display}`, session: cfg });
+        if (!ans) return null;
+        passphrase = ans.password;
+        parsed = utils.parseKey(raw, passphrase);
+        if (!(parsed instanceof Error) && ans.save && cfg.id && savePassphrase) {
+          this.store.upsertSession({ ...cfg, passphrase }).catch(() => {});
+        }
+      }
+      if (parsed instanceof Error) {
+        ctx.out(`${RED}Invalid private key ${display}: ${parsed.message}${RESET}\r\n`);
+        return null;
+      }
+      return { type: 'publickey', username, key: raw, passphrase, _parsed: parsed };
+    };
+
     if ((method === 'key' || method === 'auto') && cfg.privateKeyPath) {
-      steps.push({
-        type: 'publickey',
-        run: async () => {
-          let raw;
-          try {
-            raw = fs.readFileSync(expandHome(cfg.privateKeyPath));
-          } catch (e) {
-            ctx.out(`${RED}Cannot read private key ${cfg.privateKeyPath}: ${e.message}${RESET}\r\n`);
-            return null;
-          }
-          let passphrase = cfg.passphrase || undefined;
-          let parsed = utils.parseKey(raw, passphrase);
-          let tries = 0;
-          while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
-            tries++;
-            const ans = await prompter.password({
-              kind: 'passphrase',
-              title: 'Private key passphrase',
-              message: `Enter passphrase for key ${cfg.privateKeyPath}`,
-              session: cfg,
-            });
-            if (!ans) return null;
-            passphrase = ans.password;
-            parsed = utils.parseKey(raw, passphrase);
-            if (!(parsed instanceof Error) && ans.save && cfg.id) {
-              this.store.upsertSession({ ...cfg, passphrase }).catch(() => {});
-            }
-          }
-          if (parsed instanceof Error) {
-            ctx.out(`${RED}Invalid private key: ${parsed.message}${RESET}\r\n`);
-            return null;
-          }
-          return { type: 'publickey', username, key: raw, passphrase };
-        },
-      });
+      steps.push({ type: 'publickey', label: cfg.privateKeyPath, run: () => loadKey(cfg.privateKeyPath, cfg.privateKeyPath, true) });
     }
-    // "auto" order: key file → saved password → ssh-agent keys → keyboard-interactive with the
-    // saved password → interactive prompts (password dialog or keyboard-interactive dialog).
+    // "auto" order: configured key → saved password → ssh-agent keys → default ~/.ssh keys (like the
+    // ssh CLI) → keyboard-interactive with the saved password → interactive prompts.
     if ((method === 'password' || method === 'auto') && cfg.password) {
       steps.push({ type: 'password', label: 'saved password', run: async () => ({ type: 'password', username, password: cfg.password }) });
     }
-    // Agent keys: every key in the agent counts as a failed attempt on the server (MaxAuthTries,
-    // fail2ban), so in "auto" mode they are only tried when no password is saved for the session.
-    if ((method === 'agent' || (method === 'auto' && !cfg.password)) && process.env.SSH_AUTH_SOCK) {
-      steps.push({ type: 'agent', label: 'ssh-agent keys', run: async () => ({ type: 'agent', username, agent: process.env.SSH_AUTH_SOCK }) });
+    // Every key is a failed attempt on the server side (MaxAuthTries, fail2ban), so when a password is
+    // saved and the server accepts passwords, keys from the agent / default files are not tried.
+    const keysWanted = () => !(cfg.password && Array.isArray(ctx.serverMethods) && ctx.serverMethods.includes('password'));
+    if ((method === 'agent' || method === 'auto') && process.env.SSH_AUTH_SOCK) {
+      steps.push({ type: 'agent', label: 'ssh-agent keys', guard: keysWanted, run: async () => ((await agentPublicKeys()).size ? { type: 'agent', username, agent: process.env.SSH_AUTH_SOCK } : null) });
+    }
+    if (method === 'auto' || (method === 'key' && !cfg.privateKeyPath)) {
+      for (const name of DEFAULT_IDENTITY_FILES) {
+        const file = path.join(os.homedir(), '.ssh', name);
+        if (!fs.existsSync(file)) continue;
+        steps.push({
+          type: 'publickey',
+          label: `~/.ssh/${name}`,
+          guard: keysWanted,
+          run: async () => {
+            const res = await loadKey(file, `~/.ssh/${name}`, false);
+            if (!res) return null;
+            // skip keys the agent already offered
+            let pub = null;
+            try {
+              pub = fs.readFileSync(file + '.pub', 'utf8').trim().split(/\s+/)[1];
+            } catch {}
+            if (!pub && res._parsed) {
+              try { pub = res._parsed.getPublicSSH().toString('base64'); } catch {}
+            }
+            if (pub && (await agentPublicKeys()).has(pub)) return null;
+            delete res._parsed;
+            return res;
+          },
+        });
+      }
     }
     let kbdUsedSaved = false;
     let promptCount = 0;
