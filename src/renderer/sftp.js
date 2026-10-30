@@ -13,6 +13,13 @@ function errMsg(e) {
   return m;
 }
 
+/** Connection id the panel binds to for a pane: SSH/FTP panes own one, a Mosh pane uses its SFTP companion. */
+export function connIdOf(pane) {
+  if (!pane) return null;
+  if (pane.kind === 'mosh') return pane.sftpStatus === 'connected' ? pane.sftpConnId : null;
+  return (pane.kind === 'ssh' || pane.kind === 'ftp') && pane.status === 'connected' ? pane.termId : null;
+}
+
 export class SftpPanel {
   constructor(app) {
     this.app = app;
@@ -76,12 +83,12 @@ export class SftpPanel {
 
   /** Called by the app whenever the active pane changes. */
   setPane(pane) {
-    const browsable = pane && (pane.kind === 'ssh' || pane.kind === 'ftp');
-    if (!browsable || pane.status !== 'connected' || !pane.termId) {
+    this.renderMoshHint(pane);
+    const connId = connIdOf(pane);
+    if (!connId) {
       this.setConnection(null);
       return;
     }
-    const connId = pane.termId;
     if (!this.states.has(connId)) {
       this.states.set(connId, { path: null, entries: [], selected: new Set(), hidden: false, follow: !!pane.session?.followCwd, pane, loading: false });
     } else this.states.get(connId).pane = pane;
@@ -96,7 +103,7 @@ export class SftpPanel {
     if (!st) return;
     const s = st.pane.session || {};
     const defPort = s.type === 'ftp' ? 21 : 22;
-    this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`);
+    this.els.conn.replaceChildren(h('b', {}, s.name || st.pane.title), ' ', `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`, s.type === 'mosh' ? ' · via SSH' : '');
     this.els.follow.checked = st.follow;
     this.els.hidden.checked = st.hidden;
     if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
@@ -105,7 +112,7 @@ export class SftpPanel {
 
   show(connId) {
     this.app.showPanel('sftp');
-    const pane = this.app.paneByTerm(connId);
+    const pane = this.app.paneByConn(connId);
     if (pane) this.setPane(pane);
   }
 
@@ -114,10 +121,29 @@ export class SftpPanel {
     if (this.connId === connId) this.setConnection(null);
   }
 
+  /** Mosh panes have no SSH channel of their own: the empty state offers the companion SSH connection. */
+  renderMoshHint(pane) {
+    if (this.moshEl) {
+      this.moshEl.remove();
+      this.moshEl = null;
+    }
+    if (!pane || pane.kind !== 'mosh' || pane.dead || pane.status !== 'connected' || pane.sftpStatus === 'connected') return;
+    const s = pane.session || {};
+    const where = `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
+    const connecting = pane.sftpStatus === 'connecting';
+    this.moshEl = h('div', { class: 'sftp-mosh' },
+      h('p', {}, `Mosh session "${s.name || where}": files are browsed over a separate SSH connection to ${where}.`),
+      h('button', { class: 'btn small', disabled: connecting, onclick: () => pane.openSftpCompanion() }, connecting ? 'Connecting via SSH…' : 'Open SFTP for this host (via SSH)'),
+      pane.sftpStatus === 'failed' && pane.sftpError ? h('div', { class: 'sftp-mosh-err' }, pane.sftpError) : null
+    );
+    this.els.empty.append(this.moshEl);
+  }
+
   onPaneCwd(pane) {
-    const st = pane.termId && this.states.get(pane.termId);
+    const connId = connIdOf(pane);
+    const st = connId && this.states.get(connId);
     if (st && st.follow && pane.remoteCwd && pane.remoteCwd !== st.path) {
-      if (this.connId === pane.termId) this.navigate(pane.remoteCwd);
+      if (this.connId === connId) this.navigate(pane.remoteCwd);
       else st.path = null; // reload on next show
     }
   }

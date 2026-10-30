@@ -159,7 +159,11 @@ class App {
     });
     window.api.on('ssh:status', ({ id, state, msg }) => {
       const p = this.panesByTerm.get(id);
-      if (!p) return;
+      if (!p) {
+        const owner = this.workspace.allPanes().find((x) => x.sftpConnId === id); // a Mosh pane's SFTP companion
+        if (owner) owner.onCompanionStatus(state, msg);
+        return;
+      }
       p.setStatus(state, msg);
       if (state === 'connected') {
         this.sessionTree.render();
@@ -304,6 +308,11 @@ class App {
 
   paneByTerm(id) {
     return this.panesByTerm.get(id);
+  }
+
+  /** Pane behind a connection id: its own terminal, or (Mosh) its SFTP companion connection. */
+  paneByConn(id) {
+    return this.panesByTerm.get(id) || this.workspace.allPanes().find((p) => p.sftpConnId === id) || null;
   }
 
   registerPane(pane) {
@@ -606,7 +615,8 @@ class App {
         : pane.kind === 'ftp' ? `${s?.username ? s.username + '@' : 'anonymous@'}${s?.host}${s?.port && s.port !== 21 ? ':' + s.port : ''}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
       el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${pane.status}${msg ? ' (' + msg + ')' : ''}`;
-      const browsing = this.sftpPanel.states.get(pane.termId);
+      if (pane.kind === 'mosh' && pane.sftpStatus && pane.sftpStatus !== 'idle') el.textContent += ` · SFTP: ${pane.sftpStatus}`;
+      const browsing = this.sftpPanel.states.get(pane.kind === 'mosh' ? pane.sftpConnId : pane.termId);
       $('#st-cwd').textContent = pane.dead ? '' : shortPath(pane.remoteCwd || pane.cwd || (browsing && browsing.path) || '');
     }
     $('#st-log').textContent = pane && pane.logging ? '● LOG' : '';

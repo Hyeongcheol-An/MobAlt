@@ -38,7 +38,7 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | 세션 로그 | ✅ | 세션 설정 또는 탭 메뉴 |
 | RDP / VNC | ⚠️ 외부 앱 | RDP는 `.rdp` 파일을 만들어 Windows App으로, VNC는 macOS 화면 공유로 |
 | MobaXterm.ini 가져오기 | ✅ | Bookmarks 섹션 best-effort 파싱, `~/.ssh/config` 가져오기 |
-| Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩 |
+| Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩, 동반 SSH 연결로 SFTP |
 | FTP / FTPS | ✅ | 명시적 TLS FTPS, 익명 FTP. Sftp 패널에서 탐색·전송·편집 |
 
 작업대 복원 기능이 탭·분할·세션(로컬 셸은 폴더까지)을 다음 실행 때 되살리고 SSH는 자동 재접속합니다. 시작 시

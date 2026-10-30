@@ -137,6 +137,11 @@ connects, and you are told if one fails to bind.
 - **Mosh**: needs `brew install mosh` locally and `mosh-server` on the host (UDP 60000-61000).
   The pane runs the mosh client; the SSH bootstrap uses your key, agent or an interactive prompt.
   Set the `mosh-server` path if it is not on the remote PATH.
+- **Mosh + SFTP**: mosh carries no SFTP channel, so the Sftp panel browses a Mosh host through a
+  separate shell-less SSH connection to the same host (same key, agent and prompts). It opens
+  automatically when "Open SFTP browser automatically" is on for the session (and "Switch to SFTP
+  panel" in Settings), otherwise from the panel's "Open SFTP for this host (via SSH)" button or the
+  pane menu's "Open SFTP Browser"; it is dropped together with the pane.
 - **Serial**: the editor lists USB-serial devices; set baud, data/stop bits, parity, flow control,
   local echo and what Enter sends (CR, LF, CRLF).
 - **RDP / VNC**: MobAlt writes an `.rdp` file and opens Windows App, or opens `vnc://` in Screen

@@ -132,6 +132,10 @@ to SFTP panel when SSH connects").
 - **Mosh**: 로컬에 `brew install mosh`, 호스트에 `mosh-server`(UDP 60000-61000)가 필요합니다. 페인에서
   mosh 클라이언트가 돌고, SSH 부트스트랩은 키·에이전트·대화형 프롬프트를 씁니다. 원격 PATH에 없으면
   `mosh-server` 경로를 지정하세요.
+- **Mosh + SFTP**: mosh에는 SFTP 채널이 없으므로 Sftp 패널은 같은 호스트로 셸 없는 별도 SSH 연결을 열어
+  파일을 봅니다(키·에이전트·프롬프트는 SSH 세션과 동일). 세션의 "Open SFTP browser automatically"(그리고
+  Settings의 "Switch to SFTP panel")가 켜져 있으면 자동으로, 아니면 패널의 "Open SFTP for this host (via SSH)"
+  버튼이나 페인 메뉴의 "Open SFTP Browser"로 엽니다. 페인을 닫으면 함께 끊깁니다.
 - **시리얼**: 편집기가 USB-시리얼 장치를 나열합니다. baud, 데이터/정지 비트, 패리티, 흐름 제어, 로컬
   에코, Enter가 보내는 문자(CR, LF, CRLF)를 설정합니다.
 - **RDP / VNC**: `.rdp` 파일을 만들어 Windows App을 열거나 `vnc://`를 화면 공유로 엽니다. 호스트·사용자·
