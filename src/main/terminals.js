@@ -8,6 +8,84 @@ const path = require('path');
 const crypto = require('crypto');
 const { ensureZdotdir } = require('./zdotdir');
 
+/**
+ * Streaming filter that turns terminal output into plain text for session logs: drops CSI, OSC (incl.
+ * the OSC 7 folder hook), DCS/APC strings and single-ESC sequences — also when a sequence is split
+ * across data chunks — turns CR LF and lone CR into LF and strips the remaining control characters
+ * (TAB and LF stay).
+ */
+class PlainTextFilter {
+  constructor() {
+    this.pending = ''; // tail of the previous chunk that may continue in the next one
+  }
+
+  /** Index just past the escape sequence that starts at s[i] (an ESC), or -1 when it is not complete yet. */
+  static seqEnd(s, i) {
+    const n = s.length;
+    if (i + 1 >= n) return -1;
+    const k = s[i + 1];
+    if (k === '[') { // CSI: parameter bytes 0x30-0x3f, intermediates 0x20-0x2f, final 0x40-0x7e
+      let j = i + 2;
+      while (j < n && s.charCodeAt(j) >= 0x30 && s.charCodeAt(j) <= 0x3f) j++;
+      while (j < n && s.charCodeAt(j) >= 0x20 && s.charCodeAt(j) <= 0x2f) j++;
+      if (j >= n) return -1;
+      const f = s.charCodeAt(j);
+      return f >= 0x40 && f <= 0x7e ? j + 1 : j; // malformed: drop the prefix, resume at the odd byte
+    }
+    if (k === ']' || k === 'P' || k === 'X' || k === '^' || k === '_') { // OSC / DCS / SOS / PM / APC: until BEL or ST
+      for (let j = i + 2; j < n; j++) {
+        const c = s.charCodeAt(j);
+        if (c === 0x07 || c === 0x9c) return j + 1;
+        if (c === 0x1b) {
+          if (j + 1 >= n) return -1; // may be the first half of ST
+          return s[j + 1] === '\\' ? j + 2 : j; // another ESC aborts the string
+        }
+      }
+      return -1;
+    }
+    // ESC with intermediates (0x20-0x2f) and one final byte: ESC ( B, ESC = , ESC 7, ESC M …
+    let j = i + 1;
+    while (j < n && s.charCodeAt(j) >= 0x20 && s.charCodeAt(j) <= 0x2f) j++;
+    return j >= n ? -1 : j + 1;
+  }
+
+  /** Feed a chunk; returns the plain text that is safe to write now. */
+  push(chunk) {
+    const s = this.pending + String(chunk);
+    this.pending = '';
+    const n = s.length;
+    let out = '';
+    let i = 0;
+    while (i < n) {
+      const c = s.charCodeAt(i);
+      if (c === 0x1b) {
+        const end = PlainTextFilter.seqEnd(s, i);
+        if (end < 0) {
+          if (n - i < 4096) this.pending = s.slice(i); // wait for the rest (bounded: a runaway string is dropped)
+          break;
+        }
+        i = end;
+      } else if (c === 0x0d) {
+        if (i + 1 >= n) { this.pending = '\r'; break; } // CR LF may straddle chunks
+        if (s.charCodeAt(i + 1) !== 0x0a) out += '\n'; // lone CR (progress bars) starts a new line
+        i++;
+      } else if ((c < 0x20 && c !== 0x09 && c !== 0x0a) || c === 0x7f || (c >= 0x80 && c <= 0x9f)) {
+        i++; // other C0/C1 controls (BEL, backspace, …)
+      } else {
+        out += s[i++];
+      }
+    }
+    return out;
+  }
+
+  /** Text still held back at the end of the session (a trailing CR becomes a newline). */
+  flush() {
+    const p = this.pending;
+    this.pending = '';
+    return p === '\r' ? '\n' : '';
+  }
+}
+
 class TerminalRegistry extends EventEmitter {
   constructor() {
     super();
@@ -29,16 +107,15 @@ class TerminalRegistry extends EventEmitter {
 
   data(id, data) {
     const log = this.logs.get(id);
-    if (log) log.write(data);
+    if (log) {
+      const text = log.filter ? log.filter.push(data) : data;
+      if (text) log.ws.write(text);
+    }
     this.emit('data', id, data);
   }
 
   exit(id, code, reason) {
-    const log = this.logs.get(id);
-    if (log) {
-      log.end(`\n--- session ended ${new Date().toISOString()} ---\n`);
-      this.logs.delete(id);
-    }
+    this._endLog(id, `\n--- session ended ${new Date().toISOString()} ---\n`);
     this.map.delete(id);
     this.emit('exit', id, code, reason);
   }
@@ -66,21 +143,25 @@ class TerminalRegistry extends EventEmitter {
     }
   }
 
-  startLog(id, file) {
+  /** Append the terminal's output to `file`; `plain` strips colours/control sequences (see PlainTextFilter). */
+  startLog(id, file, { plain = false } = {}) {
     this.stopLog(id);
     fs.mkdirSync(path.dirname(file), { recursive: true });
     const ws = fs.createWriteStream(file, { flags: 'a' });
     ws.write(`--- session log started ${new Date().toISOString()} ---\n`);
-    this.logs.set(id, ws);
+    this.logs.set(id, { ws, filter: plain ? new PlainTextFilter() : null });
     return file;
   }
 
   stopLog(id) {
+    this._endLog(id, `\n--- log stopped ${new Date().toISOString()} ---\n`);
+  }
+
+  _endLog(id, footer) {
     const log = this.logs.get(id);
-    if (log) {
-      log.end(`\n--- log stopped ${new Date().toISOString()} ---\n`);
-      this.logs.delete(id);
-    }
+    if (!log) return;
+    this.logs.delete(id);
+    log.ws.end((log.filter ? log.filter.flush() : '') + footer);
   }
 }
 
@@ -337,4 +418,4 @@ async function listSerialPorts() {
     .filter((p, i, a) => a.findIndex((x) => x.path === p.path) === i);
 }
 
-module.exports = { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, defaultShell, spawnMosh, findMosh };
+module.exports = { TerminalRegistry, PlainTextFilter, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, defaultShell, spawnMosh, findMosh };

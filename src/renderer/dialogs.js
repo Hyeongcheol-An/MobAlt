@@ -444,6 +444,7 @@ export function settingsDialog(app) {
   const sftpAutoOpen = check('Switch to SFTP panel when SSH connects', s.sftpAutoOpen !== false);
   const downloadDir = text(s.downloadDir, { placeholder: '~/Downloads' });
   const logDir = text(s.logDir, { placeholder: '~/Documents/MobAlt Logs' });
+  const logPlain = check('Strip colours and control sequences from session logs (plain text)', !!s.logPlainText);
   const keepAlive = num(s.keepAliveInterval, { min: 0, max: 3600 });
   const autoUpdate = check('Check for updates at startup', s.autoUpdate !== false);
   const m = showModal({
@@ -457,6 +458,7 @@ export function settingsDialog(app) {
       ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
       ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
       ...field('Download folder', downloadDir), ...field('Log folder', logDir), ...field('SSH keep-alive (s)', keepAlive),
+      h('label', {}, 'Logging'), h('div', { class: 'checks' }, logPlain.el),
       h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
       h('label', {}, 'Updates'), h('div', { class: 'checks' }, autoUpdate.el, h('button', { class: 'btn small', type: 'button', onclick: () => window.api.app.checkUpdates() }, 'Check now')),
       h('label', {}, 'Data'), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, 'Open config folder'))
@@ -468,7 +470,7 @@ export function settingsDialog(app) {
         cursorStyle: cursorStyle.value, cursorBlink: cursorBlink.cb.checked, scrollback: clamp(parseInt(scrollback.value, 10), 100, 1000000, 10000), theme: theme.value,
         rightClickPaste: rightClickPaste.cb.checked, copyOnSelect: copyOnSelect.cb.checked, macOptionIsMeta: optMeta.cb.checked,
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
-        confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(),
+        confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(), logPlainText: logPlain.cb.checked,
         keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked,
       }) },
     ],

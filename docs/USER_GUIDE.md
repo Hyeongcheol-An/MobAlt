@@ -94,7 +94,8 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 - **Keys**: Shift+Enter and Option+Enter send ESC+CR (a newline in TUI apps such as Claude Code);
   Option acts as Meta by default.
 - **Logging**: Terminal → Start/Stop Session Log, or the session option, writes the raw output to
-  `~/Documents/MobAlt Logs/`.
+  `~/Documents/MobAlt Logs/`. Settings → Logging → *Strip colours and control sequences* keeps the
+  logs as plain text instead (ANSI colours, cursor movement and the folder-tracking hook are removed).
 - **Themes and fonts**: Settings → Theme/Font apply to all terminals; a session can override them in
   its Terminal tab.
 
