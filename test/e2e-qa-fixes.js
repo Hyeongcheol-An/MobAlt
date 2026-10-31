@@ -141,7 +141,7 @@
       results.settingsTabsFit900x560 = Object.keys(fit).length === 4 && Object.values(fit).every(Boolean);
       const upd = m.querySelector('.mpage.active'); // Updates is in front now
       results.settingsCheckNowOnUpdates = tabs[3].classList.contains('active') && [...upd.querySelectorAll('button')].some((x) => x.textContent === 'Check now') && !!upd.querySelector('.upd-status');
-      const fieldOf = (root, txt) => [...root.querySelectorAll('.form-grid > label')].find((l) => l.textContent === txt)?.nextElementSibling;
+      const fieldOf = (root, txt) => { const el = [...root.querySelectorAll('.form-grid > label')].find((l) => l.textContent === txt)?.nextElementSibling; return el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) ? el : el?.querySelector('input,select,textarea'); }; // the Theme select sits in a wrapper with its preview chip
       const cbOf = (root, txt) => [...root.querySelectorAll('.checks label')].find((l) => l.textContent.includes(txt))?.querySelector('input[type=checkbox]');
       tabs[0].click(); fieldOf(m, 'SSH keep-alive (s)').value = '45'; cbOf(m, 'Confirm quit').checked = true;
       tabs[1].click(); fieldOf(m, 'Font size').value = '15'; fieldOf(m, 'Theme').value = 'dracula'; cbOf(m, 'Copy on select').checked = true;
