@@ -769,3 +769,16 @@ body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }
 /* A transfer that came from a terminal (rz / sz) carries a small "zmodem" chip in the files panel's transfer list, so
    it is told apart from the panel's own SFTP / FTP transfers; the theme tokens keep it readable on every palette. */
 .xfer .xfer-proto { flex: 0 0 auto; font-size: 9px; line-height: 14px; padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .03em; }
+/* ---- qa5 tabs ---- */
+/* The scanner's rDNS checkbox: the generic `.tools-form input` reset took its focus ring (and the text-field box); it
+   gets the 2px accent ring every other control shows, like the rules table's checkboxes. */
+.tools-form input[type=checkbox] { flex: none; width: auto; height: auto; padding: 0; border: 0; background: none; }
+.tools-form input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Monitoring meters: the track is the window's base surface with a hairline edge, so the --warn / --danger fills (tuned
+   to ≥ 3:1 on --bg by theme.js) and the accent fill (≥ 4.5:1) read on it in every theme — on --bg-active the Light
+   theme's warn fill was 2.4:1, barely a fill at all. */
+.pane-monitor .mon-bar { background: var(--bg); box-shadow: inset 0 0 0 1px var(--divider); }
+/* The detached window's "▸" brand marker: dim text (≥ 4.5:1) instead of the accent at .55 opacity (2.3–2.7:1). */
+body.detached #toolbar .brand::after { color: var(--fg-dim); opacity: 1; }
+/* The scan table's ＋ keeps its accent colour on the hover surface, where the accent is ≥ 4.5:1 (it is not on --bg-active). */
+.scan-table .scan-add:hover { background: var(--bg-hover); }

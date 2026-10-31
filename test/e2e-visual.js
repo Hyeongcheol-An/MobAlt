@@ -376,10 +376,34 @@
       // text selection in fields follows the theme
       const selStyle = getComputedStyle(document.getElementById('qc-input'), '::selection');
       results[`inputSelectionThemed-${theme}`] = selStyle.backgroundColor === rgbOf(pal.selection) && selStyle.color === rgbOf(pal['selection-fg']);
+      // qa5: the monitoring meters' fills on their track (warn at 85 %, danger at 96 %, the accent fill), the detached
+      // window's "▸" brand marker on the toolbar, and the scan table's ＋ on its hover surface
+      if (tunnelPane && !tunnelPane.disposed) {
+        const realSample = tunnelPane.monitorSample;
+        tunnelPane._monitorRender({ cpu: 85, memUsed: 96, memTotal: 100, diskPct: 50, rx: 0, tx: 0, load: [0.1, 0.1, 0.1], uptime: 60, host: 'qa5', os: 'linux' });
+        const bars = [...tunnelPane.monitorEl.querySelectorAll('.mon-bar')];
+        for (const [what, bar] of [['monitor warn fill vs track', bars[0]], ['monitor danger fill vs track', bars[1]], ['monitor accent fill vs track', bars[2]]]) {
+          pair(what, bar && parseColor(px(bar.querySelector('i'), 'backgroundColor')), bar && parseColor(px(bar, 'backgroundColor')), 3);
+        }
+        pair('monitor track edge vs bar', bars[0] && parseColor(/rgba?\([^)]+\)/.exec(px(bars[0], 'boxShadow'))?.[0]), bars[0] && bgBehind(tunnelPane.monitorEl), 1.2); // a visible hairline
+        results[`monitorLevelsClassed-${theme}`] = bars.length === 3 && bars[0].classList.contains('warn') && bars[1].classList.contains('danger') && !bars[2].classList.contains('warn') && !bars[2].classList.contains('danger');
+        if (theme === 'light') { tunnelPane.monitorEl.hidden = false; app.workspace.activate(tunnelPane.tab); await sleep(150); await shot('93-light-monitor-levels'); app.workspace.activate(amberTab); }
+        if (realSample) tunnelPane._monitorRender(realSample); else tunnelPane._monitorRender(null, 'monitoring…');
+        tunnelPane.syncMonitor?.();
+      } else notes.push('monitor meters not measured (no sshd pane)');
+      const brand = sel('#toolbar .brand');
+      document.body.classList.add('detached');
+      const marker = getComputedStyle(brand, '::after'), mc = parseColor(marker.color), mop = parseFloat(marker.opacity) || 1, tb = bgBehind(brand);
+      pair('detached ▸ marker on toolbar', mc && { r: mc.r * mop + tb.r * (1 - mop), g: mc.g * mop + tb.g * (1 - mop), b: mc.b * mop + tb.b * (1 - mop) }, tb, 3);
+      document.body.classList.remove('detached');
+      pair('scan ＋ on its hover surface', parseColor(pal.accent), parseColor(pal['bg-hover']), 4.5);
       const low = checks.filter(([, r, min]) => r !== null && r < min), missing = checks.filter(([, r]) => r === null).map(([what]) => what);
       results[`qa4Contrast-${theme}`] = low.length === 0 && missing.length === 0;
       log(theme, 'qa4 | measured', checks.length - missing.length, '| below target:', low.length ? JSON.stringify(low) : 'none', missing.length ? '| missing: ' + missing.join(', ') : '', notes.length ? '| ' + notes.join('; ') : '');
     }
+    // the ＋ hover rule really is on the hover surface (styles.css "qa5 tabs": the last rule for the selector wins)
+    const addHoverRules = [...document.styleSheets].flatMap((s) => { try { return [...s.cssRules]; } catch { return []; } }).filter((r) => r.selectorText === '.scan-table .scan-add:hover');
+    results.scanAddHoverOnHoverSurface = addHoverRules.length > 0 && /--bg-hover/.test(addHoverRules[addHoverRules.length - 1].style.cssText); // a var() in the shorthand leaves the longhand empty
     findInput.value = ''; findInput.dispatchEvent(new Event('input', { bubbles: true }));
     findRegex.checked = false; findRegex.dispatchEvent(new Event('change', { bubbles: true }));
     app.action('find-close');

@@ -191,6 +191,15 @@
     results.tabCoversNewControls = ['wol-mac', 'wol:wake', 'wol-broadcast', 'wol-port', 'wol-label', 'scan-target', 'scan:start', 'scan-method', 'scan-ports', 'scan-rdns', 'scan-concurrency', 'scan-timeout'].every((k) => seen.includes(k));
     results.stopSkippedWhileIdle = !seen.includes('scan:stop');
     await shot('74-tab-on-last-control');
+    // the rDNS checkbox shows the keyboard focus ring like every other control (the text fields' outline reset used to take it)
+    await window.api.app.testKey('F19'); // keyboard modality: :focus-visible on the programmatic focus below
+    const rdns = q('#scan-rdns');
+    rdns.focus();
+    await sleep(60);
+    const ring = getComputedStyle(rdns);
+    results.rdnsFocusRing = document.activeElement === rdns && rdns.matches(':focus-visible') && ring.outlineStyle !== 'none' && parseFloat(ring.outlineWidth) >= 2 && ring.outlineColor !== 'rgba(0, 0, 0, 0)';
+    log('rdns ring:', ring.outlineStyle, ring.outlineWidth, ring.outlineColor);
+    await shot('74b-rdns-focus-ring');
     set('#scan-target', '127.0.0.1/32');
     set('#scan-ports', '2222');
     q('#scan-target').focus();
