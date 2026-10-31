@@ -484,3 +484,9 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 #update-banner .btn.small:not(.primary):hover { background: rgba(255, 255, 255, .08); }
 #update-banner .btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; } /* the accent ring would sink into the blue bar */
 .form-grid .checks .upd-status { align-self: center; font-size: 12px; color: var(--fg-dim); } /* "Check now" outcome in Settings → Updates */
+
+/* ---- qa3 journeys ---- */
+/* Dialog title: a very long session name is clipped with an ellipsis inside the dialog (the full name is its tooltip);
+   the ✕ keeps its place at the right. */
+.modal-title { min-width: 0; }
+.modal-title .modal-title-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

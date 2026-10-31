@@ -89,6 +89,22 @@
       results.tunnelKeptAfterDiscard = (app.sessions.sessions.find((x) => x.id === withTunnel.id)?.tunnels || []).length === 1;
       await app.deleteSession(withTunnel.id); // keeps the renderer session list in sync
     }
+    // editor title: a ~200-char session name is clipped with an ellipsis inside the dialog (the full name is its tooltip)
+    {
+      const longName = 'very-long-session-name-' + 'abcdefghij'.repeat(18);
+      const sl = await app.saveSession({ name: longName, type: 'ssh', host: 'long.example.com', username: 'u' });
+      app.editSession(sl);
+      await sleep(300);
+      const modal = document.querySelector('.modal'), titleEl = modal.querySelector('.modal-title'), txt = titleEl.querySelector('.modal-title-text');
+      const mr = modal.getBoundingClientRect(), cr = titleEl.querySelector('.close').getBoundingClientRect();
+      results.longTitleClipped = !!txt && txt.scrollWidth > txt.clientWidth && getComputedStyle(txt).textOverflow === 'ellipsis' && titleEl.scrollWidth <= titleEl.clientWidth + 1 && txt.getBoundingClientRect().right <= mr.right;
+      results.longTitleTooltip = !!txt && txt.title === `Edit session — ${longName}` && txt.textContent === `Edit session — ${longName}`;
+      results.longTitleCloseInside = cr.left >= mr.left && cr.right <= mr.right && cr.left > txt.getBoundingClientRect().right - 1;
+      await shot('50b-editor-long-title');
+      closeModal();
+      await sleep(200);
+      await app.deleteSession(sl.id);
+    }
 
     // --- tunnel form: host inputs usable
     app.action('tunnels');
