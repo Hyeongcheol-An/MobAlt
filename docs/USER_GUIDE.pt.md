@@ -1,6 +1,6 @@
 # Guia do Usuário do MobAlt
 
-This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md)
+This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
 
 O MobAlt é uma bancada de trabalho no estilo do MobaXterm para o macOS: uma árvore de sessões à esquerda,
 terminais em abas e divididos no centro, e um navegador SFTP, ferramentas de rede e macros em painéis laterais.
@@ -320,16 +320,17 @@ e “Verificar agora”).
 
 ### Idioma da interface
 
-Os menus, a barra de ferramentas, os painéis, os diálogos e as mensagens do MobAlt estão disponíveis em dez idiomas: English, 한국어, 简体中文, 日本語,
-Tiếng Việt, हिन्दी, Deutsch, Français, Español e Português. Por padrão (**Padrão do sistema**), a interface segue
+Os menus, a barra de ferramentas, os painéis, os diálogos e as mensagens do MobAlt estão disponíveis em onze idiomas: English, 한국어, 简体中文, 日本語,
+Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português e العربية (em árabe, a janela é espelhada: barra lateral à direita,
+texto alinhado à direita; os terminais continuam da esquerda para a direita). Por padrão (**Padrão do sistema**), a interface segue
 a lista de idiomas do macOS (Ajustes do Sistema → Geral → Idioma e Região): vence o primeiro idioma dessa lista que
 o MobAlt oferece, e o inglês quando nenhum deles é oferecido. Ajustes → Geral → **Idioma** escolhe um explicitamente; a mudança
 vale na hora em todas as janelas — nada reinicia, as conexões continuam ativas — e fica memorizada. A saída do terminal nunca é
-traduzida: o que um host remoto escreve é mostrado como está. O guia do usuário existe nos mesmos dez idiomas
+traduzida: o que um host remoto escreve é mostrado como está. O guia do usuário existe nos mesmos onze idiomas
 (`docs/USER_GUIDE.<language>.md`); Ajuda → **Guia do Usuário** abre o do idioma atual.
 
 Para usar o MobAlt num idioma uma única vez sem mudar o ajuste (capturas de tela, um teste), inicie-o com `MOBALT_LANG=<code>`
-no ambiente (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
+no ambiente (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
 
 ## Atalhos de teclado
 
@@ -356,7 +357,7 @@ no ambiente (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
 | Lista SFTP: mover / abrir / pasta superior / apagar, menu de contexto | ↑ ↓ Home End PgUp PgDn / ⏎ / ⌫ / Del, ⇧F10 ou a tecla Menu |
 | Lista SFTP: estender a seleção / alternar a linha em foco / selecionar tudo | ⇧↑ ⇧↓ ⇧Home ⇧End / Espaço / ⌘A |
 | Lista SFTP: ordenar por uma coluna | Tab até o cabeçalho Nome / Tamanho / Modificado, ⏎ ou Espaço |
-| Árvore de sessões e lista SFTP: saltar para um nome | digite as primeiras letras, espaços incluídos (a mesma letra de novo: próxima correspondência) |
+| Árvore de sessões e lista SFTP: ir até um nome | digite as primeiras letras, espaços incluídos (a mesma letra de novo: próxima correspondência) |
 | Seletores de ícone e cor no editor de sessão: mover / escolher | ← → ↑ ↓ / ⏎ ou Espaço |
 | Botões de painel da faixa lateral / ⌘1-4 | ⏎ leva o teclado para dentro do painel; trocar de painel lembra onde ele estava |
 
