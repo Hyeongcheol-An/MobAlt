@@ -608,3 +608,28 @@ input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: defaul
 /* Text selection in fields and selectable text follows the theme, not the OS highlight colour. */
 ::selection { background: var(--selection); color: var(--selection-fg); }
 input::selection, textarea::selection { background: var(--selection); color: var(--selection-fg); }
+
+/* ---- keyword highlight ---- */
+/* Settings → Terminal → Keyword highlighting (highlight.js): a match is an xterm.js decoration — the renderer paints its
+   colour and background into the cells, and the decoration's own element (over the cells) carries what a decoration
+   cannot: a bold copy of the text in the rule's colour and a 1px underline (`--kh-fg` is set per element from the
+   theme-derived rule colour). It never takes the mouse: selection, links and the find highlights work underneath. */
+.xterm-decoration.kh { pointer-events: none; user-select: none; white-space: pre; overflow: hidden; box-sizing: border-box; }
+.xterm-decoration.kh-ul { box-shadow: inset 0 -1px 0 var(--kh-fg); }
+.xterm-decoration.kh-bold { font-weight: 700; color: var(--kh-fg); }
+/* The rules table (a sub-dialog of Settings → Terminal): one row per rule, scrolling past ~9 rows; the pattern box is
+   monospace, the colour selects carry a colour well that appears for Custom… */
+.hl-row { align-items: center; }
+.hl-help { color: var(--fg-dim); font-size: 12px; line-height: 1.4; margin: 0 0 10px; }
+.hl-rules { max-height: 46vh; overflow: auto; border: 1px solid var(--divider); border-radius: var(--radius); }
+.hl-rules .list-table th { white-space: nowrap; position: sticky; top: 0; background: var(--bg-dialog); z-index: 1; }
+.hl-rules .list-table td { padding: 3px 4px; vertical-align: middle; }
+.hl-rules .list-table td.pat { width: 100%; }
+.hl-rules .list-table input[type=text] { width: 100%; min-width: 160px; height: 26px; padding: 0 6px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); font-family: var(--font-mono); font-size: 11.5px; }
+.hl-rules .list-table select { height: 26px; min-height: 26px; padding: 0 4px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); font-size: 12px; }
+.hl-rules .list-table .inline { display: flex; gap: 4px; align-items: center; }
+.hl-rules .list-table input[type=color] { width: 26px; height: 26px; padding: 1px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--bg-input); }
+.hl-rules .list-table input[type=color][hidden] { display: none; }
+.hl-rules .list-table input:focus, .hl-rules .list-table select:focus { border-color: var(--accent); outline: none; }
+.hl-rules .list-table input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hl-actions { display: flex; gap: 8px; margin-top: 10px; }

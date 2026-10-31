@@ -2,6 +2,7 @@
 import { h, showModal, toast, confirmDialog, TYPE_LABEL, icon } from './ui.js';
 import { THEMES } from './terminal.js';
 import { mix, contrast } from './theme.js';
+import { DEFAULT_RULES, COLOR_KEYS, compileRules, normalizeRule } from './highlight.js';
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -249,6 +250,7 @@ export function sessionEditor(app, initial = {}) {
   const logging = check('Log session output to file', s.logging);
   const theme = select([['', '(default)'], ...Object.keys(THEMES).map((t) => [t, themeLabel(t)])], s.theme || '');
   const fontSize = num(s.fontSize || '', { min: 8, max: 40, placeholder: String(app.settings.fontSize) });
+  const highlight = select([['', 'Default (Settings)'], ['on', 'On'], ['off', 'Off']], s.highlight === 'on' || s.highlight === 'off' ? s.highlight : '');
   const notes = h('textarea', { spellcheck: false, placeholder: 'Notes' });
   notes.value = s.notes || '';
 
@@ -370,7 +372,9 @@ export function sessionEditor(app, initial = {}) {
   pages.terminal.append(
     ...field('Startup commands', startup),
     h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, sftpAuto.el, followCwd.el, logging.el),
-    ...field('Theme', theme), ...field('Font size', fontSize), ...field('Notes', notes)
+    ...field('Theme', theme), ...field('Font size', fontSize),
+    ...field('Keyword highlighting', highlight, 'Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Terminal'),
+    ...field('Notes', notes)
   );
 
   let prevType = s.type;
@@ -460,6 +464,7 @@ export function sessionEditor(app, initial = {}) {
       logging: logging.cb.checked,
       theme: theme.value,
       fontSize: parseInt(fontSize.value, 10) || undefined,
+      highlight: highlight.value,
       notes: notes.value,
       shell: shell.value.trim(),
       cwd: cwd.value.trim(),
@@ -566,6 +571,78 @@ export async function tunnelsDialog(app, preset = {}) {
   return m.promise;
 }
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+const sameRules = (a, b) => JSON.stringify((a || []).map(normalizeRule)) === JSON.stringify((b || []).map(normalizeRule));
+
+/**
+ * Settings → Terminal → Keyword highlighting → Rules…: the editable rule table (pattern, regex, ignore case, colour,
+ * background, bold, underline). Resolves with the rule list to save (empty patterns dropped), or null on Cancel; OK
+ * refuses a regex that does not compile (toast, the pattern keeps the focus). "Restore defaults" reloads the built-in set.
+ */
+export function highlightRulesDialog(initial) {
+  const rules = (Array.isArray(initial) && initial.length ? initial : DEFAULT_RULES).map((r) => ({ ...normalizeRule(r) }));
+  const rows = h('div', { class: 'hl-rules' });
+  // a colour cell: the theme's slots, or Custom… with a colour well
+  const colourCell = (value, none, label, onChange) => {
+    const custom = HEX_COLOR.test(value);
+    const sel = select([['', none], ...COLOR_KEYS, ['custom', 'Custom…']], custom ? 'custom' : value, { 'aria-label': label });
+    const well = h('input', { type: 'color', value: custom ? value : '#ff8800', hidden: !custom, 'aria-label': `${label} (custom)` });
+    const emit = () => onChange(sel.value === 'custom' ? well.value.toLowerCase() : sel.value);
+    sel.addEventListener('change', () => { well.hidden = sel.value !== 'custom'; emit(); });
+    well.addEventListener('input', emit);
+    return h('div', { class: 'inline' }, sel, well);
+  };
+  const flag = (r, key, label, i) => h('input', { type: 'checkbox', checked: r[key], 'aria-label': `Rule ${i + 1}: ${label}`, onchange: (e) => (r[key] = e.target.checked) });
+  let addBtn;
+  const render = (focusRow) => {
+    rows.replaceChildren(h('table', { class: 'list-table' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Pattern'), h('th', { title: 'Regular expression' }, 'Regex'), h('th', { title: 'Ignore case' }, 'Aa'),
+        h('th', {}, 'Colour'), h('th', {}, 'Background'), h('th', { title: 'Bold' }, 'B'), h('th', { title: 'Underline' }, 'U'), h('th', {}))),
+      h('tbody', {}, rules.map((r, i) => h('tr', {},
+        h('td', { class: 'pat' }, text(r.pattern, { placeholder: r.regex ? 'regular expression' : 'text', 'aria-label': `Rule ${i + 1}: pattern`, oninput: (e) => (r.pattern = e.target.value) })),
+        h('td', {}, flag(r, 'regex', 'regular expression', i)),
+        h('td', {}, flag(r, 'ci', 'ignore case', i)),
+        h('td', {}, colourCell(r.color, '(keep)', `Rule ${i + 1}: colour`, (v) => (r.color = v))),
+        h('td', {}, colourCell(r.bg, '(none)', `Rule ${i + 1}: background`, (v) => (r.bg = v))),
+        h('td', {}, flag(r, 'bold', 'bold', i)),
+        h('td', {}, flag(r, 'underline', 'underline', i)),
+        h('td', {}, h('button', { class: 'btn small icon-only', type: 'button', title: 'Remove', 'aria-label': `Remove rule ${i + 1}`, onclick: (e) => {
+          const viaKeyboard = e.currentTarget === document.activeElement;
+          rules.splice(i, 1);
+          render();
+          if (viaKeyboard) (rows.querySelectorAll('tbody .icon-only')[Math.min(i, rules.length - 1)] || addBtn).focus();
+        } }, icon('x')))
+      )))
+    ));
+    if (focusRow !== undefined) rows.querySelectorAll('tbody input[type=text]')[focusRow]?.focus();
+  };
+  addBtn = h('button', { class: 'btn small', type: 'button', onclick: () => { rules.push(normalizeRule({ color: 'red' })); render(rules.length - 1); } }, '＋ Add rule');
+  const restoreBtn = h('button', { class: 'btn small', type: 'button', onclick: () => { rules.splice(0, rules.length, ...DEFAULT_RULES.map((r) => ({ ...r }))); render(); toast('Built-in rules restored', 'info'); } }, 'Restore defaults');
+  render();
+  const m = showModal({
+    title: 'Keyword highlighting rules',
+    width: 'wide',
+    body: h('div', {},
+      h('div', { class: 'hl-help' }, 'Matches in every terminal take the rule\'s colour. Plain text matches anywhere in a line; Regex is a JavaScript regular expression. Colours come from the terminal theme, so they read on every palette. Where rules overlap, the earlier match wins, then the longer one.'),
+      rows,
+      h('div', { class: 'hl-actions' }, addBtn, restoreBtn)),
+    buttons: [
+      { label: 'Cancel', value: null },
+      { label: 'OK', primary: true, action: (api) => {
+        const { invalid } = compileRules(rules.map((r) => ({ ...r, enabled: true })));
+        if (invalid.length) {
+          const { index, rule, error } = invalid[0];
+          toast(`"${rule.pattern}" is not a valid regular expression: ${error}`, 'warn', 6000);
+          rows.querySelectorAll('tbody input[type=text]')[index]?.focus();
+          return;
+        }
+        api.close(rules.map(normalizeRule).filter((r) => r.pattern));
+      } },
+    ],
+  });
+  return m.promise;
+}
+
 export function settingsDialog(app) {
   const s = app.settings;
   const fontFamily = text(s.fontFamily);
@@ -580,6 +657,14 @@ export function settingsDialog(app) {
   const rightClickPaste = check('Right-click pastes (⇧-right-click for menu)', s.rightClickPaste);
   const copyOnSelect = check('Copy on select', s.copyOnSelect);
   const optMeta = check('Option key acts as Meta/Alt', s.macOptionIsMeta !== false);
+  // keyword highlighting: the switch here, the rule table in a sub-dialog (the Terminal tab must keep fitting 900×560);
+  // null rules = the built-in set, so "Restore defaults" (or an unchanged table) keeps following it
+  const hlEnabled = check('Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes', s.highlightEnabled !== false);
+  let hlRules = Array.isArray(s.highlightRules) && s.highlightRules.length ? s.highlightRules.map(normalizeRule) : null;
+  const hlRulesBtn = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+    const r = await highlightRulesDialog(hlRules);
+    if (r) hlRules = sameRules(r, DEFAULT_RULES) ? null : r;
+  } }, 'Rules…');
   const localShell = text(s.localShell, { placeholder: '(login shell)' });
   const shellInt = check('zsh/bash integration (folder following)', s.localShellIntegration !== false);
   const editor = text(s.editorCommand, { placeholder: 'e.g. code --wait {file}   (blank = TextEdit)' });
@@ -614,10 +699,11 @@ export function settingsDialog(app) {
     )],
     ['terminal', 'Terminal', h('div', { class: 'form-grid' },
       ...field('Font family', fontFamily), ...field('Font size', fontSize), ...field('Line height', lineHeight),
-      ...field('Cursor', cursorStyle), h('label', {}), h('div', { class: 'checks' }, cursorBlink.el),
+      ...field('Cursor', h('div', { class: 'inline' }, cursorStyle, h('div', { class: 'checks' }, cursorBlink.el))), // one row: the tab keeps fitting 900×560 with the highlighting row below
       ...field('Scrollback lines', scrollback),
       ...field('Theme', h('div', { class: 'inline theme-field' }, theme, themePreview), 'Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme'),
-      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
+      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el),
+      h('label', {}, 'Keyword highlighting'), h('div', { class: 'checks hl-row' }, hlEnabled.el, hlRulesBtn)
     )],
     ['logging', 'Logging', h('div', { class: 'form-grid' },
       ...field('Log folder', logDir, 'Terminal → Start Session Log, or a session\'s Logging option, writes here'),
@@ -643,6 +729,7 @@ export function settingsDialog(app) {
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
         confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(), logPlainText: logPlain.cb.checked,
         keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked,
+        highlightEnabled: hlEnabled.cb.checked, highlightRules: hlRules,
       }) },
     ],
   });

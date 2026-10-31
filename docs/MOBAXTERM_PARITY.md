@@ -125,7 +125,7 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 | Graphical macros (mouse + keyboard) | ❌ | not implemented |
 | Colour schemes | 🟡 | 6 built-in themes (Settings → Terminal → Theme) and a per-session override; no custom or imported themes |
 | Fonts (bundled fonts, ligatures, fixed size) | 🟡 | any installed font, size and line height (Settings → Terminal), ⌘= / ⌘- / ⌘0, per-session font size; no ligatures, no fixed rows/cols |
-| Syntax highlighting of keywords | ❌ | not implemented (URLs are underlined) |
+| Syntax highlighting of keywords | ✅ | Settings → Terminal → Keyword highlighting: an editable rule table (plain text or regex, colour, background, bold, underline) with defaults for errors, warnings, success, IP addresses, URLs and sizes, coloured from the terminal theme; per-session on / off |
 | Search in terminal | ✅ | ⌘F incremental search with case and regex toggles and a match counter |
 | Logging / save / print | 🟡 | session log to a folder; no "Save terminal text" or print (Select All + copy instead) |
 | Scrollback | ✅ | Settings → Terminal → Scrollback lines (100 – 1,000,000; default 10,000); ⌘K clears |
@@ -359,7 +359,6 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 | Zmodem (rz/sz) transfers in the terminal | the classic way to move files through serial consoles and jump hosts where SFTP is unavailable | M |
 | Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
 | Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
-| Keyword syntax highlighting in the terminal | readable logs on colour-less servers; xterm.js decorations API | M |
 | Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
 | SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
 | Expert SSH algorithm / KEX / cipher / MAC settings | one legacy toggle is too coarse; ssh2's `algorithms` option takes explicit lists (ML-KEM waits on ssh2) | S |

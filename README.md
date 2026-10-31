@@ -55,6 +55,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Sessions export / import | ✅ | JSON file of every session and folder, never a password or passphrase (Session menu or the tree's context menu); importing merges by id and adds the rest |
 | Maximise a split pane | ✅ Zoom | ⇧⌘⏎ (or ⤢ in the pane head) fills the tab with the focused pane and brings the layout back; each tab keeps its zoom, also across a restart |
 | Colour themes / dark mode | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark and Light colour the whole window (toolbar, sidebar, tabs, dialogs), not only the terminals; a session can override its own terminal theme |
+| Keyword highlighting | ✅ | Errors, warnings, OK, IP addresses, URLs and sizes coloured in every terminal by an editable rule table (plain text or regex, colour / background / bold / underline; Settings → Terminal), colours from the theme; a session can switch it on or off |
 | Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
 | FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |
 

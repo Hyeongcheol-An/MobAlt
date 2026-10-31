@@ -2,6 +2,7 @@
 import { h, contextMenu, toast, icon } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
+import { TermHighlighter, DEFAULT_RULES } from './highlight.js';
 
 /** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
 const startErrorText = (e) => errMsg(e);
@@ -70,6 +71,8 @@ export class TermPane {
       this.term.loadAddon(new Unicode11Addon());
       this.term.unicode.activeVersion = '11';
     } catch {}
+    this.highlighter = new TermHighlighter(this.term); // keyword highlighting (highlight.js): rules, colours and on/off from _syncHighlight
+    this._syncHighlight(s);
 
     this.el = h('div', { class: 'pane', dataset: { pane: this.id } },
       (this.headEl = h('div', { class: 'pane-head' },
@@ -626,13 +629,15 @@ export class TermPane {
   }
 
   clear() {
-    this.term.clear();
+    this.term.clear(); // drops every marker, and with them the keyword decorations; the highlighter forgets its records too
+    this.highlighter.reset();
   }
 
   zoom(delta) {
     const s = this.app.settings;
     if (delta === 0) this.term.options.fontSize = s.fontSize;
     else this.term.options.fontSize = Math.max(8, Math.min(40, this.term.options.fontSize + delta));
+    this.highlighter.fontChanged();
     this.fit();
   }
 
@@ -643,9 +648,25 @@ export class TermPane {
     this.term.options.cursorBlink = s.cursorBlink;
     this.term.options.cursorStyle = s.cursorStyle;
     this.term.options.scrollback = s.scrollback;
-    this.applyTheme(s);
+    this.applyTheme(s); // also hands the highlighter the rules, the on/off state and the palette
+    this.highlighter.fontChanged();
     this.term.options.macOptionIsMeta = s.macOptionIsMeta !== false;
     this.fit();
+  }
+
+  /**
+   * Keyword highlighting for this pane (Settings → Terminal → Keyword highlighting): the session's override (on / off)
+   * wins over the global switch; the rules are the saved ones or the built-in set, coloured from this pane's palette.
+   * A rule whose regex does not compile is skipped and said so once per pane (never thrown into the data path).
+   */
+  _syncHighlight(s = this.app.settings) {
+    if (!this.highlighter) return;
+    const o = this.session?.highlight;
+    const enabled = o === 'on' || (o !== 'off' && s.highlightEnabled !== false);
+    const invalid = this.highlighter.configure({ enabled, rules: s.highlightRules || DEFAULT_RULES, theme: this.themeFor(s) });
+    const key = invalid.map((i) => i.rule.pattern).join('\n');
+    if (key && key !== this._hlInvalid) for (const { rule, error } of invalid) toast(`Keyword highlighting: "${rule.pattern}" is not a valid regex (${error}) — rule skipped`, 'warn', 6000);
+    this._hlInvalid = key;
   }
 
   /** The palette this pane should show: the session's own theme, else the global one. */
@@ -665,6 +686,7 @@ export class TermPane {
     this.term.options.theme = terminalTheme(theme); // always a fresh object (see above); the selection band is derived per palette
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e');
     this.el.style.setProperty('--term-fg', theme.foreground || '#ececec');
+    this._syncHighlight(s); // the keyword colours follow the palette (a no-op when nothing changed)
   }
 
   async paste() {
@@ -725,6 +747,7 @@ export class TermPane {
     }
     try { this.webgl && this.webgl.dispose(); } catch {}
     this.webgl = null;
+    try { this.highlighter.dispose(); } catch {}
     try {
       this.term.dispose();
     } catch {}

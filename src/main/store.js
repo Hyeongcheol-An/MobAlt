@@ -104,6 +104,8 @@ const DEFAULT_SETTINGS = {
   logPlainText: false,
   keepAliveInterval: 30,
   readyTimeout: 20000,
+  highlightEnabled: true, // Settings → Terminal → Keyword highlighting (a session can override it: on / off)
+  highlightRules: null, // the rule table; null = the built-in rules (src/renderer/highlight.js DEFAULT_RULES), so a fresh install follows their updates
   macros: [],
   tunnels: [],
   windowBounds: null,

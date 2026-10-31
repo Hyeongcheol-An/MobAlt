@@ -889,6 +889,13 @@ class App {
   async saveSession(s) {
     const saved = await window.api.sessions.save(s);
     await this.reloadSessions();
+    // an open pane of this session takes its new keyword-highlighting override at once (the rest applies on the next connect)
+    for (const p of this.workspace.allPanes()) {
+      if (p.session && p.session.id === saved.id && (p.session.highlight || '') !== (saved.highlight || '')) {
+        p.session.highlight = saved.highlight;
+        p._syncHighlight(this.settings);
+      }
+    }
     return saved;
   }
 

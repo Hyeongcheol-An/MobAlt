@@ -124,7 +124,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 그래픽 매크로(마우스 + 키보드) | ❌ | 미구현 |
 | 색상 스킴 | 🟡 | 내장 테마 6종(Settings → Terminal → Theme)과 세션별 덮어쓰기. 사용자 정의나 가져오기는 없음 |
 | 글꼴(번들 글꼴, 합자, 고정 크기) | 🟡 | 설치된 아무 글꼴, 크기, 줄 간격(Settings → Terminal), ⌘= / ⌘- / ⌘0, 세션별 글꼴 크기. 합자와 행/열 고정은 없음 |
-| 키워드 구문 강조 | ❌ | 미구현(URL 밑줄만) |
+| 키워드 구문 강조 | ✅ | Settings → Terminal → Keyword highlighting: 편집 가능한 규칙 표(일반 텍스트 또는 정규식, 색, 배경, 굵게, 밑줄), 오류·경고·성공·IP 주소·URL·용량 기본 규칙, 색은 터미널 테마에서. 세션별 켜기 / 끄기 |
 | 터미널 내 검색 | ✅ | ⌘F 증분 검색, 대소문자·정규식 토글, 일치 개수 |
 | 로그 / 저장 / 인쇄 | 🟡 | 폴더로 세션 로그. "터미널 텍스트 저장"이나 인쇄는 없음(Select All 후 복사) |
 | 스크롤백 | ✅ | Settings → Terminal → Scrollback lines(100 – 1,000,000, 기본 10,000). ⌘K로 지움 |
@@ -358,7 +358,6 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 터미널 안 Zmodem(rz/sz) 전송 | SFTP를 못 쓰는 시리얼 콘솔과 점프 호스트 너머로 파일을 옮기는 고전적 방법 | M |
 | SSH 연결의 exec 채널을 주기적으로 돌리는 원격 모니터링 바(CPU / RAM / 디스크 / 네트워크) | MobaXterm은 25.2부터 기본 켜짐. ssh2 연결은 이미 있음 | M |
 | Tools 패널의 Wake-on-LAN과 서브넷 / 네트워크 스캐너 | Tools를 완성함. WoL은 UDP 매직 패킷, 스캐너는 포트 스캔 워커를 재사용 | S + M |
-| 터미널 키워드 구문 강조 | 색이 없는 서버에서도 읽기 좋은 로그. xterm.js decorations API | M |
 | 탭 고정, 왼쪽/오른쪽 닫기, 창으로 분리 | 탭 색상은 이미 있음. 분리는 터미널 레지스트리를 공유하는 두 번째 BrowserWindow가 필요 | M |
 | SSH 키 생성 UI(`ssh-keygen` 래퍼) | 가장 흔한 "SSH 첫걸음" 작업. MobaKeyGen 공백도 메움 | S |
 | 전문가 SSH 알고리즘 / KEX / 암호 / MAC 설정 | 레거시 토글 하나로는 너무 거칠다. ssh2의 `algorithms` 옵션이 명시적 목록을 받음(ML-KEM은 ssh2를 기다려야 함) | S |
