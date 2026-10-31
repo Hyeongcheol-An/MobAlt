@@ -2,7 +2,9 @@
 //   test/start-sshd.sh start
 //   MOBALT_TEST_SCRIPT=test/e2e-ssh.js MOBALT_SHOT_DIR=/tmp/shots MOBALT_SCREENSHOT=/tmp/shots/final.png MOBALT_SCREENSHOT_DELAY=90000 npx electron .
 // Exercises: session save, host-key prompt, key auth, follow-cwd/SFTP, X11 env, session tunnel,
-// SFTP mkdir/upload/download/read/write, encrypted key passphrase prompt, split, MultiExec.
+// SFTP mkdir/upload/download/read/write, encrypted key passphrase prompt, split, MultiExec; typing the moment the
+// shell is up (not spliced into the injected folder hook); Backspace erasing a whole Hangul syllable in canonical
+// mode (the pty-req carries IUTF8).
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const waitFor = async (fn, ms = 10000, what = 'condition') => {
@@ -18,6 +20,7 @@
   const log = (...a) => console.log('[e2e]', ...a);
   const app = window.app;
   const results = {};
+  const textOf = (p) => [...Array(p.term.buffer.active.length)].map((_, i) => p.term.buffer.active.getLine(i)?.translateToString(true)).join('\n');
   try {
     const home = app.info.home;
     const root = app.info.appPath;
@@ -41,7 +44,25 @@
     const pane = await p1;
     await waitFor(() => pane.status === 'connected', 15000, 'ssh connected');
     results.connect = true;
-    await sleep(1800);
+    // typed the moment the shell is up: held until the folder hook (sent 700 ms in) is on its way, not spliced into it
+    pane.write("echo QA10_''OK\r");
+    await waitFor(() => /^QA10_OK$/m.test(textOf(pane)), 10000, 'early typing answered');
+    await sleep(1500);
+    results.earlyTypingKept = (textOf(pane).match(/^QA10_OK$/mg) || []).length === 1 && !/parse error|command not found/.test(textOf(pane));
+    log('early typing tail', JSON.stringify(textOf(pane).trimEnd().split('\n').slice(-4)));
+    // Backspace in canonical mode (read, cat, password prompts) erases a whole Hangul syllable: the remote pty has IUTF8
+    pane.write('\x15');
+    pane.write("read -r x; printf 'READ_''X=[%s]\\n' \"$x\"\r");
+    await sleep(700);
+    pane.write('가나다라');
+    await sleep(400);
+    pane.write('\x7f\x7f');
+    await sleep(300);
+    pane.write('\r');
+    await waitFor(() => /READ_X=\[/.test(textOf(pane)), 8000, 'read answered');
+    results.canonicalBackspaceUtf8 = /READ_X=\[가나\]/.test(textOf(pane));
+    log('canonical backspace', JSON.stringify((textOf(pane).match(/READ_X=\[.*\]/) || [])[0]));
+    await sleep(600);
     pane.write('\x15'); // clear any stray input on the line first
     await sleep(200);
     pane.write('cd /tmp && echo DISPLAY=$DISPLAY\r');

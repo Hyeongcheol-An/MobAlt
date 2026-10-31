@@ -4,7 +4,10 @@
 // Exercises, in a local shell pane and in an SSH pane to the test sshd on 127.0.0.1:2222:
 //   - `sz file` on the far side downloads to the folder in settings → identical sha256
 //   - `rz` sends the files answered in the Open dialog (testNextDialog) → identical sha256 in the far-side cwd
-//   - Cancel from the transfers list aborts a running transfer
+//   - Cancel from the transfers list, Ctrl-C in the pane and a killed remote sz end a running transfer: the prompt is
+//     back within seconds, nothing binary reaches the terminal, a typed command is answered, a session log stays text
+//   - a second download of the same name is listed under its unique local name; the status lines carry the pane's
+//     palette colour; a finished transfer is announced
 //   - with the setting off the stream is not intercepted (shows as garbage, no transfer)
 // The far side is the same Mac (the sshd's home is the real home), so a path written on one side is read on the other.
 // sz / rz come from lrzsz (brew install lrzsz); they are not on the sshd's non-interactive PATH, so the full path is used.
@@ -30,9 +33,75 @@
   // the zmodem transfer (proto 'zmodem') newest-first; optionally only for a given connection / kind
   const zx = (pred = () => true) => [...app.sftpPanel.transfers.values()].filter((t) => t.proto === 'zmodem' && pred(t)).sort((a, b) => b.startedAt - a.startedAt)[0];
   const promptReady = (p) => /[$%#>] ?$/.test(textOf(p).trimEnd());
+  const hl = await import('./highlight.js');
+  const th = await import('./theme.js');
+  // xterm reports every byte it cannot parse on console.error: the count after an abort must stay at zero
+  const parseErrors = { n: 0 };
+  const origError = console.error;
+  console.error = (...a) => { if (a.some((x) => String(x).includes('Parsing error'))) parseErrors.n++; return origError.apply(console, a); };
+  const junkChars = (p) => { const t = textOf(p); return (t.match(/[\x00-\x08\x0b-\x1f\x7f-\x9f\ufffd]/g) || []).length + (t.match(/[^\x00-\x7f→…]/g) || []).length; };
+  const liveText = () => document.querySelector('#panel-sftp .xfer-live')?.textContent || '';
+  const rgbOf = (hex) => parseInt(hex.slice(1), 16);
+  /** The last line matching `re` carries the palette colour `key` as a true-colour foreground, and that colour reads at 4.5:1 on the theme's background. */
+  const statusColourOk = (pane, re, key) => {
+    const theme = th.THEMES[app.settings.theme], p = hl.highlightPalette(theme), buf = pane.term.buffer.active;
+    for (let y = buf.length - 1; y >= 0; y--) {
+      const line = buf.getLine(y);
+      if (!line || !re.test(line.translateToString(true))) continue;
+      const cell = line.getCell(2);
+      const r = { fgRGB: cell && cell.isFgRGB(), fg: cell && cell.getFgColor(), want: rgbOf(p[key]), contrast: +th.contrast(p[key], theme.background).toFixed(2) };
+      log('status colour', app.settings.theme, key, JSON.stringify(r));
+      return r.fgRGB && r.fg === r.want && r.contrast >= 4.5;
+    }
+    return false;
+  };
+  /** After an abort: a typed command is answered (the prompt is usable, the input gate open). */
+  const usable = async (p, tag) => {
+    p.term.input(`echo ZM_''${tag}\r`);
+    return waitFor(() => textOf(p).split('\n').some((l) => l.trim() === `ZM_${tag}`), 8000, `echo after ${tag}`).then(() => true).catch(() => false);
+  };
+  /**
+   * A big sz ended by `how` — 'list' (Cancel in the transfers list), 'ctrlc' (Ctrl-C in the pane) or 'kill' (the remote
+   * sz killed with SIGKILL 1.2 s in: no cancel string from it, the shell's prompt lands in the stream). The transfer
+   * settles, the partial file goes, the prompt is back within 3 s (kill: the silence detection takes ~2 s, so 7 s),
+   * nothing binary reached xterm, no parse error, a typed command is answered.
+   */
+  const abortCase = async (tag, pane, far, dl, how) => {
+    const r = { how };
+    const bigName = 'sz-big.bin';
+    pane.write('\x15'); await sleep(150);
+    pane.write(`cd ${far}\r`); await sleep(400);
+    const errs0 = parseErrors.n, junk0 = junkChars(pane);
+    pane.write(how === 'kill' ? `(sleep 1.2; pkill -KILL -P $$ -x sz) & ${SZ} -q -b ${bigName}\r` : `${SZ} -q -b ${bigName}\r`);
+    const running = await waitFor(() => { const t = zx((t) => t.kind === 'download' && t.connId === pane.termId && t.name === bigName); return t && t.status === 'running' && t.transferred > 0 ? t : null; }, 30000, `${tag} big sz running`);
+    const t0 = Date.now();
+    if (how === 'list') await window.api.sftp.cancel(running.id);
+    else if (how === 'ctrlc') pane.term.input('\x03');
+    const settled = await waitFor(() => { const t = zx((t) => t.id === running.id); return t && t.status !== 'running' ? t : null; }, 20000, `${tag} ${how} settled`);
+    r.status = settled.status;
+    r.error = settled.error;
+    r.settleMs = Date.now() - t0;
+    r.partialRemoved = !(await fsx('exists', dl + '/' + bigName));
+    r.promptMs = await waitFor(() => promptReady(pane), 15000, `${tag} prompt back after ${how}`).then(() => Date.now() - t0).catch(() => null);
+    await sleep(400);
+    r.junkChars = junkChars(pane) - junk0;
+    r.parseErrors = parseErrors.n - errs0;
+    r.statusLine = textOf(pane).split('\n').map((l) => l.trim()).filter((l) => /^Zmodem download of sz-big\.bin/.test(l)).pop() || '';
+    r.statusColourOk = statusColourOk(pane, /^Zmodem download of sz-big\.bin/, how === 'kill' ? 'red' : 'dim');
+    r.shellUsable = await usable(pane, tag.toUpperCase() + how.toUpperCase());
+    r.liveRegion = liveText();
+    r.tail = textOf(pane).trimEnd().split('\n').slice(-4);
+    await shot(`${tag}-03-${how}`);
+    r.ok = (how === 'kill' ? r.status === 'error' && /the remote side stopped/.test(r.error || '') : r.status === 'cancelled' && /cancelled$/.test(r.statusLine))
+      && r.partialRemoved && r.promptMs !== null && r.promptMs < (how === 'kill' ? 7000 : 3000) && r.junkChars === 0 && r.parseErrors === 0 && r.shellUsable && r.statusColourOk
+      && (how === 'kill' || /download of sz-big\.bin cancelled/.test(r.liveRegion));
+    log(`${tag} ${how}`, JSON.stringify(r));
+    return r;
+  };
 
   try {
-    await app.saveSettings({ confirmClose: false, zmodem: true, sftpAutoOpen: false });
+    await app.saveSettings({ confirmClose: false, zmodem: true, sftpAutoOpen: false, theme: 'moba-dark' });
+    app.showPanel('sftp'); // the transfers list is read from the DOM
     const scratch = await fsx('mkdtemp', 'mobalt-zmodem-e2e-');
     log('scratch', scratch);
 
@@ -58,8 +127,17 @@
       r.szHashMatch = dlt.status === 'done' && (await fsx('sha256', dlt.local)) === srcHash;
       r.szLocal = dlt.local;
       log(`${tag} sz`, dlt.status, 'hash', r.szHashMatch, '→', dlt.local);
+      r.szDoneToast = /Zmodem: sz-src\.bin downloaded \(3\.0 MB\)/.test(document.getElementById('toast-root').textContent);
       await waitFor(() => promptReady(pane), 10000, `${tag} prompt back after sz`).catch(() => {});
+      r.szStatusColourOk = statusColourOk(pane, /^Zmodem: received sz-src\.bin/, 'dim');
       await shot(`${tag}-01-sz-done`);
+      // the same file again: the folder has it, so the download lands under a unique name — and is listed under it
+      pane.write(`${SZ} -q -b ${srcName}\r`);
+      const dup = await waitFor(() => { const t = zx((t) => t.kind === 'download' && t.connId === pane.termId && t.startedAt > dlt.startedAt); return t && t.status !== 'running' ? t : null; }, 60000, `${tag} second sz done`);
+      r.dupListedUnderLocalName = dup.status === 'done' && dup.name === 'sz-src (1).bin' && dup.remote === srcName && dup.local === dl + '/sz-src (1).bin'
+        && [...document.querySelectorAll('#panel-sftp .xfer .n')].some((n) => n.textContent === 'sz-src (1).bin' && n.title === srcName);
+      log(`${tag} second sz`, dup.status, dup.name, dup.local, 'listed', JSON.stringify([...document.querySelectorAll('#panel-sftp .xfer .n')].map((n) => n.textContent)));
+      await waitFor(() => promptReady(pane), 10000, `${tag} prompt back after the second sz`).catch(() => {});
 
       // --- rz: we send the far side a file chosen in the Open dialog (its basename is what lands remotely) ---
       const upName = 'rz-src.bin';
@@ -80,20 +158,19 @@
       await waitFor(() => (window.api.app.testNextDialog()).then((x) => x.pending === 0), 3000, 'dialog queue drained').catch(() => {});
       await shot(`${tag}-02-rz-done`);
 
-      // --- cancel: a large sz, cancelled from the transfers list ---
-      const bigName = 'sz-big.bin';
-      await fsx('randomFile', far + '/' + bigName, 12 * 1024 * 1024);
-      pane.write('\x15'); await sleep(150);
-      if (prep.cd) { pane.write(`cd ${far}\r`); await sleep(400); }
-      pane.write(`${SZ} -q -b ${bigName}\r`);
-      const running = await waitFor(() => { const t = zx((t) => t.kind === 'download' && t.connId === pane.termId && t.name === bigName); return t && t.status === 'running' && t.transferred > 0 ? t : null; }, 30000, `${tag} big sz running`);
-      await window.api.sftp.cancel(running.id);
-      const cancelled = await waitFor(() => { const t = zx((t) => t.id === running.id); return t && t.status !== 'running' ? t : null; }, 20000, `${tag} cancel settled`);
-      r.cancelStatus = cancelled.status;
-      r.cancelCleanedUp = !(await fsx('exists', dl + '/' + bigName));
-      log(`${tag} cancel`, cancelled.status, 'partial removed', r.cancelCleanedUp);
-      await waitFor(() => promptReady(pane), 12000, `${tag} prompt back after cancel`).catch(() => {});
-      await shot(`${tag}-03-cancel`);
+      // --- aborts: a big sz cancelled from the transfers list (while a session log runs), by Ctrl-C, and killed remotely ---
+      await fsx('randomFile', far + '/sz-big.bin', 160 * 1024 * 1024); // ~8 s at the loopback's ~20 MB/s: room to cancel and to kill
+      await pane.toggleLog(true);
+      await sleep(300);
+      r.cancelList = await abortCase(tag, pane, far, dl, 'list');
+      await pane.toggleLog(false);
+      await sleep(400);
+      const logText = await fsx('readText', pane.logFile);
+      const logJunk = (logText.match(/[\x00-\x06\x0e-\x1a\x1c-\x1f\x7f-\x9f]/g) || []).length;
+      r.logStaysText = /Zmodem download of sz-big\.bin cancelled/.test(logText) && new RegExp(`ZM_${tag.toUpperCase()}LIST`).test(logText) && logJunk === 0 && logText.length < 20000;
+      log(`${tag} log`, pane.logFile, 'bytes', logText.length, 'junk bytes', logJunk);
+      r.cancelCtrlC = await abortCase(tag, pane, far, dl, 'ctrlc');
+      r.remoteKill = await abortCase(tag, pane, far, dl, 'kill');
       return r;
     };
 
@@ -141,8 +218,10 @@
       await pane.disconnect().catch(() => {});
     }
 
-    // ---------- local shell pane (same code path; needs a working node-pty) ----------
+    // ---------- local shell pane (same code path; needs a working node-pty), on Solarized Dark: SGR 90 was invisible there ----------
     try {
+      await app.saveSettings({ theme: 'solarized-dark' });
+      await sleep(300);
       const pane = await app.newLocalTab();
       await waitFor(() => pane.status === 'connected' && promptReady(pane), 10000, 'local shell ready');
       const farDir = await fsx('mkdtemp', 'mobalt-zmodem-local-');
@@ -154,15 +233,22 @@
       log('local pane unavailable:', e.message);
     }
 
-    results.ok = !!(results.ssh && results.ssh.szHashMatch && results.ssh.rzHashMatch && results.ssh.cancelStatus === 'cancelled' && results.disabledNoTransfer)
-      && (!results.local || (results.local.szHashMatch && results.local.rzHashMatch && results.local.cancelStatus === 'cancelled'));
+    await app.saveSettings({ theme: 'moba-dark' });
     await fsx('rm', scratch);
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-zmodem] FAIL', e.message, e.stack);
     await shot('99-zmodem-fail').catch(() => {});
   }
+  // every boolean that is false anywhere in the results is a failure; the abort cases carry their verdict in `ok`
+  const failed = [];
+  const walk = (o, at) => { for (const [k, v] of Object.entries(o || {})) { const p = at ? `${at}.${k}` : k; if (v === false) failed.push(p); else if (v && typeof v === 'object' && !Array.isArray(v)) walk(v, p); } };
+  walk(results, '');
+  if (results.error) failed.push('error');
+  if (!results.ssh) failed.push('ssh');
+  results.ok = failed.length === 0;
   log('RESULTS ' + JSON.stringify(results));
+  log('SUMMARY ' + JSON.stringify({ fail: failed.length, failed }));
   log('DONE');
   await sleep(300);
   window.api.app.quit();

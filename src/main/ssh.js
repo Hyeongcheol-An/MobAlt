@@ -13,8 +13,9 @@ const keygen = require('./keygen');
 
 const { execFile } = require('child_process');
 
-const GREY = '\x1b[90m';
-const RED = '\x1b[31m';
+const { STATUS_DIM, STATUS_FAIL } = require('./terminals');
+const GREY = STATUS_DIM; // status lines are painted by the renderer from the pane's palette (SGR 90 is invisible on Solarized Dark)
+const RED = STATUS_FAIL;
 const RESET = '\x1b[0m';
 const DEFAULT_IDENTITY_FILES = ['id_ed25519', 'id_ecdsa', 'id_rsa'];
 
@@ -430,10 +431,13 @@ class SshManager {
     // A close with neither is the server or the network dropping the session, which the renderer announces.
     const info = { id, cfg, client: null, jump: null, stream: null, sftp: null, x11: null, cols, rows, closed: false, closing: false, shellExited: false, lastError: null, remoteForwards: new Map() };
     this.conns.set(id, info);
+    // Typed input waits (`pending`) until the shell is open — and, when a prompt hook or startup command is injected,
+    // until that has been written: keystrokes that arrive in between would be spliced into the injected line.
     let pending = '';
+    let hold = true;
     registry.register(id, {
       kind: 'ssh',
-      write: (d) => (info.stream ? info.stream.write(d) : (pending += d)),
+      write: (d) => (info.stream && !hold ? info.stream.write(d) : (pending += d)),
       // ZMODEM bytes: resolves when the channel has taken them (ssh2 calls back once window space allowed the send)
       writeRaw: (buf) => new Promise((resolve, reject) => {
         if (!info.stream || info.closed) return reject(new Error('not connected'));
@@ -475,13 +479,19 @@ class SshManager {
           cfg.password = ctx.lastPrompted.password;
           this.store.upsertSession({ ...cfg }).catch(() => {});
         }
-        const shellOpts = { term: 'xterm-256color', cols: info.cols, rows: info.rows };
+        // The pty-req carries IUTF8 (RFC 8160 opcode 42, not in ssh2's mode table, so the raw encoding) like OpenSSH's
+        // client does for a UTF-8 locale: without it the remote pty erases one byte of a multi-byte character on
+        // Backspace in canonical mode (read, cat, password prompts).
+        const shellOpts = { term: 'xterm-256color', cols: info.cols, rows: info.rows, modes: Buffer.from([42, 0, 0, 0, 1, 0]) };
+        // ssh2's shell(window, options): an object that carries `x11` is taken as the options and the pty is then
+        // requested with the defaults (vt100, 80×24, no modes), so the X11 request goes in its own argument
+        const sessOpts = {};
         if (cfg.x11) {
           const xp = await x11.prepare((msg) => this._out(id, `${GREY}X11: ${msg}${RESET}\r\n`));
           if (info.closed) return;
           if (xp) {
             info.x11 = xp;
-            shellOpts.x11 = { single: false, screen: xp.screen, protocol: xp.protocol, cookie: xp.fakeCookie };
+            sessOpts.x11 = { single: false, screen: xp.screen, protocol: xp.protocol, cookie: xp.fakeCookie };
             let x11Warned = false;
             client.on('x11', (details, accept, reject) => {
               try {
@@ -503,7 +513,7 @@ class SshManager {
           if (h) h(details, accept, reject);
           else reject();
         });
-        client.shell(shellOpts, (err, stream) => {
+        client.shell(shellOpts, sessOpts, (err, stream) => {
           if (err) {
             this._out(id, `${RED}Failed to open shell: ${err.message}${RESET}\r\n`);
             info.closing = true; // our own end, not a drop
@@ -517,14 +527,18 @@ class SshManager {
           stream.on('exit', () => { info.shellExited = true; }); // exit status from the server: the shell ended on its own
           stream.on('close', () => client.end());
           this.prompter.status(id, 'connected');
-          if (pending) {
-            stream.write(pending);
-            pending = '';
-          }
+          const release = () => {
+            hold = false;
+            if (pending && info.stream) {
+              info.stream.write(pending);
+              pending = '';
+            }
+          };
           const inject = [];
           if (cfg.followCwd) inject.push(' ' + FOLLOW_HOOK);
           if (cfg.startupCommand) inject.push(cfg.startupCommand);
-          if (inject.length) setTimeout(() => info.stream && info.stream.write(inject.join('\r') + '\r'), 700);
+          if (!inject.length) release();
+          else setTimeout(() => { if (info.stream && !info.closed) info.stream.write(inject.join('\r') + '\r'); release(); }, 700);
         });
       })
       .catch((e) => {
