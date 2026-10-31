@@ -1,8 +1,9 @@
 // A tab moved into a window of its own (tab menu → Detach to New Window, ⌥⌘N, action 'detach-tab'): the new window
 // attaches to the same live terminal and draws the replayed output, typing goes on there, MultiExec stays per
 // window, the workspace file lists the window; closing the detached window brings the tab back to the main window
-// with its terminal still alive; a split tab moves with both panes. The script runs in the main window and drives
-// the detached one through window.api.app.testEval (test/qa/README.md).
+// with its terminal still alive; ⌘W on the last tab of a detached window closes that window (nothing comes back); a
+// second detached window cascades +30/+30 from the first, on screen; a split tab moves with both panes. The script
+// runs in the main window and drives the detached one through window.api.app.testEval (test/qa/README.md).
 //   test/qa/run.sh test/e2e-detach.js <out-dir>            (phase 1: ends with a split tab in a detached window, saved)
 //   test/qa/run.sh test/e2e-detach-verify.js <out-dir>     (phase 2, same out-dir: that window comes back on launch)
 (async () => {
@@ -126,6 +127,62 @@
     await sleep(500);
     const ws2 = await window.api.workspace.get();
     results.workspaceWindowDropped = ws2.tabs.length === 2 && (!ws2.windows || ws2.windows.length === 0);
+
+    // ---- ⌘W on the last tab of a detached window: the window closes by itself, nothing comes back, the shell ended
+    const c = await app.newLocalTab();
+    await prompt(c);
+    const cId = c.termId, nMain = app.workspace.tabs.length;
+    app.workspace.activate(c.tab);
+    await app.action('detach-tab');
+    dw = await waitWindow('detached window for the ⌘W check');
+    await waitFor(() => quiet(() => ev(dw.id, `!!(window.app && window.app.workspace && window.app.activePane() && window.app.activePane().termId === ${JSON.stringify(cId)} && window.app.activePane().status === 'connected')`)), 15000, 'the ⌘W window attached its terminal');
+    results.detachedPaneHasWebgl = await ev(dw.id, `!!window.app.activePane().webgl && window.app.activePane().webglLosses === 0`); // the budget is per window
+    results.mainPaneKeepsWebgl = !!app.activePane().webgl && app.workspace.allPanes().every((p) => p.webglLosses === 0);
+    const backToasts = () => (toasts().match(/back from the closed window/g) || []).length, backBefore = backToasts();
+    await ev(dw.id, `window.app.action('close')`); // ⌘W on its only tab
+    await waitFor(async () => (await windows()).length === 1, 10000, 'the emptied detached window closed itself');
+    results.lastTabCloseClosesWindow = true;
+    await sleep(400);
+    results.nothingCameBack = app.workspace.tabs.length === nMain - 1 && !app.panesByTerm.has(cId) && backToasts() === backBefore;
+    app.saveWorkspaceNow();
+    await sleep(300);
+    const wsC = await window.api.workspace.get();
+    results.closedWindowNotInWorkspace = !wsC.windows || wsC.windows.length === 0;
+    await shot('81b-main-after-last-tab-close');
+
+    // ---- a second detached window cascades +30/+30 from the first (kept inside the work area), never on top of it
+    await window.api.app.testResize(1000, 650); // room to cascade on the test display
+    await sleep(300);
+    const d1 = await app.newLocalTab(), d2 = await app.newLocalTab();
+    await prompt(d1); await prompt(d2);
+    const cids = [d1.termId, d2.termId];
+    app.workspace.activate(d1.tab);
+    await app.action('detach-tab');
+    const w1 = await waitWindow('cascade window 1');
+    await waitFor(() => quiet(() => ev(w1.id, `!!(window.app && window.app.activePane() && window.app.activePane().termId === ${JSON.stringify(cids[0])})`)), 15000, 'window 1 attached');
+    app.workspace.activate(d2.tab);
+    await app.action('detach-tab');
+    await waitFor(async () => (await windows()).filter((w) => w.detached).length === 2, 15000, 'cascade window 2');
+    const wins = await windows();
+    const b1 = wins.find((w) => w.id === w1.id).bounds, w2 = wins.find((w) => w.detached && w.id !== w1.id), b2 = w2.bounds;
+    await waitFor(() => quiet(() => ev(w2.id, `!!(window.app && window.app.activePane() && window.app.activePane().termId === ${JSON.stringify(cids[1])})`)), 15000, 'window 2 attached');
+    // what main.js cascadeBounds does from window 1's bounds, with this display's work area (both windows are on it)
+    const wa = { x: screen.availLeft, y: screen.availTop, width: screen.availWidth, height: screen.availHeight };
+    const expect = (() => { const width = Math.min(b1.width, wa.width), height = Math.min(b1.height, wa.height); let x = b1.x + 30, y = b1.y + 30; if (x + width > wa.x + wa.width || y + height > wa.y + wa.height) { x = wa.x + 30; y = wa.y + 30; } return { x: Math.max(wa.x, Math.min(x, wa.x + wa.width - width)), y: Math.max(wa.y, Math.min(y, wa.y + wa.height - height)), width, height }; })();
+    log('cascade:', JSON.stringify({ b1, b2, expect, wa }));
+    results.secondWindowCascades = b2.x === expect.x && b2.y === expect.y && b2.width === expect.width && b2.height === expect.height && (b2.x !== b1.x || b2.y !== b1.y);
+    results.cascadedWindowsOnScreen = [b1, b2].every((b) => b.x >= wa.x && b.y >= wa.y && b.x + b.width <= wa.x + wa.width && b.y + b.height <= wa.y + wa.height);
+    await sleep(300);
+    await ev(w2.id, `window.api.app.screenshot('81c-second-detached-cascaded')`);
+    // both come back (newest first), then go, so phase 2 sees the workspace below
+    await window.api.app.testCloseWindow(w2.id);
+    await window.api.app.testCloseWindow(w1.id);
+    await waitFor(async () => (await windows()).length === 1 && cids.every((id) => app.panesByTerm.has(id)), 15000, 'both cascade tabs back');
+    for (const id of cids) await app.closeTab(app.panesByTerm.get(id).tab);
+    await sleep(300);
+    results.cascadeTabsBackAndClosed = app.workspace.tabs.length === nMain - 1 && app.workspace.tabs.includes(back);
+    await window.api.app.testResize(1400, 880);
+    await sleep(300);
 
     // ---- a split tab moves with both panes (and phase 2 launches on this workspace: the window comes back)
     await app.splitActive('right', bp);
