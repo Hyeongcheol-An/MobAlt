@@ -22,9 +22,13 @@ const DH_GROUPS = {
   'diffie-hellman-group17-sha512': 'modp17',
   'diffie-hellman-group18-sha512': 'modp18',
 };
+// Only the 1024-bit group can be missing (Node 24 dropped modp1/modp2). The others exist everywhere, and asking for
+// them is NOT free: Electron's BoringSSL validates the prime on every getDiffieHellman() call — 0.4 s for modp14 up
+// to ~21 s for modp18 — so probing every group at load froze the app for half a minute before its window appeared.
+const PROBED_GROUPS = new Set(['modp2']);
 const dhAvailable = (name) => {
   const group = DH_GROUPS[name];
-  if (!group) return true;
+  if (!group || !PROBED_GROUPS.has(group)) return true;
   try { crypto.getDiffieHellman(group); return true; } catch { return false; }
 };
 /** Algorithms ssh2 names but this build's crypto cannot run (today: the 1024-bit DH group). */

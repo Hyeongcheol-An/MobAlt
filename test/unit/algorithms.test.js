@@ -158,3 +158,14 @@ test('explainDhGroup turns ssh2\'s raw "Unknown DH group" into a hint and leaves
   assert.equal(A.explainDhGroup('Handshake failed: no matching key exchange algorithm'), null);
   assert.equal(A.explainDhGroup(''), null);
 });
+
+test('loading the module is instant: only the 1024-bit group is probed (BoringSSL makes the big groups cost seconds)', () => {
+  const modPath = require.resolve('../../src/main/algorithms');
+  delete require.cache[modPath];
+  const t0 = Date.now();
+  const fresh = require(modPath);
+  const ms = Date.now() - t0;
+  assert.ok(ms < 300, `algorithms.js took ${ms} ms to load`);
+  const unavailable = fresh.UNAVAILABLE ? fresh.UNAVAILABLE.kex : (fresh.describe().unavailable || {}).kex || [];
+  for (const n of unavailable) assert.equal(n, 'diffie-hellman-group1-sha1', 'only group1 may be reported unavailable');
+});
