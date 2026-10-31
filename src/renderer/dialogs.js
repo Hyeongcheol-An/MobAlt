@@ -4,7 +4,7 @@ import { THEMES } from './terminal.js';
 import { mix, contrast } from './theme.js';
 import { analysePaste, KIND_LABEL, DANGER_KINDS, PASTE_CONFIRM_CHARS } from './pasteguard.js';
 import { DEFAULT_RULES, COLOR_KEYS, compileRules, normalizeRule } from './highlight.js';
-import { t, LANGUAGES, SYSTEM_LOCALE, languageOf } from './i18n.js';
+import { t, tn, LANGUAGES, SYSTEM_LOCALE, languageOf } from './i18n.js';
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -749,41 +749,41 @@ export function settingsDialog(app) {
   const fontFamily = text(s.fontFamily);
   const fontSize = num(s.fontSize, { min: 8, max: 40 });
   const lineHeight = num(s.lineHeight || 1, { min: 0.8, max: 2, step: 0.05 });
-  const cursorStyle = select([['block', 'Block'], ['underline', 'Underline'], ['bar', 'Bar']], s.cursorStyle);
-  const cursorBlink = check('Blink cursor', s.cursorBlink);
+  const cursorStyle = select([['block', t('Block')], ['underline', t('Underline')], ['bar', t('Bar')]], s.cursorStyle);
+  const cursorBlink = check(t('Blink cursor'), s.cursorBlink);
   const scrollback = num(s.scrollback, { min: 100, max: 1000000 });
-  const theme = select(Object.keys(THEMES).map((t) => [t, themeLabel(t)]), s.theme);
+  const theme = select(Object.keys(THEMES).map((k) => [k, themeLabel(k)]), s.theme);
   const themePreview = paintThemePreview(h('span', { class: 'theme-preview', 'aria-hidden': 'true' }), theme.value);
   theme.addEventListener('change', () => paintThemePreview(themePreview, theme.value));
-  const rightClickPaste = check('Right-click pastes (⇧-right-click for menu)', s.rightClickPaste);
-  const copyOnSelect = check('Copy on select', s.copyOnSelect);
-  const optMeta = check('Option key acts as Meta/Alt', s.macOptionIsMeta !== false);
+  const rightClickPaste = check(t('Right-click pastes (⇧-right-click for menu)'), s.rightClickPaste);
+  const copyOnSelect = check(t('Copy on select'), s.copyOnSelect);
+  const optMeta = check(t('Option key acts as Meta/Alt'), s.macOptionIsMeta !== false);
   // the two paste-guard toggles (terminal.js pasteText); their long explanation lives in the user guide
-  const pasteConfirm = check('Confirm multi-line pastes', s.pasteConfirmMultiline !== false, { title: `A paste with more than one line, or over ${PASTE_CONFIRM_CHARS} characters, asks first and can be edited` });
-  const pasteWarn = check('Warn about suspicious pastes', s.pasteWarnSuspicious !== false, { title: 'Invisible or control characters, a trailing newline, curl | sh, writes to shell profiles, rm -rf / and look-alike letters are listed, with a "Paste cleaned" option' });
+  const pasteConfirm = check(t('Confirm multi-line pastes'), s.pasteConfirmMultiline !== false, { title: t('A paste with more than one line, or over {n} characters, asks first and can be edited', { n: PASTE_CONFIRM_CHARS }) });
+  const pasteWarn = check(t('Warn about suspicious pastes'), s.pasteWarnSuspicious !== false, { title: t('Invisible or control characters, a trailing newline, curl | sh, writes to shell profiles, rm -rf / and look-alike letters are listed, with a "Paste cleaned" option') });
   // the explanation is the row's tooltip: the Terminal section must keep fitting a 900×560 window without scrolling
-  const monitorBar = check('Remote monitoring bar on SSH sessions', s.monitorBar !== false, { title: 'CPU, memory, disk, network, load and uptime under each SSH terminal, polled over the session\'s own connection; a session (Advanced SSH) or a pane (its head, the View menu) can differ' });
-  const monitorInterval = num(s.monitorInterval ?? 3, { min: 2, max: 30, step: 1, class: 'mon-interval', 'aria-label': 'Monitoring bar refresh, seconds', title: 'Seconds between two polls (2–30)' });
+  const monitorBar = check(t('Remote monitoring bar on SSH sessions'), s.monitorBar !== false, { title: t('CPU, memory, disk, network, load and uptime under each SSH terminal, polled over the session\'s own connection; a session (Advanced SSH) or a pane (its head, the View menu) can differ') });
+  const monitorInterval = num(s.monitorInterval ?? 3, { min: 2, max: 30, step: 1, class: 'mon-interval', 'aria-label': t('Monitoring bar refresh, seconds'), title: t('Seconds between two polls (2–30)') });
   // keyword highlighting: the switch here, the rule table in a sub-dialog (the Terminal tab must keep fitting 900×560);
   // null rules = the built-in set, so "Restore defaults" (or an unchanged table) keeps following it
-  const hlEnabled = check('Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes', s.highlightEnabled !== false);
+  const hlEnabled = check(t('Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes'), s.highlightEnabled !== false);
   let hlRules = Array.isArray(s.highlightRules) && s.highlightRules.length ? s.highlightRules.map(normalizeRule) : null;
   const hlRulesBtn = h('button', { class: 'btn small', type: 'button', onclick: async () => {
     const r = await highlightRulesDialog(hlRules);
     if (r) hlRules = sameRules(r, DEFAULT_RULES) ? null : r;
-  } }, 'Rules…');
-  const zmodemCb = check('Zmodem transfers (rz/sz)', s.zmodem !== false);
-  const localShell = text(s.localShell, { placeholder: '(login shell)' });
-  const shellInt = check('zsh/bash integration (folder following)', s.localShellIntegration !== false);
-  const editor = text(s.editorCommand, { placeholder: 'e.g. code --wait {file}   (blank = TextEdit)' });
-  const confirmClose = check('Confirm quit with open connections (SSH, Mosh, SFTP, FTP)', s.confirmClose);
-  const restoreWs = check('Restore tabs & split layout at startup', s.restoreWorkspace !== false);
-  const sftpAutoOpen = check('Switch to SFTP panel when SSH connects', s.sftpAutoOpen !== false);
+  } }, t('Rules…'));
+  const zmodemCb = check(t('Zmodem transfers (rz/sz)'), s.zmodem !== false);
+  const localShell = text(s.localShell, { placeholder: t('(login shell)') });
+  const shellInt = check(t('zsh/bash integration (folder following)'), s.localShellIntegration !== false);
+  const editor = text(s.editorCommand, { placeholder: t('e.g. code --wait {file}   (blank = TextEdit)') }); // {file} is the user's token here, not a placeholder: no params, so it stays
+  const confirmClose = check(t('Confirm quit with open connections (SSH, Mosh, SFTP, FTP)'), s.confirmClose);
+  const restoreWs = check(t('Restore tabs & split layout at startup'), s.restoreWorkspace !== false);
+  const sftpAutoOpen = check(t('Switch to SFTP panel when SSH connects'), s.sftpAutoOpen !== false);
   const downloadDir = text(s.downloadDir, { placeholder: '~/Downloads' });
   const logDir = text(s.logDir, { placeholder: '~/Documents/MobAlt Logs' });
-  const logPlain = check('Strip colours and control sequences from session logs (plain text)', !!s.logPlainText);
+  const logPlain = check(t('Strip colours and control sequences from session logs (plain text)'), !!s.logPlainText);
   const keepAlive = num(s.keepAliveInterval, { min: 0, max: 3600 });
-  const autoUpdate = check('Check for updates at startup', s.autoUpdate !== false);
+  const autoUpdate = check(t('Check for updates at startup'), s.autoUpdate !== false);
   // Settings → General → Language: 'system' follows the macOS language list (the name shows what that is on this Mac);
   // a choice applies at once to menus, panels and dialogs of every window (app.js _applyLanguage) — terminals are never touched
   const sysLang = languageOf(SYSTEM_LOCALE) || LANGUAGES[0];
@@ -791,56 +791,56 @@ export function settingsDialog(app) {
   // "Check now" reports on its own line, e.g. "0.11.0 is already installed on disk; relaunch to use it"
   const updStatus = h('span', { class: 'upd-status', 'aria-live': 'polite' });
   const checkNow = h('button', { class: 'btn small', type: 'button', onclick: async () => {
-    updStatus.textContent = 'Checking…';
+    updStatus.textContent = t('Checking…');
     try {
       const r = await window.api.app.checkUpdates();
       updStatus.textContent = (r && r.message) || '';
     } catch (e) {
       updStatus.textContent = e.message;
     }
-  } }, 'Check now');
+  } }, t('Check now'));
   // Five section tabs (General / Terminal / Features / Logging / Updates): each fits the 900×560 minimum window without scrolling.
   // Every field stays in the DOM whichever tab is in front, so Save reads them all.
   const tabs = modalTabs([
-    ['general', 'General', h('div', { class: 'form-grid' },
+    ['general', t('General'), h('div', { class: 'form-grid' },
       ...field(t('Language'), language, t('Menus, panels and dialogs switch at once; terminal output is not translated')),
-      h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
-      ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
-      ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
-      ...field('Download folder', downloadDir), ...field('SSH keep-alive (s)', keepAlive),
-      h('label', {}, 'Data'), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, 'Open config folder'))
+      h('label', {}, t('Behaviour')), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
+      ...field(t('Local shell'), localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
+      ...field(t('External editor'), editor, t('{file} is replaced by the temp file path; omit it to append the path')),
+      ...field(t('Download folder'), downloadDir), ...field(t('SSH keep-alive (s)'), keepAlive),
+      h('label', {}, t('Data')), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, t('Open config folder')))
     )],
-    ['terminal', 'Terminal', h('div', { class: 'form-grid' },
-      ...field('Font family', fontFamily), ...field('Font size', fontSize), ...field('Line height', lineHeight),
-      ...field('Cursor', h('div', { class: 'inline' }, cursorStyle, cursorBlink.el)), // the blink toggle shares the row: Terminal is the tallest section and must fit the 560px window
-      ...field('Scrollback lines', scrollback),
-      ...field('Theme', h('div', { class: 'inline theme-field' }, theme, themePreview), 'Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme'),
-      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
+    ['terminal', t('Terminal'), h('div', { class: 'form-grid' },
+      ...field(t('Font family'), fontFamily), ...field(t('Font size'), fontSize), ...field(t('Line height'), lineHeight),
+      ...field(t('Cursor'), h('div', { class: 'inline' }, cursorStyle, cursorBlink.el)), // the blink toggle shares the row: Terminal is the tallest section and must fit the 560px window
+      ...field(t('Scrollback lines'), scrollback),
+      ...field(t('Theme'), h('div', { class: 'inline theme-field' }, theme, themePreview), t('Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme')),
+      h('label', {}, t('Mouse / keys')), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
     )],
-    ['features', 'Features', h('div', { class: 'form-grid' },
-      h('label', {}, 'Paste guard'), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el),
-      h('label', {}, 'Monitoring'), h('div', { class: 'checks' }, monitorBar.el, h('label', { class: 'mon-every' }, 'every', monitorInterval, 's')),
-      h('label', {}, 'Keyword highlighting'), h('div', { class: 'checks hl-row' }, hlEnabled.el, hlRulesBtn),
-      h('label', {}, 'Transfers'), h('div', { class: 'checks' }, zmodemCb.el)
+    ['features', t('Features'), h('div', { class: 'form-grid' },
+      h('label', {}, t('Paste guard')), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el),
+      h('label', {}, t('Monitoring')), h('div', { class: 'checks' }, monitorBar.el, h('label', { class: 'mon-every' }, fill(t('every {n} s'), { n: monitorInterval }))),
+      h('label', {}, t('Keyword highlighting')), h('div', { class: 'checks hl-row' }, hlEnabled.el, hlRulesBtn),
+      h('label', {}, t('Transfers')), h('div', { class: 'checks' }, zmodemCb.el)
     )],
-    ['logging', 'Logging', h('div', { class: 'form-grid' },
-      ...field('Log folder', logDir, 'Terminal → Start Session Log, or a session\'s Logging option, writes here'),
-      h('label', {}, 'Session logs'), h('div', { class: 'checks' }, logPlain.el)
+    ['logging', t('Logging'), h('div', { class: 'form-grid' },
+      ...field(t('Log folder'), logDir, t('Terminal → Start Session Log, or a session\'s Logging option, writes here')),
+      h('label', {}, t('Session logs')), h('div', { class: 'checks' }, logPlain.el)
     )],
-    ['updates', 'Updates', h('div', { class: 'form-grid' },
-      h('label', {}, 'Updates'), h('div', { class: 'checks' }, autoUpdate.el),
-      h('div', { class: 'form-help' }, 'Releases on GitHub; a newer version is offered in a dialog and installed only when you agree'),
+    ['updates', t('Updates'), h('div', { class: 'form-grid' },
+      h('label', {}, t('Updates')), h('div', { class: 'checks' }, autoUpdate.el),
+      h('div', { class: 'form-help' }, t('Releases on GitHub; a newer version is offered in a dialog and installed only when you agree')),
       h('label', {}), h('div', { class: 'checks' }, checkNow, updStatus)
     )],
   ]);
   const body = h('div', { class: 'settings-tabs' }, tabs.strip, ...Object.values(tabs.pages));
   const m = showModal({
-    title: 'Settings',
+    title: t('Settings'),
     width: 'wide',
     body,
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'Save', primary: true, action: (api) => api.close({
+      { label: t('Cancel'), value: null },
+      { label: t('Save'), primary: true, action: (api) => api.close({
         fontFamily: fontFamily.value.trim() || s.fontFamily, fontSize: clamp(parseInt(fontSize.value, 10), 8, 40, 13), lineHeight: clamp(parseFloat(lineHeight.value), 0.8, 2, 1),
         cursorStyle: cursorStyle.value, cursorBlink: cursorBlink.cb.checked, scrollback: clamp(parseInt(scrollback.value, 10), 100, 1000000, 10000), theme: theme.value,
         rightClickPaste: rightClickPaste.cb.checked, copyOnSelect: copyOnSelect.cb.checked, macOptionIsMeta: optMeta.cb.checked, zmodem: zmodemCb.cb.checked,
@@ -857,37 +857,49 @@ export function settingsDialog(app) {
   return m.promise;
 }
 
+/**
+ * A translated sentence with elements inside it: the "{name}" placeholders of `str` (a t() result left unfilled)
+ * become the nodes of `nodes`, the text around them stays text — for a control that sits mid-sentence ("every [3] s")
+ * or a message with styled spans, so that the sentence is one literal for the translators, who may reorder it.
+ * Returns the children for h() (which flattens the array); an unknown name stays as text, like format() does.
+ */
+function fill(str, nodes) {
+  return String(str).split(/\{(\w+)\}/).map((part, i) => (i % 2 ? (part in nodes ? nodes[part] : `{${part}}`) : part)).filter((p) => p !== '');
+}
+
 export function hostKeyDialog(p) {
-  const forName = p.name ? ` — ${p.name}` : '';
+  const changed = p.status === 'mismatch';
   const m = showModal({
-    title: (p.status === 'mismatch' ? '⚠️ Host key changed!' : 'Unknown host key') + forName,
+    title: changed
+      ? t(p.name ? '⚠️ Host key changed! — {name}' : '⚠️ Host key changed!', { name: p.name })
+      : t(p.name ? 'Unknown host key — {name}' : 'Unknown host key', { name: p.name }),
     closeOnBackdrop: false,
     body: h('div', {},
-      p.status === 'mismatch' ? h('div', { class: 'warn' }, 'The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.') : h('p', {}, `The authenticity of host ${p.host}:${p.port} can't be established.`),
+      changed ? h('div', { class: 'warn' }, t('The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.')) : h('p', {}, t('The authenticity of host {host}:{port} can\'t be established.', { host: p.host, port: p.port })),
       h('div', {}, h('b', {}, `${p.host}:${p.port}`), ` (${p.keyType})`),
       h('div', { class: 'hostkey-fp' }, p.fingerprint.sha256, h('br'), p.fingerprint.md5),
-      h('p', { style: { color: 'var(--fg-dim)' } }, 'Accept to continue and remember this key.')
+      h('p', { style: { color: 'var(--fg-dim)' } }, t('Accept to continue and remember this key.'))
     ),
     buttons: [
-      { label: 'Cancel', value: false },
-      { label: p.status === 'mismatch' ? 'Accept new key' : 'Accept', primary: true, danger: p.status === 'mismatch', value: true },
+      { label: t('Cancel'), value: false },
+      { label: changed ? t('Accept new key') : t('Accept'), primary: true, danger: changed, value: true },
     ],
   });
   return m.promise.then((r) => !!r);
 }
 
 export function passwordDialog(p) {
-  const input = h('input', { type: 'password', autocomplete: 'current-password', 'aria-label': 'Password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)' } });
+  const input = h('input', { type: 'password', autocomplete: 'current-password', 'aria-label': t('Password'), style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)' } });
   const save = h('input', { type: 'checkbox', checked: false });
   const m = showModal({
-    title: p.title || 'Password',
+    title: p.title || t('Password'),
     width: 'narrow',
     closeOnBackdrop: false,
     body: h('div', {}, h('div', { style: { marginBottom: '8px' } }, p.message), input,
-      p.session && p.session.id ? h('label', { style: { display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center' } }, save, `Save in session "${p.session.name}" (Keychain-encrypted)`) : null),
+      p.session && p.session.id ? h('label', { style: { display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center' } }, save, t('Save in session "{name}" (Keychain-encrypted)', { name: p.session.name })) : null),
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'OK', primary: true, action: (api) => api.close({ password: input.value, save: save.checked }) },
+      { label: t('Cancel'), value: null },
+      { label: t('OK'), primary: true, action: (api) => api.close({ password: input.value, save: save.checked }) },
     ],
   });
   setTimeout(() => input.focus(), 20);
@@ -897,14 +909,14 @@ export function passwordDialog(p) {
 export function kbdIntDialog(p) {
   const inputs = (p.prompts || []).map((pr) => h('input', { type: pr.echo ? 'text' : 'password', 'aria-label': pr.prompt, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)', marginBottom: '8px' } }));
   const m = showModal({
-    title: p.name || 'Authentication',
+    title: p.name || t('Authentication'),
     width: 'narrow',
     closeOnBackdrop: false,
     body: h('div', {}, h('div', { style: { color: 'var(--fg-dim)', marginBottom: '8px' } }, p.label), p.instructions ? h('pre', { style: { whiteSpace: 'pre-wrap' } }, p.instructions) : null,
       (p.prompts || []).map((pr, i) => h('div', {}, h('div', {}, pr.prompt), inputs[i]))),
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'OK', primary: true, action: (api) => api.close(inputs.map((i) => i.value)) },
+      { label: t('Cancel'), value: null },
+      { label: t('OK'), primary: true, action: (api) => api.close(inputs.map((i) => i.value)) },
     ],
   });
   setTimeout(() => inputs[0] && inputs[0].focus(), 20);
@@ -940,6 +952,8 @@ function paintPasteMarks(pre, value, findings, max = Infinity) {
 /** The preview re-analyses the edited text this long after the last keystroke, and paints at most this many marks. */
 const PG_DEBOUNCE_MS = 120;
 const PG_MAX_MARKS = 500;
+/** The label of a finding kind, looked up when the list is drawn (pasteguard.js KIND_LABEL: a string, or a function once it is translated). */
+const kindLabel = (kind) => { const l = KIND_LABEL[kind]; return typeof l === 'function' ? l() : l || kind; };
 
 /**
  * The paste guard (app.js guardPaste): "Paste N lines into <where>?" with what src/renderer/pasteguard.js found, an
@@ -948,9 +962,9 @@ const PG_MAX_MARKS = 500;
  * off: only the multi-line confirmation is wanted). Resolves with the text to send, or null.
  */
 export function pasteGuardDialog({ text, analysis, where, warn = true }) {
-  const lf = (t) => t.replace(/\r\n|\r/g, '\n'); // a textarea's value is LF-normalised whatever was put in it
+  const lf = (s) => s.replace(/\r\n|\r/g, '\n'); // a textarea's value is LF-normalised whatever was put in it
   const findingsOf = (a) => (warn ? a.findings : []);
-  const ta = h('textarea', { class: 'pg-text', spellcheck: false, autocapitalize: 'off', autocomplete: 'off', wrap: 'soft', 'aria-label': 'Text to paste (editable)' });
+  const ta = h('textarea', { class: 'pg-text', spellcheck: false, autocapitalize: 'off', autocomplete: 'off', wrap: 'soft', 'aria-label': t('Text to paste (editable)') });
   ta.value = text;
   const backdrop = h('pre', { class: 'pg-backdrop', 'aria-hidden': 'true' });
   const list = h('ul', { class: 'pg-findings', hidden: true });
@@ -959,8 +973,7 @@ export function pasteGuardDialog({ text, analysis, where, warn = true }) {
   const lfAnalysis = lfText === text ? analysis : analysePaste(lfText); // the marks sit on the textarea's own (LF) text, whose offsets differ once CRs are gone
   const edited = () => ta.value !== lfText;
   const value = () => (edited() ? ta.value : text); // untouched: the original goes out, CR / CRLF intact
-  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-  const title = (a) => `Paste ${plural(a.lines, 'line')} into ${where}?`;
+  const title = (a) => tn('Paste {n} line into {where}?', 'Paste {n} lines into {where}?', a.lines, { where });
   let pasteBtn = null, cleanBtn = null, m = null;
   const render = () => {
     const current = edited() ? analysePaste(ta.value) : analysis; // one analysis per render
@@ -969,17 +982,20 @@ export function pasteGuardDialog({ text, analysis, where, warn = true }) {
     const danger = fs.some((f) => DANGER_KINDS.has(f.kind));
     list.hidden = !fs.length;
     list.className = 'pg-findings' + (danger ? ' danger' : '');
-    list.replaceChildren(...fs.map((f) => h('li', {}, h('span', { class: 'pg-kind' }, KIND_LABEL[f.kind] || f.kind), h('span', { class: 'pg-msg' }, f.message, current.multiline ? h('span', { class: 'pg-where' }, ` (line ${f.line})`) : null))));
+    list.replaceChildren(...fs.map((f) => h('li', {}, h('span', { class: 'pg-kind' }, kindLabel(f.kind)), h('span', { class: 'pg-msg' }, f.message, current.multiline ? h('span', { class: 'pg-where' }, ' ', t('(line {n})', { n: f.line })) : null))));
     const cleanable = warn && current.cleanable;
     const painted = paintPasteMarks(backdrop, ta.value, findingsOf(marks), PG_MAX_MARKS);
-    note.textContent = `${plural(current.lines, 'line')} · ${plural(current.chars, 'character')} · ⌘⏎ pastes, Esc cancels` + (cleanable ? ' · Paste cleaned removes the hidden characters and the trailing newline' : '')
-      + (painted.painted < painted.total ? ` · marks on the first ${painted.painted} of ${painted.total} places` : '');
+    note.textContent = [
+      tn('{n} line', '{n} lines', current.lines), tn('{n} character', '{n} characters', current.chars), t('⌘⏎ pastes, Esc cancels'),
+      cleanable ? t('Paste cleaned removes the hidden characters and the trailing newline') : null,
+      painted.painted < painted.total ? t('marks on the first {painted} of {total} places', { painted: painted.painted, total: painted.total }) : null,
+    ].filter(Boolean).join(' · ');
     if (cleanBtn) cleanBtn.hidden = !cleanable;
-    if (pasteBtn) pasteBtn.textContent = fs.length ? 'Paste as is' : 'Paste';
+    if (pasteBtn) pasteBtn.textContent = fs.length ? t('Paste as is') : t('Paste');
     if (m) { // the title counts the lines of what will be pasted, edits included
-      const t = title(current);
-      m.el.querySelector('.modal-title-text').textContent = t;
-      m.el.setAttribute('aria-label', t);
+      const ttl = title(current);
+      m.el.querySelector('.modal-title-text').textContent = ttl;
+      m.el.setAttribute('aria-label', ttl);
     }
   };
   m = showModal({
@@ -988,9 +1004,9 @@ export function pasteGuardDialog({ text, analysis, where, warn = true }) {
     closeOnBackdrop: false,
     body: h('div', { class: 'pg' }, note, list, h('div', { class: 'pg-preview' }, backdrop, ta)),
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'Paste cleaned', action: (api) => api.close(analysePaste(value()).cleaned) },
-      { label: 'Paste', primary: true, action: (api) => api.close(value()) },
+      { label: t('Cancel'), value: null },
+      { label: t('Paste cleaned'), action: (api) => api.close(analysePaste(value()).cleaned) },
+      { label: t('Paste'), primary: true, action: (api) => api.close(value()) },
     ],
   });
   [, cleanBtn, pasteBtn] = [...m.el.querySelectorAll('.modal-foot button')];
@@ -1009,34 +1025,35 @@ export function shortcutsDialog(app) {
   const rightClick = app.settings.rightClickPaste !== false;
   // One section tab per area, each two columns of label + key chip (a chip that does not fit beside its label drops
   // to its own line, styles.css .shortcuts): every section fits the 900×560 minimum window without scrolling.
+  // Built here, at open time, so a language switch shows in the next opening; a chip of pure key glyphs is not translated.
   const sections = [
-    ['sessions', 'Sessions & tabs', [
-      ['New session', '⌘N'], ['New local terminal', '⌘T'], ['Quick connect', '⇧⌘N'], ['Duplicate session', '⇧⌘T'], ['Reconnect', '⌘R'], ['Close tab', '⌘W'],
-      ['Next / previous tab', '⌃Tab / ⌃⇧Tab'], ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'],
-      ['Pin / unpin tab, detach tab to its own window', '⇧⌘P / ⌥⌘N'],
+    ['sessions', t('Sessions & tabs'), [
+      [t('New session'), '⌘N'], [t('New local terminal'), '⌘T'], [t('Quick connect'), '⇧⌘N'], [t('Duplicate session'), '⇧⌘T'], [t('Reconnect'), '⌘R'], [t('Close tab'), '⌘W'],
+      [t('Next / previous tab'), '⌃Tab / ⌃⇧Tab'], [t('Switch to tab 1-9'), '⌃⌘1 … ⌃⌘9'], [t('Focused tab: move / activate / close'), '← → / ⏎ / ⌫'],
+      [t('Pin / unpin tab, detach tab to its own window'), '⇧⌘P / ⌥⌘N'],
     ]],
-    ['panes', 'Panes & terminal', [
-      ['Split right / down', '⌘D / ⇧⌘D'], ['Grid 2 / 4 / 6 / 8 panes', '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], ['Unsplit', '⌥⌘1'], ['Close pane', '⇧⌘W'], ['Next pane', '⌘]'], ['Zoom pane (fill the tab) / restore', '⇧⌘⏎'],
-      ['Find', '⌘F'], ['Clear terminal', '⌘K'], ['Zoom', '⌘= / ⌘- / ⌘0'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', rightClick ? 'Right-click' : '⌘V'], ['Terminal menu', rightClick ? '⇧Right-click' : 'Right-click'],
-      ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'], ['MultiExec', '⇧⌘M'],
+    ['panes', t('Panes & terminal'), [
+      [t('Split right / down'), '⌘D / ⇧⌘D'], [t('Grid 2 / 4 / 6 / 8 panes'), '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], [t('Unsplit'), '⌥⌘1'], [t('Close pane'), '⇧⌘W'], [t('Next pane'), '⌘]'], [t('Zoom pane (fill the tab) / restore'), '⇧⌘⏎'],
+      [t('Find'), '⌘F'], [t('Clear terminal'), '⌘K'], [t('Zoom'), '⌘= / ⌘- / ⌘0'], [t('Copy / Paste'), '⌘C / ⌘V'], [t('Paste (terminal)'), rightClick ? t('Right-click') : '⌘V'], [t('Terminal menu'), rightClick ? t('⇧Right-click') : t('Right-click')],
+      [t('Newline in TUI apps (ESC+CR)'), '⇧Enter / ⌥Enter'], [t('MultiExec'), '⇧⌘M'],
     ]],
-    ['sidebar', 'Sidebar, SFTP & lists', [
-      ['Toggle sidebar', '⌘B'], ['Sessions / SFTP / Tools / Macros', '⌘1 / ⌘2 / ⌘3 / ⌘4'],
-      ['Focused session row: move / fold / open', '↑ ↓ / ← → / ⏎'], ['Focused session row: open in split / delete', '⌘⏎ or ⇧⏎ / ⌫'],
-      ['Focused macro: play / delete, context menu', '⏎ / ⌫, ⇧F10'], ['Context menu: focused tab, row, macro, SFTP entry', '⇧F10 / Menu key'],
-      ['SFTP list: context menu / delete / parent folder', '⇧F10 or Menu / Del or ⌘⌫ / ⌫'], ['SFTP list: move / open', '↑ ↓ Home End PgUp PgDn / ⏎'],
-      ['SFTP list: extend selection / toggle row / select all', '⇧↑ ⇧↓ ⇧Home ⇧End / Space / ⌘A'], ['SFTP list: sort by a column', 'Tab to a header, ⏎ or Space'],
-      ['Session tree, SFTP list: jump to a name', 'type its first letters'],
+    ['sidebar', t('Sidebar, SFTP & lists'), [
+      [t('Toggle sidebar'), '⌘B'], [t('Sessions / SFTP / Tools / Macros'), '⌘1 / ⌘2 / ⌘3 / ⌘4'],
+      [t('Focused session row: move / fold / open'), '↑ ↓ / ← → / ⏎'], [t('Focused session row: open in split / delete'), t('⌘⏎ or ⇧⏎ / ⌫')],
+      [t('Focused macro: play / delete, context menu'), '⏎ / ⌫, ⇧F10'], [t('Context menu: focused tab, row, macro, SFTP entry'), t('⇧F10 / Menu key')],
+      [t('SFTP list: context menu / delete / parent folder'), t('⇧F10 or Menu / Del or ⌘⌫ / ⌫')], [t('SFTP list: move / open'), '↑ ↓ Home End PgUp PgDn / ⏎'],
+      [t('SFTP list: extend selection / toggle row / select all'), '⇧↑ ⇧↓ ⇧Home ⇧End / Space / ⌘A'], [t('SFTP list: sort by a column'), t('Tab to a header, ⏎ or Space')],
+      [t('Session tree, SFTP list: jump to a name'), t('type its first letters')],
     ]],
-    ['dialogs', 'Dialogs', [
-      ['Settings', '⌘,'], ['Tunnels', '⇧⌘U'], ['Icon & colour picks: move / choose', '← → ↑ ↓ / ⏎ or Space'],
-      ['Dialog: confirm / close', '⏎ / Esc'], ['Dialog: next / previous control', 'Tab / ⇧Tab'], ['Dialog tabs: previous / next, first / last section', '← → / Home End'],
-      ['Paste guard (multi-line or suspicious paste): paste / cancel', '⌘⏎ / Esc'],
+    ['dialogs', t('Dialogs'), [
+      [t('Settings'), '⌘,'], [t('Tunnels'), '⇧⌘U'], [t('Icon & colour picks: move / choose'), t('← → ↑ ↓ / ⏎ or Space')],
+      [t('Dialog: confirm / close'), '⏎ / Esc'], [t('Dialog: next / previous control'), 'Tab / ⇧Tab'], [t('Dialog tabs: previous / next, first / last section'), '← → / Home End'],
+      [t('Paste guard (multi-line or suspicious paste): paste / cancel'), '⌘⏎ / Esc'],
     ]],
   ];
   const tabs = modalTabs(sections.map(([k, label, rows]) => [k, label, h('div', {}, h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))))]));
   const body = h('div', { class: 'shortcuts-tabs' }, tabs.strip, ...Object.values(tabs.pages));
-  showModal({ title: 'Keyboard shortcuts', width: 'wide', body, buttons: [{ label: 'Close', value: null }] });
+  showModal({ title: t('Keyboard shortcuts'), width: 'wide', body, buttons: [{ label: t('Close'), value: null }] });
   holdTallest(body, tabs, sections[0][0]);
 }
 
@@ -1044,7 +1061,7 @@ export function shortcutsDialog(app) {
 const tildeHome = (p, home) => (home && p.startsWith(home + '/') ? '~' + p.slice(home.length) : p);
 /** A rough passphrase strength for the hint under the field: ['none' | 'weak' | 'fair' | 'strong', text]. */
 export function passphraseStrength(p) {
-  if (!p) return ['none', 'No passphrase: anyone who copies the private key file can use it'];
+  if (!p) return ['none', t('No passphrase: anyone who copies the private key file can use it')];
   let score = 0;
   if (p.length >= 8) score++;
   if (p.length >= 12) score++;
@@ -1053,8 +1070,8 @@ export function passphraseStrength(p) {
   if (/\d/.test(p)) score++;
   if (/[^A-Za-z0-9\s]/.test(p)) score++;
   if (p.trim().split(/\s+/).length >= 4) score += 2; // a few words make a good passphrase
-  return score <= 2 ? ['weak', 'Weak passphrase: use 12 characters or more with mixed case, digits or symbols, or a few words']
-    : score <= 4 ? ['fair', 'Fair passphrase'] : ['strong', 'Strong passphrase'];
+  return score <= 2 ? ['weak', t('Weak passphrase: use 12 characters or more with mixed case, digits or symbols, or a few words')]
+    : score <= 4 ? ['fair', t('Fair passphrase')] : ['strong', t('Strong passphrase')];
 }
 
 /**
@@ -1064,15 +1081,15 @@ export function passphraseStrength(p) {
  * (the editor's Generate… button, `forSession`), null otherwise.
  */
 export async function keygenDialog(app, { forSession = false } = {}) {
-  const KINDS = [['ed25519', 'Ed25519 (recommended)'], ['rsa', 'RSA 4096'], ['ecdsa-256', 'ECDSA P-256'], ['ecdsa-384', 'ECDSA P-384']];
+  const KINDS = [['ed25519', t('Ed25519 (recommended)')], ['rsa', 'RSA 4096'], ['ecdsa-256', 'ECDSA P-256'], ['ecdsa-384', 'ECDSA P-384']];
   const kindOf = (v) => v.split('-')[0];
   const bitsOf = (v) => (v === 'rsa' ? 4096 : v.startsWith('ecdsa') ? parseInt(v.split('-')[1], 10) : undefined);
   const home = app.info.home || '';
   const user = home.split('/').pop() || 'user';
   const type = select(KINDS, 'ed25519');
-  const comment = text(`${user}@mobalt`, { placeholder: 'comment (who / what this key is for)' });
-  const pass = h('input', { type: 'password', placeholder: 'optional: protects the private key file', autocomplete: 'new-password' });
-  const pass2 = h('input', { type: 'password', placeholder: 'repeat the passphrase', autocomplete: 'new-password' });
+  const comment = text(`${user}@mobalt`, { placeholder: t('comment (who / what this key is for)') });
+  const pass = h('input', { type: 'password', placeholder: t('optional: protects the private key file'), autocomplete: 'new-password' });
+  const pass2 = h('input', { type: 'password', placeholder: t('repeat the passphrase'), autocomplete: 'new-password' });
   const strength = h('div', { class: 'form-help keygen-strength', 'aria-live': 'polite' });
   const passErr = h('div', { class: 'form-error', role: 'alert', hidden: true });
   const outPath = text('', { placeholder: '~/.ssh/id_ed25519' });
@@ -1090,20 +1107,20 @@ export async function keygenDialog(app, { forSession = false } = {}) {
   });
   const browse = h('button', { class: 'btn small', type: 'button', onclick: async () => {
     const cur = outPath.value.trim() || suggested;
-    const r = await window.api.dialog.save({ title: 'Save private key as', defaultPath: cur.startsWith('~') ? home + cur.slice(1) : cur, properties: ['showHiddenFiles', 'createDirectory'] });
+    const r = await window.api.dialog.save({ title: t('Save private key as'), defaultPath: cur.startsWith('~') ? home + cur.slice(1) : cur, properties: ['showHiddenFiles', 'createDirectory'] });
     if (!r.canceled && r.filePath) { outPath.value = tildeHome(r.filePath, home); pathErr.hidden = true; }
-  } }, 'Browse…');
-  const agent = check('Add to ssh-agent (ssh-add --apple-use-keychain)', false);
-  const install = check('Install on a server…', false);
+  } }, t('Browse…'));
+  const agent = check(t('Add to ssh-agent (ssh-add --apple-use-keychain)'), false);
+  const install = check(t('Install on a server…'), false);
   const sshSessions = app.sessions.sessions.filter((x) => x.type === 'ssh');
   const target = select(sshSessions.length
     ? sshSessions.map((x) => [x.id, `${x.name} (${x.username ? x.username + '@' : ''}${x.host}${x.port && x.port !== 22 ? ':' + x.port : ''})`])
-    : [['', '(no saved SSH session yet)']], sshSessions[0] ? sshSessions[0].id : '');
+    : [['', t('(no saved SSH session yet)')]], sshSessions[0] ? sshSessions[0].id : '');
   if (!sshSessions.length) target.disabled = true;
   const remoteFile = text('~/.ssh/authorized_keys');
   const installRows = [
-    ...field('Server', target, 'A saved SSH session; it connects with its usual authentication (you may be asked for its password) and appends the public key like ssh-copy-id'),
-    ...field('Remote file', remoteFile),
+    ...field(t('Server'), target, t('A saved SSH session; it connects with its usual authentication (you may be asked for its password) and appends the public key like ssh-copy-id')),
+    ...field(t('Remote file'), remoteFile),
   ];
   const applyInstall = () => { for (const el of installRows) el.hidden = !install.cb.checked; };
   install.cb.addEventListener('change', applyInstall);
@@ -1119,10 +1136,10 @@ export async function keygenDialog(app, { forSession = false } = {}) {
   updateStrength();
   const status = h('div', { class: 'keygen-status', 'aria-live': 'polite' });
   const form = h('div', { class: 'form-grid keygen-form' },
-    ...field('Key type', type), ...field('Comment', comment),
-    ...field('Passphrase', pass), strength, ...field('Confirm', pass2), passErr,
-    ...field('Save as', h('div', { class: 'inline' }, outPath, browse), 'The public key goes next to it with .pub; ~/.ssh is created private when missing'), pathErr,
-    h('label', {}, 'Options'), h('div', { class: 'checks' }, agent.el, install.el),
+    ...field(t('Key type'), type), ...field(t('Comment'), comment),
+    ...field(t('Passphrase'), pass), strength, ...field(t('Confirm'), pass2), passErr,
+    ...field(t('Save as'), h('div', { class: 'inline' }, outPath, browse), t('The public key goes next to it with .pub; ~/.ssh is created private when missing')), pathErr,
+    h('label', {}, t('Options')), h('div', { class: 'checks' }, agent.el, install.el),
     ...installRows
   );
   const result = h('div', { class: 'keygen-result', hidden: true });
@@ -1132,15 +1149,15 @@ export async function keygenDialog(app, { forSession = false } = {}) {
   // the key pair is on disk by then, and closing early would hide its path and the install's outcome
   let busyNow = false;
   const m = showModal({
-    title: 'Generate SSH key',
+    title: t('Generate SSH key'),
     width: 'wide',
     closeOnBackdrop: false,
     beforeClose: () => !busyNow,
     body,
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'Use in this session', action: (api) => api.close(done) },
-      { label: 'Generate', primary: true, action: (api) => (done ? api.close(forSession ? done : null) : generate(api)) },
+      { label: t('Cancel'), value: null },
+      { label: t('Use in this session'), action: (api) => api.close(done) },
+      { label: t('Generate'), primary: true, action: (api) => (done ? api.close(forSession ? done : null) : generate(api)) },
     ],
   });
   const [cancelBtn, useBtn, genBtn] = m.el.querySelectorAll('.modal-foot .btn');
@@ -1153,13 +1170,13 @@ export async function keygenDialog(app, { forSession = false } = {}) {
     genBtn.disabled = on;
     cancelBtn.disabled = on;
     closeX.disabled = on;
-    closeX.title = on ? 'Wait for the key to be generated and installed' : 'Close (Esc)';
+    closeX.title = on ? t('Wait for the key to be generated and installed') : t('Close (Esc)');
   };
 
   async function generate() {
     passErr.hidden = pathErr.hidden = true;
     if (pass.value !== pass2.value) {
-      passErr.textContent = 'The passphrases do not match';
+      passErr.textContent = t('The passphrases do not match');
       passErr.hidden = false;
       pass2.focus();
       pass2.select();
@@ -1167,14 +1184,14 @@ export async function keygenDialog(app, { forSession = false } = {}) {
     }
     const where = outPath.value.trim();
     if (!where) {
-      pathErr.textContent = 'Choose where to save the key';
+      pathErr.textContent = t('Choose where to save the key');
       pathErr.hidden = false;
       outPath.focus();
       return;
     }
-    if (install.cb.checked && !target.value) return toast('Save an SSH session first to install the key on it', 'warn');
+    if (install.cb.checked && !target.value) return toast(t('Save an SSH session first to install the key on it'), 'warn');
     busy(true);
-    status.textContent = `Generating ${KINDS.find((k) => k[0] === type.value)[1]} key…`;
+    status.textContent = t('Generating {type} key…', { type: KINDS.find((k) => k[0] === type.value)[1] });
     let r;
     try {
       r = await window.api.keygen.generate({ type: kindOf(type.value), bits: bitsOf(type.value), comment: comment.value.trim(), passphrase: pass.value, path: where });
@@ -1189,15 +1206,15 @@ export async function keygenDialog(app, { forSession = false } = {}) {
     done = { privateKeyPath: r.privateKeyPath, publicKeyPath: r.publicKeyPath, publicKey: r.publicKey };
     const steps = [];
     if (agent.cb.checked) {
-      status.textContent = 'Adding the key to ssh-agent…';
+      status.textContent = t('Adding the key to ssh-agent…');
       const a = await window.api.keygen.addToAgent(r.privateKeyPath, pass.value).catch((e) => ({ ok: false, error: ipcMessage(e) }));
-      steps.push({ ok: a.ok, text: a.ok ? `Added to ssh-agent (${a.message})` : `ssh-agent: ${a.error}` });
+      steps.push({ ok: a.ok, text: a.ok ? t('Added to ssh-agent ({message})', { message: a.message }) : t('ssh-agent: {error}', { error: a.error }) });
     }
     if (install.cb.checked && target.value) {
       const sess = sshSessions.find((x) => x.id === target.value);
-      status.textContent = `Installing the public key on ${sess ? sess.name : 'the server'}…`;
+      status.textContent = sess ? t('Installing the public key on {name}…', { name: sess.name }) : t('Installing the public key on the server…');
       const i = await window.api.keygen.install(target.value, r.publicKey, remoteFile.value.trim() || '~/.ssh/authorized_keys').catch((e) => ({ ok: false, error: ipcMessage(e) }));
-      steps.push({ ok: i.ok, text: i.ok ? (i.added ? `Installed on ${i.host} in ${i.remoteFile}` : `Already present on ${i.host} in ${i.remoteFile}`) : i.error });
+      steps.push({ ok: i.ok, text: i.ok ? (i.added ? t('Installed on {host} in {file}', { host: i.host, file: i.remoteFile }) : t('Already present on {host} in {file}', { host: i.host, file: i.remoteFile })) : i.error });
     }
     status.textContent = '';
     busy(false); // the result can be closed again
@@ -1210,22 +1227,22 @@ export async function keygenDialog(app, { forSession = false } = {}) {
     pub.addEventListener('focus', () => pub.select());
     const copy = h('button', { class: 'btn small', type: 'button', onclick: async () => {
       await window.api.clipboard.write(r.publicKey);
-      toast('Public key copied', 'success');
-    } }, 'Copy');
+      toast(t('Public key copied'), 'success');
+    } }, t('Copy'));
     const fp = r.fingerprint || {};
     result.replaceChildren(
-      h('div', { class: 'keygen-ok' }, 'Key pair saved: ', h('span', { class: 'mono' }, tildeHome(r.privateKeyPath, home)), ' (private, 0600) and ', h('span', { class: 'mono' }, tildeHome(r.publicKeyPath, home)), ' (public, 0644)'),
+      h('div', { class: 'keygen-ok' }, fill(t('Key pair saved: {private} (private, 0600) and {public} (public, 0644)'), { private: h('span', { class: 'mono' }, tildeHome(r.privateKeyPath, home)), public: h('span', { class: 'mono' }, tildeHome(r.publicKeyPath, home)) })),
       h('div', { class: 'form-grid' },
-        ...field('Public key', h('div', { class: 'inline keygen-pubrow' }, pub, copy), 'One line for ~/.ssh/authorized_keys on the servers this key should open'),
-        ...field('Fingerprint', h('div', { class: 'hostkey-fp keygen-fp' }, fp.hash ? `${fp.hash} (${fp.type} ${fp.bits})` : fp.line || '')),
-        ...(steps.length ? [h('label', {}, 'Steps'), h('div', { class: 'keygen-steps' }, steps.map((st) => h('div', { class: 'keygen-step ' + (st.ok ? 'ok' : 'err') }, st.text)))] : [])
+        ...field(t('Public key'), h('div', { class: 'inline keygen-pubrow' }, pub, copy), t('One line for ~/.ssh/authorized_keys on the servers this key should open')),
+        ...field(t('Fingerprint'), h('div', { class: 'hostkey-fp keygen-fp' }, fp.hash ? `${fp.hash} (${fp.type} ${fp.bits})` : fp.line || '')),
+        ...(steps.length ? [h('label', {}, t('Steps')), h('div', { class: 'keygen-steps' }, steps.map((st) => h('div', { class: 'keygen-step ' + (st.ok ? 'ok' : 'err') }, st.text)))] : [])
       )
     );
     form.hidden = true;
     result.hidden = false;
-    m.el.querySelector('.modal-title-text').textContent = 'SSH key generated';
+    m.el.querySelector('.modal-title-text').textContent = t('SSH key generated');
     genBtn.hidden = true;
-    cancelBtn.textContent = 'Close';
+    cancelBtn.textContent = t('Close');
     if (forSession) { useBtn.hidden = false; useBtn.classList.add('primary'); useBtn.focus(); }
     else copy.focus();
   }
