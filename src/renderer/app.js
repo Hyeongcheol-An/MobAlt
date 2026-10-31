@@ -1,5 +1,5 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, plural, ipcMessage } from './ui.js';
+import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, ipcMessage, fillNodes } from './ui.js';
 import { TermPane, THEMES, searchDecorations } from './terminal.js';
 import { chromePalette, cssVars } from './theme.js';
 import { Workspace } from './layout.js';
@@ -8,7 +8,7 @@ import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
 import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
-import { t, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
+import { t, tn, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
 
 translateDom(document); // the static labels of index.html, before anything else is rendered (the preload fetched the dictionary)
 
@@ -17,6 +17,9 @@ const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
 
 /** Pane kind for a session type (rdp/vnc never get a pane). */
 const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh');
+
+/** A pane's / SFTP companion's state (terminal.js: idle | connecting | connected | failed | disconnected) as the status bar words it. */
+const stateLabel = (s) => s === 'connected' ? t('connected') : s === 'connecting' ? t('connecting') : s === 'failed' ? t('failed') : s === 'disconnected' ? t('disconnected') : s === 'idle' ? t('idle') : String(s || '');
 
 class App {
   constructor() {
@@ -228,7 +231,7 @@ class App {
       await window.api.detach.open(payload);
       return true;
     } catch (e) {
-      toast(`Could not open a window: ${ipcMessage(e)}`, 'error');
+      toast(t('Could not open a window: {error}', { error: ipcMessage(e) }), 'error');
       await this.adoptTabs(payload, { quiet: true });
       return false;
     } finally {
@@ -256,7 +259,7 @@ class App {
   async adoptTabs(payload, { attach = true, quiet = false } = {}) {
     if (!payload || !Array.isArray(payload.tabs) || !payload.tabs.length) return false;
     const ok = await this.buildTabs(payload, { attach });
-    if (ok && !quiet) toast(`${plural(payload.tabs.length, 'tab')} back from the closed window`, 'info');
+    if (ok && !quiet) toast(tn('{n} tab back from the closed window', '{n} tabs back from the closed window', payload.tabs.length), 'info');
     return ok;
   }
 
@@ -324,7 +327,7 @@ class App {
       }
     });
     window.api.on('sftp:transfer', (t) => this.sftpPanel.onTransfer(t));
-    window.api.on('sftp:edit-synced', (e) => toast(e.ok ? `Uploaded ${e.remote.split('/').pop()}` : `Upload failed: ${e.error}`, e.ok ? 'success' : 'error'));
+    window.api.on('sftp:edit-synced', (e) => toast(e.ok ? t('Uploaded {name}', { name: e.remote.split('/').pop() }) : t('Upload failed: {error}', { error: e.error }), e.ok ? 'success' : 'error'));
     window.api.on('menu:action', ({ action, arg }) => this.action(action, arg));
     // several windows: tabs coming back from a closed detached window, this window being closed, the other window's changes
     window.api.on('detach:adopt', (payload) => this.adoptTabs(payload).catch((e) => console.error('adopt failed', e)));
@@ -430,7 +433,7 @@ class App {
     // an unfinished regex (e.g. "h[ae") throws inside the search addon: show it as an invalid pattern instead
     const safeFind = (fn) => {
       try { fn(); fb.classList.remove('bad-pattern'); return true; }
-      catch { fb.classList.add('bad-pattern'); $('#find-count').textContent = 'Invalid pattern'; return false; }
+      catch { fb.classList.add('bad-pattern'); $('#find-count').textContent = t('Invalid pattern'); return false; }
     };
     const research = () => {
       const p = this.activePane();
@@ -534,7 +537,7 @@ class App {
     const btn = document.querySelector('.strip-btn[data-action="toggle-sidebar"]');
     if (!btn) return;
     btn.querySelector('span').replaceChildren(icon(collapsed ? 'chevron-right' : 'chevron-left'));
-    btn.title = collapsed ? 'Show sidebar (⌘B)' : 'Hide sidebar (⌘B)';
+    btn.title = collapsed ? t('Show sidebar (⌘B)') : t('Hide sidebar (⌘B)');
     for (const b of document.querySelectorAll('.strip-btn[data-action="sidebar"]')) b.classList.toggle('active', !collapsed && b.dataset.arg === this.settings.sidebarTab);
   }
 
@@ -589,7 +592,7 @@ class App {
   async openSession(s, opts = {}) {
     if (!s) return;
     if (s.type === 'rdp' || s.type === 'vnc') {
-      toast(`Opening ${s.name || s.host} in ${s.type === 'rdp' ? 'Windows App / Remote Desktop' : 'Screen Sharing'}…`, 'info');
+      toast(t('Opening {name} in {app}…', { name: s.name || s.host, app: s.type === 'rdp' ? t('Windows App / Remote Desktop') : t('Screen Sharing') }), 'info');
       return s.type === 'rdp' ? window.api.launch.rdp(s) : window.api.launch.vnc(s);
     }
     const kind = kindOf(s.type);
@@ -614,7 +617,7 @@ class App {
    *  both sides counts as agreement): "ftp://host" means anonymous, not the saved "demo@host". */
   quickConnect(str) {
     const q = parseQuickConnect(str);
-    if (!q) return toast('Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://', 'warn');
+    if (!q) return toast(t('Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://'), 'warn');
     const defPort = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 };
     const existing = this.sessions.sessions.find((s) => s.type === q.type && s.host === q.host && (s.port || defPort[s.type] || 22) === q.port && (s.username || '') === (q.username || ''));
     $('#qc-input').value = '';
@@ -629,7 +632,7 @@ class App {
 
   async closePane(pane, silent = false) {
     if (!silent && pane.status === 'connected' && pane.kind !== 'local' && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Close "${pane.title}"? The connection will be dropped.`, { okLabel: 'Close', danger: true }))) return;
+      if (!(await confirmDialog(t('Close "{title}"? The connection will be dropped.', { title: pane.title }), { okLabel: t('Close'), danger: true }))) return;
     }
     const tab = pane.tab;
     const connId = pane.termId; // dispose() clears it: drop the panel state by the id it had
@@ -654,7 +657,7 @@ class App {
   async closeTab(tab) {
     const live = this.liveIn([tab]);
     if (live.length && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Close tab "${tab.title}" with ${plural(live.length, 'live connection')}?`, { okLabel: 'Close', danger: true }))) return false;
+      if (!(await confirmDialog(tn('Close tab "{title}" with {n} live connection?', 'Close tab "{title}" with {n} live connections?', live.length, { title: tab.title }), { okLabel: t('Close'), danger: true }))) return false;
     }
     this._disposeTab(tab);
     this._afterClose();
@@ -672,7 +675,8 @@ class App {
     if (tabs.length === 1) return this.closeTab(tabs[0]);
     const live = this.liveIn(tabs);
     if (live.length && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Close ${plural(tabs.length, 'tab')} with ${plural(live.length, 'live connection')}?`, { okLabel: 'Close tabs', danger: true }))) return false;
+      const conns = tn('{n} live connection', '{n} live connections', live.length);
+      if (!(await confirmDialog(tn('Close {n} tab with {conns}?', 'Close {n} tabs with {conns}?', tabs.length, { conns }), { okLabel: t('Close tabs'), danger: true }))) return false;
     }
     const active = this.workspace.active;
     for (const t of tabs) if (t !== active) this._disposeTab(t); // the active tab last: no neighbour is activated only to be closed
@@ -703,7 +707,7 @@ class App {
     if (!tab) return;
     const on = !tab.pinned;
     this.workspace.setPinned(tab, on);
-    toast(on ? `Pinned "${tab.title}" — it stays at the left and Close Others / Left / Right leave it alone` : `Unpinned "${tab.title}"`, 'info', on ? 3500 : 1800);
+    toast(on ? t('Pinned "{title}" — it stays at the left and Close Others / Left / Right leave it alone', { title: tab.title }) : t('Unpinned "{title}"', { title: tab.title }), 'info', on ? 3500 : 1800);
   }
 
   /** Split the active pane and open an empty pane next to it (drop a session onto it to connect). */
@@ -733,7 +737,7 @@ class App {
     const ap = tab.activePane || tab.panes()[0];
     if (ap) this.focusPane(ap, true);
     this.updateMultiexec();
-    if (created.length) toast(`${plural(created.length, 'empty pane')} added — drag sessions onto them`, 'info');
+    if (created.length) toast(tn('{n} empty pane added — drag sessions onto them', '{n} empty panes added — drag sessions onto them', created.length), 'info');
   }
 
   /** Open several sessions at once in a new tab laid out as a 2-column grid. */
@@ -742,7 +746,7 @@ class App {
     if (!list.length) return;
     const first = await this.openSession(list[0]);
     const tab = first.tab;
-    tab.title = `${list.length} sessions`;
+    tab.title = tn('{n} session', '{n} sessions', list.length);
     tab.autoTitle = false;
     this.workspace.updateTab(tab);
     const empties = this.workspace.applyGrid(tab, cols, Math.ceil(list.length / cols), () => new TermPane(this, { kind: 'empty' }));
@@ -759,7 +763,8 @@ class App {
     if (!ap || !ap.tab) return;
     const others = ap.tab.panes().filter((p) => p !== ap);
     const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead);
-    if (live.length && this.settings.confirmClose && !(await confirmDialog(`Close ${plural(others.length, 'other pane')}? ${plural(live.length, 'live connection')} will be dropped.`, { okLabel: 'Close panes', danger: true }))) return;
+    const conns = tn('{n} live connection', '{n} live connections', live.length);
+    if (live.length && this.settings.confirmClose && !(await confirmDialog(tn('Close {n} other pane? {conns} will be dropped.', 'Close {n} other panes? {conns} will be dropped.', others.length, { conns }), { okLabel: t('Close panes'), danger: true }))) return;
     for (const p of others) await this.closePane(p, true);
     this.focusPane(ap, true);
   }
@@ -770,14 +775,14 @@ class App {
    */
   toggleZoom(pane) {
     const ap = pane || this.activePane();
-    if (!ap || !ap.tab) return toast('Nothing to zoom — open a session first', 'info');
+    if (!ap || !ap.tab) return toast(t('Nothing to zoom — open a session first'), 'info');
     const tab = ap.tab;
     if (tab.zoomed) {
       this.workspace.setZoom(tab, null);
       this.focusPane(tab.activePane, true);
       return;
     }
-    if (tab.panes().length < 2) return toast('Only one pane in this tab', 'info');
+    if (tab.panes().length < 2) return toast(t('Only one pane in this tab'), 'info');
     this.workspace.setZoom(tab, ap);
     this.focusPane(ap, true);
   }
@@ -788,19 +793,19 @@ class App {
     const n = ap && ap.tab ? ap.tab.panes().length : 0;
     const zoomed = !!(ap && ap.tab && ap.tab.zoomed);
     contextMenu(r.left, r.bottom + 4, [
-      { label: 'Split Right (side by side)', key: '⌘D', action: () => this.action('split', 'right') },
-      { label: 'Split Down (top / bottom)', key: '⇧⌘D', action: () => this.action('split', 'down') },
+      { label: t('Split Right (side by side)'), key: '⌘D', action: () => this.action('split', 'right') },
+      { label: t('Split Down (top / bottom)'), key: '⇧⌘D', action: () => this.action('split', 'down') },
       '-',
-      { label: zoomed ? 'Restore Panes (unzoom)' : 'Zoom Pane (fill the tab)', key: '⇧⌘⏎', action: () => this.toggleZoom(), disabled: n < 2 },
+      { label: zoomed ? t('Restore Panes (unzoom)') : t('Zoom Pane (fill the tab)'), key: '⇧⌘⏎', action: () => this.toggleZoom(), disabled: n < 2 },
       '-',
-      { label: 'Layout 1 × 2  (2 side by side)', action: () => this.applyLayout('2x1') },
-      { label: 'Layout 2 × 1  (2 stacked)', action: () => this.applyLayout('1x2') },
-      { label: 'Layout 2 × 2  (4 panes)', action: () => this.applyLayout('2x2') },
-      { label: 'Layout 2 × 3  (6 panes)', action: () => this.applyLayout('2x3') },
-      { label: 'Layout 2 × 4  (8 panes)', action: () => this.applyLayout('2x4') },
+      { label: t('Layout 1 × 2  (2 side by side)'), action: () => this.applyLayout('2x1') },
+      { label: t('Layout 2 × 1  (2 stacked)'), action: () => this.applyLayout('1x2') },
+      { label: t('Layout 2 × 2  (4 panes)'), action: () => this.applyLayout('2x2') },
+      { label: t('Layout 2 × 3  (6 panes)'), action: () => this.applyLayout('2x3') },
+      { label: t('Layout 2 × 4  (8 panes)'), action: () => this.applyLayout('2x4') },
       '-',
-      { label: 'Re-arrange current panes as grid', action: () => this.applyLayout(`2x${Math.max(1, Math.ceil(n / 2))}`), disabled: n < 2 },
-      { label: 'Unsplit (keep active pane)', action: () => this.unsplit(), disabled: n < 2 },
+      { label: t('Re-arrange current panes as grid'), action: () => this.applyLayout(`2x${Math.max(1, Math.ceil(n / 2))}`), disabled: n < 2 },
+      { label: t('Unsplit (keep active pane)'), action: () => this.unsplit(), disabled: n < 2 },
     ]);
   }
 
@@ -815,7 +820,7 @@ class App {
     if (!pane.tab || !session) return;
     if (session.type === 'rdp' || session.type === 'vnc') return this.openSession(session);
     if (!silent && pane.status === 'connected' && pane.kind !== 'local' && !pane.dead && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Replace "${pane.title}" with "${session.name}"? The current connection will be dropped.`, { okLabel: 'Replace', danger: true }))) return;
+      if (!(await confirmDialog(t('Replace "{title}" with "{name}"? The current connection will be dropped.', { title: pane.title, name: session.name }), { okLabel: t('Replace'), danger: true }))) return;
     }
     const kind = kindOf(session.type);
     const next = new TermPane(this, { kind, session, cwd: session.cwd || undefined });
@@ -857,7 +862,8 @@ class App {
     if (pane !== this.activePane()) return;
     const el = $('#find-count'), fi = $('#find-input');
     if (!el) return;
-    el.textContent = resultCount > 0 ? `${resultIndex >= 0 ? resultIndex + 1 : '–'} / ${resultCount}` : fi.value ? 'No matches' : '';
+    this._findLast = { resultCount, resultIndex }; // redone in the new language on a switch (onLanguageChanged)
+    el.textContent = resultCount > 0 ? `${resultIndex >= 0 ? resultIndex + 1 : '–'} / ${resultCount}` : fi.value ? t('No matches') : '';
     $('#find-bar').classList.toggle('no-match', !!fi.value && resultCount === 0);
   }
 
@@ -868,22 +874,22 @@ class App {
     const empty = !this.workspace.tabs.length;
     if (empty && !el) {
       host.append(h('div', { class: 'workspace-empty' },
-        h('div', { class: 'big' }, 'No terminal open'),
-        h('div', { class: 'hint' }, 'Drag a session from the Sessions panel here, or:'),
+        h('div', { class: 'big' }, t('No terminal open')),
+        h('div', { class: 'hint' }, t('Drag a session from the Sessions panel here, or:')),
         h('div', { class: 'btns' },
-          h('button', { class: 'btn small', onclick: () => this.action('new-session') }, '＋ New session  ⌘N'),
-          h('button', { class: 'btn small', onclick: () => this.action('new-local') }, '>_ Local terminal  ⌘T'),
-          h('button', { class: 'btn small', onclick: () => this.action('quick-connect') }, 'Quick connect  ⇧⌘N'))));
+          h('button', { class: 'btn small', onclick: () => this.action('new-session') }, t('＋ New session  ⌘N')),
+          h('button', { class: 'btn small', onclick: () => this.action('new-local') }, t('>_ Local terminal  ⌘T')),
+          h('button', { class: 'btn small', onclick: () => this.action('quick-connect') }, t('Quick connect  ⇧⌘N')))));
     } else if (!empty && el) el.remove();
   }
 
   /** A detached window is titled after its active tab (Mission Control, the Window menu). */
   onTabUpdated(tab) {
-    if (this.detached && tab === this.workspace.active) document.title = tab ? `${tab.title} — MobAlt` : 'MobAlt';
+    if (this.detached && tab === this.workspace.active) document.title = tab ? t('{title} — MobAlt', { title: tab.title }) : 'MobAlt';
   }
 
   onActiveTabChanged(tab) {
-    if (this.detached) document.title = tab ? `${tab.title} — MobAlt` : 'MobAlt';
+    if (this.detached) document.title = tab ? t('{title} — MobAlt', { title: tab.title }) : 'MobAlt';
     this._syncEmptyState();
     this.updateMultiexec(); // the broadcast set is the new tab's panes
     if (this._findResearch) this._findResearch(); // the find counter belongs to the new terminal
@@ -963,7 +969,7 @@ class App {
   onPaneCwd(pane) {
     if (this.activePane() === pane) this.setStatusCwd(pane.remoteCwd);
     // local shells: the tab/pane title follows the folder (until the shell or the user sets a title)
-    if (pane.kind === 'local' && !pane.session && pane.remoteCwd && (pane.title === 'Local' || pane._cwdTitled)) {
+    if (pane.kind === 'local' && !pane.session && pane.remoteCwd && (pane.title === 'Local' || pane.title === t('Local') || pane._cwdTitled)) { // the untitled shell (terminal.js's fallback, in either language)
       const cwd = pane.remoteCwd.replace(/\/+$/, '');
       pane.title = cwd === this.info.home ? '~' : cwd.split('/').pop() || '/';
       pane._cwdTitled = true;
@@ -975,22 +981,24 @@ class App {
 
   updateStatus(pane, msg) {
     const el = $('#st-session');
+    this._statusMsg = msg; // shown again in the new language on a switch (onLanguageChanged)
     if (!pane) {
-      el.textContent = 'No session';
+      el.textContent = t('No session');
       $('#st-cwd').textContent = '';
     } else {
       const s = pane.session;
-      const where = pane.kind === 'local' ? 'local shell'
-        : pane.kind === 'empty' ? 'empty pane — drag a session here'
+      // the protocol tag (SSH, LOCAL, …), where, and the state: the glyphs between them are punctuation, each part is translated on its own
+      const where = pane.kind === 'local' ? t('local shell')
+        : pane.kind === 'empty' ? t('empty pane — drag a session here')
         : pane.kind === 'serial' ? `${s?.serialPath} @ ${s?.baudRate}`
         : pane.kind === 'ftp' ? `${s?.username ? s.username + '@' : 'anonymous@'}${s?.host}${s?.port && s.port !== 21 ? ':' + s.port : ''}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
-      el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${pane.status}${msg ? ' (' + msg + ')' : ''}`;
-      if (pane.kind === 'mosh' && pane.sftpStatus && pane.sftpStatus !== 'idle') el.textContent += ` · SFTP: ${pane.sftpStatus}`;
+      el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${stateLabel(pane.status)}${msg ? ' (' + msg + ')' : ''}`;
+      if (pane.kind === 'mosh' && pane.sftpStatus && pane.sftpStatus !== 'idle') el.textContent += ' · ' + t('SFTP: {state}', { state: stateLabel(pane.sftpStatus) });
       const browsing = this.sftpPanel.states.get(pane.kind === 'mosh' ? pane.sftpConnId : pane.termId);
       $('#st-cwd').textContent = pane.dead ? '' : shortPath(pane.remoteCwd || pane.cwd || (browsing && browsing.path) || '');
     }
-    $('#st-log').textContent = pane && pane.logging ? '● LOG' : '';
+    $('#st-log').textContent = pane && pane.logging ? t('● LOG') : '';
     $('#st-log').classList.toggle('on', !!(pane && pane.logging));
   }
 
@@ -1005,8 +1013,8 @@ class App {
 
   updateStatusRight() {
     const el = $('#st-transfers');
-    const x = parseInt(el.dataset.xfers || '0', 10), t = parseInt(el.dataset.tunnels || '0', 10);
-    el.textContent = [x ? `⇅ ${x} transfer${x > 1 ? 's' : ''}` : '', t ? `⇄ ${t} tunnel${t > 1 ? 's' : ''}` : ''].filter(Boolean).join('  ');
+    const x = parseInt(el.dataset.xfers || '0', 10), tun = parseInt(el.dataset.tunnels || '0', 10);
+    el.textContent = [x ? tn('⇅ {n} transfer', '⇅ {n} transfers', x) : '', tun ? tn('⇄ {n} tunnel', '⇄ {n} tunnels', tun) : ''].filter(Boolean).join('  ');
   }
 
   // ---------- MultiExec ----------
@@ -1045,7 +1053,7 @@ class App {
     if (this.multiexec) {
       const targets = this.multiexecTargets();
       const n = targets.length + (targets.includes(pane) ? 0 : 1); // broadcast() also writes to a pane that is not on screen
-      if (n > 1) where = `${n} terminals (MultiExec)`;
+      if (n > 1) where = t('{n} terminals (MultiExec)', { n });
     }
     return pasteGuardDialog({ text, analysis, where, warn: mode.warn });
   }
@@ -1053,8 +1061,8 @@ class App {
   /** Wording for an empty broadcast set: no tab at all, or a tab whose panes are empty cards, FTP cards or dead shells. */
   multiexecNoneText() {
     const tab = this.workspace.active;
-    if (tab && tab.zoomed) return 'the zoomed pane has no live terminal — restore the panes (⇧⌘⏎) or reconnect';
-    return tab ? 'no terminal is visible in this tab — connect a session first' : 'no terminal is visible — open a session first';
+    if (tab && tab.zoomed) return t('the zoomed pane has no live terminal — restore the panes (⇧⌘⏎) or reconnect');
+    return tab ? t('no terminal is visible in this tab — connect a session first') : t('no terminal is visible — open a session first');
   }
 
   /** Banner, toolbar state and the visible-terminal count; called whenever the active tab or a pane's life changes. */
@@ -1064,10 +1072,15 @@ class App {
     banner.hidden = !this.multiexec;
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
     const n = this.multiexecTargets().length;
-    // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminal(s)"
+    // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminal(s)".
+    // The banner is rendered here, never through a data-i18n hook on the static element (index.html): one sentence
+    // per case, the count element put where {count} is, so a translation can move it.
     const count = h('b', { id: 'multiexec-count', hidden: n === 0 }, String(n));
     const zoomed = !!(this.workspace.active && this.workspace.active.zoomed);
-    banner.replaceChildren('MultiExec is ON — ', ...(n === 0 ? [this.multiexecNoneText(), count] : ['keystrokes go to ', count, ' visible terminal(s) in this tab', zoomed ? ' (the zoomed pane only)' : '']));
+    const text = n === 0 ? t('MultiExec is ON — {reason}', { reason: this.multiexecNoneText() })
+      : zoomed ? t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab (the zoomed pane only)')
+      : t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab');
+    banner.replaceChildren(...fillNodes(text, { count }), ...(n === 0 ? [count] : []));
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
 
@@ -1076,8 +1089,16 @@ class App {
   onBundleUpdated({ version, current }) {
     if (!version || version === this.updateDismissed) return;
     this.updateOnDisk = version;
-    $('#update-banner-text').replaceChildren('MobAlt ', h('b', {}, version), ' is installed on disk — you are running ', h('b', {}, current || this.info.version), '. ', h('span', { class: 'keep' }, 'Relaunch to use it.'));
+    this._updateCurrent = current || this.info.version;
+    this._renderUpdateBanner();
     this.showUpdateBanner(true);
+  }
+
+  /** The banner's sentence (test/e2e-update.js asserts the English): the two versions in bold wherever the translation puts them. */
+  _renderUpdateBanner() {
+    if (!this.updateOnDisk) return;
+    const versions = { version: h('b', {}, this.updateOnDisk), current: h('b', {}, this._updateCurrent) };
+    $('#update-banner-text').replaceChildren(...fillNodes(t('MobAlt {version} is installed on disk — you are running {current}.'), versions), ' ', h('span', { class: 'keep' }, t('Relaunch to use it.')));
   }
 
   showUpdateBanner(on) {
@@ -1090,11 +1111,11 @@ class App {
   async startSessionTunnels(pane) {
     const list = (pane.session?.tunnels || []).filter((t) => t.enabled !== false);
     const ids = [];
-    for (const t of list) {
+    for (const tun of list) {
       try {
-        ids.push(await window.api.tunnels.start({ ...t, connId: pane.termId }));
+        ids.push(await window.api.tunnels.start({ ...tun, connId: pane.termId }));
       } catch (e) {
-        toast(`Tunnel ${t.bindPort}: ${e.message}`, 'error');
+        toast(t('Tunnel {port}: {error}', { port: tun.bindPort, error: e.message }), 'error');
       }
     }
     if (!list.length) return;
@@ -1103,8 +1124,8 @@ class App {
     const mine = all.filter((x) => ids.includes(x.id));
     const failed = mine.filter((x) => x.status === 'error');
     const ok = mine.length - failed.length;
-    if (failed.length) toast(`${failed.length} of ${plural(mine.length, 'tunnel')} failed for ${pane.title}: ${failed.map((x) => `${x.bindPort} (${x.error || 'error'})`).join('; ')}`, 'error', 7000);
-    if (ok) toast(`${plural(ok, 'tunnel')} started for ${pane.title}`, 'success');
+    if (failed.length) toast(tn('{failed} of {n} tunnel failed for {title}: {list}', '{failed} of {n} tunnels failed for {title}: {list}', mine.length, { failed: failed.length, title: pane.title, list: failed.map((x) => `${x.bindPort} (${x.error || t('error')})`).join('; ') }), 'error', 7000);
+    if (ok) toast(tn('{n} tunnel started for {title}', '{n} tunnels started for {title}', ok, { title: pane.title }), 'success');
   }
 
   // ---------- sessions / settings persistence ----------
@@ -1113,15 +1134,17 @@ class App {
    * (nothing imported or skipped, one reason) is an error — "<refused>: <reason>"; a file with nothing in it is a
    * warning — "No sessions found in <file>"; anything else is a summary — "Imported 5 sessions from MobaXterm.ini,
    * updated 2 already in the tree, skipped 1: …" — shown as a warning when entries were skipped, with up to three
-   * of their reasons.
+   * of their reasons. The summary is a head clause and up to two tail clauses, each translated whole (with its
+   * leading comma), since the eight combinations would otherwise be sixteen sentences.
    */
-  importToast(r, { from = '', refused = 'Import failed' } = {}) {
+  importToast(r, { from = '', refused = t('Import failed') } = {}) {
     const errors = r.errors || [];
     if (!r.imported && !r.updated && !r.skipped && errors.length) return toast(`${refused}: ${errors[0]}`, 'error', 8000);
-    if (!r.imported && !r.updated && !r.skipped) return toast(`No sessions found${r.file || from ? ` in ${r.file || from}` : ''}`, 'warn');
-    let msg = `Imported ${plural(r.imported, 'session')}${from ? ` from ${from}` : ''}`;
-    if (r.updated) msg += `, updated ${r.updated} already in the tree`;
-    if (r.skipped) msg += `, skipped ${r.skipped}: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '; …' : ''}`;
+    const file = r.file || from;
+    if (!r.imported && !r.updated && !r.skipped) return toast(file ? t('No sessions found in {file}', { file }) : t('No sessions found'), 'warn');
+    let msg = from ? tn('Imported {n} session from {from}', 'Imported {n} sessions from {from}', r.imported, { from }) : tn('Imported {n} session', 'Imported {n} sessions', r.imported);
+    if (r.updated) msg += t(', updated {n} already in the tree', { n: r.updated });
+    if (r.skipped) msg += t(', skipped {n}: {reasons}', { n: r.skipped, reasons: errors.slice(0, 3).join('; ') + (errors.length > 3 ? '; …' : '') });
     return toast(msg, r.skipped ? 'warn' : 'success', r.skipped ? 8000 : undefined);
   }
 
@@ -1192,11 +1215,28 @@ class App {
     return true;
   }
 
-  /** The labels app.js writes itself, redone in the new language (components do their own on the same event). */
+  /**
+   * The labels app.js writes itself, redone in the new language (components do their own on the same event): the
+   * status bar, the MultiExec and update banners, the empty-workspace card, the find counter, a detached window's
+   * title. Terminal output is never touched.
+   */
   onLanguageChanged() {
     if (!this.info) return;
     $('#st-x11').title = this.info.x11Available ? t('Local X server: {display}', { display: this.info.display }) : t('No X server found (install XQuartz for X11 forwarding)');
     this._syncSidebarToggle();
+    if (!this.workspace) return; // before init() finished: nothing else is on screen yet
+    this.updateStatus(this.activePane(), this._statusMsg);
+    this.updateStatusRight();
+    this.updateMultiexec();
+    this._renderUpdateBanner();
+    const empty = $('#tab-content .workspace-empty');
+    if (empty) { empty.remove(); this._syncEmptyState(); }
+    if (this.detached) this.onTabUpdated(this.workspace.active);
+    const fb = $('#find-bar');
+    if (!fb.hidden) {
+      if (fb.classList.contains('bad-pattern')) $('#find-count').textContent = t('Invalid pattern');
+      else if (this._findLast) this.onFindResults(this.activePane(), this._findLast);
+    }
   }
 
   /**
@@ -1284,11 +1324,11 @@ class App {
         this.multiexec = !this.multiexec;
         this.updateMultiexec();
         const n = this.multiexecTargets().length;
-        toast(!this.multiexec ? 'MultiExec OFF'
-          : n === 0 ? `MultiExec ON: ${this.multiexecNoneText()}`
-          : n === 1 && this.workspace.active?.zoomed ? 'MultiExec ON: only the zoomed pane is visible — restore the panes (⇧⌘⏎) to broadcast'
-          : n === 1 ? 'MultiExec ON: only 1 terminal is visible — split the tab to broadcast'
-          : 'MultiExec ON: input goes to every visible terminal in this tab', this.multiexec ? 'warn' : 'info');
+        toast(!this.multiexec ? t('MultiExec OFF')
+          : n === 0 ? t('MultiExec ON: {reason}', { reason: this.multiexecNoneText() })
+          : n === 1 && this.workspace.active?.zoomed ? t('MultiExec ON: only the zoomed pane is visible — restore the panes (⇧⌘⏎) to broadcast')
+          : n === 1 ? t('MultiExec ON: only 1 terminal is visible — split the tab to broadcast')
+          : t('MultiExec ON: input goes to every visible terminal in this tab'), this.multiexec ? 'warn' : 'info');
         return;
       }
       case 'tunnels': return tunnelsDialog(this, typeof arg === 'object' ? arg : {});
@@ -1297,7 +1337,7 @@ class App {
         const r = await settingsDialog(this);
         if (r) {
           await this.saveSettings(r);
-          toast('Settings saved', 'success');
+          toast(t('Settings saved'), 'success');
         }
         return;
       }
@@ -1305,21 +1345,21 @@ class App {
       case 'import-sshconfig': {
         const r = await window.api.sessions.importSshConfig();
         await this.reloadSessions();
-        toast(`Imported ${r.imported} of ${plural(r.found, 'host')} from ~/.ssh/config`, 'success');
+        toast(tn('Imported {imported} of {n} host from ~/.ssh/config', 'Imported {imported} of {n} hosts from ~/.ssh/config', r.found, { imported: r.imported }), 'success');
         return;
       }
       case 'import-moba': {
         const r = await window.api.sessions.importMoba().catch((e) => ({ imported: 0, skipped: 0, errors: [ipcMessage(e)] }));
         if (!r) return;
         await this.reloadSessions();
-        this.importToast(r, { from: 'MobaXterm.ini', refused: 'Not a MobaXterm.ini file' });
+        this.importToast(r, { from: 'MobaXterm.ini', refused: t('Not a MobaXterm.ini file') });
         return;
       }
       case 'import-json': {
         const r = await window.api.sessions.importJson().catch((e) => ({ imported: 0, skipped: 0, errors: [ipcMessage(e)] }));
         if (!r) return;
         await this.reloadSessions();
-        this.importToast(r, { refused: 'Not a MobAlt sessions file' });
+        this.importToast(r, { refused: t('Not a MobAlt sessions file') });
         return;
       }
       case 'export-json': {
@@ -1327,11 +1367,11 @@ class App {
         try {
           f = await window.api.sessions.exportJson(); // the path, null when cancelled, { error } when the file could not be written
         } catch (e) {
-          return toast(`Export failed: ${ipcMessage(e)}`, 'error', 8000);
+          return toast(t('Export failed: {error}', { error: ipcMessage(e) }), 'error', 8000);
         }
         if (!f) return;
-        if (f.error) return toast(`Export failed: ${f.error}`, 'error', 8000);
-        toast(`Exported to ${f}`, 'success');
+        if (f.error) return toast(t('Export failed: {error}', { error: f.error }), 'error', 8000);
+        toast(t('Exported to {file}', { file: f }), 'success');
         return;
       }
       case 'shortcuts': return shortcutsDialog(this);
@@ -1346,5 +1386,5 @@ const app = new App();
 window.app = app;
 app.init().catch((e) => {
   console.error(e);
-  toast('Startup error: ' + e.message, 'error', 10000);
+  toast(t('Startup error: {error}', { error: e.message }), 'error', 10000);
 });

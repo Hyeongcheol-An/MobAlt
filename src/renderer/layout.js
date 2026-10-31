@@ -1,6 +1,6 @@
 // Tabs and split-pane layout. Each tab owns a tree: {type:'pane', pane} | {type:'split', dir, children:[a,b], ratio}
 import { h, contextMenu, promptDialog, icon } from './ui.js';
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { t, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 let tabSeq = 0;
 
@@ -47,7 +47,8 @@ export class Workspace {
     });
     // keyboard: the tab strip is one Tab stop (roving tabindex); arrows move between tabs
     this.tabsEl.setAttribute('role', 'tablist');
-    this.tabsEl.setAttribute('aria-label', 'Terminal tabs');
+    this.tabsEl.setAttribute('aria-label', t('Terminal tabs'));
+    onChange(() => this.relabel()); // a language switch: the strip's own words again (the tab titles are the tabs')
     this.tabsEl.addEventListener('keydown', (e) => this._onTabKey(e));
     this.tabsEl.addEventListener('focusin', (e) => {
       const t = this.tabs.find((t) => t.tabEl === e.target);
@@ -139,15 +140,15 @@ export class Workspace {
   /** Menu listing every tab (status dot, icon, title; ✓ marks the active one); picking one activates it. */
   showTabList(anchor = this.tabListBtn) {
     if (!this.tabs.length || !anchor) return null;
-    const items = this.tabs.map((t) => ({
+    const items = this.tabs.map((tab) => ({
       label: h('span', { class: 'tab-menu-item' },
-        h('span', { class: 'dot ' + (t.activePane ? t.activePane.status : '') }),
-        t.icon ? h('span', { class: 'tabico' }, t.icon) : null,
-        h('span', { class: 'title' }, t.title),
-        t.zoomed ? h('span', { class: 'zoomico', title: 'A pane is zoomed' }, icon('zoom')) : null,
-        t.pinned ? h('span', { class: 'pinico', title: 'Pinned' }, icon('pin')) : null),
-      key: t === this.active ? '✓' : '',
-      action: () => this.activate(t),
+        h('span', { class: 'dot ' + (tab.activePane ? tab.activePane.status : '') }),
+        tab.icon ? h('span', { class: 'tabico' }, tab.icon) : null,
+        h('span', { class: 'title' }, tab.title),
+        tab.zoomed ? h('span', { class: 'zoomico', title: t('A pane is zoomed') }, icon('zoom')) : null,
+        tab.pinned ? h('span', { class: 'pinico', title: t('Pinned') }, icon('pin')) : null),
+      key: tab === this.active ? '✓' : '',
+      action: () => this.activate(tab),
     }));
     const r = anchor.getBoundingClientRect();
     const menu = contextMenu(r.left, r.bottom + 4, items);
@@ -210,10 +211,11 @@ export class Workspace {
       h('span', { class: 'dot' }),
       h('span', { class: 'tabico', hidden: !tab.icon }, tab.icon || ''),
       h('span', { class: 'title' }, tab.title),
-      h('span', { class: 'zoomico', hidden: !tab.zoomed, title: 'A pane is zoomed (⇧⌘⏎ restores the layout)' }, icon('zoom')),
-      h('span', { class: 'pinico', hidden: !tab.pinned, title: 'Pinned (⇧⌘P unpins)' }, icon('pin')),
-      h('button', { class: 'close', title: 'Close (⌘W)', 'aria-label': 'Close tab', tabindex: -1, onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, icon('x'))
+      h('span', { class: 'zoomico', hidden: !tab.zoomed }, icon('zoom')),
+      h('span', { class: 'pinico', hidden: !tab.pinned }, icon('pin')),
+      h('button', { class: 'close', tabindex: -1, onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, icon('x'))
     );
+    this._relabelTab(tab, el); // the tooltips and the close button's name, in the current language
     el.addEventListener('mousedown', (e) => {
       if (e.button === 1) { e.preventDefault(); if (!tab.pinned) this.app.closeTab(tab); } // a pinned tab has no accidental close: ⌘W, the menu or ⌫ on the focused tab
     });
@@ -251,6 +253,23 @@ export class Workspace {
       this.moveTab(src, idx);
     });
     return el;
+  }
+
+  /** The strip's own words on a tab — the tooltips, the close button's name — in the current language; the title is the tab's. */
+  _relabelTab(tab, el = tab.tabEl) {
+    if (!el) return;
+    el.title = tab.pinned ? t('{title} (pinned)', { title: tab.title }) : tab.title;
+    el.querySelector('.zoomico').title = t('A pane is zoomed (⇧⌘⏎ restores the layout)');
+    el.querySelector('.pinico').title = t('Pinned (⇧⌘P unpins)');
+    const close = el.querySelector('.close');
+    close.title = t('Close (⌘W)');
+    close.setAttribute('aria-label', t('Close tab'));
+  }
+
+  /** A language switch (i18n:changed): every label the strip keeps on screen, again; nothing else moves. */
+  relabel() {
+    this.tabsEl.setAttribute('aria-label', t('Terminal tabs'));
+    for (const tab of this.tabs) this._relabelTab(tab);
   }
 
   /** Number of pinned tabs; they are always the prefix of `tabs` (moveTab keeps it so). */
@@ -327,21 +346,21 @@ export class Workspace {
     const bulk = (which) => this.closeTargets(tab, which);
     const closeItem = (label, which) => ({ label, action: closing(() => this.app.closeTabs(bulk(which))), disabled: !bulk(which).length });
     contextMenu(x, y, [
-      { label: 'Rename Tab…', action: () => this.renameTab(tab) },
-      { label: 'Duplicate', key: '⇧⌘T', action: () => this.app.action('duplicate') },
-      { label: 'Tab Color', action: () => this.pickColor(tab) },
-      { label: tab.pinned ? 'Unpin Tab' : 'Pin Tab', key: '⇧⌘P', action: () => this.app.togglePin(tab) },
+      { label: t('Rename Tab…'), action: () => this.renameTab(tab) },
+      { label: t('Duplicate'), key: '⇧⌘T', action: () => this.app.action('duplicate') },
+      { label: t('Tab Color'), action: () => this.pickColor(tab) },
+      { label: tab.pinned ? t('Unpin Tab') : t('Pin Tab'), key: '⇧⌘P', action: () => this.app.togglePin(tab) },
       '-',
-      { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right') },
-      { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down') },
+      { label: t('Split Right'), key: '⌘D', action: () => this.app.action('split', 'right') },
+      { label: t('Split Down'), key: '⇧⌘D', action: () => this.app.action('split', 'down') },
       '-',
-      { label: 'Detach to New Window', key: '⌥⌘N', action: () => this.app.detachTab(tab) },
+      { label: t('Detach to New Window'), key: '⌥⌘N', action: () => this.app.detachTab(tab) },
       '-',
-      { label: 'Close', key: '⌘W', action: closing(() => this.app.closeTab(tab)) },
-      closeItem('Close Others', 'others'),
-      closeItem('Close Tabs to the Left', 'left'),
-      closeItem('Close Tabs to the Right', 'right'),
-      closeItem('Close All', 'all'),
+      { label: t('Close'), key: '⌘W', action: closing(() => this.app.closeTab(tab)) },
+      closeItem(t('Close Others'), 'others'),
+      closeItem(t('Close Tabs to the Left'), 'left'),
+      closeItem(t('Close Tabs to the Right'), 'right'),
+      closeItem(t('Close All'), 'all'),
     ]);
   }
 
@@ -397,10 +416,10 @@ export class Workspace {
   }
 
   async renameTab(tab) {
-    const name = await promptDialog('Rename tab', { value: tab.title });
+    const name = await promptDialog(t('Rename tab'), { value: tab.title });
     if (name === null) return;
     tab.autoTitle = !name.trim();
-    tab.title = name.trim() || (tab.activePane ? tab.activePane.title : 'Terminal');
+    tab.title = name.trim() || (tab.activePane ? tab.activePane.title : t('Terminal'));
     if (tab.autoTitle) this.app.deriveTabTitle?.(tab); // back to automatic: the session's name and icon again
     this.updateTab(tab);
   }
@@ -415,7 +434,7 @@ export class Workspace {
   updateTab(tab) {
     if (!tab.tabEl) return;
     tab.tabEl.querySelector('.title').textContent = tab.title;
-    tab.tabEl.title = tab.pinned ? `${tab.title} (pinned)` : tab.title;
+    tab.tabEl.title = tab.pinned ? t('{title} (pinned)', { title: tab.title }) : tab.title;
     tab.tabEl.classList.toggle('pinned', !!tab.pinned);
     const pin = tab.tabEl.querySelector('.pinico');
     if (pin) pin.hidden = !tab.pinned;
