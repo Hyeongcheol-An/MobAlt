@@ -14,45 +14,45 @@
       <div class="drag-region"></div>
       <div class="brand">MobAlt</div>
       <div class="tb-group">
-        <button class="tb-btn" data-action="new-session" title="New session (⌘N)"><span class="ico" data-icon="plus"></span>Session</button>
-        <button class="tb-btn" data-action="new-local" title="New local terminal (⌘T)"><span class="ico" data-icon="terminal"></span>Terminal</button>
-        <button class="tb-btn" data-action="tunnels" title="SSH tunnels / port forwarding (⇧⌘U)"><span class="ico" data-icon="tunnel"></span>Tunneling</button>
-        <button class="tb-btn toggle" id="btn-multiexec" data-action="multiexec" title="Broadcast keystrokes to every visible terminal in this tab (⇧⌘M)"><span class="ico" data-icon="multiexec"></span>MultiExec</button>
+        <button class="tb-btn" data-action="new-session" title="New session (⌘N)" data-i18n data-i18n-title><span class="ico" data-icon="plus"></span>Session</button>
+        <button class="tb-btn" data-action="new-local" title="New local terminal (⌘T)" data-i18n data-i18n-title><span class="ico" data-icon="terminal"></span>Terminal</button>
+        <button class="tb-btn" data-action="tunnels" title="SSH tunnels / port forwarding (⇧⌘U)" data-i18n data-i18n-title><span class="ico" data-icon="tunnel"></span>Tunneling</button>
+        <button class="tb-btn toggle" id="btn-multiexec" data-action="multiexec" title="Broadcast keystrokes to every visible terminal in this tab (⇧⌘M)" data-i18n data-i18n-title><span class="ico" data-icon="multiexec"></span>MultiExec</button>
         <div class="tb-split">
-          <button class="tb-btn" id="btn-split" data-action="split-menu" title="Split / grid layouts (⌘D right, ⇧⌘D down)"><span class="ico" data-icon="split"></span>Split ▾</button>
+          <button class="tb-btn" id="btn-split" data-action="split-menu" title="Split / grid layouts (⌘D right, ⇧⌘D down)" data-i18n data-i18n-title><span class="ico" data-icon="split"></span>Split ▾</button>
         </div>
-        <button class="tb-btn" data-action="sidebar" data-arg="tools" title="Network tools"><span class="ico" data-icon="tools"></span>Tools</button>
-        <button class="tb-btn" data-action="settings" title="Settings (⌘,)"><span class="ico" data-icon="settings"></span>Settings</button>
+        <button class="tb-btn" data-action="sidebar" data-arg="tools" title="Network tools" data-i18n data-i18n-title><span class="ico" data-icon="tools"></span>Tools</button>
+        <button class="tb-btn" data-action="settings" title="Settings (⌘,)" data-i18n data-i18n-title><span class="ico" data-icon="settings"></span>Settings</button>
       </div>
       <form id="quick-connect" class="quick" autocomplete="off">
-        <input id="qc-input" placeholder="quick connect: user@host[:port]" aria-label="Quick connect" spellcheck="false" />
-        <button type="submit" title="Connect">Go</button>
+        <input id="qc-input" placeholder="quick connect: user@host[:port]" aria-label="Quick connect" data-i18n-placeholder data-i18n-aria-label spellcheck="false" />
+        <button type="submit" title="Connect" data-i18n data-i18n-title>Go</button>
       </form>
     </header>
 
     <div id="main">
       <!-- Left: vertical tab strip + panel -->
-      <nav id="side-strip" aria-label="Panels">
-        <button class="strip-btn active" data-panel="sessions" title="Sessions (⌘1)"><span>Sessions</span></button>
-        <button class="strip-btn" data-panel="sftp" title="SFTP browser (⌘2)"><span>Sftp</span></button>
-        <button class="strip-btn" data-panel="tools" title="Tools (⌘3)"><span>Tools</span></button>
-        <button class="strip-btn" data-panel="macros" title="Macros (⌘4)"><span>Macros</span></button>
+      <nav id="side-strip" aria-label="Panels" data-i18n-aria-label>
+        <button class="strip-btn active" data-panel="sessions" title="Sessions (⌘1)" data-i18n-title><span data-i18n>Sessions</span></button>
+        <button class="strip-btn" data-panel="sftp" title="SFTP browser (⌘2)" data-i18n-title><span data-i18n>Sftp</span></button>
+        <button class="strip-btn" data-panel="tools" title="Tools (⌘3)" data-i18n-title><span data-i18n>Tools</span></button>
+        <button class="strip-btn" data-panel="macros" title="Macros (⌘4)" data-i18n-title><span data-i18n>Macros</span></button>
         <div class="strip-spacer"></div>
-        <button class="strip-btn" data-action="toggle-sidebar" title="Hide sidebar (⌘B)"><span data-icon="chevron-left"></span></button>
+        <button class="strip-btn" data-action="toggle-sidebar" title="Hide sidebar (⌘B)" data-i18n-title><span data-icon="chevron-left"></span></button>
       </nav>
 
       <aside id="sidebar">
         <!-- Sessions panel -->
         <section class="panel active" id="panel-sessions">
           <div class="panel-head">
-            <input id="session-filter" placeholder="Filter sessions…" aria-label="Filter sessions" spellcheck="false" />
-            <button class="icon-btn" data-action="new-folder" data-icon="folder-plus" title="New folder" aria-label="New folder"></button>
-            <button class="icon-btn" data-action="new-session" data-icon="plus" title="New session" aria-label="New session"></button>
+            <input id="session-filter" placeholder="Filter sessions…" aria-label="Filter sessions" data-i18n-placeholder data-i18n-aria-label spellcheck="false" />
+            <button class="icon-btn" data-action="new-folder" data-icon="folder-plus" title="New folder" aria-label="New folder" data-i18n-title data-i18n-aria-label></button>
+            <button class="icon-btn" data-action="new-session" data-icon="plus" title="New session" aria-label="New session" data-i18n-title data-i18n-aria-label></button>
           </div>
           <div id="session-tree" class="tree"></div>
           <div class="panel-foot">
-            <button class="link-btn" data-action="import-sshconfig">Import ~/.ssh/config</button>
-            <button class="link-btn" data-action="import-moba">Import MobaXterm.ini</button>
+            <button class="link-btn" data-action="import-sshconfig" data-i18n>Import ~/.ssh/config</button>
+            <button class="link-btn" data-action="import-moba" data-i18n>Import MobaXterm.ini</button>
           </div>
         </section>
 
@@ -60,24 +60,24 @@
         <section class="panel" id="panel-sftp">
           <div class="sftp-empty" id="sftp-empty">
             <div class="big">SFTP</div>
-            <p>Open an SSH session to browse remote files here.<br/>Drag files from Finder into the list to upload.</p>
+            <p data-i18n>Open an SSH session to browse remote files here.<br/>Drag files from Finder into the list to upload.</p>
           </div>
           <div id="sftp-ui" hidden>
             <div class="sftp-conn" id="sftp-conn"></div>
             <div class="sftp-toolbar">
-              <button class="icon-btn" data-sftp="up" data-icon="arrow-up" title="Parent folder"></button>
-              <button class="icon-btn" data-sftp="home" data-icon="home" title="Home"></button>
-              <button class="icon-btn" data-sftp="refresh" data-icon="refresh" title="Refresh"></button>
-              <button class="icon-btn" data-sftp="mkdir" data-icon="folder-plus" title="New folder"></button>
-              <button class="icon-btn" data-sftp="upload" data-icon="upload" title="Upload…"></button>
-              <button class="icon-btn" data-sftp="download" data-icon="download" title="Download selected"></button>
-              <button class="icon-btn" data-sftp="delete" data-icon="trash" title="Delete selected"></button>
-              <button class="icon-btn" data-sftp="terminal-cd" data-icon="terminal" title="cd terminal to this folder"></button>
+              <button class="icon-btn" data-sftp="up" data-icon="arrow-up" title="Parent folder" data-i18n-title></button>
+              <button class="icon-btn" data-sftp="home" data-icon="home" title="Home" data-i18n-title></button>
+              <button class="icon-btn" data-sftp="refresh" data-icon="refresh" title="Refresh" data-i18n-title></button>
+              <button class="icon-btn" data-sftp="mkdir" data-icon="folder-plus" title="New folder" data-i18n-title></button>
+              <button class="icon-btn" data-sftp="upload" data-icon="upload" title="Upload…" data-i18n-title></button>
+              <button class="icon-btn" data-sftp="download" data-icon="download" title="Download selected" data-i18n-title></button>
+              <button class="icon-btn" data-sftp="delete" data-icon="trash" title="Delete selected" data-i18n-title></button>
+              <button class="icon-btn" data-sftp="terminal-cd" data-icon="terminal" title="cd terminal to this folder" data-i18n-title></button>
             </div>
-            <form class="sftp-path" id="sftp-path-form"><input id="sftp-path" aria-label="Remote path" spellcheck="false" /></form>
+            <form class="sftp-path" id="sftp-path-form"><input id="sftp-path" aria-label="Remote path" data-i18n-aria-label spellcheck="false" /></form>
             <div class="sftp-opts">
-              <label title="Keep the panel on the shell's current folder"><input type="checkbox" id="sftp-follow" /> Follow terminal</label>
-              <label><input type="checkbox" id="sftp-hidden" /> Show hidden</label>
+              <label title="Keep the panel on the shell's current folder" data-i18n data-i18n-title><input type="checkbox" id="sftp-follow" /> Follow terminal</label>
+              <label data-i18n><input type="checkbox" id="sftp-hidden" /> Show hidden</label>
             </div>
             <div id="sftp-list" class="sftp-list" tabindex="0"></div>
             <div id="sftp-transfers" class="sftp-transfers"></div>
@@ -87,98 +87,98 @@
         <!-- Tools panel -->
         <section class="panel" id="panel-tools">
           <div class="tools-form">
-            <div class="row"><input id="tool-host" placeholder="host or IP" aria-label="Host or IP" spellcheck="false" /></div>
+            <div class="row"><input id="tool-host" placeholder="host or IP" aria-label="Host or IP" data-i18n-placeholder data-i18n-aria-label spellcheck="false" /></div>
             <div class="row btns">
-              <button data-tool="ping">Ping</button>
-              <button data-tool="traceroute">Traceroute</button>
+              <button data-tool="ping" data-i18n>Ping</button>
+              <button data-tool="traceroute" data-i18n>Traceroute</button>
               <button data-tool="lookup">DNS</button>
-              <button data-tool="netinfo">Net info</button>
+              <button data-tool="netinfo" data-i18n>Net info</button>
             </div>
             <div class="row">
-              <input id="tool-port-from" type="number" value="1" min="1" max="65535" title="from port" aria-label="From port" />
+              <input id="tool-port-from" type="number" value="1" min="1" max="65535" title="from port" aria-label="From port" data-i18n-title data-i18n-aria-label />
               <span>–</span>
-              <input id="tool-port-to" type="number" value="1024" min="1" max="65535" title="to port" aria-label="To port" />
-              <button data-tool="portscan">Port scan</button>
-              <button data-tool="stop" class="danger">Stop</button>
+              <input id="tool-port-to" type="number" value="1024" min="1" max="65535" title="to port" aria-label="To port" data-i18n-title data-i18n-aria-label />
+              <button data-tool="portscan" data-i18n>Port scan</button>
+              <button data-tool="stop" class="danger" data-i18n>Stop</button>
             </div>
             <div class="row btns">
-              <button data-action="keygen" id="tool-keygen" title="Generate an SSH key pair (ssh-keygen)">Generate SSH key…</button>
+              <button data-action="keygen" id="tool-keygen" title="Generate an SSH key pair (ssh-keygen)" data-i18n data-i18n-title>Generate SSH key…</button>
             </div>
           </div>
           <!-- Wake-on-LAN: the magic packet (6 × FF + the MAC 16 times) as a UDP broadcast, 3 times (panels.js ToolsPanel.wake) -->
           <details class="tools-group" id="tools-wol" open>
-            <summary>Wake-on-LAN</summary>
+            <summary data-i18n>Wake-on-LAN</summary>
             <div class="tools-form">
               <div class="row">
-                <input id="wol-mac" list="wol-history" placeholder="MAC aa:bb:cc:dd:ee:ff" aria-label="MAC address" title="MAC address: aa:bb:cc:dd:ee:ff, aa-bb-cc-dd-ee-ff, aabb.ccdd.eeff or bare hex; the last 10 are remembered" spellcheck="false" autocomplete="off" />
+                <input id="wol-mac" list="wol-history" placeholder="MAC aa:bb:cc:dd:ee:ff" aria-label="MAC address" title="MAC address: aa:bb:cc:dd:ee:ff, aa-bb-cc-dd-ee-ff, aabb.ccdd.eeff or bare hex; the last 10 are remembered" data-i18n-placeholder data-i18n-aria-label data-i18n-title spellcheck="false" autocomplete="off" />
                 <datalist id="wol-history"></datalist>
-                <button data-wol="wake" title="Send the magic packet (⏎)">Wake</button>
+                <button data-wol="wake" title="Send the magic packet (⏎)" data-i18n data-i18n-title>Wake</button>
               </div>
               <div class="row">
-                <input id="wol-broadcast" value="255.255.255.255" placeholder="255.255.255.255" aria-label="Broadcast address" title="Broadcast address (a directed broadcast such as 192.168.1.255 reaches another subnet)" spellcheck="false" />
-                <input id="wol-port" type="number" value="9" min="1" max="65535" aria-label="UDP port" title="UDP port" />
-                <input id="wol-label" placeholder="label (optional)" aria-label="Label for the history" title="A name to remember this MAC by (up to 40 characters)" maxlength="40" spellcheck="false" />
+                <input id="wol-broadcast" value="255.255.255.255" placeholder="255.255.255.255" aria-label="Broadcast address" title="Broadcast address (a directed broadcast such as 192.168.1.255 reaches another subnet)" data-i18n-aria-label data-i18n-title spellcheck="false" />
+                <input id="wol-port" type="number" value="9" min="1" max="65535" aria-label="UDP port" title="UDP port" data-i18n-aria-label data-i18n-title />
+                <input id="wol-label" placeholder="label (optional)" aria-label="Label for the history" title="A name to remember this MAC by (up to 40 characters)" data-i18n-placeholder data-i18n-aria-label data-i18n-title maxlength="40" spellcheck="false" />
               </div>
             </div>
           </details>
           <!-- Network scanner: a CIDR / range / host → ping and TCP connects over a worker queue in the main process, hits streamed into the table below -->
           <details class="tools-group" id="tools-scan" open>
-            <summary>Network scanner</summary>
+            <summary data-i18n>Network scanner</summary>
             <div class="tools-form">
               <div class="row">
-                <input id="scan-target" placeholder="192.168.1.0/24, 10.0.0.1-50 or host" aria-label="Scan target" title="A CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or one host; up to a /16" spellcheck="false" />
-                <button data-scan="start" title="Scan (⏎)">Scan</button>
-                <button data-scan="stop" class="danger" title="Stop the scan">Stop</button>
+                <input id="scan-target" placeholder="192.168.1.0/24, 10.0.0.1-50 or host" aria-label="Scan target" title="A CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or one host; up to a /16" data-i18n-placeholder data-i18n-aria-label data-i18n-title spellcheck="false" />
+                <button data-scan="start" title="Scan (⏎)" data-i18n data-i18n-title>Scan</button>
+                <button data-scan="stop" class="danger" title="Stop the scan" data-i18n data-i18n-title>Stop</button>
               </div>
               <div class="row">
-                <select id="scan-method" aria-label="Scan method" title="How a host is probed">
-                  <option value="both">Ping + TCP</option>
-                  <option value="ping">Ping</option>
+                <select id="scan-method" aria-label="Scan method" title="How a host is probed" data-i18n-aria-label data-i18n-title>
+                  <option value="both" data-i18n>Ping + TCP</option>
+                  <option value="ping" data-i18n>Ping</option>
                   <option value="tcp">TCP</option>
                 </select>
-                <input id="scan-ports" value="22,80,443,3389,5900" aria-label="TCP ports" title="TCP ports to try (comma-separated, ranges allowed)" spellcheck="false" />
-                <label class="chk" title="Look up the host name of every hit"><input type="checkbox" id="scan-rdns" checked /> rDNS</label>
+                <input id="scan-ports" value="22,80,443,3389,5900" aria-label="TCP ports" title="TCP ports to try (comma-separated, ranges allowed)" data-i18n-aria-label data-i18n-title spellcheck="false" />
+                <label class="chk" title="Look up the host name of every hit" data-i18n-title><input type="checkbox" id="scan-rdns" checked /> rDNS</label>
               </div>
               <div class="row"><!-- two rows: one would wrap at the 180px sidebar width -->
-                <label class="lbl" for="scan-concurrency">Workers</label>
-                <input id="scan-concurrency" type="number" value="64" min="1" max="512" title="Hosts probed at the same time" />
+                <label class="lbl" for="scan-concurrency" data-i18n>Workers</label>
+                <input id="scan-concurrency" type="number" value="64" min="1" max="512" title="Hosts probed at the same time" data-i18n-title />
               </div>
               <div class="row">
-                <label class="lbl" for="scan-timeout">Timeout</label>
-                <input id="scan-timeout" type="number" value="600" min="50" max="10000" step="50" title="Per probe, in milliseconds" />
-                <span class="lbl">ms</span>
+                <label class="lbl" for="scan-timeout" data-i18n>Timeout</label>
+                <input id="scan-timeout" type="number" value="600" min="50" max="10000" step="50" title="Per probe, in milliseconds" data-i18n-title />
+                <span class="lbl" data-i18n>ms</span>
               </div>
               <div class="row scan-progress" id="scan-progress" hidden>
-                <progress id="scan-bar" value="0" max="1" aria-label="Scan progress"></progress>
+                <progress id="scan-bar" value="0" max="1" aria-label="Scan progress" data-i18n-aria-label></progress>
                 <span id="scan-count" class="count">0/0</span>
-                <button data-scan="copy" title="Copy the results as text">Copy as text</button>
+                <button data-scan="copy" title="Copy the results as text" data-i18n data-i18n-title>Copy as text</button>
               </div>
             </div>
           </details>
           <pre id="tool-output" class="tool-output"></pre>
           <div id="scan-results" class="scan-results" hidden>
-            <table class="list-table scan-table" aria-label="Scan results">
+            <table class="list-table scan-table" aria-label="Scan results" data-i18n-aria-label>
               <thead>
                 <tr>
                   <th aria-sort="ascending"><button type="button" class="on" data-sort="ip">IP</button></th>
-                  <th aria-sort="none"><button type="button" data-sort="hostname">Host</button></th>
+                  <th aria-sort="none"><button type="button" data-sort="hostname" data-i18n>Host</button></th>
                   <th aria-sort="none"><button type="button" data-sort="rtt">RTT</button></th>
-                  <th aria-sort="none"><button type="button" data-sort="ports">Ports</button></th>
-                  <th><span class="sr">Add as session</span></th>
+                  <th aria-sort="none"><button type="button" data-sort="ports" data-i18n>Ports</button></th>
+                  <th><span class="sr" data-i18n>Add as session</span></th>
                 </tr>
               </thead>
               <tbody></tbody>
             </table>
-            <div id="scan-empty" class="tree-empty" hidden>No host answered.</div>
+            <div id="scan-empty" class="tree-empty" data-i18n hidden>No host answered.</div>
           </div>
         </section>
 
         <!-- Macros panel -->
         <section class="panel" id="panel-macros">
           <div class="panel-head">
-            <button class="icon-btn" data-macro="record" id="macro-record" title="Record keystrokes of the active terminal">● Rec</button>
-            <button class="icon-btn" data-macro="new" data-icon="plus" title="New macro from text"></button>
-            <span class="hint" title="Double-click a macro to play it in the active terminal">Double-click to play</span>
+            <button class="icon-btn" data-macro="record" id="macro-record" title="Record keystrokes of the active terminal" data-i18n data-i18n-title>● Rec</button>
+            <button class="icon-btn" data-macro="new" data-icon="plus" title="New macro from text" data-i18n-title></button>
+            <span class="hint" title="Double-click a macro to play it in the active terminal" data-i18n data-i18n-title>Double-click to play</span>
           </div>
           <div id="macro-list" class="tree"></div>
         </section>
@@ -191,36 +191,36 @@
         <!-- a different MobAlt.app is on disk (brew upgrade / dragged DMG while running): app.js fills the text -->
         <div id="update-banner" role="status" hidden>
           <span id="update-banner-text"></span>
-          <button id="update-relaunch" class="btn small primary" type="button" title="Quit and start the version on disk">Relaunch</button>
-          <button id="update-later" class="btn small" type="button" title="Hide until another version appears">Later</button>
+          <button id="update-relaunch" class="btn small primary" type="button" title="Quit and start the version on disk" data-i18n data-i18n-title>Relaunch</button>
+          <button id="update-later" class="btn small" type="button" title="Hide until another version appears" data-i18n data-i18n-title>Later</button>
         </div>
         <div id="tabbar">
-          <button id="tab-scroll-left" class="tab-scroll" title="Scroll tabs left" aria-label="Scroll tabs left" hidden>‹</button>
+          <button id="tab-scroll-left" class="tab-scroll" title="Scroll tabs left" aria-label="Scroll tabs left" data-i18n-title data-i18n-aria-label hidden>‹</button>
           <div id="tabs"></div>
-          <button id="tab-scroll-right" class="tab-scroll" title="Scroll tabs right" aria-label="Scroll tabs right" hidden>›</button>
-          <button id="tab-add" data-icon="plus" title="New local terminal (⌘T)" aria-label="New local terminal"></button>
-          <button id="tab-list" data-icon="chevron-down" title="All tabs" aria-label="All tabs" hidden></button>
+          <button id="tab-scroll-right" class="tab-scroll" title="Scroll tabs right" aria-label="Scroll tabs right" data-i18n-title data-i18n-aria-label hidden>›</button>
+          <button id="tab-add" data-icon="plus" title="New local terminal (⌘T)" aria-label="New local terminal" data-i18n-title data-i18n-aria-label></button>
+          <button id="tab-list" data-icon="chevron-down" title="All tabs" aria-label="All tabs" data-i18n-title data-i18n-aria-label hidden></button>
         </div>
         <div id="tab-content"></div>
         <div id="find-bar" hidden>
-          <input id="find-input" placeholder="Find in terminal" aria-label="Find in terminal" spellcheck="false" />
+          <input id="find-input" placeholder="Find in terminal" aria-label="Find in terminal" data-i18n-placeholder data-i18n-aria-label spellcheck="false" />
           <span id="find-count" class="find-count"></span>
-          <button data-find="prev" data-icon="chevron-up" title="Previous (⇧⏎)"></button>
-          <button data-find="next" data-icon="chevron-down" title="Next (⏎)"></button>
-          <label title="Match case"><input type="checkbox" id="find-case" aria-label="Match case" /> Aa</label>
-          <label title="Regular expression"><input type="checkbox" id="find-regex" aria-label="Regular expression" /> .*</label>
-          <button data-find="close" data-icon="x" title="Close (Esc)"></button>
+          <button data-find="prev" data-icon="chevron-up" title="Previous (⇧⏎)" data-i18n-title></button>
+          <button data-find="next" data-icon="chevron-down" title="Next (⏎)" data-i18n-title></button>
+          <label title="Match case" data-i18n-title><input type="checkbox" id="find-case" aria-label="Match case" data-i18n-aria-label /> Aa</label>
+          <label title="Regular expression" data-i18n-title><input type="checkbox" id="find-regex" aria-label="Regular expression" data-i18n-aria-label /> .*</label>
+          <button data-find="close" data-icon="x" title="Close (Esc)" data-i18n-title></button>
         </div>
       </div>
     </div>
 
     <footer id="statusbar">
-      <span id="st-session">No session</span>
+      <span id="st-session" data-i18n>No session</span>
       <span id="st-cwd"></span>
       <span class="spacer"></span>
       <span id="st-transfers"></span>
-      <span id="st-x11" title="Local X server">X11</span>
-      <span id="st-log" title="Session logging"></span>
+      <span id="st-x11" title="Local X server" data-i18n-title>X11</span>
+      <span id="st-log" title="Session logging" data-i18n-title></span>
       <span id="st-version"></span>
     </footer>
   </div>

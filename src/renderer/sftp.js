@@ -1,6 +1,6 @@
 // SFTP browser panel (left sidebar "Sftp" tab) bound to the active SSH pane's connection.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead, repointOpeners, plural } from './ui.js';
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead, repointOpeners } from './ui.js';
+import { t, tn, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 
@@ -12,36 +12,37 @@ const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|j
 export function errMsg(e) {
   let m = (e && e.message) || String(e);
   m = m.replace(/^Error invoking remote method '[^']+': (Error: )?/, '').replace(/^FTPError:\s*/, '');
-  if (/^Failure$/i.test(m)) m = 'The server refused the operation (does the name already exist?)';
-  else if (/^No such file$/i.test(m)) m = 'Path not found';
-  else if (/^Permission denied$/i.test(m)) m = 'Permission denied';
+  if (/^Failure$/i.test(m)) m = t('The server refused the operation (does the name already exist?)');
+  else if (/^No such file$/i.test(m)) m = t('Path not found');
+  else if (/^Permission denied$/i.test(m)) m = t('Permission denied');
   else {
     const f = /^(\d{3})[ -]?([\s\S]*)$/.exec(m.trim()); // FTP reply code that was not explained in main
     if (f) {
       const code = parseInt(f[1], 10), detail = f[2].trim().replace(/[.\s]+$/, '');
-      if (code === 530) m = 'Login failed (530): check the username/password';
-      else if (code >= 500 && code <= 504 && /\bAUTH\b/i.test(detail)) m = 'The server does not support FTPS (explicit TLS); untick FTPS';
-      else if ((code === 550 || code === 553) && /exist/i.test(detail)) m = `The name already exists on the server (${code} ${detail})`;
-      else if ((code === 550 || code === 553) && /no such|not found|failed to open|does not exist/i.test(detail)) m = `Path not found on the server (${code} ${detail})`;
-      else if ((code === 550 || code === 553) && /privilege|permission|denied|not allowed/i.test(detail)) m = `Permission denied on the server (${code} ${detail})`;
-      else if (code === 550 || code === 553) m = `The server refused the operation (${code} ${detail})`;
-      else if (code === 421) m = `The server closed the connection (421 ${detail})`;
-      else if (code >= 400) m = `Server error ${code}: ${detail}`;
+      if (code === 530) m = t('Login failed (530): check the username/password');
+      else if (code >= 500 && code <= 504 && /\bAUTH\b/i.test(detail)) m = t('The server does not support FTPS (explicit TLS); untick FTPS');
+      else if ((code === 550 || code === 553) && /exist/i.test(detail)) m = t('The name already exists on the server ({code} {detail})', { code, detail });
+      else if ((code === 550 || code === 553) && /no such|not found|failed to open|does not exist/i.test(detail)) m = t('Path not found on the server ({code} {detail})', { code, detail });
+      else if ((code === 550 || code === 553) && /privilege|permission|denied|not allowed/i.test(detail)) m = t('Permission denied on the server ({code} {detail})', { code, detail });
+      else if (code === 550 || code === 553) m = t('The server refused the operation ({code} {detail})', { code, detail });
+      else if (code === 421) m = t('The server closed the connection (421 {detail})', { detail });
+      else if (code >= 400) m = t('Server error {code}: {detail}', { code, detail });
     }
   }
   return m;
 }
 
-/** Overwrite / Skip existing / Cancel for an upload that would replace files (null = cancel the whole upload). */
-function overwriteDialog(what, dir) {
+/** Overwrite / Skip existing / Cancel for an upload that would replace `names` in `dir` (null = cancel the whole upload). */
+function overwriteDialog(names, dir) {
+  const what = names.length === 1 ? t('"{name}" already exists in {dir}.', { name: names[0], dir }) : tn('{n} item already exists in {dir}.', '{n} items already exist in {dir}.', names.length, { dir });
   const m = showModal({
-    title: 'Overwrite?',
+    title: t('Overwrite?'),
     width: 'narrow',
-    body: h('div', {}, `${what} in ${dir}.`, h('div', { style: { marginTop: '6px', color: 'var(--fg-dim)' } }, 'Overwrite replaces the existing files; "Skip existing" uploads only the others.')),
+    body: h('div', {}, what, h('div', { style: { marginTop: '6px', color: 'var(--fg-dim)' } }, t('Overwrite replaces the existing files; "Skip existing" uploads only the others.'))),
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'Skip existing', value: 'skip' },
-      { label: 'Overwrite', primary: true, danger: true, value: 'overwrite' },
+      { label: t('Cancel'), value: null },
+      { label: t('Skip existing'), value: 'skip' },
+      { label: t('Overwrite'), primary: true, danger: true, value: 'overwrite' },
     ],
   });
   return m.promise;
@@ -97,7 +98,7 @@ export class SftpPanel {
     // keyboard: the rows are options of a multi-select listbox with one Tab stop (roving tabindex), see onKey()
     list.setAttribute('role', 'listbox');
     list.setAttribute('aria-multiselectable', 'true');
-    list.setAttribute('aria-label', 'Files');
+    list.setAttribute('aria-label', t('Files'));
     list.addEventListener('keydown', (e) => this.onKey(e));
     list.addEventListener('focusin', (e) => {
       const r = e.target.closest('.sftp-row[data-name]');
@@ -122,6 +123,21 @@ export class SftpPanel {
       const paths = Array.from(e.dataTransfer.files || []).map((f) => window.api.getPathForFile(f)).filter(Boolean);
       if (paths.length) this.upload(paths);
     });
+    onChange(() => this.relabel()); // a language switch: what the panel keeps on screen is rendered again
+  }
+
+  /** Everything rendered with labels that stays on screen, in the current language (the list names, sizes and dates are values). */
+  relabel() {
+    this.els.list.setAttribute('aria-label', t('Files'));
+    const st = this.state();
+    if (st) {
+      this.renderConn(st);
+      if (st.path !== null) this.renderList();
+      else if (st.loading) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('Loading…')));
+      else if (st.error) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, errMsg(st.error)));
+    }
+    this.renderMoshHint(this.pane);
+    this.renderTransfers();
   }
 
   state() {
@@ -130,6 +146,7 @@ export class SftpPanel {
 
   /** Called by the app whenever the active pane changes. */
   setPane(pane) {
+    this.pane = pane;
     this.renderMoshHint(pane);
     const connId = connIdOf(pane);
     if (!connId) {
@@ -148,13 +165,7 @@ export class SftpPanel {
     this.els.empty.hidden = !!st;
     this.els.ui.hidden = !st;
     if (!st) return;
-    const s = st.pane.session || {};
-    const defPort = s.type === 'ftp' ? 21 : 22;
-    // the "via SSH" marker of a Mosh companion sits before the host as a badge, so a long host name is
-    // what gets truncated, never the marker
-    this.els.conn.replaceChildren(...[h('b', {}, s.name || st.pane.title), ' ',
-      s.type === 'mosh' ? h('span', { class: 'sftp-via', title: 'Files are browsed over a separate SSH connection to this host' }, 'via SSH') : null,
-      `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`].filter(Boolean));
+    this.renderConn(st);
     this.els.follow.checked = st.follow;
     const noTerminal = st.pane.kind === 'ftp';
     this.els.follow.closest('label').hidden = noTerminal || st.pane.kind === 'mosh'; // FTP has no terminal to follow; Mosh reports no folder
@@ -163,6 +174,17 @@ export class SftpPanel {
     this.els.hidden.checked = st.hidden;
     if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
     else this.renderList();
+  }
+
+  /** The connection line above the toolbar: session name, the "via SSH" badge of a Mosh companion, user@host[:port]. */
+  renderConn(st) {
+    const s = st.pane.session || {};
+    const defPort = s.type === 'ftp' ? 21 : 22;
+    // the "via SSH" marker of a Mosh companion sits before the host as a badge, so a long host name is
+    // what gets truncated, never the marker
+    this.els.conn.replaceChildren(...[h('b', {}, s.name || st.pane.title), ' ',
+      s.type === 'mosh' ? h('span', { class: 'sftp-via', title: t('Files are browsed over a separate SSH connection to this host') }, t('via SSH')) : null,
+      `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== defPort ? ':' + s.port : ''}`].filter(Boolean));
   }
 
   show(connId) {
@@ -187,8 +209,8 @@ export class SftpPanel {
     const where = `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
     const connecting = pane.sftpStatus === 'connecting';
     this.moshEl = h('div', { class: 'sftp-mosh' },
-      h('p', {}, `Mosh session "${s.name || where}": files are browsed over a separate SSH connection to ${where}.`),
-      h('button', { class: 'btn small', disabled: connecting, onclick: () => pane.openSftpCompanion() }, connecting ? 'Connecting via SSH…' : 'Open SFTP for this host (via SSH)'),
+      h('p', {}, t('Mosh session "{name}": files are browsed over a separate SSH connection to {where}.', { name: s.name || where, where })),
+      h('button', { class: 'btn small', disabled: connecting, onclick: () => pane.openSftpCompanion() }, connecting ? t('Connecting via SSH…') : t('Open SFTP for this host (via SSH)')),
       pane.sftpStatus === 'failed' && pane.sftpError ? h('div', { class: 'sftp-mosh-err' }, pane.sftpError) : null
     );
     this.els.empty.append(this.moshEl);
@@ -208,7 +230,8 @@ export class SftpPanel {
     const st = this.state();
     if (!st || !connId) return;
     st.loading = true;
-    if (st.path === null) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, 'Loading…'));
+    st.error = null;
+    if (st.path === null) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('Loading…')));
     try {
       if (path === '~' || (path || '').startsWith('~/')) path = (await window.api.sftp.home(connId)) + path.slice(1);
       const r = await window.api.sftp.list(connId, path || '.');
@@ -225,9 +248,11 @@ export class SftpPanel {
       this.app.setStatusCwd(r.path);
     } catch (e) {
       if (this.connId !== connId) return;
-      toast(`${path || '.'}: ${errMsg(e)}`, 'error');
-      if (st.path === null) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, errMsg(e)));
-      else {
+      toast(t('{path}: {error}', { path: path || '.', error: errMsg(e) }), 'error');
+      if (st.path === null) {
+        st.error = e; // the message stays on screen: relabel() explains it again after a language switch
+        this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, errMsg(e)));
+      } else {
         this.els.path.value = st.path; // revert to the folder that is actually shown
         this.renderList();
       }
@@ -259,9 +284,9 @@ export class SftpPanel {
     const entries = this.visibleEntries(st);
     // sortable header cells are buttons: Tab reaches them, Enter / Space sort (a click re-renders, so a focused
     // cell is focused again below), aria-sort tells the state
-    const headCell = (key, label, cls) => {
+    const headCell = (key, label, title, cls) => {
       const active = st.sort.key === key;
-      return h('button', { type: 'button', class: cls + (active ? ' sorted' : ''), dataset: { sort: key }, title: 'Sort by ' + label.toLowerCase(),
+      return h('button', { type: 'button', class: cls + (active ? ' sorted' : ''), dataset: { sort: key }, title,
         'aria-sort': active ? (st.sort.dir > 0 ? 'ascending' : 'descending') : 'none',
         onmousedown: (ev) => ev.preventDefault(), // a mouse click sorts without taking the keyboard from the terminal (like the toolbar)
         onclick: () => {
@@ -269,13 +294,13 @@ export class SftpPanel {
           this.renderList();
         } }, label + (active ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''));
     };
-    list.append(h('div', { class: 'sftp-row sftp-head', role: 'presentation' }, h('span', {}), headCell('name', 'Name', 'name'), headCell('size', 'Size', 'size'), headCell('mtime', 'Modified', 'date')));
+    list.append(h('div', { class: 'sftp-row sftp-head', role: 'presentation' }, h('span', {}), headCell('name', t('Name'), t('Sort by name'), 'name'), headCell('size', t('Size'), t('Sort by size'), 'size'), headCell('mtime', t('Modified'), t('Sort by modified'), 'date')));
     if (st.path !== '/') {
       const up = h('div', { class: 'sftp-row dir', dataset: { name: '..' }, role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' }));
       up.addEventListener('dblclick', () => this.cmd('up'));
       list.append(up);
     }
-    if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, 'Empty folder'));
+    if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, t('Empty folder')));
     for (const e of entries) {
       const row = h('div', {
         class: 'sftp-row' + (e.type === 'd' ? ' dir' : '') + (e.link ? ' link' : '') + (e.name.startsWith('.') ? ' hidden-file' : '') + (st.selected.has(e.name) ? ' selected' : ''),
@@ -495,7 +520,7 @@ export class SftpPanel {
       case 'home': return this.navigate('.');
       case 'refresh': return this.navigate(st.path);
       case 'mkdir': {
-        const n = await promptDialog('New folder', { placeholder: 'folder name' });
+        const n = await promptDialog(t('New folder'), { placeholder: t('folder name') });
         if (!n || !n.trim()) return;
         try {
           await window.api.sftp.mkdir(this.connId, this.join(n.trim()));
@@ -507,8 +532,8 @@ export class SftpPanel {
         return;
       }
       case 'upload': return this.upload(null);
-      case 'download': return sel.length ? this.download(sel) : toast('Select files to download', 'warn');
-      case 'delete': return sel.length ? this.remove(sel) : toast('Select files to delete', 'warn');
+      case 'download': return sel.length ? this.download(sel) : toast(t('Select files to download'), 'warn');
+      case 'delete': return sel.length ? this.remove(sel) : toast(t('Select files to delete'), 'warn');
       case 'terminal-cd': {
         if (st.pane && st.pane.kind !== 'ftp') {
           st.pane.write(`cd ${shellQuote(st.path)}\r`);
@@ -530,7 +555,7 @@ export class SftpPanel {
     if (!paths || !paths.length) {
       try {
         const ids = await window.api.sftp.upload(connId, [], dir); // native picker
-        if (ids && ids.length) toast(`Uploading ${plural(ids.length, 'item')}`, 'info');
+        if (ids && ids.length) toast(tn('Uploading {n} item', 'Uploading {n} items', ids.length), 'info');
       } catch (e) {
         toast(errMsg(e), 'error');
       }
@@ -543,14 +568,13 @@ export class SftpPanel {
       const conflicts = paths.filter((p) => names.has(base(p)));
       let todo = paths;
       if (conflicts.length) {
-        const what = conflicts.length === 1 ? `"${base(conflicts[0])}" already exists` : `${conflicts.length} items already exist`;
-        const choice = await overwriteDialog(what, dir);
-        if (!choice) return toast('Upload cancelled', 'info');
+        const choice = await overwriteDialog(conflicts.map(base), dir);
+        if (!choice) return toast(t('Upload cancelled'), 'info');
         if (choice === 'skip') todo = paths.filter((p) => !names.has(base(p)));
-        if (!todo.length) return toast('Nothing to upload: every item already exists', 'info');
+        if (!todo.length) return toast(t('Nothing to upload: every item already exists'), 'info');
       }
       const ids = await window.api.sftp.upload(connId, todo, dir);
-      if (ids && ids.length) toast(`Uploading ${plural(ids.length, 'item')}`, 'info');
+      if (ids && ids.length) toast(tn('Uploading {n} item', 'Uploading {n} items', ids.length), 'info');
     } catch (e) {
       toast(errMsg(e), 'error');
     }
@@ -568,8 +592,12 @@ export class SftpPanel {
 
   async remove(entries) {
     const dirs = entries.filter((e) => e.type === 'd').length;
-    const what = entries.length === 1 ? (dirs ? `folder "${entries[0].name}" and everything inside it` : `"${entries[0].name}"`) : `${entries.length} items${dirs ? ` (including ${dirs} folder${dirs > 1 ? 's' : ''} with their contents)` : ''}`;
-    const ok = await confirmDialog(`Delete ${what} on the remote host? This cannot be undone.`, { title: 'Delete', okLabel: 'Delete', danger: true });
+    const name = entries[0].name, n = entries.length;
+    const what = n === 1
+      ? (dirs ? t('Delete folder "{name}" and everything inside it on the remote host? This cannot be undone.', { name }) : t('Delete "{name}" on the remote host? This cannot be undone.', { name }))
+      : dirs ? tn('Delete {count} items (including {n} folder with its contents) on the remote host? This cannot be undone.', 'Delete {count} items (including {n} folders with their contents) on the remote host? This cannot be undone.', dirs, { count: n })
+      : tn('Delete {n} item on the remote host? This cannot be undone.', 'Delete {n} items on the remote host? This cannot be undone.', n);
+    const ok = await confirmDialog(what, { title: t('Delete'), okLabel: t('Delete'), danger: true });
     if (!ok) return;
     const st = this.state();
     // the keyboard cursor moves to the row after the deleted ones (else the one before them)
@@ -580,7 +608,7 @@ export class SftpPanel {
       try {
         await window.api.sftp.remove(this.connId, this.join(e.name), e.type === 'd');
       } catch (err) {
-        toast(`${e.name}: ${errMsg(err)}`, 'error');
+        toast(t('{path}: {error}', { path: e.name, error: errMsg(err) }), 'error');
       }
     }
     if (gone.has(st.lastSel)) st.lastSel = after ?? before ?? null;
@@ -588,18 +616,18 @@ export class SftpPanel {
   }
 
   async rename(e) {
-    const n = await promptDialog('Rename', { value: e.name });
+    const n = await promptDialog(t('Rename'), { value: e.name });
     if (!n || n === e.name) return;
     const connId = this.connId, st = this.state();
     if (!st || !connId) return;
-    if (/\//.test(n)) return toast('A name cannot contain "/"', 'warn');
+    if (/\//.test(n)) return toast(t('A name cannot contain "/"'), 'warn');
     try {
       // never silently replace another entry (FTP servers overwrite on RNTO): check a fresh listing first
       const current = await window.api.sftp.list(connId, st.path).then((r) => r.entries, () => st.entries);
       const taken = current.find((x) => x.name === n);
       if (taken) {
-        const what = taken.type === 'd' ? 'folder' : 'file';
-        const ok = await confirmDialog(`A ${what} named "${n}" already exists here. Replace it with "${e.name}"?${taken.type === 'd' ? ' The server may refuse this.' : ''}`, { title: 'Replace?', okLabel: 'Replace', danger: true });
+        const q = taken.type === 'd' ? t('A folder named "{name}" already exists here. Replace it with "{from}"? The server may refuse this.', { name: n, from: e.name }) : t('A file named "{name}" already exists here. Replace it with "{from}"?', { name: n, from: e.name });
+        const ok = await confirmDialog(q, { title: t('Replace?'), okLabel: t('Replace'), danger: true });
         if (!ok) return;
       }
       if (this.connId !== connId) return;
@@ -614,10 +642,10 @@ export class SftpPanel {
 
   async chmod(e) {
     const cur = (e.mode & 0o777).toString(8).padStart(3, '0');
-    const v = await promptDialog(`Permissions for ${e.name}`, { label: `Octal mode (current ${cur}, ${e.modeStr.slice(1)})`, value: cur });
+    const v = await promptDialog(t('Permissions for {name}', { name: e.name }), { label: t('Octal mode (current {mode}, {rwx})', { mode: cur, rwx: e.modeStr.slice(1) }), value: cur });
     if (!v || !/^[0-7]{3,4}$/.test(v)) return;
     try {
-      if (!/^[0-7]{3,4}$/.test(v.trim())) return toast('Enter an octal mode such as 755 or 0644', 'warn');
+      if (!/^[0-7]{3,4}$/.test(v.trim())) return toast(t('Enter an octal mode such as 755 or 0644'), 'warn');
       await window.api.sftp.chmod(this.connId, this.join(e.name), parseInt(v.trim(), 8));
       this.navigate(this.state().path);
     } catch (err) {
@@ -634,7 +662,7 @@ export class SftpPanel {
     } catch (err) {
       return toast(errMsg(err), 'error');
     }
-    const ta = h('textarea', { class: 'editor-area', spellcheck: false, 'aria-label': `Contents of ${e.name}` });
+    const ta = h('textarea', { class: 'editor-area', spellcheck: false, 'aria-label': t('Contents of {name}', { name: e.name }) });
     ta.value = content;
     let dirty = false;
     ta.addEventListener('input', () => (dirty = true));
@@ -654,7 +682,7 @@ export class SftpPanel {
       try {
         await window.api.sftp.write(connId, remote, ta.value);
         dirty = false;
-        toast(`Saved ${e.name}`, 'success');
+        toast(t('Saved {name}', { name: e.name }), 'success');
         await this.navigate(this.state()?.path); // re-renders the list; renderList re-points this dialog's opener row
       } catch (err) {
         toast(errMsg(err), 'error');
@@ -666,9 +694,9 @@ export class SftpPanel {
       closeOnBackdrop: false,
       body: ta,
       buttons: [
-        { label: 'Open in External Editor', action: async (api) => { api.close(); this.editExternal(e); } },
-        { label: 'Close', action: async (api) => { if (dirty && !(await confirmDialog('Discard unsaved changes?', { okLabel: 'Discard', danger: true }))) return; api.close(); } },
-        { label: 'Save (⌘S)', primary: true, action: () => save() },
+        { label: t('Open in External Editor'), action: async (api) => { api.close(); this.editExternal(e); } },
+        { label: t('Close'), action: async (api) => { if (dirty && !(await confirmDialog(t('Discard unsaved changes?'), { okLabel: t('Discard'), danger: true }))) return; api.close(); } },
+        { label: t('Save (⌘S)'), primary: true, action: () => save() },
       ],
     });
     m.el.querySelector('.modal-body').style.padding = '8px';
@@ -678,7 +706,7 @@ export class SftpPanel {
   async editExternal(e) {
     try {
       const r = await window.api.sftp.edit(this.connId, this.join(e.name));
-      toast(`Opened ${e.name} in editor; saves are uploaded automatically`, 'info', 5000);
+      toast(t('Opened {name} in editor; saves are uploaded automatically', { name: e.name }), 'info', 5000);
       return r;
     } catch (err) {
       toast(errMsg(err), 'error');
@@ -690,52 +718,54 @@ export class SftpPanel {
     const sel = this.selectedEntries();
     const items = [];
     if (e) {
+      const n = sel.length; // "Download (3)" / "Delete (3)" when several entries are selected
       items.push(
-        e.type === 'd' ? { label: 'Open', action: () => this.open(e) } : { label: 'Edit (built-in)', action: () => this.editBuiltin(e) },
-        e.type === 'f' ? { label: 'Edit in External Editor', action: () => this.editExternal(e) } : null,
-        { label: `Download${sel.length > 1 ? ` (${sel.length})` : ''}`, action: () => this.download(sel.length ? sel : [e]) },
+        e.type === 'd' ? { label: t('Open'), action: () => this.open(e) } : { label: t('Edit (built-in)'), action: () => this.editBuiltin(e) },
+        e.type === 'f' ? { label: t('Edit in External Editor'), action: () => this.editExternal(e) } : null,
+        { label: n > 1 ? t('Download ({n})', { n }) : t('Download'), action: () => this.download(sel.length ? sel : [e]) },
         '-',
-        { label: 'Rename…', action: () => this.rename(e) },
-        { label: 'Permissions…', action: () => this.chmod(e) },
-        { label: 'Copy Path', action: () => window.api.clipboard.write(this.join(e.name)) },
-        e.type === 'd' && st.pane && st.pane.kind !== 'ftp' ? { label: 'cd Terminal Here', action: () => { st.pane.write(`cd ${shellQuote(this.join(e.name))}\r`); st.pane.focus(); } } : null,
+        { label: t('Rename…'), action: () => this.rename(e) },
+        { label: t('Permissions…'), action: () => this.chmod(e) },
+        { label: t('Copy Path'), action: () => window.api.clipboard.write(this.join(e.name)) },
+        e.type === 'd' && st.pane && st.pane.kind !== 'ftp' ? { label: t('cd Terminal Here'), action: () => { st.pane.write(`cd ${shellQuote(this.join(e.name))}\r`); st.pane.focus(); } } : null,
         '-',
-        { label: `Delete${sel.length > 1 ? ` (${sel.length})` : ''}`, danger: true, action: () => this.remove(sel.length ? sel : [e]) },
+        { label: n > 1 ? t('Delete ({n})', { n }) : t('Delete'), danger: true, action: () => this.remove(sel.length ? sel : [e]) },
         '-'
       );
     }
     items.push(
-      { label: 'Upload Files Here…', action: () => this.upload(null) },
-      { label: 'New Folder…', action: () => this.cmd('mkdir') },
-      { label: 'Refresh', action: () => this.cmd('refresh') },
-      { label: st.hidden ? 'Hide Hidden Files' : 'Show Hidden Files', action: () => { this.els.hidden.checked = !st.hidden; this.els.hidden.dispatchEvent(new Event('change')); } },
-      { label: 'Copy Current Path', action: () => window.api.clipboard.write(st.path) }
+      { label: t('Upload Files Here…'), action: () => this.upload(null) },
+      { label: t('New Folder…'), action: () => this.cmd('mkdir') },
+      { label: t('Refresh'), action: () => this.cmd('refresh') },
+      { label: st.hidden ? t('Hide Hidden Files') : t('Show Hidden Files'), action: () => { this.els.hidden.checked = !st.hidden; this.els.hidden.dispatchEvent(new Event('change')); } },
+      { label: t('Copy Current Path'), action: () => window.api.clipboard.write(st.path) }
     );
     contextMenu(x, y, items);
   }
 
   // ---------- transfers ----------
-  onTransfer(t) {
-    const prev = this.transfers.get(t.id);
-    if (t.status !== 'running' && !(prev && prev.finishedAt)) t.finishedAt = Date.now();
-    else if (prev && prev.finishedAt) t.finishedAt = prev.finishedAt;
-    this.transfers.set(t.id, t);
-    if (t.status !== 'running') {
+  onTransfer(x) {
+    const prev = this.transfers.get(x.id);
+    if (x.status !== 'running' && !(prev && prev.finishedAt)) x.finishedAt = Date.now();
+    else if (prev && prev.finishedAt) x.finishedAt = prev.finishedAt;
+    this.transfers.set(x.id, x);
+    if (x.status !== 'running') {
       // the end of a transfer is announced: a toast (the toast root is a polite live region; an error one an alert)
       // for failures and for Zmodem, whose only other trace is a line in the terminal; a visually hidden live region
       // for the rest, so a batch of panel uploads does not stack toasts
-      const what = `${t.name} ${t.kind === 'upload' ? 'uploaded' : 'downloaded'}${t.total ? ` (${fmtSize(t.total)})` : ''}`;
-      if (t.status === 'done') {
-        const st = this.states.get(t.connId);
-        if (st && this.connId === t.connId && t.kind === 'upload') this.navigate(st.path);
-        setTimeout(() => { this.transfers.delete(t.id); this.renderTransfers(); }, 30000);
-        if (t.proto === 'zmodem') toast(`Zmodem: ${what}`, 'info');
+      const p = { name: x.name, size: x.total ? fmtSize(x.total) : '' };
+      const what = x.kind === 'upload' ? (x.total ? t('{name} uploaded ({size})', p) : t('{name} uploaded', p)) : (x.total ? t('{name} downloaded ({size})', p) : t('{name} downloaded', p));
+      if (x.status === 'done') {
+        const st = this.states.get(x.connId);
+        if (st && this.connId === x.connId && x.kind === 'upload') this.navigate(st.path);
+        setTimeout(() => { this.transfers.delete(x.id); this.renderTransfers(); }, 30000);
+        if (x.proto === 'zmodem') toast(t('Zmodem: {what}', { what }), 'info');
         else this._announce(what);
-      } else if (t.status === 'error') toast(`${t.kind} ${t.name}: ${t.error}`, 'error', 6000);
-      else this._announce(`${t.kind} of ${t.name} ${t.status}`);
+      } else if (x.status === 'error') toast(x.kind === 'upload' ? t('upload {name}: {error}', { name: x.name, error: x.error }) : t('download {name}: {error}', { name: x.name, error: x.error }), 'error', 6000);
+      else this._announce(x.kind === 'upload' ? t('upload of {name} {status}', { name: x.name, status: x.status }) : t('download of {name} {status}', { name: x.name, status: x.status }));
     }
     this.renderTransfers();
-    this.app.setStatusTransfers([...this.transfers.values()].filter((x) => x.status === 'running').length);
+    this.app.setStatusTransfers([...this.transfers.values()].filter((v) => v.status === 'running').length);
   }
 
   /** One sentence per finished transfer for screen readers (styles.css .xfer-live); the list itself re-renders on every progress tick, so it cannot be the live region. */
@@ -751,17 +781,20 @@ export class SftpPanel {
     const el = this.els.transfers;
     el.replaceChildren();
     const list = [...this.transfers.values()].sort((a, b) => b.startedAt - a.startedAt).slice(0, 12);
-    for (const t of list) {
-      const pct = t.total ? Math.min(100, Math.round((t.transferred / t.total) * 100)) : t.status === 'done' ? 100 : 0;
-      const elapsed = (t.finishedAt || Date.now()) - t.startedAt;
-      const speed = elapsed > 300 ? fmtSize((t.transferred / elapsed) * 1000) + '/s' : '';
-      el.append(h('div', { class: 'xfer ' + t.status },
-        h('div', { class: 'l1' }, h('span', { class: 'xfer-kind' }, icon(t.kind === 'upload' ? 'upload' : 'download')), h('span', { class: 'n', title: t.remote }, t.name),
-          t.proto === 'zmodem' ? h('span', { class: 'xfer-proto', title: 'Zmodem transfer in the terminal (rz / sz)' }, 'zmodem') : null, // from a terminal, not the Sftp panel
-          t.status === 'running' ? h('button', { title: 'Cancel', 'aria-label': 'Cancel transfer', onclick: () => window.api.sftp.cancel(t.id) }, icon('x')) : null,
-          t.status === 'done' && t.kind === 'download' ? h('button', { title: 'Show in Finder', onclick: () => window.api.shell.showItem(t.local) }, icon('folder')) : null),
+    for (const x of list) {
+      const pct = x.total ? Math.min(100, Math.round((x.transferred / x.total) * 100)) : x.status === 'done' ? 100 : 0;
+      const elapsed = (x.finishedAt || Date.now()) - x.startedAt;
+      const speed = elapsed > 300 ? t('{size}/s', { size: fmtSize((x.transferred / elapsed) * 1000) }) : '';
+      const sizes = { sent: fmtSize(x.transferred), size: fmtSize(x.total), done: x.filesDone, total: x.filesTotal };
+      const progress = x.filesTotal > 1 ? t('{sent} / {size} · {done}/{total} files', sizes) : t('{sent} / {size}', sizes);
+      const status = x.status === 'done' ? t('done') : x.status === 'error' ? x.error : x.status;
+      el.append(h('div', { class: 'xfer ' + x.status },
+        h('div', { class: 'l1' }, h('span', { class: 'xfer-kind' }, icon(x.kind === 'upload' ? 'upload' : 'download')), h('span', { class: 'n', title: x.remote }, x.name),
+          x.proto === 'zmodem' ? h('span', { class: 'xfer-proto', title: t('Zmodem transfer in the terminal (rz / sz)') }, 'zmodem') : null, // from a terminal, not the Sftp panel
+          x.status === 'running' ? h('button', { title: t('Cancel'), 'aria-label': t('Cancel transfer'), onclick: () => window.api.sftp.cancel(x.id) }, icon('x')) : null,
+          x.status === 'done' && x.kind === 'download' ? h('button', { title: t('Show in Finder'), onclick: () => window.api.shell.showItem(x.local) }, icon('folder')) : null),
         h('div', { class: 'bar' }, h('i', { style: { width: pct + '%' } })),
-        h('div', { class: 'l2' }, h('span', {}, t.status === 'running' ? `${fmtSize(t.transferred)} / ${fmtSize(t.total)}${t.filesTotal > 1 ? ` · ${t.filesDone}/${t.filesTotal} files` : ''}` : t.status === 'error' ? t.error : t.status), h('span', {}, t.status === 'running' ? speed : fmtDuration(elapsed)))
+        h('div', { class: 'l2' }, h('span', {}, x.status === 'running' ? progress : status), h('span', {}, x.status === 'running' ? speed : fmtDuration(elapsed)))
       ));
     }
   }
