@@ -28,10 +28,23 @@ function magicPacket(mac) {
 }
 
 /**
+ * A socket error while sending (ENETUNREACH, EHOSTUNREACH, EACCES…) as a sentence for the toast: Node's own
+ * "send EHOSTUNREACH 0.0.0.0:9" says nothing about the broadcast address being the thing to check.
+ */
+function describeSendError(e, target, port) {
+  const code = e && e.code;
+  const where = `${target}:${port}`;
+  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return new Error(`No route to ${target}; check the broadcast address (${code})`);
+  if (code === 'EACCES' || code === 'EPERM') return new Error(`Sending to ${where} is not allowed on this Mac (${code})`);
+  if (code === 'EADDRNOTAVAIL' || code === 'EINVAL') return new Error(`Cannot send to ${where}; check the broadcast address (${code})`);
+  return new Error(`Cannot send to ${where}: ${code || (e && e.message) || e}`);
+}
+
+/**
  * Sends the magic packet `repeat` times, `interval` ms apart, as a UDP broadcast to `broadcast`:`port` (the usual
  * 255.255.255.255:9; a directed broadcast such as 192.168.1.255 reaches another subnet when the router forwards it).
  * Resolves to { mac, broadcast, port, sent } once every packet has left; rejects on a bad address or port, or a
- * socket error.
+ * socket error (as a readable sentence, see describeSendError).
  */
 function wake({ mac, broadcast = '255.255.255.255', port = 9, repeat = 3, interval = 100 } = {}) {
   return new Promise((resolve, reject) => {
@@ -39,8 +52,10 @@ function wake({ mac, broadcast = '255.255.255.255', port = 9, repeat = 3, interv
     try { packet = magicPacket(mac); } catch (e) { return reject(e); }
     const target = String(broadcast ?? '').trim() || '255.255.255.255';
     if (!net.isIPv4(target)) return reject(new Error(`Invalid broadcast address: ${target}`));
+    if (target === '0.0.0.0') return reject(new Error('Invalid broadcast address: 0.0.0.0 — use 255.255.255.255 or the subnet\'s broadcast such as 192.168.1.255'));
     const p = port === '' || port === null || port === undefined ? 9 : Number(port);
-    if (!Number.isInteger(p) || p < 1 || p > 65535) return reject(new Error('The port must be between 1 and 65535'));
+    if (!Number.isInteger(p)) return reject(new Error('The port must be a whole number between 1 and 65535'));
+    if (p < 1 || p > 65535) return reject(new Error('The port must be between 1 and 65535'));
     const socket = dgram.createSocket('udp4');
     let sent = 0, timer = null, done = false;
     const finish = (err) => {
@@ -48,7 +63,7 @@ function wake({ mac, broadcast = '255.255.255.255', port = 9, repeat = 3, interv
       done = true;
       clearTimeout(timer);
       try { socket.close(); } catch {}
-      if (err) reject(err);
+      if (err) reject(err && err.code ? describeSendError(err, target, p) : err);
       else resolve({ mac: parseMac(mac), broadcast: target, port: p, sent });
     };
     socket.once('error', finish);
@@ -65,4 +80,4 @@ function wake({ mac, broadcast = '255.255.255.255', port = 9, repeat = 3, interv
   });
 }
 
-module.exports = { parseMac, magicPacket, wake };
+module.exports = { parseMac, magicPacket, wake, describeSendError };

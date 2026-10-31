@@ -237,8 +237,10 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
     opener,
     close(result) {
       if (!backdrop.isConnected) return;
-      // a dismissal (Esc / ✕ / backdrop / Cancel) may ask for confirmation first
-      if ((result === null || result === undefined) && beforeClose && !api._closing) {
+      // a dismissal (Esc / ✕ / backdrop / Cancel) may ask for confirmation first; a second one while that is
+      // pending (Esc twice, Esc then ✕) is nothing more — it used to slip past the question and close
+      if ((result === null || result === undefined) && beforeClose) {
+        if (api._closing) return;
         api._closing = true;
         Promise.resolve(beforeClose()).then((ok) => { api._closing = false; if (ok) api.close(false); }, () => { api._closing = false; });
         return;

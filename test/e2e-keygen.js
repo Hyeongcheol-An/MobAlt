@@ -3,7 +3,9 @@
 //   test/qa/run.sh test/e2e-keygen.js <out-dir> 120000
 // Keys are generated into <out-dir>/keys (never ~/.ssh); the Save dialog of Browse… is answered with testNextDialog;
 // "Install on a server…" targets the local test sshd and its test/sshd-runtime/authorized_keys, which is restored at
-// the end. Nothing is added to the user's ssh-agent.
+// the end. Nothing is added to the user's ssh-agent. The last parts check the path messages (a folder, ~user) and
+// that the dialog cannot be dismissed while it installs (testSilentListen: a TCP listener on 127.0.0.1:2213 that
+// never sends the SSH banner holds the install connection until the handshake limit).
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -242,6 +244,74 @@
     await sleep(200);
     results.allKeysOnDisk = (await sh(`ls ${keysDir} | tr '\\n' ' '`)).out === 'id_ed25519 id_ed25519.pub id_ed25519_dup id_ed25519_dup.pub id_ed25519_session id_ed25519_session.pub id_rsa id_rsa.pub';
     log('keys on disk:', (await sh(`ls -l ${keysDir}`)).out);
+
+    // 8. path edge cases get their own sentences before ssh-keygen runs: a trailing slash, an existing folder, ~user
+    app.action('keygen');
+    const m5 = await waitFor(() => modal(), 5000, 'keygen dialog (paths)');
+    await sleep(200);
+    setVal(fieldOf(m5, 'Save as'), keysDir + '/sub/');
+    btnOf(m5, 'Generate').click();
+    await waitFor(() => errorsShown(m5).length, 5000, 'folder error');
+    results.folderPathRefused = errorsShown(m5).includes('That is a folder; add a file name') && document.activeElement === fieldOf(m5, 'Save as');
+    setVal(fieldOf(m5, 'Save as'), keysDir); // an existing folder, no slash
+    btnOf(m5, 'Generate').click();
+    await waitFor(() => errorsShown(m5).some((t) => /is a folder/.test(t)), 5000, 'existing folder error');
+    results.existingFolderRefused = errorsShown(m5).some((t) => /\/keys is a folder; add a file name$/.test(t));
+    setVal(fieldOf(m5, 'Save as'), '~bob/id_ed25519');
+    btnOf(m5, 'Generate').click();
+    await waitFor(() => errorsShown(m5).some((t) => /~user/.test(t)), 5000, '~user error');
+    results.tildeUserRefused = errorsShown(m5).includes('~user paths are not supported — use ~/ for your own home folder or an absolute path');
+    await shot('26-keygen-path-messages');
+    // the remote file of an install: "~bob/…" is refused by the installer, nothing runs on the server
+    cbOf(m5, 'Install on a server').click();
+    await sleep(100);
+    setVal(fieldOf(m5, 'Server'), sshd.id);
+    setVal(fieldOf(m5, 'Remote file'), '~bob/.ssh/authorized_keys');
+    setVal(fieldOf(m5, 'Save as'), outDir + '/keys2/id_tilde');
+    btnOf(m5, 'Generate').click();
+    await waitResult(m5);
+    results.remoteTildeUserRefused = [...m5.querySelectorAll('.keygen-step.err')].some((st) => /^~user paths are not supported for the remote file — use ~\/ \(the login's home\) or an absolute path$/.test(st.textContent));
+    btnOf(m5, 'Close').click();
+    await sleep(200);
+    log('after m5 Close: modals', document.querySelectorAll('.modal').length);
+
+    // 9. while "Installing…" runs the dialog cannot be dismissed — Cancel and ✕ are inert, Esc does nothing — because
+    //    the key pair is on disk already and its path and the install's outcome must be seen. A silent listener on
+    //    127.0.0.1:2213 (test hook) holds the install connection until the (shortened) handshake limit; the result
+    //    then shows the saved path with the failed step.
+    const { port: silentPort } = await window.api.app.testSilentListen(2213);
+    await app.saveSettings({ readyTimeout: 4000 });
+    const silent = await app.saveSession({ name: 'silent-2213', type: 'ssh', host: '127.0.0.1', port: silentPort, username: user, authMethod: 'key', privateKeyPath: keyDir + '/client_ed25519', sftpAuto: false });
+    app.action('keygen');
+    const m6 = await waitFor(() => modal(), 5000, 'keygen dialog (cancel)');
+    await sleep(200);
+    log('m6: same as m5?', m6 === m5, '| modals', document.querySelectorAll('.modal').length, '| save as', fieldOf(m6, 'Save as').value);
+    setVal(fieldOf(m6, 'Save as'), outDir + '/keys2/id_cancel');
+    cbOf(m6, 'Install on a server').click();
+    await sleep(100);
+    setVal(fieldOf(m6, 'Server'), silent.id);
+    btnOf(m6, 'Generate').click();
+    await waitFor(() => /Installing the public key on silent-2213/.test(m6.querySelector('.keygen-status').textContent), 5000, 'installing');
+    const cancel6 = btnOf(m6, 'Cancel'), x6 = m6.querySelector('.modal-title .close');
+    results.cancelInertWhileInstalling = cancel6.disabled === true && x6.disabled === true && /Wait for the key/.test(x6.title) && btnOf(m6, 'Generate').disabled === true;
+    cancel6.click();
+    x6.click();
+    m6.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await sleep(300);
+    results.dismissInertWhileInstalling = document.querySelector('.modal') === m6 && m6.isConnected && /Installing the public key/.test(m6.querySelector('.keygen-status').textContent);
+    log('after the dismiss attempts: modals', document.querySelectorAll('.modal').length, '| top is m6', document.querySelector('.modal') === m6, '| m6 connected', m6.isConnected, '| status', JSON.stringify(m6.querySelector('.keygen-status').textContent), '| save as', fieldOf(m6, 'Save as')?.value, '| result visible', visible(m6.querySelector('.keygen-result')));
+    await shot('27-keygen-installing-locked');
+    await waitResult(m6, 20000);
+    const step6 = [...m6.querySelectorAll('.keygen-step.err')].map((st) => st.textContent).join(' | ');
+    results.installFailureShown = new RegExp(`Could not connect to \\S+@127\\.0\\.0\\.1:${silentPort}: Timed out while waiting for handshake — no SSH banner within 4s`).test(step6) && /Key pair saved: .*keys2\/id_cancel/.test(m6.querySelector('.keygen-ok').textContent) && btnOf(m6, 'Close').disabled === false && x6.disabled === false;
+    log('install step after the lock:', step6);
+    await shot('28-keygen-install-failed-result');
+    btnOf(m6, 'Close').click();
+    await sleep(200);
+    results.closesAfterResult = !document.querySelector('.modal');
+    results.cancelKeysOnDisk = (await sh(`ls ${outDir}/keys2 | tr '\\n' ' '`)).out === 'id_cancel id_cancel.pub id_tilde id_tilde.pub';
+    await app.saveSettings({ readyTimeout: 20000 });
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-keygen] FAIL', e.message, e.stack);

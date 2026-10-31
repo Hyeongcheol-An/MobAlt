@@ -65,6 +65,7 @@ class SshManager {
     this.prompter = prompter;
     this.conns = new Map();
     this.execCount = 0; // exec channels opened so far (the monitoring bar's polls among them; a test hook reads it)
+    this.hostKeyPrompts = new Map(); // host:port → { key, promise } while its "Unknown host key" dialog is open (see _hostVerifier)
   }
 
   get(id) {
@@ -246,22 +247,80 @@ class SshManager {
     };
   }
 
+  /**
+   * ssh2's hostVerifier for a connection: a known key passes, anything else goes through the app's prompt — one
+   * dialog per host:port at a time. Several first connections to the same host (a folder opened in a grid, MultiExec)
+   * share the first dialog: the others wait for its answer, re-read known_hosts and continue without a prompt of
+   * their own (a declined key declines them too). The handshake timer (ctx.readyTimer, _readyTimer) is paused while
+   * a connection waits, so neither the dialog nor the queue behind it runs into the timeout.
+   */
   _hostVerifier(cfg, ctx) {
-    return (key, cb) => {
-      const status = knownhosts.check(cfg.host, cfg.port || 22, key);
+    const host = cfg.host, port = cfg.port || 22, slot = `${host}:${port}`;
+    const paused = (fn) => {
+      if (ctx.readyTimer) ctx.readyTimer.pause();
+      return fn().finally(() => { if (ctx.readyTimer) ctx.readyTimer.resume(); });
+    };
+    const decide = (key, cb) => {
+      const status = knownhosts.check(host, port, key);
       if (status === 'ok') return cb(true);
+      const open = this.hostKeyPrompts.get(slot);
+      if (open) {
+        paused(() => open.promise).then((ok) => {
+          if (knownhosts.check(host, port, key) === 'ok') return cb(true); // accepted and remembered by the first connection
+          if (!ok && open.key.equals(key)) return cb(false); // the same key was declined: so is this connection
+          decide(key, cb); // the dialog was about another key than this one: ask
+        });
+        return;
+      }
       const fp = knownhosts.fingerprint(key);
-      this.prompter
-        .hostKey({ host: cfg.host, port: cfg.port || 22, keyType: knownhosts.readKeyType(key), fingerprint: fp, status, name: cfg.name || '' })
+      const promise = paused(() => this.prompter.hostKey({ host, port, keyType: knownhosts.readKeyType(key), fingerprint: fp, status, name: cfg.name || '' }))
         .then((ok) => {
           if (ok) {
-            if (status === 'mismatch') knownhosts.forget(cfg.host, cfg.port || 22);
-            knownhosts.remember(cfg.host, cfg.port || 22, key);
+            if (status === 'mismatch') knownhosts.forget(host, port);
+            knownhosts.remember(host, port, key);
           }
-          cb(!!ok);
-        })
-        .catch(() => cb(false));
+          return !!ok;
+        }, () => false);
+      const entry = { key, promise };
+      this.hostKeyPrompts.set(slot, entry);
+      promise.then((ok) => {
+        if (this.hostKeyPrompts.get(slot) === entry) this.hostKeyPrompts.delete(slot);
+        cb(ok);
+      });
     };
+    return decide;
+  }
+
+  /**
+   * The handshake timeout (Settings' readyTimeout, 20 s by default) as a timer this code owns: ssh2's own readyTimeout
+   * keeps running while a host-key dialog waits for the user, so the connection is opened with readyTimeout 0 and
+   * this one fails it instead — with ssh2's message and level, so _explainError reads the same. pause() / resume()
+   * bracket a prompt (a resumed timer keeps at least 5 s for the rest of the handshake); ready, error and close stop
+   * it. Returns { pause, resume, stop }.
+   */
+  _readyTimer(client, ms, onTimeout) {
+    let timer = null, left = ms, since = 0, done = false;
+    const stop = () => { done = true; if (timer) clearTimeout(timer); timer = null; };
+    const resume = () => {
+      if (done || timer) return;
+      since = Date.now();
+      timer = setTimeout(() => {
+        timer = null;
+        done = true;
+        const err = new Error('Timed out while waiting for handshake');
+        err.level = 'client-timeout';
+        onTimeout(err);
+      }, left);
+    };
+    const pause = () => {
+      if (!timer) return;
+      clearTimeout(timer);
+      timer = null;
+      left = Math.max(Math.min(5000, ms), left - (Date.now() - since));
+    };
+    client.once('ready', stop).once('error', stop).once('close', stop);
+    resume();
+    return { pause, resume, stop };
   }
 
   /**
@@ -303,6 +362,10 @@ class SshManager {
       client.on('error', (e) => finish(false, this._explainError(e, ctx, cfg)));
       client.on('close', () => finish(false, 'connection closed during the host key check'));
       client.on('ready', () => finish(true));
+      ctx.readyTimer = this._readyTimer(client, settings.readyTimeout || 20000, (err) => {
+        finish(false, this._explainError(err, ctx, cfg));
+        try { client.destroy(); } catch {}
+      });
       try {
         client.connect({
           host: cfg.host,
@@ -316,7 +379,7 @@ class SshManager {
             finish(ok, 'host key not accepted');
           }),
           authHandler: (_methods, _partial, cb) => cb(false), // never reached: the check ends with the key exchange
-          readyTimeout: settings.readyTimeout || 20000,
+          readyTimeout: 0, // ctx.readyTimer: the same limit, paused while the host-key dialog is open
           algorithms: this._algorithms(cfg),
           debug: this._debugHook(ctx),
         });
@@ -398,6 +461,13 @@ class SshManager {
         if (ctx.onClose) ctx.onClose();
       });
 
+      // the handshake limit: ssh2's readyTimeout would keep running through a host-key dialog (and the connections
+      // queued behind it), so it is off and _readyTimer — paused by _hostVerifier while a dialog waits — fails the
+      // connection instead; ssh2 itself ends a timed-out connection the same way (the error, then the socket)
+      ctx.readyTimer = this._readyTimer(client, settings.readyTimeout || 20000, (err) => {
+        fail(err);
+        try { client.destroy(); } catch {}
+      });
       const connectCfg = {
         host: cfg.host,
         port: cfg.port || 22,
@@ -406,7 +476,7 @@ class SshManager {
         hostVerifier: this._hostVerifier(cfg, ctx),
         keepaliveInterval: (cfg.keepAliveInterval ?? settings.keepAliveInterval ?? 30) * 1000,
         keepaliveCountMax: 3,
-        readyTimeout: settings.readyTimeout || 20000,
+        readyTimeout: 0, // see ctx.readyTimer above
         compress: !!cfg.compression,
         agentForward: !!cfg.agentForward && !!process.env.SSH_AUTH_SOCK,
         agent: cfg.agentForward ? process.env.SSH_AUTH_SOCK : undefined,
@@ -579,6 +649,9 @@ class SshManager {
       msg = algorithms.explainHandshake(msg, cfg, ctx.remoteAlgorithms) || msg;
     } else if (/^Unsupported algorithm: /.test(msg)) {
       msg += ' — Advanced SSH → Algorithms names an algorithm this version of MobAlt cannot do; Reset to defaults there.';
+    } else if (/Unknown DH group/i.test(msg)) {
+      // the key exchange was agreed but Node's crypto has no such group (the 1024-bit one): algorithms.js knows the name
+      msg = algorithms.explainDhGroup(msg) || msg;
     }
     if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
     return msg;

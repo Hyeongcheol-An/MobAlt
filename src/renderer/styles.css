@@ -793,3 +793,23 @@ body.detached #toolbar .brand::after { color: var(--fg-dim); opacity: 1; }
 /* Transfers: a visually hidden polite live region beside the list carries one sentence per finished transfer
    (sftp.js _announce); the list re-renders on every progress tick, so it cannot be the live region itself. */
 .xfer-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+/* ---- qa5 net ---- */
+/* Tools panel in a short window (900×560): the scanner's results keep a readable minimum height and the panel scrolls
+   for the rest (the Wake-on-LAN group also folds up when a scan starts in a short panel, panels.js fitScanResults). */
+#panel-tools { overflow-y: auto; }
+.scan-results:not([hidden]) { min-height: 160px; }
+/* A narrow sidebar (the #sidebar container, 180 px at the least): the RTT column goes first, then the host name (it
+   stays in the IP cell's tooltip); the ＋ button is pinned to the right edge, so it never needs a horizontal scroll. */
+@container (max-width: 259px) {
+  .scan-table th:nth-child(3), .scan-table td:nth-child(3) { display: none; }
+  .scan-table td.host { max-width: 64px; }
+}
+@container (max-width: 219px) { .scan-table th:nth-child(2), .scan-table td:nth-child(2) { display: none; } }
+.scan-table td.act { position: sticky; right: 0; background: var(--bg); }
+.scan-table th:last-child { right: 0; }
+/* Monitoring bar: terminal.js _monitorFit hides items by priority (host → uptime → load → the meters → network) when
+   the pane is too narrow for the whole strip — `hidden` must win over the items' own display — and the full line moves
+   into the strip's tooltip. A stale sample (a failed poll) is dimmed with its age in the warning colour. */
+.pane-monitor [hidden] { display: none !important; }
+.pane-monitor.stale .mon-item:not(.mon-stale), .pane-monitor.stale .mon-host, .pane-monitor.stale .mon-note { opacity: .5; }
+.pane-monitor .mon-stale { color: var(--warn); }

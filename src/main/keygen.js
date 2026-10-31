@@ -87,6 +87,8 @@ function installCommand(remoteFile, blob) {
   if (!/^[A-Za-z0-9+/=]+$/.test(String(blob || ''))) throw new Error('Not a public key');
   const file = String(remoteFile || '').trim() || '~/.ssh/authorized_keys';
   if (/[\r\n]/.test(file)) throw new Error('Bad remote file name');
+  // quoted for the shell, "~bob/…" would be a folder literally named ~bob under the login's home
+  if (/^~[^/]/.test(file)) throw new Error('~user paths are not supported for the remote file — use ~/ (the login\'s home) or an absolute path');
   const target = file === '~' ? '"$HOME"' : file.startsWith('~/') ? `"$HOME"/${shq(file.slice(2))}` : shq(file);
   const script = [
     `f=${target}`, 'd=$(dirname "$f")', 'umask 077',
@@ -111,9 +113,16 @@ function run(bin, args, opts = {}) {
  */
 async function generate(opts = {}, deps = {}) {
   const bin = deps.bin || SSH_KEYGEN;
-  const file = expandHome(String(opts.path || '').trim());
-  if (!file) throw new Error('Choose where to save the key');
+  const raw = String(opts.path || '').trim();
+  if (!raw) throw new Error('Choose where to save the key');
+  // the two path shapes ssh-keygen would answer with a confusing "No such file or directory"
+  if (/^~[^/]/.test(raw)) throw new Error('~user paths are not supported — use ~/ for your own home folder or an absolute path');
+  if (raw.endsWith('/')) throw new Error('That is a folder; add a file name');
+  const file = expandHome(raw);
   if (!path.isAbsolute(file)) throw new Error(`The key path must be absolute (or start with ~): ${file}`);
+  let isDir = false;
+  try { isDir = fs.statSync(file).isDirectory(); } catch {}
+  if (isDir) throw new Error(`${shortHome(file)} is a folder; add a file name`);
   const args = keygenArgs({ ...opts, path: file }); // validates type / bits first
   if (fs.existsSync(file) || fs.existsSync(file + '.pub')) throw new Error(`${shortHome(file)} already exists — choose another file name`);
   const dir = path.dirname(file);

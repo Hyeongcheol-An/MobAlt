@@ -265,14 +265,20 @@ export function sessionEditor(app, initial = {}) {
   const parseAlgos = (t) => uniq(String(t || '').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean));
   const algoPreset = (cat, legacyOn) => (legacyOn ? uniq([...algo.defaults[cat], ...algo.legacy[cat]]) : [...algo.defaults[cat]]);
   const algoArea = {}, algoErr = {};
+  // the same wording as the main process (algorithms.js validate): its labels ("MAC", not "mac"), and a name ssh2
+  // knows but this build's crypto lacks is "not available", not "unknown"
   const checkAlgos = (cat) => {
-    const unknown = parseAlgos(algoArea[cat].value).filter((a) => !algo.supported[cat].includes(a));
-    const label = ALGO_CATS.find((c) => c[0] === cat)[1].toLowerCase().replace(/s$/, '');
-    algoErr[cat].textContent = unknown.length ? `Unknown ${label} algorithm${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}` : '';
-    algoErr[cat].hidden = !unknown.length;
-    algoArea[cat].classList.toggle('invalid', !!unknown.length);
-    algoArea[cat].setAttribute('aria-invalid', unknown.length ? 'true' : 'false');
-    return !unknown.length;
+    const list = parseAlgos(algoArea[cat].value);
+    const missing = list.filter((a) => ((algo.unavailable && algo.unavailable[cat]) || []).includes(a));
+    const unknown = list.filter((a) => !algo.supported[cat].includes(a) && !missing.includes(a));
+    const label = (algo.labels && algo.labels[cat]) || ALGO_CATS.find((c) => c[0] === cat)[1].toLowerCase().replace(/s$/, '');
+    algoErr[cat].textContent = unknown.length ? `Unknown ${label} algorithm${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`
+      : missing.length ? `Not available in this build: ${missing.join(', ')} (1024-bit Diffie-Hellman was removed from its crypto)` : '';
+    const bad = !!(unknown.length || missing.length);
+    algoErr[cat].hidden = !bad;
+    algoArea[cat].classList.toggle('invalid', bad);
+    algoArea[cat].setAttribute('aria-invalid', bad ? 'true' : 'false');
+    return !bad;
   };
   if (algo) {
     for (const [cat, label] of ALGO_CATS) {
@@ -420,13 +426,20 @@ export function sessionEditor(app, initial = {}) {
       b.append(h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, type === 'rdp' ? 'Opens in Windows App / Microsoft Remote Desktop via a generated .rdp file.' : 'Opens in macOS Screen Sharing (vnc:// URL).'));
     }
   };
+  // the rows that are SSH's alone: a Mosh session keeps the legacy preset, the algorithm lists and the monitoring
+  // bar (they drive its host-key check and its SFTP companion connection), not the jump host, X11, agent
+  // forwarding, compression or keep-alive (the mosh client's own ssh does not take them)
+  const jumpRows = field('Jump host', h('div', { class: 'inline', style: { flexDirection: 'column', alignItems: 'stretch' } }, jumpSel, jumpHost), 'ProxyJump: connect through a bastion');
+  const keepAliveRows = field('Keep-alive (s)', keepAlive);
+  const moshAlgoNote = h('div', { class: 'form-help', hidden: true }, 'Mosh: the preset and these lists apply to the host-key check before mosh starts and to the SFTP companion connection; mosh\'s own ssh keeps its defaults.');
   pages.advanced.append(
-    ...field('Jump host', h('div', { class: 'inline', style: { flexDirection: 'column', alignItems: 'stretch' } }, jumpSel, jumpHost), 'ProxyJump: connect through a bastion'),
+    ...jumpRows,
     h('label', {}, 'Options'), h('div', { class: 'checks' }, x11.el, agentFwd.el, compression.el, legacy.el),
-    ...field('Keep-alive (s)', keepAlive),
+    ...keepAliveRows,
     ...(algo ? [
       h('label', { class: 'algo-title' }, 'Algorithms'), h('div', { class: 'algo-head' }, algoReset),
       h('div', { class: 'form-help' }, 'What this session offers the server, most preferred first (comma or newline separated). "Legacy algorithms" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.'),
+      moshAlgoNote,
       ...ALGO_CATS.flatMap(([cat, label]) => [...field(label, algoArea[cat]), algoErr[cat]]),
     ] : []),
     h('label', {}, 'Monitoring'), h('div', { class: 'checks' }, monitor.el),
@@ -447,7 +460,9 @@ export function sessionEditor(app, initial = {}) {
     if (!port.value || +port.value === DEFAULT_PORT[prevType] || +port.value === 0) port.value = DEFAULT_PORT[t] || '';
     prevType = type = t;
     name.placeholder = t === 'local' ? 'Session name (defaults to "Local")' : t === 'serial' ? 'Session name (defaults to device @ baud)' : 'Session name (defaults to user@host)';
-    tabBtns.advanced.hidden = t !== 'ssh';
+    tabBtns.advanced.hidden = t !== 'ssh' && t !== 'mosh'; // Mosh: the preset / lists (host-key check, SFTP companion) and the monitoring bar
+    for (const el of [...jumpRows, ...keepAliveRows, x11.el, agentFwd.el, compression.el]) el.hidden = t !== 'ssh';
+    moshAlgoNote.hidden = t !== 'mosh';
     tabBtns.tunnels.hidden = t !== 'ssh';
     tabBtns.terminal.hidden = t === 'rdp' || t === 'vnc' || t === 'ftp';
     sftpAuto.el.hidden = t !== 'ssh' && t !== 'mosh'; // Mosh: opens the SFTP companion connection automatically
@@ -539,7 +554,7 @@ export function sessionEditor(app, initial = {}) {
       tunnels,
     };
     delete out._connect;
-    if (algo && type === 'ssh') {
+    if (algo && (type === 'ssh' || type === 'mosh')) { // Mosh: used by its host-key check and SFTP companion (main.js, terminal.js)
       for (const [cat] of ALGO_CATS) {
         if (checkAlgos(cat)) continue;
         showPage('advanced');
@@ -1107,10 +1122,14 @@ export async function keygenDialog(app, { forSession = false } = {}) {
   const result = h('div', { class: 'keygen-result', hidden: true });
   const body = h('div', { class: 'keygen' }, form, result, status);
   let done = null; // { privateKeyPath, publicKeyPath, publicKey } once generated
+  // while the key is generated / added to the agent / installed, the dialog cannot be dismissed (Cancel, ✕, Esc):
+  // the key pair is on disk by then, and closing early would hide its path and the install's outcome
+  let busyNow = false;
   const m = showModal({
     title: 'Generate SSH key',
     width: 'wide',
     closeOnBackdrop: false,
+    beforeClose: () => !busyNow,
     body,
     buttons: [
       { label: 'Cancel', value: null },
@@ -1119,9 +1138,17 @@ export async function keygenDialog(app, { forSession = false } = {}) {
     ],
   });
   const [cancelBtn, useBtn, genBtn] = m.el.querySelectorAll('.modal-foot .btn');
+  const closeX = m.el.querySelector('.modal-title .close');
   useBtn.hidden = true;
   const controls = () => [...form.querySelectorAll('input, select, button')];
-  const busy = (on) => { for (const el of controls()) el.disabled = on || (el === target && !sshSessions.length); genBtn.disabled = on; };
+  const busy = (on) => {
+    busyNow = on;
+    for (const el of controls()) el.disabled = on || (el === target && !sshSessions.length);
+    genBtn.disabled = on;
+    cancelBtn.disabled = on;
+    closeX.disabled = on;
+    closeX.title = on ? 'Wait for the key to be generated and installed' : 'Close (Esc)';
+  };
 
   async function generate() {
     passErr.hidden = pathErr.hidden = true;
@@ -1167,6 +1194,7 @@ export async function keygenDialog(app, { forSession = false } = {}) {
       steps.push({ ok: i.ok, text: i.ok ? (i.added ? `Installed on ${i.host} in ${i.remoteFile}` : `Already present on ${i.host} in ${i.remoteFile}`) : i.error });
     }
     status.textContent = '';
+    busy(false); // the result can be closed again
     showResult(r, steps);
   }
 
