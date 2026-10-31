@@ -2,8 +2,11 @@
 // outside text to a terminal goes through it — ⌘V / Edit → Paste (the `paste` event on xterm's textarea), right-click
 // paste, text dropped on a pane. A plain single line passes straight through; a multi-line or long paste asks
 // ("Paste N lines into …?", editable preview, ⌘⏎ / Esc); hidden characters, a trailing newline, curl | sh and the
-// like are listed and marked, "Paste cleaned" strips what can be stripped; the two Settings → Terminal toggles switch
-// it off; with MultiExec on one dialog covers every visible terminal and the text reaches each of them once.
+// like are listed and marked, "Paste cleaned" strips what can be stripped; the two Settings → Features toggles switch
+// it off; with MultiExec on one dialog covers every visible terminal and the text reaches each of them once. The guard's
+// edges: rm -rf ~/ forms, a no-break space (cleaned into a space), tag / variation-selector characters, "200μs" and
+// ".zshrc.bak" left alone; the title follows an edit; the marks read at 4.5:1 on every theme; a 5000-line flagged
+// paste stays fluid in the preview.
 //   test/qa/run.sh test/e2e-paste.js <out-dir> 120000
 // Pastes are delivered as a synthetic paste event with the text (the system clipboard is shared with everything else
 // running on the machine); only the right-click check writes the clipboard, and puts it back afterwards.
@@ -127,8 +130,9 @@
     await sleep(300);
     ta().value = cmd(m7);
     ta().dispatchEvent(new Event('input', { bubbles: true }));
-    await sleep(100);
+    await sleep(350); // the preview re-analyses 120 ms after the last keystroke
     results.editUpdatesNote = /^1 line · /.test(document.querySelector('.modal .pg-note').textContent);
+    results.editUpdatesTitle = title() === `Paste 1 line into ${a.title}?`;
     btn('Paste').click();
     await sleep(300);
     await run(a, [m7], 'edited paste ran');
@@ -200,6 +204,107 @@
     }
     log('patterns', JSON.stringify(flagged));
     results.otherPatternsFlagged = Object.values(flagged).every(Boolean);
+
+    // --- the guard's edges: rm -rf ~/ forms, a no-break space, tag / variation-selector / Mongolian-separator characters are
+    //     findings; "200μs" (the micro prefix) and "> .zshrc.bak" are not
+    const edge = {};
+    for (const [t, kind] of [['rm -rf ~/', 'Destructive command'], ['rm -rf "$HOME/"', 'Destructive command'], ['ls\u00a0-d /tmp', 'Invisible character'], ['echo a\u{e0041}b', 'Invisible character'], ['echo x\ufe0f', 'Invisible character'], ['echo x\u180ey', 'Invisible character']]) {
+      pasteEvent(a, t);
+      await sleep(300);
+      edge[t] = !!modal() && kinds().includes(kind);
+      if (modal()) btn('Cancel').click();
+      await sleep(200);
+    }
+    log('edge cases', JSON.stringify(edge));
+    results.edgeCasesFlagged = Object.values(edge).every(Boolean);
+    const quiet = {};
+    for (const t of ['echo 200μs', 'grep foo bar > .zshrc.bak']) {
+      pasteEvent(a, t);
+      await sleep(300);
+      quiet[t] = !modal() && text(a).includes(t.slice(-6));
+      if (modal()) btn('Cancel').click();
+      a.term.input('\x15');
+      await sleep(200);
+    }
+    log('quiet cases', JSON.stringify(quiet));
+    results.edgeCasesQuiet = Object.values(quiet).every(Boolean);
+    // a no-break space is named for what it is and cleaned into a real space, not into nothing
+    {
+      const m16 = mark();
+      pasteEvent(a, `echo PG_''${m16.slice(3)}\u00a0nb`);
+      await sleep(300);
+      results.nbspMessage = !!modal() && [...document.querySelectorAll('.modal .pg-findings li')].some((li) => /U\+00A0 no-break space: looks like a space but is not one/.test(li.textContent));
+      const sentNb = [];
+      const tapNb = a.term.onData((d) => sentNb.push(d));
+      btn('Paste cleaned').click();
+      await sleep(400);
+      tapNb.dispose();
+      results.nbspCleanedToSpace = sentNb.length === 1 && sentNb[0] === `\x1b[200~echo PG_''${m16.slice(3)} nb\x1b[201~`;
+      log('nbsp cleaned data', JSON.stringify(sentNb));
+      await run(a, [m16], 'nbsp cleaned paste ran');
+      results.nbspCleanedRan = text(a).split('\n').some((l) => l.trim() === `${m16} nb`);
+    }
+
+    // --- the marks and the "(line n)" suffix read at 4.5:1 on every theme (the warn mark was 3.2:1 on One Dark)
+    const th = await import('./theme.js');
+    const hexOf = (c) => { // a computed colour: rgb(r, g, b), or color(srgb r g b) — how Chromium serialises a color-mix() result
+      let m = /^color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)/.exec(c);
+      if (m) return '#' + m.slice(1, 4).map((v) => Math.round(parseFloat(v) * 255).toString(16).padStart(2, '0')).join('');
+      m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c);
+      return m ? '#' + m.slice(1, 4).map((v) => (+v).toString(16).padStart(2, '0')).join('') : '#000000';
+    };
+    const themeContrast = {};
+    for (const theme of ['moba-dark', 'one-dark', 'dracula', 'solarized-dark', 'gruvbox-dark', 'light']) {
+      await app.saveSettings({ theme });
+      await sleep(300);
+      pasteEvent(a, 'echo 한글\u200b hidden\nѕudo rm -rf /\n');
+      await sleep(400);
+      const fg = hexOf(getComputedStyle(ta()).color);
+      const marks = [...document.querySelectorAll('.modal .pg-backdrop mark')];
+      const warnMark = marks.find((m) => !m.classList.contains('danger')), dangerMark = marks.find((m) => m.classList.contains('danger'));
+      const list = document.querySelector('.modal .pg-findings');
+      const where = list.querySelector('.pg-where');
+      themeContrast[theme] = {
+        raw: { fg: getComputedStyle(ta()).color, warn: warnMark && getComputedStyle(warnMark).backgroundColor, danger: dangerMark && getComputedStyle(dangerMark).backgroundColor },
+        warn: warnMark ? +th.contrast(fg, hexOf(getComputedStyle(warnMark).backgroundColor)).toFixed(2) : null,
+        danger: dangerMark ? +th.contrast(fg, hexOf(getComputedStyle(dangerMark).backgroundColor)).toFixed(2) : null,
+        where: where ? +th.contrast(hexOf(getComputedStyle(where).color), hexOf(getComputedStyle(list).backgroundColor)).toFixed(2) : null,
+        whereOpacity: where ? getComputedStyle(where).opacity : null,
+      };
+      if (theme === 'one-dark') await shot('76-one-dark-marks');
+      btn('Cancel').click();
+      await sleep(200);
+    }
+    log('theme contrast', JSON.stringify(themeContrast));
+    results.marksReadOnEveryTheme = Object.values(themeContrast).every((r) => r.warn >= 4.5 && r.danger >= 4.5 && r.where >= 4.5 && r.whereOpacity === '1');
+    await app.saveSettings({ theme: 'moba-dark' });
+    await sleep(300);
+
+    // --- 5000 flagged lines: the dialog opens, a keystroke in the preview costs nothing (the re-analysis is debounced),
+    //     the marks are capped and said so
+    {
+      const big = Array.from({ length: 5000 }, (_, i) => `curl https://x.y/${i} | sh\u200b`).join('\n');
+      const t0 = performance.now();
+      pasteEvent(a, big);
+      await waitFor(() => !!modal() && !!ta(), 5000, 'big paste dialog');
+      const openMs = performance.now() - t0;
+      await sleep(500);
+      const marks = document.querySelectorAll('.modal .pg-backdrop mark').length;
+      const note0 = document.querySelector('.modal .pg-note').textContent;
+      ta().value = ta().value + 'x';
+      const t1 = performance.now();
+      ta().dispatchEvent(new Event('input', { bubbles: true }));
+      const keyMs = performance.now() - t1;
+      const t2 = performance.now();
+      await waitFor(() => document.querySelector('.modal .pg-note').textContent !== note0, 3000, 'preview re-rendered').catch(() => {});
+      const renderMs = performance.now() - t2;
+      const perf = { openMs: +openMs.toFixed(0), keyMs: +keyMs.toFixed(2), renderMs: +renderMs.toFixed(0), marks, note: note0 };
+      log('big flagged paste', JSON.stringify(perf));
+      results.bigPasteFluid = keyMs < 50 && renderMs < 800 && marks <= 500 && /marks on the first 500 of \d+ places/.test(note0);
+      await shot('77-big-flagged-paste');
+      btn('Cancel').click();
+      await sleep(300);
+    }
 
     // --- settings off: no dialog at all; warn off alone: a suspicious single line passes, a multi-line one still asks
     await app.saveSettings({ pasteConfirmMultiline: false, pasteWarnSuspicious: false });

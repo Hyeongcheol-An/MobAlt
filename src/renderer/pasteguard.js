@@ -27,8 +27,11 @@ export const KIND_LABEL = {
 export const DANGER_KINDS = new Set(['pipe-to-shell', 'profile-write', 'destructive']);
 
 // Characters that take no space on screen but reach the shell: zero-width spaces/joiners, bidi marks, embeddings,
-// overrides and isolates (Trojan Source), word joiner and the invisible operators, BOM, soft hyphen.
-const INVISIBLE_RE = /[\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF\u00AD]/g;
+// overrides and isolates (Trojan Source), word joiner and the invisible operators, BOM, soft hyphen, the Mongolian
+// vowel separator, variation selectors and tag characters (invisible text) — and the no-break spaces, which look like
+// a space but are not one to the shell ("ls -d" from a web page becomes a command called "ls -d").
+const INVISIBLE_RE = /[\u200B-\u200F\u2028\u2029\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF\u00AD\u00A0\u202F\u180E\uFE00-\uFE0F\u{E0000}-\u{E007F}]/gu;
+const SPACE_LOOKALIKE_RE = /[\u00A0\u202F]/g; // cleaned: a real space, not nothing
 // C0 controls other than \t \n \r, DEL and the C1 range: keys and escape sequences, not text.
 const CONTROL_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u0080-\u009F]/g;
 const LINE_BREAK_RE = /\r\n|\r|\n/g;
@@ -40,8 +43,9 @@ const INVISIBLE_NAMES = {
   0x202d: 'left-to-right override', 0x202e: 'right-to-left override',
   0x2060: 'word joiner', 0x2061: 'function application', 0x2062: 'invisible times', 0x2063: 'invisible separator', 0x2064: 'invisible plus',
   0x2066: 'left-to-right isolate', 0x2067: 'right-to-left isolate', 0x2068: 'first strong isolate', 0x2069: 'pop directional isolate',
-  0xfeff: 'byte order mark', 0xad: 'soft hyphen',
+  0xfeff: 'byte order mark', 0xad: 'soft hyphen', 0xa0: 'no-break space', 0x202f: 'narrow no-break space', 0x180e: 'Mongolian vowel separator',
 };
+const invisibleName = (code) => INVISIBLE_NAMES[code] || (code >= 0xfe00 && code <= 0xfe0f ? 'variation selector' : code >= 0xe0000 && code <= 0xe007f ? 'tag character' : 'invisible character');
 const BIDI_RE = /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/;
 const CONTROL_NAMES = {
   0: 'NUL', 1: 'SOH', 2: 'STX', 3: 'ETX (^C)', 4: 'EOT (^D)', 5: 'ENQ', 6: 'ACK', 7: 'BEL', 8: 'BS', 11: 'VT', 12: 'FF',
@@ -58,11 +62,11 @@ const PIPE_TO_SHELL = [
   { re: new RegExp(`\\b(?:${SHELLS})\\s+(?:-\\S+\\s+)*<\\(\\s*${FETCH}\\b`, 'i'), message: 'runs a download through process substitution (sh <(curl …)): the script runs without being seen' },
 ];
 const PROFILE_FILES = 'bashrc|bash_profile|bash_login|bash_logout|profile|zshrc|zprofile|zshenv|zlogin|zlogout|ssh\\/authorized_keys|ssh\\/config|ssh\\/rc';
-const PROFILE_WRITE = new RegExp(`(?:>>?|\\btee\\b(?:\\s+-\\w+)*)\\s*["']?(?:~|\\$HOME|\\$\\{HOME\\}|\\/home\\/[\\w.-]+|\\/Users\\/[\\w.-]+|\\/root)?\\/?\\.(${PROFILE_FILES})\\b`, 'g');
+const PROFILE_WRITE = new RegExp(`(?:>>?|\\btee\\b(?:\\s+-\\w+)*)\\s*["']?(?:~|\\$HOME|\\$\\{HOME\\}|\\/home\\/[\\w.-]+|\\/Users\\/[\\w.-]+|\\/root)?\\/?\\.(${PROFILE_FILES})(?![\\w.-])`, 'g'); // the exact file: .zshrc.bak is not the profile
 const DEVICE = '\\/dev\\/(?:r?disk|sd|hd|nvme|mmcblk|vd|xvd)\\w*';
 const DESTRUCTIVE = [
-  // rm with a recursive flag somewhere in its options and the root, the home folder or a bare * as the first target
-  { re: /\brm\s+(?=(?:-\S+\s+)*(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)\s)(?:-\S+\s+)+["']?(?:\/|~|\$HOME|\$\{HOME\}|\/\*|~\/\*|\*)["']?(?=\s|$|[;&|)])/m, message: 'rm -rf on the root, the home folder or everything in the current folder' },
+  // rm with a recursive flag somewhere in its options and the root, the home folder (with or without a trailing slash) or a bare * as the first target
+  { re: /\brm\s+(?=(?:-\S+\s+)*(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)\s)(?:-\S+\s+)+["']?(?:\/|~\/?|\$HOME\/?|\$\{HOME\}\/?|\/\*|~\/\*|\*)["']?(?=\s|$|[;&|)])/m, message: 'rm -rf on the root, the home folder or everything in the current folder' },
   { re: new RegExp(`\\bdd\\b[^\\n|;]*\\bof=${DEVICE}`), message: 'dd writes raw data over a disk device' },
   { re: new RegExp(`>\\s*${DEVICE}`), message: 'overwrites a disk device' },
   { re: /\b(?:mkfs(?:\.\w+)?|mke2fs|newfs)\b|\bdiskutil\s+(?:erase\w*|reformat|partition\w*)\b/, message: 'formats a disk' },
@@ -72,6 +76,8 @@ const DESTRUCTIVE = [
 const WORD_RE = /[\p{L}\p{M}\p{N}_]+/gu;
 const LATIN_RE = /[A-Za-z]/;
 const CONFUSABLE_RE = /[\u0400-\u04FF\u0370-\u03FF]/;
+// "200μs", "μm", "5μA": the Greek mu as the micro prefix of a short Latin unit is what tools print, not a spoofed name
+const MICRO_UNIT_RE = /^\d*(?:[.,]\d+)?μ[A-Za-z]{1,3}$/;
 
 const hex = (code) => 'U+' + code.toString(16).toUpperCase().padStart(4, '0');
 
@@ -138,8 +144,10 @@ export function analysePaste(input) {
   for (const g of grouped(text, INVISIBLE_RE, (m) => m[0])) {
     const code = g.key.codePointAt(0);
     const bidi = BIDI_RE.test(g.key);
-    const what = `${hex(code)} ${INVISIBLE_NAMES[code] || 'invisible character'}`;
-    const why = bidi ? 'a bidi control: the text can read in another order than it runs (Trojan Source)' : 'takes no space on screen but is sent to the shell';
+    const what = `${hex(code)} ${invisibleName(code)}`;
+    const why = bidi ? 'a bidi control: the text can read in another order than it runs (Trojan Source)'
+      : SPACE_LOOKALIKE_RE.test(g.key) ? 'looks like a space but is not one to the shell: it becomes part of the word'
+      : 'takes no space on screen but is sent to the shell';
     findings.push(finding(text, 'invisible', `${what}${g.ranges.length > 1 ? ` ×${g.ranges.length}` : ''}: ${why}`, g.ranges, { char: g.key }));
   }
   for (const g of grouped(text, CONTROL_RE, (m) => m[0])) {
@@ -171,14 +179,14 @@ export function analysePaste(input) {
     const sudo = hits.some(([, , line]) => /\bsudo\b/.test(line));
     findings.push(finding(text, 'destructive', `${message}${sudo ? ' (with sudo)' : ''}`, hits.map(([i, l]) => [i, l])));
   }
-  for (const g of grouped(text, WORD_RE, (m) => m[0]).filter((g) => LATIN_RE.test(g.key) && CONFUSABLE_RE.test(g.key))) {
+  for (const g of grouped(text, WORD_RE, (m) => m[0]).filter((g) => LATIN_RE.test(g.key) && CONFUSABLE_RE.test(g.key) && !MICRO_UNIT_RE.test(g.key))) {
     const odd = [...g.key].filter((c) => CONFUSABLE_RE.test(c)).map((c) => `${c} (${hex(c.codePointAt(0))})`);
     const script = /[\u0400-\u04FF]/.test(g.key) ? (/[\u0370-\u03FF]/.test(g.key) ? 'Cyrillic and Greek' : 'Cyrillic') : 'Greek';
     findings.push(finding(text, 'homoglyph', `"${g.key}" mixes ${script} ${odd.length > 1 ? 'letters' : 'letter'} ${[...new Set(odd)].join(', ')} into a Latin word: it is not the name it looks like`, g.ranges, { word: g.key }));
   }
   findings.sort((a, b) => a.index - b.index || a.kind.localeCompare(b.kind));
 
-  const cleaned = text.replace(INVISIBLE_RE, '').replace(CONTROL_RE, '').replace(/(?:\r\n|\r|\n)+$/, '');
+  const cleaned = text.replace(SPACE_LOOKALIKE_RE, ' ').replace(INVISIBLE_RE, '').replace(CONTROL_RE, '').replace(/(?:\r\n|\r|\n)+$/, '');
   return { text, chars: text.length, lines, multiline, findings, cleaned, cleanable: cleaned !== text };
 }
 
