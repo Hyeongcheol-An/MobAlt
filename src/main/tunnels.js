@@ -4,7 +4,7 @@
 const net = require('net');
 const crypto = require('crypto');
 const EventEmitter = require('events');
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const i18n = require('./i18n'); // interface language: every message shown to the user goes through i18n.t() (`t` names the tunnel in this file)
 
 function pipe(a, b) {
   a.pipe(b).pipe(a);
@@ -69,7 +69,7 @@ class TunnelManager extends EventEmitter {
         t.server = server;
       });
     } else if (t.type === 'remote') {
-      if (!info) throw new Error('Remote forwards need a connection context');
+      if (!info) throw new Error(i18n.t('Remote forwards need a connection context'));
       await new Promise((resolve, reject) => {
         client.forwardIn(t.bindHost || '127.0.0.1', t.bindPort, (err, port) => {
           if (err) return reject(err);
@@ -103,7 +103,7 @@ class TunnelManager extends EventEmitter {
         t.server = server;
       });
     } else {
-      throw new Error('Unknown tunnel type ' + t.type);
+      throw new Error(i18n.t('Unknown tunnel type {type}', { type: t.type }));
     }
     t.status = 'active';
     t.error = null;
@@ -175,7 +175,7 @@ class TunnelManager extends EventEmitter {
   /** Start a tunnel bound to an open terminal connection. */
   async startForConnection(connId, spec) {
     const info = this.ssh.get(connId);
-    if (!info || !info.client) throw new Error('Connection not ready');
+    if (!info || !info.client) throw new Error(i18n.t('Connection not ready'));
     const t = { ...spec, id: spec.id || 'tn_' + crypto.randomBytes(4).toString('hex'), connId, status: 'starting', sessionName: info.cfg.name, sessionId: info.cfg.id };
     this.tunnels.set(t.id, t);
     try {
@@ -191,7 +191,7 @@ class TunnelManager extends EventEmitter {
   /** Start a standalone tunnel with its own SSH connection to a saved session. */
   async startStandalone(spec) {
     const cfg = await this.store.getSession(spec.sessionId);
-    if (!cfg) throw new Error('Session not found');
+    if (!cfg) throw new Error(i18n.t('Session not found'));
     const t = { ...spec, id: spec.id || 'tn_' + crypto.randomBytes(4).toString('hex'), status: 'connecting', sessionName: cfg.name, sessionId: cfg.id, log: '' };
     this.tunnels.set(t.id, t);
     this._emit();

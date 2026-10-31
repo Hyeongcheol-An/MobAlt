@@ -170,7 +170,7 @@ function parseMobaXtermIniDetailed(file) {
     const skip = (reason) => skipped.push({ entry, reason });
     const type = MOBA_TYPES[m[1]];
     if (!type) {
-      skip(MOBA_TYPE_NAMES[m[1]] ? `${MOBA_TYPE_NAMES[m[1]]} bookmark (#${m[1]}) not supported` : `unsupported session type #${m[1]}`);
+      skip(MOBA_TYPE_NAMES[m[1]] ? t('{kind} bookmark (#{num}) not supported', { kind: MOBA_TYPE_NAMES[m[1]], num: m[1] }) : t('unsupported session type #{num}', { num: m[1] }));
       continue;
     }
     const body = m[3].split('#')[0];
@@ -178,7 +178,7 @@ function parseMobaXtermIniDetailed(file) {
     const s = { id: crypto.randomUUID(), name: key, folder: folder ? 'MobaXterm/' + folder : 'MobaXterm', type };
     if (type === 'local') {
       // a Shell bookmark: a terminal on this machine, no host to check or port to keep
-      if (seen.has(`${s.folder}|${s.name}|`)) { skip('duplicate of an earlier bookmark'); continue; }
+      if (seen.has(`${s.folder}|${s.name}|`)) { skip(t('duplicate of an earlier bookmark')); continue; }
       seen.add(`${s.folder}|${s.name}|`);
       sessions.push(s);
       continue;
@@ -186,7 +186,7 @@ function parseMobaXtermIniDetailed(file) {
     let port = MOBA_DEFAULT_PORT[type];
     if (f[1]) {
       port = /^\d+$/.test(f[1]) ? parseInt(f[1], 10) : NaN;
-      if (!Number.isInteger(port) || port < 1 || port > 65535) { skip(`bad port ${f[1]}`); continue; }
+      if (!Number.isInteger(port) || port < 1 || port > 65535) { skip(t('bad port {port}', { port: f[1] })); continue; }
     }
     Object.assign(s, {
       host: f[0] || '',
@@ -201,11 +201,11 @@ function parseMobaXtermIniDetailed(file) {
     const keyField = f.find((x) => /\.(ppk|pem|key)$|id_(rsa|ed25519|ecdsa)/i.test(x));
     if (keyField) {
       s.privateKeyPath = keyField.replace(/\\/g, '/');
-      s.notes = 'Imported key path from Windows; convert .ppk with puttygen and fix the path.';
+      s.notes = t('Imported key path from Windows; convert .ppk with puttygen and fix the path.');
     }
-    if (!s.host) { skip('no host'); continue; }
+    if (!s.host) { skip(t('no host')); continue; }
     const dupKey = `${s.folder}|${s.name}|${s.host}`;
-    if (seen.has(dupKey)) { skip('duplicate of an earlier bookmark'); continue; }
+    if (seen.has(dupKey)) { skip(t('duplicate of an earlier bookmark')); continue; }
     seen.add(dupKey);
     sessions.push(s);
   }
@@ -228,30 +228,30 @@ function parseSessionsJson(text) {
   try {
     data = JSON.parse(String(text).replace(/^\uFEFF/, '')); // a BOM that slipped past the decoder (text handed in directly)
   } catch (e) {
-    return { error: `not JSON (${e.message})` };
+    return { error: t('not JSON ({error})', { error: e.message }) };
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return { error: 'the top level is not an object' };
-  if (!Array.isArray(data.sessions)) return { error: 'no "sessions" array' };
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return { error: t('the top level is not an object') };
+  if (!Array.isArray(data.sessions)) return { error: t('no "sessions" array') };
   const sessions = [];
   const skipped = [];
   const seenIds = new Set();
   data.sessions.forEach((s, i) => {
     const named = !!(s && typeof s === 'object' && typeof s.name === 'string' && s.name.trim());
-    const entry = named ? `"${s.name.trim()}"` : `entry ${i + 1}`;
+    const entry = named ? `"${s.name.trim()}"` : t('entry {n}', { n: i + 1 });
     const skip = (reason) => skipped.push({ entry, reason });
-    if (!s || typeof s !== 'object' || Array.isArray(s)) return skip('not an object');
-    if (!named) return skip('no name');
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return skip(t('not an object'));
+    if (!named) return skip(t('no name'));
     const given = typeof s.type === 'string' ? s.type.trim().toLowerCase() : s.type; // "SSH", " ssh" → ssh
     const type = given === undefined || given === null || given === '' ? 'ssh' : given;
-    if (!SESSION_TYPES.includes(type)) return skip(`unknown type ${JSON.stringify(s.type)}`);
+    if (!SESSION_TYPES.includes(type)) return skip(t('unknown type {type}', { type: JSON.stringify(s.type) }));
     const out = { ...s, name: s.name.trim(), type, id: typeof s.id === 'string' && s.id ? s.id : crypto.randomUUID(), folder: typeof s.folder === 'string' ? s.folder : '' };
     if (s.port === undefined || s.port === null || s.port === '') delete out.port;
     else {
       const port = typeof s.port === 'number' ? s.port : /^\s*\d+\s*$/.test(String(s.port)) ? parseInt(s.port, 10) : NaN;
-      if (!Number.isInteger(port) || port < 1 || port > 65535) return skip(`bad port ${JSON.stringify(s.port)}`);
+      if (!Number.isInteger(port) || port < 1 || port > 65535) return skip(t('bad port {port}', { port: JSON.stringify(s.port) }));
       out.port = port;
     }
-    if (seenIds.has(out.id)) return skip('duplicate id');
+    if (seenIds.has(out.id)) return skip(t('duplicate id'));
     seenIds.add(out.id);
     sessions.push(out);
   });

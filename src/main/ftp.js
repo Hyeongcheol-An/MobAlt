@@ -10,7 +10,7 @@ const { EventEmitter } = require('events');
 const { Readable, Writable } = require('stream');
 const { spawn } = require('child_process');
 const { Client } = require('basic-ftp');
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const i18n = require('./i18n'); // interface language: every message shown to the user goes through i18n.t() (`t` names the transfer in this file)
 
 const FILE = 1, DIR = 2, LINK = 3; // basic-ftp FileType
 
@@ -49,25 +49,26 @@ function explainFtpError(e) {
   const detail = m ? m[2].trim().replace(/[.\s]+$/, '') : raw;
   const scode = e && typeof e.code === 'string' ? e.code : '';
   let msg = null;
-  if (code === 530) msg = 'Login failed (530): check the username/password';
-  else if (code === 332) msg = 'The server wants an account name (332) — not supported';
-  else if (code !== null && code >= 500 && code <= 504 && /\bAUTH\b/i.test(detail)) msg = 'The server does not support FTPS (explicit TLS); untick FTPS';
+  const t = i18n.t;
+  if (code === 530) msg = t('Login failed (530): check the username/password');
+  else if (code === 332) msg = t('The server wants an account name (332) — not supported');
+  else if (code !== null && code >= 500 && code <= 504 && /\bAUTH\b/i.test(detail)) msg = t('The server does not support FTPS (explicit TLS); untick FTPS');
   else if (code === 550 || code === 553 || code === 450 || code === 452 || code === 501) {
-    if (/exist/i.test(detail)) msg = `The name already exists on the server (${code} ${detail})`;
-    else if (/no such|not found|failed to open|cannot find|does not exist|not a directory|is a directory/i.test(detail)) msg = `Path not found on the server (${code} ${detail})`;
-    else if (/not empty/i.test(detail)) msg = `The folder is not empty (${code} ${detail})`;
-    else if (/privilege|permission|denied|not allowed|forbidden/i.test(detail)) msg = `Permission denied on the server (${code} ${detail})`;
-    else if (/space|quota/i.test(detail)) msg = `No space left on the server (${code} ${detail})`;
-    else if (code === 501) msg = `The server rejected the request (501 ${detail})`;
-    else msg = `The server refused the operation (${code} ${detail})`;
-  } else if (code === 421) msg = `The server closed the connection (421 ${detail})`;
-  else if (code === 425 || code === 426) msg = `Data connection failed (${code} ${detail}) — is passive mode blocked by a firewall?`;
-  else if (code !== null && code >= 400) msg = `Server error ${code}: ${detail}`;
-  else if (scode === 'ECONNREFUSED') msg = `Connection refused (${raw.replace(/^connect ECONNREFUSED\s*/, '')}) — the host is reachable but no FTP server listens on that port`;
-  else if (scode === 'ETIMEDOUT' || /timeout \((control|data) socket\)/i.test(raw)) msg = `Connection timed out (${raw}) — check the host/port, VPN or firewall`;
-  else if (scode === 'ENOTFOUND' || scode === 'EAI_AGAIN') msg = `Host not found (${raw.replace(/^getaddrinfo \w+\s*/, '')}) — check the host name`;
-  else if (scode === 'ECONNRESET' || scode === 'EPIPE') msg = `The server dropped the connection (${scode})`;
-  else if (/certificate|altname|self.signed|^CERT_|UNABLE_TO_VERIFY/i.test(raw + ' ' + scode)) msg = `TLS certificate not trusted (${raw}) — tick "Accept untrusted / self-signed certificate" in the session if you trust this server`;
+    if (/exist/i.test(detail)) msg = t('The name already exists on the server ({code} {detail})', { code, detail });
+    else if (/no such|not found|failed to open|cannot find|does not exist|not a directory|is a directory/i.test(detail)) msg = t('Path not found on the server ({code} {detail})', { code, detail });
+    else if (/not empty/i.test(detail)) msg = t('The folder is not empty ({code} {detail})', { code, detail });
+    else if (/privilege|permission|denied|not allowed|forbidden/i.test(detail)) msg = t('Permission denied on the server ({code} {detail})', { code, detail });
+    else if (/space|quota/i.test(detail)) msg = t('No space left on the server ({code} {detail})', { code, detail });
+    else if (code === 501) msg = t('The server rejected the request (501 {detail})', { detail });
+    else msg = t('The server refused the operation ({code} {detail})', { code, detail });
+  } else if (code === 421) msg = t('The server closed the connection (421 {detail})', { detail });
+  else if (code === 425 || code === 426) msg = t('Data connection failed ({code} {detail}) — is passive mode blocked by a firewall?', { code, detail });
+  else if (code !== null && code >= 400) msg = t('Server error {code}: {detail}', { code, detail });
+  else if (scode === 'ECONNREFUSED') msg = t('Connection refused ({where}) — the host is reachable but no FTP server listens on that port', { where: raw.replace(/^connect ECONNREFUSED\s*/, '') });
+  else if (scode === 'ETIMEDOUT' || /timeout \((control|data) socket\)/i.test(raw)) msg = t('Connection timed out ({error}) — check the host/port, VPN or firewall', { error: raw });
+  else if (scode === 'ENOTFOUND' || scode === 'EAI_AGAIN') msg = t('Host not found ({host}) — check the host name', { host: raw.replace(/^getaddrinfo \w+\s*/, '') });
+  else if (scode === 'ECONNRESET' || scode === 'EPIPE') msg = t('The server dropped the connection ({code})', { code: scode });
+  else if (/certificate|altname|self.signed|^CERT_|UNABLE_TO_VERIFY/i.test(raw + ' ' + scode)) msg = t('TLS certificate not trusted ({error}) — tick "Accept untrusted / self-signed certificate" in the session if you trust this server', { error: raw });
   if (!msg) return e instanceof Error ? e : new Error(raw);
   const out = new Error(msg);
   if (code !== null) out.code = code;
@@ -129,14 +130,15 @@ class FtpManager extends EventEmitter {
     let client;
     for (let attempt = 1; ; attempt++) {
       if (cfg.username && !cfg.password) {
-        if (!this.prompter) throw new Error('No password set for this FTP session');
+        if (!this.prompter) throw new Error(i18n.t('No password set for this FTP session'));
+        const account = `${cfg.username}@${cfg.host}`;
         const ans = await this.prompter.password({
           kind: 'password',
-          title: 'FTP password',
-          message: `${attempt > 1 ? 'Login failed. ' : ''}${cfg.username}@${cfg.host}'s FTP password${attempt > 1 ? ' (attempt ' + attempt + ')' : ''}`,
+          title: i18n.t('FTP password'),
+          message: attempt > 1 ? i18n.t("Login failed. {account}'s FTP password (attempt {n})", { account, n: attempt }) : i18n.t("{account}'s FTP password", { account }),
           session: cfg,
         });
-        if (!ans) throw new Error('authentication cancelled');
+        if (!ans) throw new Error(i18n.t('authentication cancelled'));
         prompted = ans;
         cfg.password = ans.password;
       }
@@ -180,7 +182,7 @@ class FtpManager extends EventEmitter {
   /** Serialize commands on the control connection; reconnect transparently if the server dropped it. */
   _run(id, fn) {
     const c = this.conns.get(id);
-    if (!c) return Promise.reject(new Error('FTP session is closed'));
+    if (!c) return Promise.reject(new Error(i18n.t('FTP session is closed')));
     const task = c.queue
       .then(async () => {
         if (c.client.closed) c.client = await this._newClient(c.cfg);
@@ -198,7 +200,7 @@ class FtpManager extends EventEmitter {
 
   async realpath(id, p) {
     const c = this.conns.get(id);
-    if (!c) throw new Error('FTP session is closed');
+    if (!c) throw new Error(i18n.t('FTP session is closed'));
     return this._abs(c, p);
   }
 
@@ -231,7 +233,7 @@ class FtpManager extends EventEmitter {
     const dir = path.posix.dirname(p), base = path.posix.basename(p);
     const { entries } = await this.list(id, dir);
     const e = entries.find((x) => x.name === base);
-    if (!e) throw new Error(`No such file: ${p}`);
+    if (!e) throw new Error(i18n.t('No such file: {path}', { path: p }));
     return { size: e.size, mtime: e.mtime, mode: e.mode, isDir: e.type === 'd' };
   }
 
@@ -254,7 +256,7 @@ class FtpManager extends EventEmitter {
   async readFile(id, p, maxBytes = 5 * 1024 * 1024) {
     return this._run(id, async (client) => {
       const size = await client.size(p).catch(() => 0);
-      if (size > maxBytes) throw new Error(`File too large (${size} bytes)`);
+      if (size > maxBytes) throw new Error(i18n.t('File too large ({size} bytes)', { size }));
       const chunks = [];
       await client.downloadTo(new Writable({ write(chunk, _enc, cb) { chunks.push(chunk); cb(); } }), p);
       return Buffer.concat(chunks).toString('utf8');
@@ -366,7 +368,7 @@ class FtpManager extends EventEmitter {
     const c = this.conns.get(connId);
     const t = this._newTransfer(connId, 'download', path.posix.basename(remote), remote, local);
     return this._finish(t, async () => {
-      if (!c) throw new Error('FTP session is closed');
+      if (!c) throw new Error(i18n.t('FTP session is closed'));
       const st = await this.stat(connId, remote);
       const client = await this._transferClient(t, c.cfg);
       if (st.isDir) {
@@ -403,7 +405,7 @@ class FtpManager extends EventEmitter {
     const c = this.conns.get(connId);
     const t = this._newTransfer(connId, 'upload', path.basename(local), remote, local);
     return this._finish(t, async () => {
-      if (!c) throw new Error('FTP session is closed');
+      if (!c) throw new Error(i18n.t('FTP session is closed'));
       const st = fs.statSync(local);
       const client = await this._transferClient(t, c.cfg);
       let current = null; // remote path of the file in flight
@@ -448,7 +450,7 @@ class FtpManager extends EventEmitter {
   /** Download to a temp file, open it in the local editor, re-upload on every save. */
   async editRemote(connId, remote) {
     const c = this.conns.get(connId);
-    if (!c) throw new Error('FTP session is closed');
+    if (!c) throw new Error(i18n.t('FTP session is closed'));
     const settings = this.store.getSettings();
     const dir = path.join(os.tmpdir(), 'mobalt-edit', connId, crypto.randomBytes(3).toString('hex'));
     fs.mkdirSync(dir, { recursive: true });

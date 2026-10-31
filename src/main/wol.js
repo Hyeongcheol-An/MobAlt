@@ -23,7 +23,7 @@ function parseMac(input) {
 /** The 102-byte magic packet for `mac` (any spelling parseMac takes); throws on an invalid address. */
 function magicPacket(mac) {
   const m = parseMac(mac);
-  if (!m) throw new Error(`Invalid MAC address: ${String(mac ?? '').trim() || '(empty)'}`);
+  if (!m) throw new Error(t('Invalid MAC address: {mac}', { mac: String(mac ?? '').trim() || t('(empty)') }));
   const bytes = Buffer.from(m.replace(/:/g, ''), 'hex');
   return Buffer.concat([Buffer.alloc(6, 0xff), ...Array.from({ length: 16 }, () => bytes)]);
 }
@@ -35,10 +35,10 @@ function magicPacket(mac) {
 function describeSendError(e, target, port) {
   const code = e && e.code;
   const where = `${target}:${port}`;
-  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return new Error(`No route to ${target}; check the broadcast address (${code})`);
-  if (code === 'EACCES' || code === 'EPERM') return new Error(`Sending to ${where} is not allowed on this Mac (${code})`);
-  if (code === 'EADDRNOTAVAIL' || code === 'EINVAL') return new Error(`Cannot send to ${where}; check the broadcast address (${code})`);
-  return new Error(`Cannot send to ${where}: ${code || (e && e.message) || e}`);
+  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return new Error(t('No route to {target}; check the broadcast address ({code})', { target, code }));
+  if (code === 'EACCES' || code === 'EPERM') return new Error(t('Sending to {where} is not allowed on this Mac ({code})', { where, code }));
+  if (code === 'EADDRNOTAVAIL' || code === 'EINVAL') return new Error(t('Cannot send to {where}; check the broadcast address ({code})', { where, code }));
+  return new Error(t('Cannot send to {where}: {error}', { where, error: code || (e && e.message) || e }));
 }
 
 /**
@@ -52,11 +52,11 @@ function wake({ mac, broadcast = '255.255.255.255', port = 9, repeat = 3, interv
     let packet;
     try { packet = magicPacket(mac); } catch (e) { return reject(e); }
     const target = String(broadcast ?? '').trim() || '255.255.255.255';
-    if (!net.isIPv4(target)) return reject(new Error(`Invalid broadcast address: ${target}`));
-    if (target === '0.0.0.0') return reject(new Error('Invalid broadcast address: 0.0.0.0 — use 255.255.255.255 or the subnet\'s broadcast such as 192.168.1.255'));
+    if (!net.isIPv4(target)) return reject(new Error(t('Invalid broadcast address: {address}', { address: target })));
+    if (target === '0.0.0.0') return reject(new Error(t("Invalid broadcast address: 0.0.0.0 — use 255.255.255.255 or the subnet's broadcast such as 192.168.1.255")));
     const p = port === '' || port === null || port === undefined ? 9 : Number(port);
-    if (!Number.isInteger(p)) return reject(new Error('The port must be a whole number between 1 and 65535'));
-    if (p < 1 || p > 65535) return reject(new Error('The port must be between 1 and 65535'));
+    if (!Number.isInteger(p)) return reject(new Error(t('The port must be a whole number between 1 and 65535')));
+    if (p < 1 || p > 65535) return reject(new Error(t('The port must be between 1 and 65535')));
     const socket = dgram.createSocket('udp4');
     let sent = 0, timer = null, done = false;
     const finish = (err) => {

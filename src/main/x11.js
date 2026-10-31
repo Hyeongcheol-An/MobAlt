@@ -85,7 +85,7 @@ async function ensureServer(onStatus, timeoutMs = 12000) {
   if (d) return d;
   const appPath = XQUARTZ_APPS.find((p) => fs.existsSync(p));
   if (!appPath) return null;
-  onStatus && onStatus('starting XQuartz…');
+  onStatus && onStatus(t('starting XQuartz…'));
   try {
     spawn('open', ['-g', '-a', appPath], { stdio: 'ignore', detached: true }).unref();
   } catch {
@@ -122,7 +122,7 @@ async function prepare(onStatus) {
 /** Pipe an accepted ssh2 x11 channel to the local X server. */
 function proxy(channel, x11, onError) {
   const sock = x11.socketPath ? net.connect(x11.socketPath) : net.connect(tcpTarget(x11.display) || { port: 6000 });
-  sock.once('error', (e) => onError && onError(`cannot connect to local X server at ${x11.socketPath || x11.display}: ${e.message}`));
+  sock.once('error', (e) => onError && onError(t('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
   let header = Buffer.alloc(0);
   let done = !x11.realCookie; // nothing to swap if we have no local cookie
 

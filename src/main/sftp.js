@@ -122,7 +122,7 @@ class SftpManager extends EventEmitter {
   async readFile(connId, p, maxBytes = 5 * 1024 * 1024) {
     const sftp = await this._sftp(connId);
     const st = await this._p(sftp, 'stat', p);
-    if (st.size > maxBytes) throw new Error(`File too large (${st.size} bytes)`);
+    if (st.size > maxBytes) throw new Error(t('File too large ({size} bytes)', { size: st.size }));
     return new Promise((resolve, reject) => {
       const chunks = [];
       sftp.createReadStream(p).on('data', (c) => chunks.push(c)).on('end', () => resolve(Buffer.concat(chunks).toString('utf8'))).on('error', reject);
