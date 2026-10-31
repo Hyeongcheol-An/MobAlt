@@ -84,6 +84,7 @@ class App {
         color: t.color || null,
         icon: t.icon || null,
         active: Math.max(0, t.panes().indexOf(t.activePane)),
+        ...(t.zoomed && t.panes().includes(t.zoomed) ? { zoomed: t.panes().indexOf(t.zoomed) } : {}), // the pane filling the tab (⇧⌘⏎)
         root: ser(t.root),
       })),
     };
@@ -140,6 +141,7 @@ class App {
       if (tab.autoTitle && this.tabTitlePane(tab)?.session) this.deriveTabTitle(tab);
       this.workspace.render(tab);
       this.workspace.updateTab(tab);
+      if (Number.isInteger(td.zoomed) && panes[td.zoomed]) this.workspace.setZoom(tab, panes[td.zoomed]); // zoomed at the save: zoomed again
       for (const p of panes) starts.push(p.start().catch(() => {}));
       any = true;
     }
@@ -413,6 +415,7 @@ class App {
   }
 
   focusPane(pane, viaTab = false) {
+    if (pane && pane.tab && pane.tab.zoomed && pane.tab.zoomed !== pane) this.workspace.setZoom(pane.tab, null); // a hidden pane that gets the focus (⌘], reconnect, a drop) must be seen
     if (pane && pane.tab) queueMicrotask(() => pane.tab.tabEl && this.workspace.updateTab(pane.tab)); // tab dot follows the active pane
     if (pane && !pane.webgl && pane.mounted && pane.kind !== 'empty' && pane.kind !== 'ftp' && this.workspace.allPanes().length <= 12) pane._loadWebgl(); // regain GPU rendering after a context-limit burst
     if (this.focused && this.focused !== pane) this.focused.el.classList.remove('focused');
@@ -573,13 +576,34 @@ class App {
     this.focusPane(ap, true);
   }
 
+  /**
+   * Zoom the pane (default: the active one) to fill its tab, or restore the tab's layout when one is zoomed.
+   * The siblings stay alive but hidden; MultiExec then writes to the zoomed pane only (multiexecTargets).
+   */
+  toggleZoom(pane) {
+    const ap = pane || this.activePane();
+    if (!ap || !ap.tab) return toast('Nothing to zoom — open a session first', 'info');
+    const tab = ap.tab;
+    if (tab.zoomed) {
+      this.workspace.setZoom(tab, null);
+      this.focusPane(tab.activePane, true);
+      return;
+    }
+    if (tab.panes().length < 2) return toast('Only one pane in this tab', 'info');
+    this.workspace.setZoom(tab, ap);
+    this.focusPane(ap, true);
+  }
+
   splitMenu(anchor) {
     const r = anchor.getBoundingClientRect();
     const ap = this.activePane();
     const n = ap && ap.tab ? ap.tab.panes().length : 0;
+    const zoomed = !!(ap && ap.tab && ap.tab.zoomed);
     contextMenu(r.left, r.bottom + 4, [
       { label: 'Split Right (side by side)', key: '⌘D', action: () => this.action('split', 'right') },
       { label: 'Split Down (top / bottom)', key: '⇧⌘D', action: () => this.action('split', 'down') },
+      '-',
+      { label: zoomed ? 'Restore Panes (unzoom)' : 'Zoom Pane (fill the tab)', key: '⇧⌘⏎', action: () => this.toggleZoom(), disabled: n < 2 },
       '-',
       { label: 'Layout 1 × 2  (2 side by side)', action: () => this.applyLayout('2x1') },
       { label: 'Layout 2 × 1  (2 stacked)', action: () => this.applyLayout('1x2') },
@@ -761,12 +785,15 @@ class App {
 
   // ---------- MultiExec ----------
   /**
-   * The terminals MultiExec writes to: the ones on screen, i.e. the live shells of the active tab
-   * (other tabs are never touched; empty placeholders, FTP cards and dead sessions are skipped).
+   * The terminals MultiExec writes to: the ones on screen, i.e. the live shells of the active tab — only the
+   * zoomed pane while one fills the tab (other tabs are never touched; empty placeholders, FTP cards and dead
+   * sessions are skipped).
    */
   multiexecTargets() {
     const tab = this.workspace.active;
-    return tab ? tab.panes().filter((p) => !p.dead && p.termId && p.kind !== 'ftp' && p.kind !== 'empty') : [];
+    if (!tab) return [];
+    const shown = tab.zoomed ? [tab.zoomed] : tab.panes();
+    return shown.filter((p) => !p.dead && p.termId && p.kind !== 'ftp' && p.kind !== 'empty');
   }
 
   broadcast(data, from) {
@@ -777,7 +804,9 @@ class App {
 
   /** Wording for an empty broadcast set: no tab at all, or a tab whose panes are empty cards, FTP cards or dead shells. */
   multiexecNoneText() {
-    return this.workspace.active ? 'no terminal is visible in this tab — connect a session first' : 'no terminal is visible — open a session first';
+    const tab = this.workspace.active;
+    if (tab && tab.zoomed) return 'the zoomed pane has no live terminal — restore the panes (⇧⌘⏎) or reconnect';
+    return tab ? 'no terminal is visible in this tab — connect a session first' : 'no terminal is visible — open a session first';
   }
 
   /** Banner, toolbar state and the visible-terminal count; called whenever the active tab or a pane's life changes. */
@@ -789,7 +818,8 @@ class App {
     const n = this.multiexecTargets().length;
     // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminal(s)"
     const count = h('b', { id: 'multiexec-count', hidden: n === 0 }, String(n));
-    banner.replaceChildren('MultiExec is ON — ', ...(n === 0 ? [this.multiexecNoneText(), count] : ['keystrokes go to ', count, ' visible terminal(s) in this tab']));
+    const zoomed = !!(this.workspace.active && this.workspace.active.zoomed);
+    banner.replaceChildren('MultiExec is ON — ', ...(n === 0 ? [this.multiexecNoneText(), count] : ['keystrokes go to ', count, ' visible terminal(s) in this tab', zoomed ? ' (the zoomed pane only)' : '']));
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
 
@@ -907,6 +937,7 @@ class App {
       case 'next-tab': return this.workspace.nextTab(1);
       case 'prev-tab': return this.workspace.nextTab(-1);
       case 'zoom': return ap && ap.zoom(arg === 0 ? 0 : arg > 0 ? 1 : -1);
+      case 'zoom-pane': return this.toggleZoom(pane); // ⇧⌘⏎: the pane fills its tab / the layout comes back
       case 'find': {
         if (!ap) return;
         $('#find-bar').hidden = false;
@@ -930,6 +961,7 @@ class App {
         const n = this.multiexecTargets().length;
         toast(!this.multiexec ? 'MultiExec OFF'
           : n === 0 ? `MultiExec ON: ${this.multiexecNoneText()}`
+          : n === 1 && this.workspace.active?.zoomed ? 'MultiExec ON: only the zoomed pane is visible — restore the panes (⇧⌘⏎) to broadcast'
           : n === 1 ? 'MultiExec ON: only 1 terminal is visible — split the tab to broadcast'
           : 'MultiExec ON: input goes to every visible terminal in this tab', this.multiexec ? 'warn' : 'info');
         return;

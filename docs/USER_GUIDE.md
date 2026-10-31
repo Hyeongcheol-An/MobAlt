@@ -105,10 +105,15 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   1×2 … 2×4 layouts (⌥⌘2/4/6/8). Drop a session from the tree onto an empty pane to connect there,
   onto a pane's edge to split in that direction, or onto its centre to replace it. Drag a tab onto
   a pane to move that terminal into the split. ⌥⌘1 unsplits (keeps the focused pane).
+- **Zoom a pane** (⇧⌘⏎, the ⤢ button in the pane head, or `Split ▾` → Zoom Pane): the focused
+  pane fills the tab, like tmux's zoom or iTerm2's maximize. The other panes stay connected but
+  hidden; the pane head shows a *zoomed* chip and the tab a small ⤢. Press again (or ⤡ in the head)
+  to bring the layout back. Splitting, closing a pane, a grid layout or focusing a hidden pane (⌘])
+  restores the layout first. Each tab keeps its own zoom, also across a restart.
 - **MultiExec** (⇧⌘M): while on, every keystroke goes to every terminal visible on screen — the
-  live panes of the active tab. Other tabs never receive it, so split the tab (or use a grid) to put
-  the servers you want to drive side by side. The banner shows how many visible terminals listen and
-  follows the tab you switch to.
+  live panes of the active tab, or only the zoomed pane while one fills the tab. Other tabs never
+  receive it, so split the tab (or use a grid) to put the servers you want to drive side by side.
+  The banner shows how many visible terminals listen and follows the tab you switch to.
 - **Find** (⌘F): incremental search with case and regex toggles and a match counter.
 - **Clipboard**: selecting copies (Settings → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
@@ -198,6 +203,7 @@ workspace restore and the update check. "Open config folder" shows where everyth
 | Split right / down, unsplit | ⌘D / ⇧⌘D, ⌥⌘1 |
 | Grid 2 / 4 / 6 / 8 panes | ⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8 |
 | Next pane, next / previous tab, tab 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
+| Zoom pane (fill the tab) / restore the layout | ⇧⌘⏎ |
 | Find, clear, zoom | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
 | Sidebar, Sessions / SFTP / Tools / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, tunnels, settings | ⇧⌘M, ⇧⌘U, ⌘, |

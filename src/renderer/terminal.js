@@ -72,6 +72,7 @@ export class TermPane {
     this.remoteCwd = null;
     this.logging = false;
     this.tab = null;
+    this.zoomed = false; // filling its tab (layout.js setZoom → setZoomed)
     this.dead = false;
     this.disposed = false;
     this.connectedAt = null;
@@ -110,6 +111,8 @@ export class TermPane {
         h('span', { class: 'dot' }),
         this.session?.icon ? h('span', { class: 'picon' }, this.session.icon) : null,
         (this.headTitle = h('span', { class: 'title' }, this.title)),
+        (this.zoomBadge = h('span', { class: 'zoom-badge', hidden: true }, 'zoomed')),
+        (this.zoomBtn = h('button', { class: 'zoom', title: 'Zoom pane (⇧⌘⏎)', 'aria-label': 'Zoom pane', 'aria-pressed': 'false', onclick: () => app.action('zoom-pane', undefined, this) }, icon('zoom'))),
         h('button', { title: 'Split right', 'aria-label': 'Split right', onclick: () => app.action('split', 'right', this) }, icon('split')),
         h('button', { title: 'Split down', 'aria-label': 'Split down', onclick: () => app.action('split', 'down', this) }, icon('split-down')),
         h('button', { title: 'Close pane', 'aria-label': 'Close pane', onclick: () => app.closePane(this) }, icon('x'))
@@ -288,6 +291,19 @@ export class TermPane {
   updateTitle() {
     this.headTitle.textContent = this.title;
     this.app.onPaneTitle(this);
+  }
+
+  /** Head state while this pane fills its tab (layout.js setZoom): badge, pressed ⤢/⤡ button, `.zoomed` on the pane. */
+  setZoomed(on) {
+    on = !!on;
+    if (this.zoomed === on) return;
+    this.zoomed = on;
+    this.el.classList.toggle('zoomed', on);
+    this.zoomBadge.hidden = !on;
+    this.zoomBtn.replaceChildren(icon(on ? 'unzoom' : 'zoom'));
+    this.zoomBtn.title = on ? 'Restore panes (⇧⌘⏎)' : 'Zoom pane (⇧⌘⏎)';
+    this.zoomBtn.setAttribute('aria-label', on ? 'Restore panes' : 'Zoom pane');
+    this.zoomBtn.setAttribute('aria-pressed', String(on));
   }
 
   setStatus(status, msg) {
@@ -711,6 +727,7 @@ export class TermPane {
       '-',
       { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right', this) },
       { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down', this) },
+      { label: this.zoomed ? 'Restore Panes' : 'Zoom Pane', key: '⇧⌘⏎', action: () => this.app.action('zoom-pane', undefined, this), disabled: !this.tab || this.tab.panes().length < 2 },
       '-',
       { label: this.logging ? 'Stop Session Log' : 'Start Session Log…', action: () => this.toggleLog() },
       this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? 'Open file browser' : 'Open SFTP Browser', action: () => this.app.sftpPanel.show(this.termId) } : null,

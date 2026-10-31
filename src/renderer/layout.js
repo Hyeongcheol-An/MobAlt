@@ -12,6 +12,7 @@ export class Tab {
     this.icon = null;
     this.root = null;
     this.activePane = null;
+    this.zoomed = null; // the pane filling the tab (⇧⌘⏎) while its siblings stay alive but hidden; null = the split layout
     this.pageEl = h('div', { class: 'tab-page', role: 'tabpanel' });
     this.tabEl = null;
   }
@@ -140,7 +141,8 @@ export class Workspace {
       label: h('span', { class: 'tab-menu-item' },
         h('span', { class: 'dot ' + (t.activePane ? t.activePane.status : '') }),
         t.icon ? h('span', { class: 'tabico' }, t.icon) : null,
-        h('span', { class: 'title' }, t.title)),
+        h('span', { class: 'title' }, t.title),
+        t.zoomed ? h('span', { class: 'zoomico', title: 'A pane is zoomed' }, icon('zoom')) : null),
       key: t === this.active ? '✓' : '',
       action: () => this.activate(t),
     }));
@@ -186,6 +188,7 @@ export class Workspace {
       h('span', { class: 'dot' }),
       h('span', { class: 'tabico', hidden: !tab.icon }, tab.icon || ''),
       h('span', { class: 'title' }, tab.title),
+      h('span', { class: 'zoomico', hidden: !tab.zoomed, title: 'A pane is zoomed (⇧⌘⏎ restores the layout)' }, icon('zoom')),
       h('button', { class: 'close', title: 'Close (⌘W)', 'aria-label': 'Close tab', tabindex: -1, onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, icon('x'))
     );
     el.addEventListener('mousedown', (e) => {
@@ -329,7 +332,41 @@ export class Workspace {
       ico.textContent = tab.icon || '';
       ico.hidden = !tab.icon;
     }
+    this._syncZoomIndicator(tab);
     this.app.saveWorkspaceSoon?.();
+  }
+
+  // ---------- pane zoom ----------
+  /**
+   * Zoom `pane` to fill its tab (its siblings stay alive but hidden), or restore the split layout with null.
+   * A pane that is not in the tab, or a tab with a single pane, cannot be zoomed. Returns true when the
+   * state changed. The zoomed pane is the tab's active pane; the caller focuses it.
+   */
+  setZoom(tab, pane) {
+    const panes = tab.panes();
+    const next = pane && panes.length > 1 && panes.includes(pane) ? pane : null;
+    if (tab.zoomed === next) return false;
+    tab.zoomed = next;
+    if (next) tab.activePane = next;
+    this._applyZoom(tab);
+    for (const p of panes) p.fit(); // the zoomed pane grows to the tab, the restored ones shrink back to their cells
+    this.app.updateMultiexec?.(); // the broadcast set is the zoomed pane alone
+    this.app.saveWorkspaceSoon?.();
+    return true;
+  }
+
+  /** DOM state of a tab's zoom: the page class (styles.css "pane zoom"), each pane's head and the tab's indicator. */
+  _applyZoom(tab) {
+    tab.pageEl.classList.toggle('zoomed', !!tab.zoomed);
+    for (const p of tab.panes()) p.setZoomed?.(p === tab.zoomed);
+    this._syncZoomIndicator(tab);
+  }
+
+  _syncZoomIndicator(tab) {
+    if (!tab.tabEl) return;
+    const z = tab.tabEl.querySelector('.zoomico');
+    if (z) z.hidden = !tab.zoomed;
+    tab.tabEl.classList.toggle('zoomed', !!tab.zoomed);
   }
 
   activate(tab) {
@@ -401,6 +438,7 @@ export class Workspace {
   split(tab, pane, dir, newPane) {
     const node = this._nodeOf(tab, pane);
     if (!node) return;
+    this.setZoom(tab, null); // a new pane must be seen: the layout comes back first
     const parent = this._findParent(tab.root, node);
     const newNode = { type: 'pane', pane: newPane };
     const before = dir === 'left' || dir === 'up';
@@ -418,6 +456,7 @@ export class Workspace {
     node.pane = newPane;
     newPane.tab = tab;
     if (tab.activePane === pane) tab.activePane = newPane;
+    if (tab.zoomed === pane) tab.zoomed = newPane; // the replacement takes the zoomed pane's place on screen too
     this.render(tab);
     return true;
   }
@@ -425,6 +464,7 @@ export class Workspace {
   removePane(tab, pane) {
     const node = this._nodeOf(tab, pane);
     if (!node) return false;
+    this.setZoom(tab, null); // closing or moving a pane (zoomed or hidden) shows the layout that remains
     const parent = this._findParent(tab.root, node);
     if (!parent) {
       tab.root = null;
@@ -452,6 +492,7 @@ export class Workspace {
    * missing cells with `makeEmpty()`. Extra panes beyond cols×rows add rows. Returns the new panes.
    */
   applyGrid(tab, cols, rows, makeEmpty) {
+    this.setZoom(tab, null); // a grid is a layout: every pane is on screen again
     const existing = tab.panes();
     const total = Math.max(cols * rows, existing.length);
     rows = Math.ceil(total / cols);
@@ -521,9 +562,15 @@ export class Workspace {
       return el;
     };
     tab.pageEl.replaceChildren();
-    if (!tab.root) return;
+    if (!tab.root) {
+      tab.zoomed = null;
+      this._applyZoom(tab);
+      return;
+    }
     tab.pageEl.append(build(tab.root));
     const panes = tab.panes();
+    if (tab.zoomed && (panes.length < 2 || !panes.includes(tab.zoomed))) tab.zoomed = null; // the zoomed pane left, or nothing is left to hide
+    this._applyZoom(tab);
     for (const p of panes) {
       p.el.classList.toggle('show-head', panes.length > 1);
       p.mount();

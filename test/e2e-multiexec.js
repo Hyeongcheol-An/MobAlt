@@ -1,7 +1,7 @@
 // MultiExec scope: keystrokes go only to the live terminals visible in the active tab, never to other tabs,
 // and the banner count follows tab switches, splits, closes, deaths and reconnects.
 //   test/qa/run.sh test/e2e-multiexec.js <out-dir>
-// (There is no pane zoom/maximize feature — "zoom" is the font size — so "visible" is every pane of the active tab.)
+// (The 'zoom' action is the font size; "visible" is every pane of the active tab — no pane is zoomed here, see test/e2e-zoom.js.)
 // Also: the tab titles after a tab → pane drop, the FTP card in a split (test/ftpd.py on 127.0.0.1:2151 when it is
 // running; without a server the failed card has the same box) and the wording when nothing can be broadcast to.
 (async () => {

@@ -520,3 +520,21 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .pane .pane-placeholder.ftp-info .ftp-err { color: color-mix(in srgb, var(--red) 70%, var(--term-fg)); }
 /* Update banner at the 900 px minimum width: the call to action never ends up as a one-word line. */
 #update-banner .keep { white-space: nowrap; }
+
+/* ---- pane zoom ---- */
+/* A zoomed pane (⇧⌘⏎, the ⤢ head button, Split ▾ → Zoom Pane) fills its tab. The split tree stays in the DOM: its
+   boxes stop existing (display: contents), so every .pane is positioned against the tab page itself; the siblings
+   are display: none — their terminals keep running exactly like an inactive tab's — and the splitters go with them. */
+.tab-page.zoomed .split, .tab-page.zoomed .split-child { display: contents; }
+.tab-page.zoomed .splitter { display: none; }
+.tab-page.zoomed .pane:not(.zoomed) { display: none; }
+/* Pane head of the zoomed pane: a "zoomed" chip after the title and the ⤡ restore button in the accent colour. */
+.pane-head .zoom-badge { flex: none; padding: 0 6px; border: 1px solid var(--accent-2); border-radius: 9px; font-size: 10px; line-height: 15px; letter-spacing: .3px; color: var(--accent); text-transform: uppercase; }
+.pane-head .zoom-badge[hidden] { display: none; }
+.pane.zoomed .pane-head button.zoom { color: var(--accent); }
+.pane.zoomed .pane-head button.zoom:hover { color: #fff; }
+/* Tab strip: a small ⤢ before the close button while one of the tab's panes is zoomed (also in the "all tabs" menu). */
+.tab .zoomico, .tab-menu-item .zoomico { flex: none; display: flex; color: var(--accent); }
+.tab .zoomico[hidden] { display: none; }
+.tab .zoomico svg.i, .tab-menu-item .zoomico svg.i { width: 11px; height: 11px; }
+.tab-menu-item .zoomico { margin-left: 4px; }

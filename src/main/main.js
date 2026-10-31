@@ -302,6 +302,7 @@ function buildMenu() {
         { label: 'Unsplit (keep active pane)', accelerator: 'Cmd+Alt+1', click: () => sendAction('unsplit') },
         { label: 'Close Pane', accelerator: 'Cmd+Shift+W', click: () => sendAction('close-pane') },
         { label: 'Focus Next Pane', accelerator: 'Cmd+]', click: () => sendAction('next-pane') },
+        { label: 'Zoom Pane (fill the tab / restore)', accelerator: 'Cmd+Shift+Return', click: () => sendAction('zoom-pane') },
         { type: 'separator' },
         { label: 'Zoom In', accelerator: 'Cmd+=', click: () => sendAction('zoom', 1) },
         { label: 'Zoom Out', accelerator: 'Cmd+-', click: () => sendAction('zoom', -1) },

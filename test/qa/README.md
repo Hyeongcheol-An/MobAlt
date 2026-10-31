@@ -27,7 +27,7 @@ await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version
 await window.api.app.testNotice('Internal error: x'); // a main-process notice (app:notice) → error toast (test mode only)
 app.action('new-session' | 'new-local' | 'quick-connect' | 'duplicate' | 'reconnect' | 'disconnect' |
            'rename-tab' | 'close' | 'close-pane' | 'split' | 'split-menu' | 'layout' | 'unsplit' |
-           'next-pane' | 'next-tab' | 'prev-tab' | 'zoom' | 'find' | 'find-close' | 'clear' |
+           'next-pane' | 'next-tab' | 'prev-tab' | 'zoom' | 'zoom-pane' | 'find' | 'find-close' | 'clear' |
            'toggle-sidebar' | 'sidebar' | 'multiexec' | 'tunnels' | 'toggle-log' | 'settings' |
            'new-folder' | 'import-sshconfig' | 'import-moba' | 'import-json' | 'export-json' | 'shortcuts', arg?)
 app.showPanel('sessions' | 'sftp' | 'tools' | 'macros');

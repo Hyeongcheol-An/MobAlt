@@ -305,6 +305,7 @@ export class SessionTree {
         else this.focusRow(parentFolderRow());
         break;
       case 'Enter':
+        if (e.metaKey && e.shiftKey) return; // ⇧⌘⏎ is the Zoom Pane accelerator (View menu), not an open-in-split
         if (f) this.toggleFolder(f.path, wrap);
         else this.app.openSession(s, e.metaKey || e.ctrlKey || e.shiftKey ? { split: 'right' } : {});
         break;
