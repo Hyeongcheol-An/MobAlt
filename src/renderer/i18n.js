@@ -42,9 +42,17 @@ export function resolveSetting(setting) {
 }
 
 /** "{name}" placeholders filled from params (an unknown name stays, so a typo is visible). */
+// In a right-to-left interface a value put into a sentence (a path, a host, a file name, a session name) is isolated
+// with FSI … PDI (U+2068 / U+2069): it takes its own direction from its first letter and never reorders the Arabic
+// around it ("~/Downloads" keeps its "~/" at its left end). Numbers and left-to-right interfaces are left untouched.
 export function format(str, params) {
   if (!params) return str;
-  return String(str).replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));
+  const iso = current && direction(current) === 'rtl';
+  return String(str).replace(/\{(\w+)\}/g, (m, k) => {
+    if (!(k in params)) return m;
+    const v = params[k];
+    return iso && typeof v === 'string' && v ? '\u2068' + v + '\u2069' : String(v);
+  });
 }
 
 /** t('Source text', { placeholders }) → the translation, else the source. */
@@ -103,6 +111,27 @@ export function setLocale(code, newDict) {
   document.dispatchEvent(new CustomEvent('i18n:changed', { detail: { locale: current } }));
   return current;
 }
+
+// ---------- direction of free-text fields ----------
+// A field the user types free text into (a session name, a folder, a host in the session editor, notes, startup
+// commands) takes the direction of its first strong letter — "user@host" and "~/Downloads" left to right, an Arabic
+// name right to left — like the title spans (styles.css unicode-bidi: plaintext). An input's text lives in its own
+// inner box, where a CSS unicode-bidi does not reach, so the attribute does it: dir="auto" on every text field without
+// a dir of its own, in index.html at boot and in every dialog / panel row built later. The technical fields that must
+// always read left to right (quick connect, paths, hosts in the Tools panel, the find box, numbers, passwords) carry
+// direction: ltr in styles.css, which wins over the attribute. Terminals keep theirs (xterm's helper textarea).
+const FREE_TEXT = 'input[type=text]:not([dir]), input:not([type]):not([dir]), input[type=search]:not([dir]), textarea:not([dir])';
+function autoDirection(root) {
+  if (!root || root.nodeType !== 1) return;
+  const els = root.matches(FREE_TEXT) ? [root] : root.querySelectorAll(FREE_TEXT);
+  for (const el of els) if (!el.closest('.xterm')) el.dir = 'auto';
+}
+try {
+  autoDirection(document.body);
+  // only the chrome that builds fields later (dialogs, sidebar panels, the toolbar): never the terminals' busy DOM
+  const watch = new MutationObserver((records) => { for (const r of records) for (const n of r.addedNodes) autoDirection(n); });
+  for (const id of ['modal-root', 'sidebar', 'toolbar']) { const el = document.getElementById(id); if (el) watch.observe(el, { childList: true, subtree: true }); }
+} catch {}
 
 /** Run fn after every language switch (components that keep rendered labels render again). Returns the unsubscribe. */
 export function onChange(fn) {

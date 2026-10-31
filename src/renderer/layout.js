@@ -76,10 +76,25 @@ export class Workspace {
       if (this._tabListWasOpen) { this._tabListWasOpen = false; return; }
       this.showTabList();
     });
+    this._labelScrollArrows();
     this.tabsEl.addEventListener('scroll', () => this.syncTabOverflow(), { passive: true });
     new ResizeObserver(() => this.syncTabOverflow()).observe(this.tabsEl); // window / sidebar resizes
     new MutationObserver(() => this.syncTabOverflow()).observe(this.tabsEl, { childList: true, subtree: true, characterData: true }); // tabs added, removed, retitled
     this.syncTabOverflow();
+  }
+
+  /**
+   * The arrows scroll towards the strip's start (#tab-scroll-left, first in the DOM) and its end. Right to left the
+   * first one sits at the right edge, its ‹ drawn as › by the bidi algorithm (a mirrored character), and reveals the tabs on the right: its name
+   * says so. Set on both directions (and again on every language switch), so the static hooks never leave it stale.
+   */
+  _labelScrollArrows() {
+    if (!this.scrollLeftBtn || !this.scrollRightBtn) return;
+    const rtl = document.documentElement.dir === 'rtl';
+    const toStart = rtl ? t('Scroll tabs right') : t('Scroll tabs left');
+    const toEnd = rtl ? t('Scroll tabs left') : t('Scroll tabs right');
+    this.scrollLeftBtn.title = toStart; this.scrollLeftBtn.setAttribute('aria-label', toStart);
+    this.scrollRightBtn.title = toEnd; this.scrollRightBtn.setAttribute('aria-label', toEnd);
   }
 
   /**
@@ -97,13 +112,14 @@ export class Workspace {
     const el = this.tabsEl;
     const max = el.scrollWidth - el.clientWidth;
     const overflow = max > 1;
-    const atStart = el.scrollLeft <= 1, atEnd = el.scrollLeft >= max - 1;
+    const pos = Math.abs(el.scrollLeft); // distance from the start: right to left, scrollLeft runs from 0 down to -max
+    const atStart = pos <= 1, atEnd = pos >= max - 1;
     const focused = document.activeElement;
     this.scrollLeftBtn.hidden = this.scrollRightBtn.hidden = !overflow;
     this.scrollLeftBtn.disabled = !overflow || atStart;
     this.scrollRightBtn.disabled = !overflow || atEnd;
-    this.barEl.classList.toggle('ovf-left', overflow && !atStart);
-    this.barEl.classList.toggle('ovf-right', overflow && !atEnd);
+    this.barEl.classList.toggle('ovf-left', overflow && !atStart); // the fade on the start side (#tabs::before; right to left: the right edge)
+    this.barEl.classList.toggle('ovf-right', overflow && !atEnd);  // the fade on the end side
     this.tabListBtn.hidden = this.tabs.length === 0;
     if (focused === this.scrollLeftBtn || focused === this.scrollRightBtn) this._keepArrowFocus(focused);
     if (overflow !== this._wasOverflow) {
@@ -122,10 +138,17 @@ export class Workspace {
 
   /** Scroll the strip by one tab: the first tab cut off on that side becomes fully visible. */
   scrollTabs(dir) {
-    const el = this.tabsEl;
-    const base = el.getBoundingClientRect().left - el.scrollLeft; // content x → scroll offset
-    const tabs = [...el.querySelectorAll('.tab')].map((t) => { const r = t.getBoundingClientRect(); return { left: r.left - base, right: r.right - base }; });
-    const left = el.scrollLeft, right = left + el.clientWidth;
+    // offsets are measured from the strip's start edge (the right one in a right-to-left interface): dir < 0 scrolls
+    // towards the start, dir > 0 towards the end; `left` / `right` below are the start / end of each box
+    const el = this.tabsEl, b = el.getBoundingClientRect();
+    const rtl = getComputedStyle(el).direction === 'rtl';
+    const pos = Math.abs(el.scrollLeft);
+    const tabs = [...el.querySelectorAll('.tab')].map((t) => {
+      const r = t.getBoundingClientRect();
+      const start = (rtl ? b.right - r.right : r.left - b.left) + pos;
+      return { left: start, right: start + r.width };
+    });
+    const left = pos, right = left + el.clientWidth;
     let target;
     if (dir > 0) {
       const t = tabs.find((t) => t.right > right + 1);
@@ -134,7 +157,7 @@ export class Workspace {
       const t = [...tabs].reverse().find((t) => t.left < left - 1);
       target = t ? t.left : left - el.clientWidth;
     }
-    el.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+    el.scrollTo({ left: (rtl ? -1 : 1) * Math.max(0, target), behavior: 'smooth' });
   }
 
   /** Menu listing every tab (status dot, icon, title; ✓ marks the active one); picking one activates it. */
@@ -151,12 +174,13 @@ export class Workspace {
       action: () => this.activate(tab),
     }));
     const r = anchor.getBoundingClientRect();
-    const menu = contextMenu(r.left, r.bottom + 4, items);
+    const rtl = document.documentElement.dir === 'rtl';
+    const menu = contextMenu(rtl ? r.right : r.left, r.bottom + 4, items);
     menu.classList.add('tab-list');
     // .tab-list caps the height at 60vh (scrolling): place the menu again with that size, not the full list's that
     // contextMenu measured (40 tabs put the box above the window and its first entries out of reach)
     menu.style.top = Math.max(6, Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 6)) + 'px';
-    menu.style.left = Math.max(6, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 6)) + 'px'; // right-aligned under the button
+    menu.style.left = Math.max(6, Math.min(rtl ? r.left : r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 6)) + 'px'; // right-aligned under the button (left-aligned in a right-to-left interface, where the button is at the strip's left end)
     // the active tab's entry is in view and holds the keyboard cursor (↑/↓ start from it; Home still reaches the first tab)
     const current = menu.querySelectorAll('.ctx-item')[this.tabs.indexOf(this.active)];
     if (current) {
@@ -247,7 +271,8 @@ export class Workspace {
       if (!src || src === tab) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      const before = e.clientX < rect.left + rect.width / 2;
+      const half = e.clientX < rect.left + rect.width / 2;
+      const before = document.documentElement.dir === 'rtl' ? !half : half; // "before" in the strip's order: right to left, the right half
       let idx = this.tabs.indexOf(tab) + (before ? 0 : 1);
       if (this.tabs.indexOf(src) < idx) idx--; // the hole src leaves behind
       this.moveTab(src, idx);
@@ -269,6 +294,7 @@ export class Workspace {
   /** A language switch (i18n:changed): every label the strip keeps on screen, again; nothing else moves. */
   relabel() {
     this.tabsEl.setAttribute('aria-label', t('Terminal tabs'));
+    this._labelScrollArrows(); // the language may have changed direction too
     for (const tab of this.tabs) this._relabelTab(tab);
   }
 
@@ -401,7 +427,7 @@ export class Workspace {
         const r = el.getBoundingClientRect();
         this.activate(tab);
         el.focus(); // the menu returns focus to the tab, not to the terminal
-        this.tabMenu(tab, r.left + 8, r.bottom);
+        this.tabMenu(tab, document.documentElement.dir === 'rtl' ? r.right - 8 : r.left + 8, r.bottom);
         break;
       }
       default: return;

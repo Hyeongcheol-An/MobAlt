@@ -171,6 +171,12 @@ export const TYPE_LABEL = new Proxy({}, {
   getOwnPropertyDescriptor: (_, k) => (TYPE_SRC[k] ? { enumerable: true, configurable: true, value: TYPE_SRC[k]() } : undefined),
 });
 
+// ---------- direction ----------
+/** True while the interface is right to left (<html dir="rtl">, Arabic): menus open towards the left of the pointer. */
+export function isRtl() {
+  return document.documentElement.dir === 'rtl';
+}
+
 // ---------- context menu ----------
 let ctxOpen = null;
 let ctxOpener = null; // element that had focus when the menu opened; focus goes back to it on close
@@ -221,7 +227,9 @@ function openSub(row, focus) {
   ctxSubs.push({ el, row });
   row.setAttribute('aria-expanded', 'true');
   const r = row.getBoundingClientRect(), m = el.getBoundingClientRect();
-  placeMenu(el, r.right + m.width + 6 > window.innerWidth ? r.left - m.width + 2 : r.right - 2, r.top - 5); // to the left when there is no room on the right
+  // beside the row, on the side the interface reads towards; the other side when there is no room there
+  const toRight = r.right - 2, toLeft = r.left - m.width + 2;
+  placeMenu(el, isRtl() ? (toLeft < 6 ? toRight : toLeft) : (toRight + m.width + 6 > window.innerWidth ? toLeft : toRight), r.top - 5);
   if (focus) enabledOf(el)[0]?.focus({ preventScroll: true });
 }
 /**
@@ -281,7 +289,8 @@ export function contextMenu(x, y, items) {
   $('#ctx-root').append(menu);
   ctxOpen = menu;
   ctxOpener = document.activeElement;
-  placeMenu(menu, x, y);
+  // left to right: the menu opens to the right of x; right to left: to its left (x is its right edge)
+  placeMenu(menu, isRtl() ? x - menu.getBoundingClientRect().width : x, y);
   enabledOf(menu)[0]?.focus({ preventScroll: true });
   setTimeout(() => {
     const off = (e) => {
@@ -480,7 +489,7 @@ export function plural(n, word, words = word + 's') {
 }
 
 // ---------- toast ----------
-/** A notice in the bottom-right stack; #toast-root is a polite live region (role=status), an error toast is an alert of its own. */
+/** A notice in the bottom-right stack (bottom-left in a right-to-left interface: #toast-root sits at inset-inline-end); #toast-root is a polite live region (role=status), an error toast is an alert of its own. */
 export function toast(message, type = 'info', ms = 3500) {
   const root = $('#toast-root');
   // identical message already showing: restart its timer instead of stacking copies

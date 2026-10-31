@@ -67,10 +67,10 @@ input, select, textarea { user-select: text; }
 #toolbar > * { position: relative; -webkit-app-region: no-drag; }
 #toolbar .tb-btn { white-space: nowrap; flex: none; }
 #toolbar .tb-group { display: flex; align-items: center; gap: inherit; flex: 0 1 auto; min-width: 0; overflow: hidden; }
-#toolbar #quick-connect { margin-left: auto; min-width: 0; flex: 0 1 300px; }
+#toolbar #quick-connect { margin-inline-start: auto; min-width: 0; flex: 0 1 300px; }
 #toolbar #qc-input { min-width: 40px; width: auto; flex: 1 1 auto; }
 #toolbar .drag-region { -webkit-app-region: drag; }
-.brand { font-weight: 700; letter-spacing: .3px; color: var(--accent); margin-right: 6px; }
+.brand { font-weight: 700; letter-spacing: .3px; color: var(--accent); margin-inline-end: 6px; }
 .tb-group { display: flex; gap: 4px; align-items: center; }
 .tb-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--fg); }
 .tb-btn:hover { background: var(--bg-3); border-color: var(--divider); }
@@ -78,9 +78,9 @@ input, select, textarea { user-select: text; }
 .tb-btn.narrow { padding: 0 6px; }
 .tb-btn.toggle.on { background: var(--danger-bg); border-color: var(--danger); color: var(--danger-fg); }
 .tb-split { display: inline-flex; }
-.tb-split .tb-btn:first-child:not(:last-child) { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.tb-split .tb-btn:last-child:not(:first-child) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
-.quick { margin-left: auto; display: flex; gap: 4px; }
+.tb-split .tb-btn:first-child:not(:last-child) { border-start-end-radius: 0; border-end-end-radius: 0; }
+.tb-split .tb-btn:last-child:not(:first-child) { border-start-start-radius: 0; border-end-start-radius: 0; }
+.quick { margin-inline-start: auto; display: flex; gap: 4px; }
 .quick input { width: 260px; height: 28px; padding: 0 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); color: var(--fg); outline: none; }
 .quick input:focus { border-color: var(--accent); }
 .quick button { height: 28px; padding: 0 10px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-control); }
@@ -88,19 +88,19 @@ input, select, textarea { user-select: text; }
 
 /* ---------- main layout ---------- */
 #main { display: flex; flex: 1; min-height: 0; }
-#side-strip { width: 30px; flex: none; display: flex; flex-direction: column; background: var(--bg-2); border-right: 1px solid var(--divider); }
+#side-strip { width: 30px; flex: none; display: flex; flex-direction: column; background: var(--bg-2); border-inline-end: 1px solid var(--divider); }
 .strip-btn { position: relative; width: 30px; min-height: 84px; border: 0; background: transparent; color: var(--fg-dim); padding: 0; border-bottom: 1px solid var(--divider); }
 .strip-btn span { display: block; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; letter-spacing: .5px; }
 /* CJK labels stand upright and read top-down (the Latin ones read bottom-up, rotated): the 180° turn would print them upside down */
 .strip-btn span:lang(ko), .strip-btn span:lang(ja), .strip-btn span:lang(zh) { text-orientation: upright; transform: none; letter-spacing: 0; }
 .strip-btn:hover { color: var(--fg); background: var(--bg-3); }
 .strip-btn.active { color: var(--fg); background: var(--bg); }
-.strip-btn.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
+.strip-btn.active::before { content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
 .strip-spacer { flex: 1; }
 .strip-btn[data-action] { min-height: 32px; border-top: 1px solid var(--divider); border-bottom: 0; }
 .strip-btn[data-action] span { writing-mode: horizontal-tb; transform: none; }
 
-#sidebar { width: var(--sidebar-w); flex: none; display: flex; flex-direction: column; background: var(--bg); border-right: 1px solid var(--divider); min-width: 180px; }
+#sidebar { width: var(--sidebar-w); flex: none; display: flex; flex-direction: column; background: var(--bg); border-inline-end: 1px solid var(--divider); min-width: 180px; }
 #sidebar.collapsed, #sidebar.collapsed + #sidebar-resizer { display: none; }
 #sidebar-resizer { width: 4px; cursor: col-resize; flex: none; background: transparent; }
 #sidebar-resizer:hover { background: var(--accent-2); }
@@ -109,7 +109,7 @@ input, select, textarea { user-select: text; }
 .panel-head { display: flex; gap: 4px; align-items: center; padding: 6px; border-bottom: 1px solid var(--divider); }
 .panel-head input { flex: 1; height: 26px; padding: 0 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); outline: none; min-width: 0; }
 .panel-head input:focus { border-color: var(--accent); }
-.panel-head .hint { color: var(--fg-faint); font-size: 11px; margin-left: 4px; }
+.panel-head .hint { color: var(--fg-faint); font-size: 11px; margin-inline-start: 4px; }
 .panel-foot { display: flex; gap: 10px; padding: 6px 8px; border-top: 1px solid var(--divider); font-size: 11px; min-width: 0; }
 .panel-foot .link-btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .icon-btn { height: 26px; min-width: 26px; padding: 0 6px; border-radius: var(--radius); border: 1px solid transparent; background: transparent; color: var(--fg); }
@@ -128,7 +128,7 @@ input, select, textarea { user-select: text; }
 .tree-folder > .tree-row .caret { width: 14px; flex: none; text-align: center; color: var(--fg-dim); font-size: 10px; transition: transform .12s; }
 .tree-folder.collapsed > .tree-row .caret { transform: rotate(-90deg); }
 .tree-folder.collapsed > .tree-children { display: none; }
-.tree-children { padding-left: 12px; }
+.tree-children { padding-inline-start: 12px; }
 .tree-row { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: default; border-radius: var(--radius-s); margin: 0 4px; min-width: 0; overflow: hidden; }
 .tree-row:hover { background: var(--bg-3); }
 .tree-row.selected { background: var(--selection); color: var(--selection-fg); }
@@ -136,8 +136,8 @@ input, select, textarea { user-select: text; }
 .tree-row .ico { width: 16px; text-align: center; font-size: 12px; flex: none; }
 /* The name is the identity: it keeps its width (up to 72%) and the grey user@host text yields first. */
 .tree-row .label { overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 72%; }
-.tree-row .sub { color: var(--fg-faint); font-size: 11px; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: left; }
-.tree-row.folder .sub { flex: none; margin-left: auto; }
+.tree-row .sub { color: var(--fg-faint); font-size: 11px; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: start; }
+.tree-row.folder .sub { flex: none; margin-inline-start: auto; }
 .tree-row.selected .sub { color: var(--selection-fg-dim); }
 .tree-row .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex: none; }
 .tree-empty { padding: 20px 14px; color: var(--fg-faint); text-align: center; line-height: 1.6; }
@@ -151,7 +151,7 @@ input, select, textarea { user-select: text; }
 #tabs::-webkit-scrollbar { height: 4px; }
 #tabs::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 2px; }
 #tabs::-webkit-scrollbar-track { background: transparent; }
-.tab { display: flex; align-items: center; gap: 6px; padding: 0 8px 0 12px; min-width: 110px; max-width: 220px; border-right: 1px solid var(--divider); background: var(--bg-2); color: var(--fg-dim); white-space: nowrap; position: relative; flex: none; }
+.tab { display: flex; align-items: center; gap: 6px; padding-block: 0; padding-inline: 12px 8px; min-width: 110px; max-width: 220px; border-inline-end: 1px solid var(--divider); background: var(--bg-2); color: var(--fg-dim); white-space: nowrap; position: relative; flex: none; }
 .tab:hover { background: var(--bg-3); color: var(--fg); }
 .tab.active { background: var(--term-bg); color: var(--fg); }
 .tab.active::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: var(--tab-color, var(--accent)); }
@@ -212,7 +212,7 @@ input, select, textarea { user-select: text; }
 .pane.drop-hover::after { content: "Drop to upload to current folder"; position: absolute; inset: 6px; border: 2px dashed var(--accent); border-radius: var(--radius-l); display: flex; align-items: center; justify-content: center; background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--term-fg); font-size: 14px; z-index: 5; pointer-events: none; }
 
 /* ---------- find bar ---------- */
-#find-bar { position: absolute; top: auto; bottom: 30px; right: 16px; display: flex; gap: 4px; align-items: center; padding: 6px; background: var(--bg-elev); border: 1px solid var(--divider); border-radius: var(--radius); box-shadow: 0 6px 20px rgb(0 0 0 / var(--shadow-a)); z-index: 20; }
+#find-bar { position: absolute; top: auto; bottom: 30px; inset-inline-end: 16px; display: flex; gap: 4px; align-items: center; padding: 6px; background: var(--bg-elev); border: 1px solid var(--divider); border-radius: var(--radius); box-shadow: 0 6px 20px rgb(0 0 0 / var(--shadow-a)); z-index: 20; }
 #find-bar input[type=text], #find-input { width: 220px; height: 26px; padding: 0 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); outline: none; }
 #find-bar button { height: 26px; min-width: 26px; border-radius: var(--radius); border: 1px solid transparent; background: transparent; color: var(--fg); }
 #find-bar button:hover { background: var(--bg-4); }
@@ -254,7 +254,7 @@ input, select, textarea { user-select: text; }
 .sftp-row:hover { background: var(--bg-3); }
 .sftp-row.selected { background: var(--selection); color: var(--selection-fg); }
 .sftp-row .name { overflow: hidden; text-overflow: ellipsis; }
-.sftp-row .size, .sftp-row .date { color: var(--fg-faint); font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }
+.sftp-row .size, .sftp-row .date { color: var(--fg-faint); font-size: 11px; text-align: end; font-variant-numeric: tabular-nums; }
 .sftp-row.selected .size, .sftp-row.selected .date { color: var(--selection-fg-dim); }
 .sftp-row.dir .name { color: var(--accent); }
 .sftp-row.link .name { font-style: italic; }
@@ -283,10 +283,10 @@ input, select, textarea { user-select: text; }
 
 /* ---------- context menu / modal / toast ---------- */
 .ctx { position: fixed; z-index: 1000; min-width: 180px; padding: 4px; background: var(--bg-elev); border: 1px solid var(--divider); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / calc(var(--shadow-a) * 1.25)); }
-.ctx-item { padding: 5px 24px 5px 12px; border-radius: var(--radius-s); white-space: nowrap; display: flex; gap: 10px; }
+.ctx-item { padding-block: 5px; padding-inline: 12px 24px; border-radius: var(--radius-s); white-space: nowrap; display: flex; gap: 10px; }
 .ctx-item:hover { background: var(--selection); color: var(--selection-fg); }
 .ctx-item.disabled { opacity: .4; pointer-events: none; }
-.ctx-item .k { margin-left: auto; color: var(--fg-faint); font-size: 11px; }
+.ctx-item .k { margin-inline-start: auto; color: var(--fg-faint); font-size: 11px; }
 .ctx-item:hover .k { color: var(--selection-fg-dim); }
 .ctx-sep { height: 1px; background: var(--divider); margin: 4px 6px; }
 
@@ -295,7 +295,7 @@ input, select, textarea { user-select: text; }
 .modal.wide { width: 760px; }
 .modal.narrow { width: 420px; }
 .modal-title { padding: 12px 16px; font-weight: 600; font-size: 14px; border-bottom: 1px solid var(--divider); display: flex; align-items: center; }
-.modal-title .close { margin-left: auto; border: 0; background: transparent; color: var(--fg-dim); font-size: 16px; }
+.modal-title .close { margin-inline-start: auto; border: 0; background: transparent; color: var(--fg-dim); font-size: 16px; }
 .modal-body { padding: 14px 16px; overflow: auto; }
 .modal-foot { padding: 10px 16px; border-top: 1px solid var(--divider); display: flex; gap: 8px; justify-content: flex-end; }
 .btn { height: 28px; padding: 0 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-control); color: var(--fg); }
@@ -307,7 +307,7 @@ input, select, textarea { user-select: text; }
 .btn.primary.danger:hover { filter: brightness(1.1); }
 .btn.small { height: 26px; padding: 0 8px; font-size: 11.5px; }
 .form-grid { display: grid; grid-template-columns: 140px 1fr; gap: 8px 12px; align-items: center; }
-.form-grid label { color: var(--fg-dim); text-align: right; }
+.form-grid label { color: var(--fg-dim); text-align: end; }
 .form-grid .full { grid-column: 1 / -1; }
 .form-grid input[type=text], .form-grid input[type=password], .form-grid input[type=number], .form-grid select, .form-grid textarea { width: 100%; height: 28px; padding: 0 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); outline: none; }
 .form-grid textarea { height: auto; padding: 6px 8px; min-height: 60px; font-family: var(--font-mono); font-size: 12px; }
@@ -318,7 +318,7 @@ input, select, textarea { user-select: text; }
 .form-grid .inline select { width: auto; flex: 1; min-width: 0; }
 .form-grid .inline .btn { flex: 0 0 auto; }
 .form-grid .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
-.form-grid .checks label { text-align: left; color: var(--fg); display: flex; gap: 6px; align-items: center; }
+.form-grid .checks label { text-align: start; color: var(--fg); display: flex; gap: 6px; align-items: center; }
 .form-help { grid-column: 2; color: var(--fg-faint); font-size: 11px; margin-top: -2px; line-height: 1.35; }
 .mtabs { display: flex; gap: 2px; border-bottom: 1px solid var(--divider); margin: -14px -16px 14px; padding: 0 12px; }
 .mtabs button { border: 0; background: transparent; color: var(--fg-dim); padding: 8px 12px; border-bottom: 2px solid transparent; }
@@ -329,7 +329,7 @@ input, select, textarea { user-select: text; }
 .type-picker button .ico { font-size: 15px; }
 .type-picker button.active { border-color: var(--accent); color: var(--fg); background: var(--bg-3); }
 .list-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.list-table th { text-align: left; color: var(--fg-dim); font-weight: 500; padding: 4px 6px; border-bottom: 1px solid var(--divider); }
+.list-table th { text-align: start; color: var(--fg-dim); font-weight: 500; padding: 4px 6px; border-bottom: 1px solid var(--divider); }
 .list-table td { padding: 5px 6px; border-bottom: 1px solid var(--divider); white-space: nowrap; }
 .list-table td.mono { font-family: var(--font-mono); font-size: 11.5px; }
 .badge { display: inline-block; padding: 1px 7px; border-radius: var(--radius-l); font-size: 10.5px; background: var(--bg-4); color: var(--fg); }
@@ -344,9 +344,9 @@ input, select, textarea { user-select: text; }
 .shortcuts div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--divider); }
 .shortcuts .kbd { white-space: nowrap; flex: 0 0 auto; }
 
-#toast-root { position: fixed; right: 16px; bottom: 34px; display: flex; flex-direction: column; gap: 8px; z-index: 1100; }
-.toast { background: var(--bg-elev); border: 1px solid var(--divider); border-left: 3px solid var(--accent); padding: 8px 12px; border-radius: var(--radius); box-shadow: 0 6px 20px rgb(0 0 0 / var(--shadow-a)); max-width: 360px; font-size: 12px; animation: toast-in .15s ease-out; }
-.toast.error { border-left-color: var(--red); } .toast.success { border-left-color: var(--green); } .toast.warn { border-left-color: var(--yellow); }
+#toast-root { position: fixed; inset-inline-end: 16px; bottom: 34px; display: flex; flex-direction: column; gap: 8px; z-index: 1100; }
+.toast { background: var(--bg-elev); border: 1px solid var(--divider); border-inline-start: 3px solid var(--accent); padding: 8px 12px; border-radius: var(--radius); box-shadow: 0 6px 20px rgb(0 0 0 / var(--shadow-a)); max-width: 360px; font-size: 12px; animation: toast-in .15s ease-out; }
+.toast.error { border-inline-start-color: var(--red); } .toast.success { border-inline-start-color: var(--green); } .toast.warn { border-inline-start-color: var(--yellow); }
 @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } }
 
 /* ---- session icons & colours ---- */
@@ -414,14 +414,14 @@ svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; strok
 /* ---- tab bar overflow / logging ---- */
 /* Scroll arrows exist only while #tabs overflows (hidden otherwise: no layout shift); disabled at an end. */
 #tabbar .tab-scroll { width: 22px; flex: none; padding: 0; border: 0; background: var(--bg-2); color: var(--fg-dim); font-size: 18px; line-height: 1; }
-#tab-scroll-left { border-right: 1px solid var(--divider); }
-#tab-scroll-right { border-left: 1px solid var(--divider); }
+#tab-scroll-left { border-inline-end: 1px solid var(--divider); }
+#tab-scroll-right { border-inline-start: 1px solid var(--divider); }
 #tabbar .tab-scroll:hover:not(:disabled) { background: var(--bg-3); color: var(--fg); }
 #tabbar .tab-scroll:disabled { opacity: .3; cursor: default; }
 /* Fades on the overflowing edge: sticky pseudo-elements inside the scroller, so no wrapper element is needed. */
 #tabs::before, #tabs::after { content: ""; position: sticky; flex: none; width: 18px; align-self: stretch; pointer-events: none; z-index: 2; opacity: 0; transition: opacity .15s; }
-#tabs::before { left: 0; margin-right: -18px; background: linear-gradient(to right, var(--bg-2), transparent); }
-#tabs::after { right: 0; margin-left: -18px; background: linear-gradient(to left, var(--bg-2), transparent); }
+#tabs::before { inset-inline-start: 0; margin-inline-end: -18px; background: linear-gradient(to right, var(--bg-2), transparent); }
+#tabs::after { inset-inline-end: 0; margin-inline-start: -18px; background: linear-gradient(to left, var(--bg-2), transparent); }
 #tabbar.ovf-left #tabs::before { opacity: 1; }
 #tabbar.ovf-right #tabs::after { opacity: 1; }
 /* "All tabs" menu button (right of +) and its menu */
@@ -490,7 +490,7 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 @container (max-height: 110px) { .pane .pane-placeholder .btns { display: none; } }
 /* ---- net follow-ups ---- */
 /* Sftp panel header: the Mosh companion's "via SSH" badge sits before the host so truncation never eats it. */
-.sftp-conn .sftp-via { display: inline-block; margin: 0 5px 0 1px; padding: 0 5px; border: 1px solid var(--border); border-radius: 9px; font-size: 10px; line-height: 15px; color: var(--fg-dim); vertical-align: 1px; white-space: nowrap; }
+.sftp-conn .sftp-via { display: inline-block; margin-block: 0; margin-inline: 1px 5px; padding: 0 5px; border: 1px solid var(--border); border-radius: 9px; font-size: 10px; line-height: 15px; color: var(--fg-dim); vertical-align: 1px; white-space: nowrap; }
 /* FTP pane card: states other than connected have no buttons; the dead overlay offers Reconnect / Close. */
 .pane .pane-placeholder.ftp-info.connecting .big::after { content: " · connecting…"; font-weight: 400; opacity: .7; }
 .pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: var(--fg-dim); }
@@ -528,7 +528,7 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 /* ---- qa3 keyboard ---- */
 /* SFTP column headers are buttons now (Tab reaches them, Enter / Space sort): styled like the spans they replace. */
 .sftp-row.sftp-head button { background: none; border: 0; padding: 0; margin: 0; min-width: 0; font: inherit; color: inherit; text-align: inherit; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: var(--radius-s); }
-.sftp-row.sftp-head button.size, .sftp-row.sftp-head button.date { color: var(--fg-faint); font-size: 11px; text-align: right; }
+.sftp-row.sftp-head button.size, .sftp-row.sftp-head button.date { color: var(--fg-faint); font-size: 11px; text-align: end; }
 .sftp-row.sftp-head button:hover, .sftp-row.sftp-head button.sorted { color: var(--fg); }
 .sftp-row.sftp-head button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* Keyboard shortcuts dialog: wide, two columns; a row whose key chip does not fit beside its label drops the chip to its
@@ -536,7 +536,7 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .shortcuts { overflow-x: hidden; gap: 4px 16px; }
 .shortcuts div { flex-wrap: wrap; row-gap: 2px; padding: 2px 0; }
 .shortcuts div > span:first-child { flex: 1 1 auto; min-width: 0; }
-.shortcuts .kbd { white-space: normal; flex: 0 1 auto; margin-left: auto; max-width: 100%; text-align: right; line-height: 1.5; }
+.shortcuts .kbd { white-space: normal; flex: 0 1 auto; margin-inline-start: auto; max-width: 100%; text-align: end; line-height: 1.5; }
 /* ---- qa3 journeys ---- */
 /* Dialog title: a very long session name is clipped with an ellipsis inside the dialog (the full name is its tooltip);
    the ✕ keeps its place at the right. */
@@ -566,7 +566,7 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .tab .zoomico, .tab-menu-item .zoomico { flex: none; display: flex; color: var(--accent); }
 .tab .zoomico[hidden] { display: none; }
 .tab .zoomico svg.i, .tab-menu-item .zoomico svg.i { width: 11px; height: 11px; }
-.tab-menu-item .zoomico { margin-left: 4px; }
+.tab-menu-item .zoomico { margin-inline-start: 4px; }
 /* ---- settings tabs ---- */
 /* Settings and Keyboard shortcuts are section tabs now (the session editor's .mtabs strip): every section fits the
    900×560 minimum window without scrolling. The focus ring of a tab is drawn inside it: the strip sits on the body's
@@ -617,7 +617,7 @@ input::selection, textarea::selection { background: var(--selection); color: var
 .tools-group { border-bottom: 1px solid var(--divider); flex: none; }
 .tools-group > summary { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 11px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; color: var(--fg-dim); list-style: none; cursor: default; user-select: none; }
 .tools-group > summary::-webkit-details-marker { display: none; }
-.tools-group > summary::before { content: ""; width: 0; height: 0; border: 4px solid transparent; border-left: 5px solid var(--fg-dim); margin-left: 2px; transition: transform .12s; }
+.tools-group > summary::before { content: ""; width: 0; height: 0; border: 4px solid transparent; border-inline-start: 5px solid var(--fg-dim); margin-inline-start: 2px; transition: transform .12s; }
 .tools-group[open] > summary::before { transform: rotate(90deg); }
 .tools-group > summary:hover { color: var(--fg); }
 .tools-group > summary:focus { outline: none; }
@@ -631,18 +631,18 @@ input::selection, textarea::selection { background: var(--selection); color: var
 #tools-scan select:focus { border-color: var(--accent); outline: none; }
 /* progress row: the bar in the accent colour, "123/254" beside it (monospace, so the text does not jiggle) */
 .scan-progress progress { flex: 1 1 60px; min-width: 0; height: 8px; accent-color: var(--accent); }
-.scan-progress .count { flex: none; min-width: 60px; text-align: right; font: 11px var(--font-mono); color: var(--fg-dim); }
+.scan-progress .count { flex: none; min-width: 60px; text-align: end; font: 11px var(--font-mono); color: var(--fg-dim); }
 /* results: a sticky-header table that shares the output area with the <pre> of the classic tools (one of the two is shown) */
 .scan-results { flex: 1; min-height: 0; overflow: auto; user-select: text; }
 .scan-table th { position: sticky; top: 0; z-index: 1; padding: 0; background: var(--bg); }
-.scan-table th button { height: 24px; width: 100%; padding: 0 6px; border: 0; border-radius: 0; background: transparent; color: var(--fg-dim); font-weight: 500; text-align: left; white-space: nowrap; }
+.scan-table th button { height: 24px; width: 100%; padding: 0 6px; border: 0; border-radius: 0; background: transparent; color: var(--fg-dim); font-weight: 500; text-align: start; white-space: nowrap; }
 .scan-table th button:hover { color: var(--fg); background: var(--bg-3); }
 .scan-table th button.on { color: var(--fg); }
 .scan-table th[aria-sort=ascending] button.on::after { content: " ▲"; font-size: 8px; }
 .scan-table th[aria-sort=descending] button.on::after { content: " ▼"; font-size: 8px; }
 .scan-table td { padding: 3px 6px; }
 .scan-table td.host { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
-.scan-table td.num { text-align: right; }
+.scan-table td.num { text-align: end; }
 .scan-table td.act { width: 26px; padding: 0 2px; text-align: center; }
 .scan-table tbody tr:hover td { background: var(--bg-3); }
 .scan-table .scan-add { height: 20px; min-width: 22px; padding: 0 4px; border: 1px solid transparent; border-radius: var(--radius-s); background: transparent; color: var(--accent); font-size: 13px; line-height: 1; }
@@ -653,7 +653,7 @@ input::selection, textarea::selection { background: var(--selection); color: var
 /* ---- paste guard ---- */
 /* Settings → Terminal → Cursor: the Blink checkbox sits beside the select (its own row would push the section past
    the 560px window once the Paste guard row is there); the Paste guard row holds two short checkboxes. */
-.form-grid .inline > label { flex: 0 0 auto; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; }
+.form-grid .inline > label { flex: 0 0 auto; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; margin-inline-start: 6px; }
 /* The dialog that asks before a multi-line, long or suspicious paste (dialogs.js pasteGuardDialog). The findings box
    is a warn box, or a danger box when a finding is an attack pattern (pipe to shell, profile write, rm -rf /). */
 .pg-note { color: var(--fg-dim); font-size: 12px; margin-bottom: 8px; }
@@ -707,7 +707,7 @@ input::selection, textarea::selection { background: var(--selection); color: var
    still close it, a middle click and the bulk closes (Close Others / to the Left / to the Right / All) leave it
    alone. A pinned tab cannot be dragged past an unpinned one (layout.js moveTab); the first unpinned tab carries a
    thin inset line that marks the end of the pinned block. */
-.tab.pinned { min-width: 0; max-width: 118px; padding: 0 8px 0 10px; }
+.tab.pinned { min-width: 0; max-width: 118px; padding-block: 0; padding-inline: 10px 8px; }
 .tab.pinned .title { flex: 0 1 auto; max-width: 64px; }
 .tab.pinned .close { display: none; }
 .tab .pinico { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--fg-faint); }
@@ -715,7 +715,7 @@ input::selection, textarea::selection { background: var(--selection); color: var
 .tab .pinico svg.i, .tab-menu-item .pinico svg.i { width: 11px; height: 11px; }
 .tab.active .pinico { color: var(--term-fg); opacity: .6; }
 .tab.pinned + .tab:not(.pinned) { box-shadow: inset 2px 0 0 var(--bg-4); }
-.tab-menu-item .pinico { flex: none; display: inline-flex; margin-left: 4px; color: var(--fg-faint); }
+.tab-menu-item .pinico { flex: none; display: inline-flex; margin-inline-start: 4px; color: var(--fg-faint); }
 /* A detached window (tab menu → Detach to New Window, ⌥⌘N) is the same page with body.detached: it starts with the
    sidebar collapsed (⌘B shows it there too) and its brand carries a small marker, so two MobAlt windows tell apart. */
 body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }
@@ -734,7 +734,7 @@ body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }
 .pane-monitor .mon-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
 .pane-monitor .mon-bar.warn i { background: var(--warn); }
 .pane-monitor .mon-bar.danger i { background: var(--danger); }
-.pane-monitor .mon-host { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-dim); }
+.pane-monitor .mon-host { margin-inline-start: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-dim); }
 .pane-monitor .mon-note, .pane-monitor.unavailable { color: var(--fg-dim); }
 @media (prefers-reduced-motion: reduce) { .pane-monitor .mon-bar i { transition: none; } }
 /* The pane-head toggle shows its pressed state in the accent, like the zoom button of a zoomed pane. */
@@ -807,8 +807,8 @@ body.detached #toolbar .brand::after { color: var(--fg-dim); opacity: 1; }
   .scan-table td.host { max-width: 64px; }
 }
 @container (max-width: 219px) { .scan-table th:nth-child(2), .scan-table td:nth-child(2) { display: none; } }
-.scan-table td.act { position: sticky; right: 0; background: var(--bg); }
-.scan-table th:last-child { right: 0; }
+.scan-table td.act { position: sticky; inset-inline-end: 0; background: var(--bg); }
+.scan-table th:last-child { inset-inline-end: 0; }
 /* Monitoring bar: terminal.js _monitorFit hides items by priority (host → uptime → load → the meters → network) when
    the pane is too narrow for the whole strip — `hidden` must win over the items' own display — and the full line moves
    into the strip's tooltip. A stale sample (a failed poll) is dimmed with its age in the warning colour. */
@@ -843,3 +843,62 @@ body.detached #toolbar .brand::after { color: var(--fg-dim); opacity: 1; }
 .ctx-item.has-sub .k { font-size: 14px; line-height: 1; }
 .ctx-item.has-sub[aria-expanded="true"] { background: var(--selection); color: var(--selection-fg); }
 .ctx-item.has-sub[aria-expanded="true"] .k { color: var(--selection-fg-dim); }
+/* ---- right-to-left (Arabic) ---- */
+/* <html dir="rtl"> follows the interface language (i18n.js direction()). The rules above use logical properties
+   (margin-inline-start, inset-inline-end, padding-inline, border-inline-*, text-align: start / end), so flex rows,
+   the toolbar, the status bar, the tab strip, dialogs, menus and toasts mirror by themselves: the side strip and the
+   sidebar go to the right edge, the terminals to the left. What must differ is below, as html[dir="rtl"] rules. */
+/* LTR islands: terminal content, and every field or label that holds a host, a port, a path, a command, a pattern,
+   a MAC, a CIDR, a key or a key chord, reads left to right whatever the interface language (unicode-bidi: isolate
+   keeps it from reordering the text around it). Numbers stay Western digits (the text is never localised). */
+.pane-term, .pane-term .xterm, .xterm-decoration,
+#qc-input, #sftp-path, #find-input, #tool-host, #tool-port-from, #tool-port-to, #wol-mac, #wol-broadcast, #wol-port,
+#scan-target, #scan-ports, #scan-concurrency, #scan-timeout, #tool-output, #scan-results td,
+input[type=number], input[type=password], .kbd, .mono, .ctx-item .k, .list-table td.mono, .hostkey-fp, .xfer .l1 .n, #st-cwd,
+.form-grid textarea.keygen-pub, .form-grid textarea.algo-list, .pg-preview > *, .editor-area, .hl-rules input[type=text],
+.theme-preview, .scan-progress .count {
+  direction: ltr; unicode-bidi: isolate;
+}
+.pane-term { text-align: left; }
+/* A box that holds an LTR island keeps the chrome's alignment: the island sits at the start (right) edge. */
+html[dir="rtl"] :is(.xfer .l1 .n, #scan-results td, .scan-progress .count, .list-table td.mono, .hostkey-fp) { text-align: right; }
+html[dir="rtl"] #scan-results td.num { text-align: left; }
+/* A technical box shows its hint (the placeholder, a translated sentence) right to left until something is typed. */
+html[dir="rtl"] :is(#qc-input, #find-input, #tool-host, #wol-mac, #scan-target):placeholder-shown { direction: rtl; }
+/* An empty dir="auto" field (i18n.js) would resolve to left to right: its hint is a sentence in the interface language. */
+html[dir="rtl"] :is(input, textarea)[dir="auto"]:placeholder-shown { direction: rtl; }
+/* …and the hint itself takes the direction of its first letter: a sentence reads right to left, a path hint such as
+   "~/Downloads" left to right (a value, not a sentence). */
+html[dir="rtl"] :is(input, textarea)::placeholder { unicode-bidi: plaintext; }
+/* Titles of sessions, tabs, panes and dialogs, and remote file names (".profile" keeps its dot in front), are text the user chose: each takes the direction of its first strong
+   letter (like dir="auto", which i18n.js puts on the free-text fields), and keeps the chrome's start edge. */
+.tab .title, .pane-head .title, .tree-row .label, .tab-menu-item .title, .modal-title-text, .sftp-row:not(.sftp-head) .name { unicode-bidi: plaintext; }
+html[dir="rtl"] :is(.tab .title, .pane-head .title, .tree-row .label, .tab-menu-item .title, .modal-title-text, .sftp-row:not(.sftp-head) .name) { text-align: right; }
+/* The split tree keeps its physical meaning: "Split Right" puts the new pane on the right, a drag-split zone and the
+   splitter maths stay in window coordinates. Only the boxes are laid out left to right; what is inside a pane (its
+   head, the monitoring strip, the empty-pane card) follows the interface direction again. */
+html[dir="rtl"] .split { direction: ltr; }
+html[dir="rtl"] .split > .split-child { direction: rtl; }
+/* Icons that point along the line flip: the sidebar's hide / show chevron, the collapsed tree caret and the Tools
+   groups' disclosure triangle. The tab strip's ‹ › are text in a right-to-left paragraph, which the bidi algorithm
+   already draws mirrored (Bidi_Mirrored characters): nothing to do. Up / down arrows, split icons (physical) and key
+   glyphs (⌘[ ⌘], which are LTR islands) do not change. */
+html[dir="rtl"] .strip-btn[data-action="toggle-sidebar"] svg.i { transform: scaleX(-1); }
+html[dir="rtl"] .tree-folder.collapsed > .tree-row .caret { transform: rotate(90deg); }
+html[dir="rtl"] .tools-group[open] > summary::before { transform: rotate(-90deg); }
+/* Edge fades of the overflowing tab strip point into the strip from its start / end. */
+html[dir="rtl"] #tabs::before { background: linear-gradient(to left, var(--bg-2), transparent); }
+html[dir="rtl"] #tabs::after { background: linear-gradient(to right, var(--bg-2), transparent); }
+/* Inset bars drawn with box-shadow (no logical form): the session colour on the pane head, the end of the pinned block. */
+html[dir="rtl"] .pane[style*="--pane-color"] .pane-head { box-shadow: inset -3px 0 0 var(--pane-color); }
+html[dir="rtl"] .pane[style*="--pane-color"].focused .pane-head { box-shadow: inset -3px 0 0 var(--pane-color), inset 0 -2px 0 var(--accent); }
+html[dir="rtl"] .tab.pinned + .tab:not(.pinned) { box-shadow: inset -2px 0 0 var(--bg-4); }
+/* Arabic letters join only within one font run: Menlo has no Arabic, so an Arabic word in a monospace box fell back
+   glyph by glyph and lost its joins. Key chips (نقر أيمن, مسافة) and the hints of the monospace boxes (startup commands,
+   notes, the key generator) use the UI font in Arabic; the commands, keys and paths typed into them stay monospace. */
+html[lang="ar"] .kbd, html[lang="ar"] :is(textarea, input)::placeholder { font-family: var(--font-ui); }
+/* Values set into a banner sentence (a version, a count) keep their own direction. */
+#update-banner b, #multiexec-banner b { unicode-bidi: isolate; }
+/* A file size ("2 B", "1.4 MB") is a number with its unit: left to right, at the column's end (left in Arabic). */
+.sftp-row:not(.sftp-head) .size { direction: ltr; unicode-bidi: isolate; }
+html[dir="rtl"] .sftp-row:not(.sftp-head) .size { text-align: left; }
