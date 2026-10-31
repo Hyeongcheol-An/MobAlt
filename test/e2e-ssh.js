@@ -1,8 +1,9 @@
 // Renderer-side end-to-end check. Run with:
 //   test/start-sshd.sh start
 //   MOBALT_TEST_SCRIPT=test/e2e-ssh.js MOBALT_SHOT_DIR=/tmp/shots MOBALT_SCREENSHOT=/tmp/shots/final.png MOBALT_SCREENSHOT_DELAY=90000 npx electron .
-// Exercises: session save, host-key prompt, key auth, follow-cwd/SFTP, X11 env, session tunnel,
-// SFTP mkdir/upload/download/read/write, encrypted key passphrase prompt, split, MultiExec.
+// Exercises: session save, ONE host-key prompt for four first connections to the same host opened in a grid (the
+// others wait for its answer and do not run into the handshake limit), key auth, follow-cwd/SFTP, X11 env, session
+// tunnel, SFTP mkdir/upload/download/read/write, encrypted key passphrase prompt, split, MultiExec.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const waitFor = async (fn, ms = 10000, what = 'condition') => {
@@ -18,11 +19,13 @@
   const log = (...a) => console.log('[e2e]', ...a);
   const app = window.app;
   const results = {};
+  const textOf = (p) => [...Array(p.term.buffer.active.length)].map((_, i) => p.term.buffer.active.getLine(i)?.translateToString(true)).join('\n');
   try {
     const home = app.info.home;
     const root = app.info.appPath;
     const keyDir = root + '/test/sshd-runtime';
     const user = home.split('/').pop();
+    await app.saveSettings({ confirmClose: false });
 
     // 1. sessions
     const s1 = await app.saveSession({
@@ -33,13 +36,39 @@
     const s2 = await app.saveSession({ name: 'enc-key', folder: 'Test', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'key', privateKeyPath: keyDir + '/client_enc_ed25519', sftpAuto: false });
     log('sessions saved:', app.sessions.sessions.map((s) => s.folder + '/' + s.name).join(', '));
 
-    // 2. open s1 -> host key prompt
-    const p1 = app.openSession(s1);
+    // 1b. four first connections to the same unknown host at once (a folder opened in a 2x2 grid): ONE host-key
+    //     prompt; it is left open longer than the handshake limit (shortened to 5 s here) and every connection still
+    //     comes up once it is accepted — the ones behind the dialog wait for its answer instead of asking again
+    await app.saveSettings({ readyTimeout: 5000 });
+    const gridSessions = [];
+    for (const i of [1, 2, 3, 4]) gridSessions.push(await app.saveSession({ name: 'grid-' + i, folder: 'Grid', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'key', privateKeyPath: keyDir + '/client_ed25519', sftpAuto: false }));
+    const prompts = new Set();
+    const promptWatch = new MutationObserver(() => { for (const m of document.querySelectorAll('.modal')) if (/host key/i.test(m.querySelector('.modal-title-text')?.textContent || '')) prompts.add(m); });
+    promptWatch.observe(document.getElementById('modal-root'), { childList: true, subtree: true });
+    const gridOpen = app.openSessionsInGrid(gridSessions, 2);
     const btn = await waitFor(() => document.querySelector('.modal .btn.primary'), 10000, 'host key dialog');
     await shot('02-hostkey');
+    await sleep(7000); // longer than the 5 s limit: nothing may time out while the dialog waits
+    results.onePromptForFour = prompts.size === 1 && document.querySelectorAll('.modal').length === 1;
     btn.click();
-    const pane = await p1;
-    await waitFor(() => pane.status === 'connected', 15000, 'ssh connected');
+    await gridOpen;
+    const gridTab = app.workspace.active;
+    await waitFor(() => gridTab.panes().filter((p) => p.kind === 'ssh').every((p) => p.status === 'connected'), 20000, 'all four grid panes connected').catch(() => {});
+    await sleep(500);
+    const gridPanes = gridTab.panes().filter((p) => p.kind === 'ssh');
+    results.gridAllConnected = gridPanes.length === 4 && gridPanes.every((p) => p.status === 'connected');
+    results.gridNoTimeout = gridPanes.every((p) => !/Timed out while waiting for handshake/.test(textOf(p)));
+    results.gridStillOnePrompt = prompts.size === 1 && !document.querySelector('.modal');
+    promptWatch.disconnect();
+    log('grid after one prompt:', gridPanes.map((p) => p.status).join(','), '| prompts seen:', prompts.size);
+    await shot('02b-grid-one-prompt');
+    await app.closeTab(gridTab);
+    await sleep(300);
+    await app.saveSettings({ readyTimeout: 20000 });
+
+    // 2. open s1 — the host is known since 1b: no prompt (one is accepted if it does appear); X11 setup takes a while
+    const pane = await app.openSession(s1);
+    await waitFor(() => { document.querySelector('.modal .btn.primary')?.click(); return pane.status === 'connected'; }, 30000, 'ssh connected');
     results.connect = true;
     await sleep(1800);
     pane.write('\x15'); // clear any stray input on the line first
