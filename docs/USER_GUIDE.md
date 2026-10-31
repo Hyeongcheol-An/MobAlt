@@ -254,7 +254,7 @@ folder dialog and leaves the field as it was when you cancel.
   Edit → Paste and right-click paste send Ctrl+V to the terminal; Claude Code reads the system clipboard
   itself and attaches the picture as `[Image #1]`. Text on the clipboard is pasted as usual (and wins when
   both are there); a shell has no use for the key and shows nothing. An image file dropped from Finder on
-  a local pane pastes its quoted path (on an SSH pane files are uploaded, see *File drop* above).
+  a local pane pastes its quoted path (on an SSH pane files are uploaded, see *Clipboard* above).
 - **Logging**: Terminal → Start/Stop Session Log, or the session option, writes the raw output to
   `~/Documents/MobAlt Logs/`. Settings → Logging → *Strip colours and control sequences* keeps the
   logs as plain text instead (ANSI colours, cursor movement and the folder-tracking hook are removed).

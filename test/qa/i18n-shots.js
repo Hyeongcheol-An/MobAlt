@@ -25,7 +25,11 @@
       const scroller = el.closest('.modal-body');
       const inScroller = scroller && scroller.scrollHeight > scroller.clientHeight + 1 && getComputedStyle(scroller).overflowY !== 'visible';
       const outside = !inScroller && (r.right > window.innerWidth + 1 || r.bottom > window.innerHeight + 1);
-      const wrapped = el.tagName === 'BUTTON' && el.getBoundingClientRect().height > parseFloat(cs.fontSize) * 2.4 && !el.classList.contains('pick') && !el.closest('.type-picker');
+      // a button whose label broke onto a second line: its content box is taller than one line of its text
+      // (vertical strip buttons, picker tiles, icon-only buttons and tabs are sized by design and skipped)
+      const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.35;
+      const inner = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const wrapped = el.tagName === 'BUTTON' && /\S\s+\S/.test((el.textContent || '').trim()) && cs.whiteSpace !== 'nowrap' && inner > lh * 1.6 && !el.matches('.strip-btn, .pick, .type-picker button, .icon-btn, .tab, [data-icon]');
       if (clipped || outside || wrapped) overflows.push(`${view}: <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : ''}> "${(el.textContent || '').trim().slice(0, 60)}" scroll=${el.scrollWidth} client=${el.clientWidth}${outside ? ' OUTSIDE WINDOW' : ''}${wrapped ? ' WRAPPED BUTTON' : ''}`);
       if (nonLatin) {
         const text = (el.textContent || '').trim();
