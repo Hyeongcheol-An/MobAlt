@@ -6,6 +6,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "\"{word}\" mixes {script} letter {letters} into a Latin word: it is not the name it looks like": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "\"{word}\" mixes {script} letters {letters} into a Latin word: it is not the name it looks like": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "(default login shell)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -255,6 +265,22 @@
         "src/main/updater.js"
       ]
     },
+    "{what} (with sudo)": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "{what}: {why}": {
+      "plural": "{what} ×{n}: {why}",
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "{where} — browse, transfer and edit files in the Sftp panel.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "•••••••• (saved — leave blank to keep)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -268,6 +294,11 @@
     "← → ↑ ↓ / ⏎ or Space": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "↻ Reconnect": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "⇧F10 / Menu key": {
@@ -300,6 +331,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    ">_ Local terminal": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "~user paths are not supported — use ~/ for your own home folder or an absolute path": {
       "refs": [
         "src/main/keygen.js"
@@ -318,6 +354,11 @@
     "⌘⏎ pastes, Esc cancels": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "── {what} Press Enter to reconnect, ⌘W to close. ──": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "⚠️ Host key changed!": {
@@ -375,9 +416,25 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "a bidi control: the text can read in another order than it runs (Trojan Source)": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "a block arrived damaged (CRC) — try again": {
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "a carriage return inside a line: the terminal presses Enter there, so what runs is not what you see": {
+      "plural": "a carriage return inside a line ×{n}: the terminal presses Enter there, so what runs is not what you see",
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "a key or escape sequence, not text; the terminal would act on it": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "A paste with more than one line, or over {n} characters, asks first and can be edited": {
@@ -397,12 +454,14 @@
     },
     "Accent": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "Accent (dim)": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "Accept": {
@@ -563,7 +622,8 @@
     },
     "Blue": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "bold": {
@@ -584,6 +644,11 @@
     "Built-in rules restored": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "byte order mark": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Cancel": {
@@ -652,6 +717,11 @@
         "src/main/zmodem.js"
       ]
     },
+    "Carriage return": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Check for updates at startup": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -670,6 +740,11 @@
     "Checking…": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "chmod on /: breaks the system": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Choose the folder the shell starts in": {
@@ -693,6 +768,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Clear": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Clear saved password": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -710,7 +790,8 @@
     },
     "Close": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
       ]
     },
     "Close (Esc)": {
@@ -725,11 +806,13 @@
     },
     "Close pane": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
       ]
     },
     "Close Pane": {
       "refs": [
+        "src/renderer/terminal.js",
         "src/main/main.js"
       ]
     },
@@ -813,6 +896,11 @@
         "src/main/ssh.js"
       ]
     },
+    "Connecting to {where}…": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Connecting to jump host {target}...": {
       "refs": [
         "src/main/ssh.js"
@@ -823,9 +911,24 @@
         "src/main/ssh.js"
       ]
     },
+    "connection failed": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Connection failed: {error}": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "connection lost": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Connection lost.": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Connection not ready": {
@@ -843,6 +946,31 @@
         "src/main/ftp.js"
       ]
     },
+    "Connection to {where} failed.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Connection to {where} was closed by the server": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Connection to {where} was closed by the server.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Connection to {where} was lost: {detail}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Connection to {where} was lost: {detail}.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Conns": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -853,9 +981,15 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Control character": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Copy": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
       ]
     },
     "Copy / Paste": {
@@ -883,6 +1017,21 @@
         "src/main/main.js"
       ]
     },
+    "CPU {pct}% (busy time between the last two polls)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "CPU {pct}% (sum of the processes over the cores)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "CPU {value}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "CPU, memory, disk, network, load and uptime under each SSH terminal, polled over the session's own connection; a session (Advanced SSH) or a pane (its head, the View menu) can differ": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -891,6 +1040,11 @@
     "CPU, memory, disk, network, load and uptime under the terminal, polled over this connection every few seconds (Settings → Features sets the default and the refresh); the pane head and the View menu toggle it per pane": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "CPU: measured between two polls": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Cursor": {
@@ -910,7 +1064,18 @@
     },
     "Cyan": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
+      ]
+    },
+    "Cyrillic": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "Cyrillic and Greek": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Data": {
@@ -931,6 +1096,11 @@
     "data was lost on the way (ZMODEM error correction is not implemented) — try again": {
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "dd writes raw data over a disk device": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Default (by session type)": {
@@ -968,6 +1138,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Destructive command": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Detach Tab to New Window": {
       "refs": [
         "src/main/main.js"
@@ -1000,7 +1175,8 @@
     },
     "Dim": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "Discard": {
@@ -1020,12 +1196,33 @@
     },
     "Disconnect": {
       "refs": [
+        "src/renderer/terminal.js",
         "src/main/main.js"
+      ]
+    },
+    "Disconnect & close": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "disconnected": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Disconnected from {where}.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Disk": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Disk {value}": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "download": {
@@ -1056,6 +1253,16 @@
     "Download to…": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Drag a session from the Sessions panel here, or:": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Duplicate \"{name}\"": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "duplicate id": {
@@ -1108,6 +1315,21 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Empty": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Empty pane": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "ends with a newline: the last line runs at once on a prompt without bracketed paste": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Enter a target: a CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or a host": {
       "refs": [
         "src/main/netscan.js"
@@ -1146,6 +1368,11 @@
     "Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Features": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "evaluates a download (eval \"$(curl …)\"): the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Even": {
@@ -1188,6 +1415,11 @@
         "src/main/ssh.js"
       ]
     },
+    "Failed to start: {why}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Fair passphrase": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1211,12 +1443,18 @@
     },
     "Find…": {
       "refs": [
+        "src/renderer/terminal.js",
         "src/main/main.js"
       ]
     },
     "Fingerprint": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "first strong isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Flow control": {
@@ -1264,6 +1502,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "fork bomb: exhausts the machine": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "formats a disk": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Framing": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1282,6 +1530,11 @@
     "FTPS: explicit TLS (AUTH TLS)": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "function application": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "General": {
@@ -1319,9 +1572,15 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Greek": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Green": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "Grid 2 / 4 / 6 / 8 panes": {
@@ -1334,6 +1593,16 @@
         "src/main/main.js"
       ]
     },
+    "Hide remote monitoring bar": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Hide Remote Monitoring Bar": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1342,6 +1611,11 @@
     "Host": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "host {host}": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "host is required": {
@@ -1378,6 +1652,11 @@
     "Host not found ({host}) — check the host name": {
       "refs": [
         "src/main/ftp.js"
+      ]
+    },
+    "Host: {host}": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "hostname or IP": {
@@ -1490,9 +1769,34 @@
         "src/main/ssh.js"
       ]
     },
+    "invisible character": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "Invisible character": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Invisible or control characters, a trailing newline, curl | sh, writes to shell profiles, rm -rf / and look-alike letters are listed, with a \"Paste cleaned\" option": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "invisible plus": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "invisible separator": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "invisible times": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Jump established, connecting to {target}...": {
@@ -1575,6 +1879,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Keyword highlighting: \"{pattern}\" is not a valid regex ({error}) — rule skipped": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Label": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1583,6 +1892,16 @@
     "Language": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Last sample {n} s ago": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Last sample {n} s ago; the last poll failed: {error}": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Later": {
@@ -1605,6 +1924,26 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "left-to-right embedding": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "left-to-right isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "left-to-right mark": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "left-to-right override": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Legacy algorithms (old devices)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1613,6 +1952,31 @@
     "Line height": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "line separator": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "load": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "load {value}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Load average over 1, 5 and 15 minutes": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Local": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Local (-L)": {
@@ -1655,6 +2019,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Logging stopped": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Logging to {file}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Login failed (530): check the username/password": {
       "refs": [
         "src/main/ftp.js"
@@ -1670,6 +2044,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Look-alike letters": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "looks like a space but is not one to the shell: it becomes part of the word": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Macros Panel": {
       "refs": [
         "src/main/main.js"
@@ -1682,7 +2066,8 @@
     },
     "Magenta": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "marks on the first {painted} of {total} places": {
@@ -1693,6 +2078,26 @@
     "Matches in every terminal take the rule's colour. Plain text matches anywhere in a line; Regex is a JavaScript regular expression. Colours come from the terminal theme, so they read on every palette. Where rules overlap, the earlier match wins, then the longer one.": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Mem": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Mem {value}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Memory in use: {pct}% of {total}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Memory: unknown": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Menus, panels and dialogs switch at once; terminal output is not translated": {
@@ -1735,6 +2140,16 @@
         "src/main/main.js"
       ]
     },
+    "Mongolian vowel separator": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "monitor unavailable": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Monitoring": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1745,9 +2160,29 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "monitoring…": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "mosh client not found — install it with \"brew install mosh\"": {
       "refs": [
         "src/main/terminals.js"
+      ]
+    },
+    "Mosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "mosh exited": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "mosh exited with code {code}": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "mosh-server (path on the remote host, optional)": {
@@ -1765,6 +2200,36 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Move terminal down": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move terminal here": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move terminal here (replace)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move terminal left": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move terminal right": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move terminal up": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "MultiExec": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1780,9 +2245,19 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "narrow no-break space": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Needs the mosh client on this Mac (brew install mosh) and mosh-server on the remote host; UDP ports 60000-61000 must be reachable.": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Never": {
@@ -1915,6 +2390,16 @@
         "src/main/wol.js"
       ]
     },
+    "No sample yet": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "No sample yet; the last poll failed: {error}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "no sh on the host": {
       "refs": [
         "src/main/monitor.js"
@@ -1943,6 +2428,11 @@
     "No X server found (install XQuartz for X11 forwarding)": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "no-break space": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Not a CIDR, an address range or a host name: {target}": {
@@ -2060,9 +2550,54 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Open file browser": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Open session down": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Open session here": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Open session here (replace)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Open session left": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Open session right": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Open session up": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Open SFTP Browser": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Open SFTP browser automatically": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Open the SFTP browser for this Mosh session first (Sftp panel)": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Opens in macOS Screen Sharing (vnc:// URL).": {
@@ -2105,9 +2640,19 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "overwrites a disk device": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Panes & terminal": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "paragraph separator": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Parity": {
@@ -2132,7 +2677,8 @@
     },
     "Paste": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
       ]
     },
     "Paste (terminal)": {
@@ -2201,6 +2747,26 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Pipe to shell": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "pipes a download straight into a shell (curl … | sh): the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "pop directional formatting": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "pop directional isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Port": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2239,6 +2805,11 @@
     "Private key passphrase": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "Profile write": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "ProxyJump: connect through a bastion": {
@@ -2290,12 +2861,14 @@
     "Reconnect": {
       "refs": [
         "src/renderer/dialogs.js",
+        "src/renderer/terminal.js",
         "src/main/main.js"
       ]
     },
     "Red": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "Regex": {
@@ -2339,9 +2912,24 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Remote folder unknown": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Remote forwards need a connection context": {
       "refs": [
         "src/main/tunnels.js"
+      ]
+    },
+    "Remote monitoring": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Remote monitoring bar": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Remote Monitoring Bar": {
@@ -2352,6 +2940,11 @@
     "Remote monitoring bar on SSH sessions": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Remote monitoring: {error}": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Remove": {
@@ -2409,6 +3002,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Restore Panes": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Restore panes (⇧⌘⏎)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Restore tabs & split layout at startup": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2422,6 +3025,36 @@
     "Right-click pastes (⇧-right-click for menu)": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "right-to-left embedding": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "right-to-left isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "right-to-left mark": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "right-to-left override": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "rm -rf on the root, the home folder or everything in the current folder": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "Root filesystem (/) in use": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Rule {n}: {what}": {
@@ -2447,6 +3080,16 @@
     "Rules…": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "runs a download through process substitution (sh <(curl …)): the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "runs a download through sh -c \"$(curl …)\": the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Save": {
@@ -2497,6 +3140,11 @@
     "Security": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Select All": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Select MobaXterm.ini": {
@@ -2564,6 +3212,11 @@
         "src/main/main.js"
       ]
     },
+    "Session ended.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Session logs": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2624,6 +3277,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "SFTP for Mosh session \"{name}\" (via SSH): {error}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "SFTP list: context menu / delete / parent folder": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2654,9 +3312,25 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Shell exited.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Show remote monitoring bar": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Show Remote Monitoring Bar": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Show sessions": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Shown on the session, its tab and pane": {
@@ -2674,13 +3348,30 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "soft hyphen": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "Split down": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Split Down": {
       "refs": [
+        "src/renderer/terminal.js",
         "src/main/main.js"
+      ]
+    },
+    "Split right": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Split Right": {
       "refs": [
+        "src/renderer/terminal.js",
         "src/main/main.js"
       ]
     },
@@ -2749,9 +3440,24 @@
         "src/main/keygen.js"
       ]
     },
+    "stale": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "stale ({n} s)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Start folder": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Start Session Log…": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Start/Stop Session Log": {
@@ -2794,6 +3500,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Stop Session Log": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "stopped": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2829,6 +3540,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "tag character": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "takes no space on screen but is sent to the shell": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "Telnet error: {error}": {
       "refs": [
         "src/main/terminals.js"
@@ -2857,7 +3578,8 @@
     },
     "Text": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "Text to paste (editable)": {
@@ -2905,6 +3627,16 @@
         "src/main/keygen.js"
       ]
     },
+    "The monitoring bar appears once the session is connected": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "The monitoring bar appears once the SFTP companion connection is up": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "The name already exists on the server ({code} {detail})": {
       "refs": [
         "src/main/ftp.js"
@@ -2938,6 +3670,11 @@
     "The range ends before it starts: {target}": {
       "refs": [
         "src/main/netscan.js"
+      ]
+    },
+    "The remote monitoring bar needs an SSH or Mosh session": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "the remote side ended the session": {
@@ -2995,6 +3732,11 @@
         "src/main/ftp.js"
       ]
     },
+    "The session ended while the tab was moved.": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "the top level is not an object": {
       "refs": [
         "src/main/importers.js"
@@ -3038,6 +3780,11 @@
     "Tools Panel": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Trailing newline": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Transfers": {
@@ -3160,6 +3907,16 @@
         "src/main/importers.js"
       ]
     },
+    "up": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "up {value}": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Update check failed": {
       "refs": [
         "src/main/updater.js"
@@ -3190,6 +3947,11 @@
         "src/main/main.js"
       ]
     },
+    "Uptime": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Use in this session": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3213,6 +3975,11 @@
     "Username": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "variation selector": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Version {version}": {
@@ -3250,6 +4017,21 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "word joiner": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "writes to ~/.{file}: a shell profile runs at every new shell": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "writes to ~/.{file}: that grants or changes SSH access to this account": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
     "X11 forwarding (XQuartz)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3267,7 +4049,8 @@
     },
     "Yellow": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/highlight.js"
       ]
     },
     "You are running {current}. Nothing needs to be downloaded; relaunching starts the version that is on disk.": {
@@ -3278,6 +4061,21 @@
     "You are using {current}. Download it now? It is installed when you quit, or right away if you choose to restart after the download.": {
       "refs": [
         "src/main/updater.js"
+      ]
+    },
+    "zero-width joiner": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "zero-width non-joiner": {
+      "refs": [
+        "src/renderer/pasteguard.js"
+      ]
+    },
+    "zero-width space": {
+      "refs": [
+        "src/renderer/pasteguard.js"
       ]
     },
     "Zmodem {kind} declined": {
@@ -3355,6 +4153,21 @@
         "src/main/main.js"
       ]
     },
+    "Zoom pane": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Zoom Pane": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Zoom pane (⇧⌘⏎)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Zoom Pane (fill the tab / restore)": {
       "refs": [
         "src/main/main.js"
@@ -3363,6 +4176,11 @@
     "Zoom pane (fill the tab) / restore": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "zoomed": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "zsh/bash integration (folder following)": {
