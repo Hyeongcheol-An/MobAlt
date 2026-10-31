@@ -75,3 +75,19 @@ test('wake rejects a bad MAC, broadcast address or port before sending anything'
   await assert.rejects(wake({ mac: 'aabbccddeeff', broadcast: '::1', port: 9 }), /Invalid broadcast address/);
   for (const port of [0, 65536, -1, 1.5, 'nine']) await assert.rejects(wake({ mac: 'aabbccddeeff', broadcast: '127.0.0.1', port }), /between 1 and 65535/, `port ${port}`);
 });
+
+test('wake refuses 0.0.0.0 as a broadcast address and a port that is not a whole number, each with its own sentence', async () => {
+  await assert.rejects(wake({ mac: 'aabbccddeeff', broadcast: '0.0.0.0', port: 9 }), /^Error: Invalid broadcast address: 0\.0\.0\.0 — use 255\.255\.255\.255 or the subnet's broadcast such as 192\.168\.1\.255$/);
+  await assert.rejects(wake({ mac: 'aabbccddeeff', broadcast: '127.0.0.1', port: '1.5' }), /^Error: The port must be a whole number between 1 and 65535$/);
+  await assert.rejects(wake({ mac: 'aabbccddeeff', broadcast: '127.0.0.1', port: 70000 }), /^Error: The port must be between 1 and 65535$/);
+});
+
+test('describeSendError: a socket error names the address to check instead of "send EHOSTUNREACH 0.0.0.0:9"', () => {
+  const { describeSendError } = require('../../src/main/wol');
+  assert.equal(describeSendError(Object.assign(new Error('send EHOSTUNREACH 192.168.9.255:9'), { code: 'EHOSTUNREACH' }), '192.168.9.255', 9).message, 'No route to 192.168.9.255; check the broadcast address (EHOSTUNREACH)');
+  assert.equal(describeSendError({ code: 'ENETUNREACH' }, '10.9.9.255', 7).message, 'No route to 10.9.9.255; check the broadcast address (ENETUNREACH)');
+  assert.equal(describeSendError({ code: 'EACCES' }, '255.255.255.255', 9).message, 'Sending to 255.255.255.255:9 is not allowed on this Mac (EACCES)');
+  assert.equal(describeSendError({ code: 'EADDRNOTAVAIL' }, '1.2.3.255', 9).message, 'Cannot send to 1.2.3.255:9; check the broadcast address (EADDRNOTAVAIL)');
+  assert.equal(describeSendError({ code: 'EWHATEVER', message: 'x' }, '1.2.3.255', 9).message, 'Cannot send to 1.2.3.255:9: EWHATEVER');
+  assert.equal(describeSendError(new Error('boom'), '1.2.3.255', 9).message, 'Cannot send to 1.2.3.255:9: boom');
+});

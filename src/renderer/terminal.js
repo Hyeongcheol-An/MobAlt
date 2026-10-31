@@ -513,7 +513,7 @@ export class TermPane {
         this.setStatus('connecting');
         const s = this.session;
         // main verifies the host key (app prompt) before the client is spawned; a declined key rejects here
-        const r = await window.api.term.spawnMosh({ name: s.name, host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, legacyAlgorithms: !!s.legacyAlgorithms, ...size });
+        const r = await window.api.term.spawnMosh({ name: s.name, host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, legacyAlgorithms: !!s.legacyAlgorithms, algorithms: s.algorithms, ...size });
         this.termId = r.id;
         this.app.registerPane(this);
         this._moshStartedAt = Date.now();
@@ -686,7 +686,9 @@ export class TermPane {
     const s = this.session;
     // id lets main merge the stored passphrase/password; ssh.js drops it before connecting, so this
     // SSH-typed copy can never be written back over the Mosh session
-    const cfg = { id: s.id, name: s.name, type: 'ssh', host: s.host, port: s.port || 22, username: s.username, authMethod: s.authMethod || 'auto', privateKeyPath: s.privateKeyPath };
+    // the session's Advanced SSH settings (legacy preset, algorithm lists, jump host) travel along, as for the host-key check
+    const cfg = { id: s.id, name: s.name, type: 'ssh', host: s.host, port: s.port || 22, username: s.username, authMethod: s.authMethod || 'auto', privateKeyPath: s.privateKeyPath,
+      legacyAlgorithms: !!s.legacyAlgorithms, algorithms: s.algorithms, jumpSessionId: s.jumpSessionId || '', jumpHost: s.jumpHost || '' };
     const gen = (this._sftpGen = (this._sftpGen || 0) + 1);
     this.sftpStatus = 'connecting';
     this.sftpError = null;
@@ -799,8 +801,13 @@ export class TermPane {
     this.monitorOn = true;
     this.monitorErrors = 0;
     this.monitorSample = null;
+    this._monitorFresh();
     this._monitorRender(null, 'monitoring…');
     this._monitorShow(true);
+    if (!this.monitorRo) { // the strip folds its items to the pane's width (see _monitorFit)
+      this.monitorRo = new ResizeObserver(() => this._monitorFit());
+      this.monitorRo.observe(this.monitorEl);
+    }
     this._monitorTick();
   }
 
@@ -811,6 +818,11 @@ export class TermPane {
       clearTimeout(this.monitorTimer);
       this.monitorTimer = null;
     }
+    if (this.monitorRo) {
+      this.monitorRo.disconnect();
+      this.monitorRo = null;
+    }
+    this._monitorFresh();
     this._monitorShow(false);
   }
 
@@ -855,6 +867,7 @@ export class TermPane {
       const first = !this.monitorSample;
       this.monitorErrors = 0;
       this.monitorSample = r.sample;
+      this._monitorFresh();
       this._monitorRender(r.sample);
       // rates need two samples: the second one comes after a second, then every interval
       this._monitorSchedule(first && (r.sample.cpu === null || r.sample.rx === null) ? 1000 : this.monitorInterval());
@@ -863,8 +876,12 @@ export class TermPane {
       if ((r && r.fatal) || this.monitorErrors >= 3) { // no sh, permission denied, a shell that cannot run it: stop asking
         this.monitorFailed = true;
         this.monitorOn = false;
+        this._monitorFresh();
         this._monitorRender(null, 'monitor unavailable', r && r.error ? `Remote monitoring: ${r.error}` : '');
-      } else this._monitorSchedule(this.monitorInterval());
+      } else {
+        this._monitorStale(r && r.error); // the last sample stays, dimmed and dated, until a poll succeeds again
+        this._monitorSchedule(this.monitorInterval());
+      }
     }
   }
 
@@ -872,25 +889,96 @@ export class TermPane {
   _monitorRender(sample, note, detail) {
     const el = this.monitorEl;
     el.classList.toggle('unavailable', !sample && note === 'monitor unavailable');
+    this.monitorItems = null;
+    this.monitorLine = '';
+    el.title = '';
+    delete el.dataset.fit;
     if (!sample) {
       el.replaceChildren(h('span', { class: 'mon-note', title: detail || undefined }, note || ''));
+      if (this.monitorStaleEl) el.append(this.monitorStaleEl);
       return;
     }
-    const meter = (label, pct, text, title) => h('span', { class: 'mon-item', title },
-      h('span', { class: 'mon-label' }, label),
-      h('span', { class: 'mon-bar ' + meterLevel(pct), 'aria-hidden': 'true' }, h('i', { style: { width: `${pct === null ? 0 : Math.round(pct)}%` } })),
-      h('span', { class: 'mon-val' }, text));
+    const bars = [];
+    const meter = (label, pct, text, title) => {
+      const bar = h('span', { class: 'mon-bar ' + meterLevel(pct), 'aria-hidden': 'true' }, h('i', { style: { width: `${pct === null ? 0 : Math.round(pct)}%` } }));
+      bars.push(bar);
+      return h('span', { class: 'mon-item', title }, h('span', { class: 'mon-label' }, label), bar, h('span', { class: 'mon-val' }, text));
+    };
     const memPct = memPercent(sample);
-    el.replaceChildren(
-      meter('CPU', sample.cpu, sample.cpu === null ? '—' : `${Math.round(sample.cpu)}%`, sample.cpu === null ? 'CPU: measured between two polls' : `CPU ${sample.cpu}% (${sample.os === 'darwin' ? 'sum of the processes over the cores' : 'busy time between the last two polls'})`),
-      meter('Mem', memPct, sample.memTotal ? `${formatBytes(sample.memUsed)} / ${formatBytes(sample.memTotal)}` : '—', memPct === null ? 'Memory: unknown' : `Memory in use: ${Math.round(memPct)}% of ${formatBytes(sample.memTotal)}`),
-      meter('Disk', sample.diskPct, sample.diskPct === null ? '—' : `${Math.round(sample.diskPct)}%`, 'Root filesystem (/) in use'),
-      h('span', { class: 'mon-item', title: 'Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll' },
-        h('span', { class: 'mon-val' }, `↓ ${formatRate(sample.rx)}`), h('span', { class: 'mon-val' }, `↑ ${formatRate(sample.tx)}`)),
-      h('span', { class: 'mon-item', title: 'Load average over 1, 5 and 15 minutes' }, h('span', { class: 'mon-label' }, 'load'), h('span', { class: 'mon-val' }, formatLoad(sample.load))),
-      h('span', { class: 'mon-item', title: 'Uptime' }, h('span', { class: 'mon-label' }, 'up'), h('span', { class: 'mon-val' }, formatUptime(sample.uptime))),
-      h('span', { class: 'mon-host', title: sample.host ? `Host: ${sample.host}` : undefined }, sample.host || '')
-    );
+    const cpu = sample.cpu === null ? '—' : `${Math.round(sample.cpu)}%`;
+    const mem = sample.memTotal ? `${formatBytes(sample.memUsed)} / ${formatBytes(sample.memTotal)}` : '—';
+    const disk = sample.diskPct === null ? '—' : `${Math.round(sample.diskPct)}%`;
+    const rx = `↓ ${formatRate(sample.rx)}`, tx = `↑ ${formatRate(sample.tx)}`;
+    const load = formatLoad(sample.load), up = formatUptime(sample.uptime);
+    const items = {
+      cpu: meter('CPU', sample.cpu, cpu, sample.cpu === null ? 'CPU: measured between two polls' : `CPU ${sample.cpu}% (${sample.os === 'darwin' ? 'sum of the processes over the cores' : 'busy time between the last two polls'})`),
+      mem: meter('Mem', memPct, mem, memPct === null ? 'Memory: unknown' : `Memory in use: ${Math.round(memPct)}% of ${formatBytes(sample.memTotal)}`),
+      disk: meter('Disk', sample.diskPct, disk, 'Root filesystem (/) in use'),
+      net: h('span', { class: 'mon-item', title: 'Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll' }, h('span', { class: 'mon-val' }, rx), h('span', { class: 'mon-val' }, tx)),
+      load: h('span', { class: 'mon-item', title: 'Load average over 1, 5 and 15 minutes' }, h('span', { class: 'mon-label' }, 'load'), h('span', { class: 'mon-val' }, load)),
+      up: h('span', { class: 'mon-item', title: 'Uptime' }, h('span', { class: 'mon-label' }, 'up'), h('span', { class: 'mon-val' }, up)),
+      host: h('span', { class: 'mon-host', title: sample.host ? `Host: ${sample.host}` : undefined }, sample.host || ''),
+    };
+    this.monitorItems = { ...items, bars };
+    // the whole strip as one line: the tooltip of a folded strip (see _monitorFit)
+    this.monitorLine = [`CPU ${cpu}`, `Mem ${mem}`, `Disk ${disk}`, `${rx} ${tx}`, `load ${load}`, `up ${up}`, sample.host ? `host ${sample.host}` : ''].filter(Boolean).join(' · ');
+    el.replaceChildren(items.cpu, items.mem, items.disk, items.net, items.load, items.up, items.host);
+    if (this.monitorStaleEl) el.insertBefore(this.monitorStaleEl, items.host);
+    this._monitorFit();
+  }
+
+  /**
+   * A narrow pane (a split, the 900 px window) cannot show the whole strip, which used to clip silently: items go by
+   * priority — host name, uptime, load, the three meters' bars, network — until the rest fits, and the full line
+   * moves into the strip's tooltip. data-fit counts the hidden items (0: everything shown).
+   */
+  _monitorFit() {
+    const el = this.monitorEl, it = this.monitorItems;
+    if (!it || el.hidden || !el.isConnected) return;
+    const order = [it.host, it.up, it.load, ...it.bars, it.net];
+    for (const x of order) x.hidden = false;
+    let n = 0;
+    while (n < order.length && el.scrollWidth > el.clientWidth) order[n++].hidden = true;
+    el.dataset.fit = String(n);
+    el.title = n ? this.monitorLine : '';
+  }
+
+  /**
+   * A failed poll (a timeout, a transient error) that is not yet the third: the last sample stays, dimmed, with its
+   * age — "stale (14 s)", counted up every second — and the error in the tooltip. The next good sample clears it
+   * (_monitorFresh); the third failure in a row turns it into "monitor unavailable".
+   */
+  _monitorStale(error) {
+    const el = this.monitorEl;
+    el.classList.add('stale');
+    this.monitorStaleError = error || '';
+    if (!this.monitorStaleEl) this.monitorStaleEl = h('span', { class: 'mon-item mon-stale' }, h('span', { class: 'mon-val' }));
+    if (!this.monitorStaleEl.isConnected) {
+      if (this.monitorItems) el.insertBefore(this.monitorStaleEl, this.monitorItems.host);
+      else el.append(this.monitorStaleEl); // no sample yet: next to the "monitoring…" note
+    }
+    const tick = () => {
+      const age = this.monitorSample ? Math.max(0, Math.round((Date.now() - this.monitorSample.at) / 1000)) : null;
+      this.monitorStaleEl.firstChild.textContent = age === null ? 'stale' : `stale (${age} s)`;
+      this.monitorStaleEl.title = (age === null ? 'No sample yet' : `Last sample ${age} s ago`) + (this.monitorStaleError ? `; the last poll failed: ${this.monitorStaleError}` : '');
+    };
+    tick();
+    if (!this.monitorStaleTimer) this.monitorStaleTimer = setInterval(tick, 1000);
+    this._monitorFit();
+  }
+
+  /** Back to a fresh strip: no stale item, no dimming, no age timer. */
+  _monitorFresh() {
+    this.monitorEl.classList.remove('stale');
+    if (this.monitorStaleTimer) {
+      clearInterval(this.monitorStaleTimer);
+      this.monitorStaleTimer = null;
+    }
+    if (this.monitorStaleEl) {
+      this.monitorStaleEl.remove();
+      this.monitorStaleEl = null;
+    }
+    this.monitorStaleError = '';
   }
 
   async toggleLog(force) {

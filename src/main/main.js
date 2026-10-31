@@ -29,6 +29,7 @@ const { ZmodemManager } = require('./zmodem');
 const pkg = require('../../package.json');
 const scans = new Map(); // running network scans: id → { cancel, promise } (netscan.js); quitting cancels them
 let wolListener = null; // test-only UDP listener for Wake-on-LAN packets (test:wol-listen)
+let silentListener = null; // test-only TCP listener that accepts and never speaks (test:silent-listen)
 app.setName('MobAlt');
 if (process.env.MOBALT_USER_DATA) app.setPath('userData', process.env.MOBALT_USER_DATA); // test isolation
 const store = new Store();
@@ -673,6 +674,21 @@ function registerIpc() {
     const menu = Menu.getApplicationMenu();
     return Object.fromEntries(TAB_MENU_IDS.map((id) => { const it = menu && menu.getMenuItemById(id); return [id, it ? it.enabled : null]; }));
   });
+  // Test-only: a TCP listener on 127.0.0.1:<port> (0 = any free port) that accepts and never sends a byte — an SSH
+  // connection to it waits for the banner until the handshake limit (how test/e2e-keygen.js holds the key
+  // generator's "Installing…" state open). Listening again replaces it; quitting closes it with the app.
+  ipcMain.handle('test:silent-listen', (_e, port) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    return new Promise((resolve, reject) => {
+      if (silentListener) { try { silentListener.close(); } catch {} silentListener = null; }
+      const srv = require('net').createServer((sock) => sock.on('error', () => {}));
+      srv.once('error', reject);
+      srv.listen(port | 0, '127.0.0.1', () => {
+        silentListener = srv;
+        resolve({ port: srv.address().port });
+      });
+    });
+  });
   // Test-only: the open windows, code run inside one of them (its resolved value comes back) and closing one — the
   // test script lives in the main window; a detached window is driven through these.
   ipcMain.handle('test:windows', () => {
@@ -718,7 +734,8 @@ function registerIpc() {
   // Mosh bootstraps over an external ssh: the host key goes through the app's own prompt first and the
   // bootstrap then runs strictly against the app's known_hosts file (never ~/.ssh/known_hosts).
   ipcMain.handle('term:spawn-mosh', async (e, opts) => {
-    const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms });
+    // the session's Advanced SSH algorithm settings apply to this check (and to the SFTP companion), not to mosh's own ssh
+    const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms, algorithms: opts.algorithms });
     if (!v.ok) throw new Error(v.error || 'host key not accepted');
     return own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
   });
@@ -1019,6 +1036,8 @@ function registerIpc() {
   // { error } instead of a rejection, so the renderer shows the message as it is.
   ipcMain.handle('tools:wake', (_e, opts) => wol.wake(opts || {}).then((r) => ({ ok: true, ...r }), (e) => ({ ok: false, error: e.message })));
   ipcMain.handle('tools:scan-start', (_e, opts = {}) => {
+    // one scan at a time: a second start (a double click before the first answered) would run untracked, with no Stop
+    if (scans.size) return { error: 'A scan is already running — stop it first' };
     let targets, ports;
     try {
       targets = netscan.expandTargets(opts.target);

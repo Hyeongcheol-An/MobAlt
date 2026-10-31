@@ -30,12 +30,17 @@ function stop(id) {
   if (p) p.kill();
 }
 
+/** macOS keeps IPv6 in separate binaries (ping6, traceroute6); Linux's take -6. */
+const v6Tool = (tool, host) => (net.isIPv6(host) ? (process.platform === 'linux' ? { bin: tool, args: ['-6'] } : { bin: tool + '6', args: [] }) : { bin: tool, args: [] });
+
 function ping(win, host, count = 5) {
-  return streamCommand(win, 'ping', ['-c', String(count), host]);
+  const t = v6Tool('ping', host);
+  return streamCommand(win, t.bin, [...t.args, '-c', String(count), host]);
 }
 
 function traceroute(win, host) {
-  return streamCommand(win, 'traceroute', ['-m', '30', '-q', '1', '-w', '2', host]);
+  const t = v6Tool('traceroute', host);
+  return streamCommand(win, t.bin, [...t.args, '-m', '30', '-q', '1', '-w', '2', host]);
 }
 
 /** Runs fn(item, index) over `items` with at most `concurrency` in flight; once isCancelled() is true no further item is taken. */
@@ -90,15 +95,20 @@ async function portScan(host, from, to, timeout = 800, concurrency = 200) {
 /**
  * One ICMP echo through the system `ping` (no raw socket, so no root): resolves { alive, ms } — ms from ping's own
  * "time=" when it answered, null otherwise — and never rejects. BSD ping waits a whole interval after its last packet
- * whatever -W says, so the process is killed at `timeout` ms. A `procs` Set holds the child while it runs, so a
- * cancelled scan can kill it.
+ * whatever -W says, so the process is killed at `timeout` ms. An IPv6 address goes through `ping6` on macOS (its
+ * `ping` cannot resolve one; ping6 has no deadline options, the kill bounds it) and `ping -6` on Linux. A `procs`
+ * Set holds the child while it runs, so a cancelled scan can kill it.
  */
 function pingOnce(host, timeout = 600, procs = null) {
   return new Promise((resolve) => {
     const secs = String(Math.max(1, Math.ceil(timeout / 1000)));
-    const args = process.platform === 'linux' ? ['-c', '1', '-W', secs, '-n', host] : ['-c', '1', '-W', String(timeout), '-t', secs, '-n', host];
+    const v6 = net.isIPv6(host);
+    const bin = v6 && process.platform !== 'linux' ? 'ping6' : 'ping';
+    const args = process.platform === 'linux' ? [...(v6 ? ['-6'] : []), '-c', '1', '-W', secs, '-n', host]
+      : v6 ? ['-c', '1', '-n', host]
+        : ['-c', '1', '-W', String(timeout), '-t', secs, '-n', host];
     let p;
-    try { p = spawn('ping', args, { env: { ...process.env, LANG: 'C' } }); } catch { return resolve({ alive: false, ms: null }); }
+    try { p = spawn(bin, args, { env: { ...process.env, LANG: 'C' } }); } catch { return resolve({ alive: false, ms: null }); }
     if (procs) procs.add(p);
     let out = '', done = false, timer = null;
     const fin = (alive) => {

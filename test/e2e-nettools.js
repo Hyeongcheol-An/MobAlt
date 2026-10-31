@@ -75,13 +75,45 @@
     set('#wol-label', '');
     set('#wol-mac', '02:00:00:00:00:05');
     results.wolLabelRecalled = q('#wol-label').value === 'srv5';
+    await sleep(300); // the last packet lands a moment after its wake answered
     results.wolPacketsTotal = (await window.api.app.testWolPackets()).length === 6 + 33;
+    log('wol packets after the history loop:', (await window.api.app.testWolPackets()).length);
     // a bad port is refused by the main process
     set('#wol-port', '70000');
     q('[data-wol="wake"]').click();
     await until(() => /The port must be between 1 and 65535/.test(toasts()), 2000, 'bad port toast');
     results.wolBadPortToast = true;
     set('#wol-port', String(wolPort));
+    // a 300-character label is kept to 40 (field, history, datalist); the label comes back whatever spelling of the MAC is typed
+    set('#wol-mac', 'AA:BB:CC:DD:EE:02');
+    set('#wol-label', 'L'.repeat(300));
+    q('[data-wol="wake"]').click();
+    await until(() => (app.settings.wolHistory || [])[0]?.mac === 'aa:bb:cc:dd:ee:02', 3000, 'long label wake');
+    results.wolLabelTrimmed = app.settings.wolHistory[0].label === 'L'.repeat(40) && q('#wol-label').value === 'L'.repeat(40) && q('#wol-label').maxLength === 40 && q('#wol-history option').label.length === 40;
+    const recall = (mac) => { set('#wol-label', ''); set('#wol-mac', mac); return q('#wol-label').value === 'L'.repeat(40); };
+    results.wolRecallEverySpelling = recall('aa-bb-cc-dd-ee-02') && recall('AABB.CCDD.EE02') && recall('AABBCCDDEE02') && recall('AA:BB:CC:DD:EE:02');
+    set('#wol-label', '');
+    set('#wol-mac', 'aa:bb:cc:dd:ee:0');
+    results.wolNoRecallWhilePartial = q('#wol-label').value === '';
+    // a port of "1.5" is refused (it used to go to port 1); 0.0.0.0 is refused with a sentence, not "send EHOSTUNREACH 0.0.0.0:9"
+    await sleep(300); // the long-label wake's last packet lands a moment after it answered
+    const sentBefore = (await window.api.app.testWolPackets()).length;
+    set('#wol-mac', 'AA:BB:CC:DD:EE:02');
+    set('#wol-port', '1.5');
+    q('[data-wol="wake"]').click();
+    await until(() => /The port must be a whole number between 1 and 65535/.test(toasts()), 2000, 'fraction port toast');
+    await sleep(350);
+    results.wolFractionPortRefused = (await window.api.app.testWolPackets()).length === sentBefore && document.activeElement === q('#wol-port');
+    log('fraction port: packets', (await window.api.app.testWolPackets()).length, '/', sentBefore, 'focus', document.activeElement?.id);
+    set('#wol-port', String(wolPort));
+    set('#wol-broadcast', '0.0.0.0');
+    q('[data-wol="wake"]').click();
+    await until(() => /Invalid broadcast address: 0\.0\.0\.0 — use 255\.255\.255\.255 or the subnet's broadcast such as 192\.168\.1\.255/.test(toasts()), 2000, '0.0.0.0 toast');
+    await sleep(350);
+    results.wolZeroBroadcastRefused = (await window.api.app.testWolPackets()).length === sentBefore;
+    set('#wol-broadcast', '127.0.0.1');
+    await shot('70b-wol-polish');
+    await sleep(3600); // the toasts go
 
     // ---------- network scanner ----------
     // a single host as /32: 127.0.0.1 answers, with the test sshd's port 2222 open and a round-trip time from ping
@@ -128,7 +160,8 @@
     const m = q('.modal');
     const hostEl = m && m.querySelector('input[placeholder^="hostname"]');
     const portEl = m && [...m.querySelectorAll('label')].find((l) => l.textContent === 'Port')?.nextElementSibling;
-    results.scanAddSession = !!m && /New session/.test(m.querySelector('.modal-title').textContent) && hostEl?.value === '127.0.0.1' && portEl?.value === '22' && !!m.querySelector('.type-picker button.active')?.textContent.includes('SSH');
+    const sshPort = tp.scan.rows[0].ports.includes(22) ? 22 : 2222; // port 22 when this Mac's own sshd is on, else the open SSH-looking port
+    results.scanAddSession = !!m && /New session/.test(m.querySelector('.modal-title').textContent) && hostEl?.value === '127.0.0.1' && portEl?.value === String(sshPort) && !!m.querySelector('.type-picker button.active')?.textContent.includes('SSH');
     await shot('72-scan-add-session');
     m && m.querySelector('.close').click();
     await sleep(250);
@@ -169,6 +202,132 @@
     await until(() => /Not a CIDR, an address range or a host name: not a target!/.test(toasts()), 2000, 'bad target toast');
     results.scanBadTargetRefused = !tp.scan.running && tp.scan.target === '127.1.0.0/24';
     await sleep(3600); // the toasts go
+
+    // ---------- Scan clicked three times at once: one run (Scan is inert from the first click), main refuses a second start ----------
+    set('#scan-target', '127.3.0.0/24');
+    set('#scan-timeout', '2000');
+    set('#scan-concurrency', '8');
+    q('#scan-method').value = 'tcp';
+    const ids = new Set();
+    window.api.on('tools:scan', (ev) => ids.add(ev.id));
+    prev = tp.scan.id;
+    startBtn().click();
+    results.scanInertOnFirstClick = startBtn().disabled === true && tp.scanStarting === true;
+    startBtn().click();
+    startBtn().click();
+    await until(() => tp.scan && tp.scan.id !== prev && tp.scan.running, 2000, 'triple-click scan started');
+    const second = await window.api.tools.scanStart({ target: '127.3.0.0/24', method: 'tcp', ports: '22', concurrency: 8, timeout: 2000, reverseDns: false });
+    results.scanSecondStartRefused = !!second && /A scan is already running — stop it first/.test(second.error || '');
+    await sleep(600);
+    stopBtn().click();
+    await until(scanDone, 5000, 'stop after the triple click');
+    const idsAtStop = new Set(ids);
+    await sleep(2500); // an orphan run would still be sending progress
+    results.scanTripleClickOneRun = idsAtStop.size === 1 && idsAtStop.has(tp.scan.id) && ids.size === 1;
+    log('scan ids seen after the triple click:', [...ids].join(','));
+    set('#scan-timeout', '600');
+    set('#scan-concurrency', '64');
+    q('#scan-method').value = 'both';
+
+    // ---------- a dual-stack name is tried on IPv4 first: localhost finds the sshd that listens on 127.0.0.1 only; ::1 answers a ping (ping6) ----------
+    set('#scan-target', 'localhost');
+    set('#scan-ports', '2222');
+    q('#scan-method').value = 'tcp';
+    prev = tp.scan.id;
+    startBtn().click();
+    await until(() => tp.scan && tp.scan.id !== prev, 2000, 'localhost scan started');
+    await until(scanDone, 15000, 'localhost scan');
+    rows = rowsOf();
+    log('localhost rows:', JSON.stringify(rows));
+    results.scanLocalhostIPv4 = rows.length === 1 && rows[0][0] === '127.0.0.1' && rows[0][1] === 'localhost' && /\b2222\b/.test(rows[0][3]);
+    set('#scan-target', '::1');
+    q('#scan-method').value = 'ping';
+    prev = tp.scan.id;
+    startBtn().click();
+    await until(() => tp.scan && tp.scan.id !== prev, 2000, '::1 scan started');
+    await until(scanDone, 15000, '::1 scan');
+    rows = rowsOf();
+    log('::1 rows:', JSON.stringify(rows));
+    results.scanPingIPv6 = rows.length === 1 && rows[0][0] === '::1' && /^[\d.]+ ms$/.test(rows[0][2]);
+    await shot('76-scan-ipv6-ping');
+    q('#scan-method').value = 'both';
+
+    // ---------- "Add as session" prefills the open SSH port: 2222 here (22 only when this Mac's own sshd answers) ----------
+    set('#scan-target', '127.0.0.1/32');
+    set('#scan-ports', '22,2222');
+    q('#scan-method').value = 'tcp';
+    prev = tp.scan.id;
+    startBtn().click();
+    await until(() => tp.scan && tp.scan.id !== prev, 2000, 'port prefill scan started');
+    await until(scanDone, 15000, 'port prefill scan');
+    const openPorts = tp.scan.rows[0]?.ports || [];
+    q('#scan-results .scan-add').click();
+    await sleep(400);
+    const m2 = q('.modal');
+    const portEl2 = m2 && [...m2.querySelectorAll('label')].find((l) => l.textContent === 'Port')?.nextElementSibling;
+    results.scanAddSessionPrefillsOpenPort = !!portEl2 && portEl2.value === String(openPorts.includes(22) ? 22 : 2222);
+    log('open ports', openPorts.join(','), '→ prefilled port', portEl2?.value);
+    await shot('77-scan-add-session-port');
+    m2 && m2.querySelector('.close').click();
+    await sleep(250);
+    q('.modal.narrow .btn.primary')?.click();
+    await sleep(200);
+    q('#scan-method').value = 'both';
+
+    // ---------- the Ports column: the first click puts the most open ports first and says "descending"; again: fewest first, "ascending" ----------
+    const synth = [['10.0.0.1', [22, 80, 443]], ['10.0.0.2', []], ['10.0.0.3', [80]], ['10.0.0.4', [22, 443]]].map(([ip, ports]) => ({ ip, host: ip, hostname: null, rtt: 1, ports }));
+    tp.scan = { id: 'synthetic', total: 4, done: 4, rows: synth, running: false, cancelled: false, ms: 1, target: 'synthetic' };
+    tp.renderScanRows();
+    const portsBtn = q('#scan-results th button[data-sort="ports"]');
+    portsBtn.click();
+    const order1 = rowsOf().map((r) => r[0]).join(), sort1 = portsBtn.closest('th').getAttribute('aria-sort');
+    portsBtn.click();
+    const order2 = rowsOf().map((r) => r[0]).join(), sort2 = portsBtn.closest('th').getAttribute('aria-sort');
+    results.scanPortsSortMatchesIndicator = sort1 === 'descending' && order1 === '10.0.0.1,10.0.0.4,10.0.0.3,10.0.0.2' && sort2 === 'ascending' && order2 === '10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.1';
+    log('ports sort:', sort1, order1, '|', sort2, order2);
+    await shot('78-scan-ports-sorted');
+    q('#scan-results th button[data-sort="ip"]').click();
+
+    // ---------- a 180 px sidebar: RTT and Host columns go, ＋ stays at the right edge; 900×560 keeps a 160 px table ----------
+    document.documentElement.style.setProperty('--sidebar-w', '180px');
+    await sleep(300);
+    const res = q('#scan-results');
+    const sbRight = q('#sidebar').getBoundingClientRect().right;
+    const rttTh = q('#scan-results th button[data-sort="rtt"]').closest('th'), hostTh = q('#scan-results th button[data-sort="hostname"]').closest('th');
+    const add0 = q('#scan-results .scan-add');
+    results.narrowHidesRttAndHost = getComputedStyle(rttTh).display === 'none' && getComputedStyle(hostTh).display === 'none' && [...q('#scan-results tbody tr').children].filter((td) => getComputedStyle(td).display !== 'none').length === 3;
+    results.narrowAddReachable = add0.getBoundingClientRect().right <= sbRight + 1 && add0.getBoundingClientRect().width > 0;
+    log('narrow table: sidebar right', Math.round(sbRight), 'add right', Math.round(add0.getBoundingClientRect().right), 'table', res.scrollWidth, '/', res.clientWidth);
+    await shot('79-scan-narrow-sidebar');
+    // the 900×560 window: a scan started in the short panel folds the Wake-on-LAN group up and brings the table (at
+    // least 160 px tall, the panel scrolling for the rest) on screen with its row — at the 180 px sidebar, where the
+    // form rows wrap, and at the default 280 px one
+    const size0 = { w: window.outerWidth, h: window.outerHeight };
+    const shortPanelScan = async (what) => {
+      q('#tools-wol').open = true;
+      set('#scan-target', '127.0.0.1/32');
+      set('#scan-ports', '2222');
+      prev = tp.scan.id;
+      startBtn().click();
+      await until(() => tp.scan && tp.scan.id !== prev, 2000, what + ' started');
+      await until(scanDone, 15000, what);
+      await sleep(200);
+      const box = res.getBoundingClientRect(), row0 = q('#scan-results tbody tr');
+      log(what + ': table', Math.round(box.height), 'px, bottom', Math.round(box.bottom), '/ window', window.innerHeight, '| wol open', q('#tools-wol').open, '| row bottom', row0 && Math.round(row0.getBoundingClientRect().bottom));
+      return box.height >= 160 && box.bottom <= window.innerHeight + 1 && box.top >= 0 && q('#tools-wol').open === false && !!row0 && row0.getBoundingClientRect().bottom <= window.innerHeight && row0.getBoundingClientRect().top >= box.top;
+    };
+    await window.api.app.testResize(900, 560);
+    await sleep(500);
+    results.narrow900Table = await shortPanelScan('900x560 with the 180 px sidebar');
+    await shot('80-scan-900x560-narrow-sidebar');
+    document.documentElement.style.setProperty('--sidebar-w', '280px');
+    await sleep(300);
+    results.shortPanelTable = await shortPanelScan('900x560 with the default sidebar');
+    await shot('81-scan-900x560-default-sidebar');
+    await window.api.app.testResize(size0.w, size0.h);
+    await sleep(400);
+    q('#tools-wol').open = true;
+    set('#scan-ports', '22,80,443,3389,5900');
 
     // ---------- keyboard: Tab walks every new control in order; Enter in the target box starts a scan; Space on Scan too ----------
     const key = (el) => el.id || (el.dataset.wol ? 'wol:' + el.dataset.wol : el.dataset.scan ? 'scan:' + el.dataset.scan : el.tagName.toLowerCase() + '#' + (el.parentElement.id || ''));

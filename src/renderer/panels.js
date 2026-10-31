@@ -1,5 +1,6 @@
 // Tools panel (ping/traceroute/port scan/DNS/net info, Wake-on-LAN, network scanner) and Macros panel.
 import { $, h, contextMenu, confirmDialog, promptDialog, toast, showModal, plural } from './ui.js';
+import { normMac, trimLabel, parsePort, sshPortOf, comparePorts } from './nettools.js';
 
 const ipKey = (ip) => (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip.split('.').map((o) => o.padStart(3, '0')).join('.') : '~' + ip); // IPv4 in address order, anything else after
 const fmtRtt = (ms) => (ms >= 100 ? String(Math.round(ms)) : ms.toFixed(ms < 10 ? 2 : 1)) + ' ms';
@@ -109,9 +110,10 @@ export class ToolsPanel {
     this.waking = false;
     $('[data-wol="wake"]').addEventListener('click', () => this.wake());
     for (const el of [this.wolMac, this.wolBroadcast, this.wolPort, this.wolLabel]) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.wake(); } });
-    // a MAC picked from the history (or typed again) brings its label along
+    // a MAC picked from the history (or typed again, in any spelling) brings its label along
     this.wolMac.addEventListener('input', () => {
-      const known = this.wolHistory.find((x) => x.mac === this.wolMac.value.trim().toLowerCase());
+      const mac = normMac(this.wolMac.value);
+      const known = mac && this.wolHistory.find((x) => x.mac === mac);
       if (known && known.label) this.wolLabel.value = known.label;
     });
     this.renderWolHistory();
@@ -124,7 +126,7 @@ export class ToolsPanel {
 
   /** The MAC box's datalist: every remembered address, its label as the option's secondary text. */
   renderWolHistory() {
-    $('#wol-history').replaceChildren(...this.wolHistory.map((e) => h('option', { value: e.mac, label: e.label || null })));
+    $('#wol-history').replaceChildren(...this.wolHistory.map((e) => h('option', { value: e.mac, label: trimLabel(e.label) || null })));
   }
 
   /** Wake: the main process validates, builds and broadcasts the magic packet; a success goes into the history with the label. */
@@ -132,14 +134,19 @@ export class ToolsPanel {
     if (this.waking) return;
     const mac = this.wolMac.value.trim();
     if (!mac) return toast('Enter a MAC address', 'warn');
-    const port = this.wolPort.value.trim() === '' ? 9 : parseInt(this.wolPort.value, 10);
+    const port = parsePort(this.wolPort.value); // "1.5" is refused here (parseInt would have sent to port 1)
+    if (port.error) {
+      this.wolPort.focus();
+      return toast(port.error, 'warn');
+    }
     const broadcast = this.wolBroadcast.value.trim() || '255.255.255.255';
     this.waking = true;
     try {
-      const r = await window.api.tools.wake({ mac, broadcast, port });
+      const r = await window.api.tools.wake({ mac, broadcast, port: port.port });
       if (!r.ok) return toast(r.error, 'warn');
       const old = this.wolHistory.find((x) => x.mac === r.mac);
-      const label = this.wolLabel.value.trim() || (old && old.label) || '';
+      const label = trimLabel(this.wolLabel.value) || (old && old.label) || '';
+      this.wolLabel.value = label; // what the history keeps (at most 40 characters)
       const wolHistory = [{ mac: r.mac, label, at: Date.now() }, ...this.wolHistory.filter((x) => x.mac !== r.mac)].slice(0, 10);
       await this.app.saveSettings({ wolHistory }, true);
       this.renderWolHistory();
@@ -157,6 +164,8 @@ export class ToolsPanel {
     this.scanTarget = $('#scan-target');
     this.scanBody = $('#scan-results tbody');
     this.scan = null; // the last run: { id, total, done, rows, running, cancelled, ms, target }
+    this.scanStarting = false; // scanStart in flight: a second Scan click / Enter meanwhile is ignored (it would start an untracked scan)
+    this.scanStopRequested = false; // Stop pressed during that window: stops the run as soon as it is known
     this.scanSort = { key: 'ip', dir: 1 };
     for (const b of document.querySelectorAll('[data-scan]')) b.addEventListener('click', () => this.scanCmd(b.dataset.scan));
     for (const el of [this.scanTarget, $('#scan-ports'), $('#scan-concurrency'), $('#scan-timeout')]) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.startScan(); } });
@@ -171,9 +180,9 @@ export class ToolsPanel {
     else if (name === 'copy') this.copyScan();
   }
 
-  /** Scan while idle, Stop while running, Copy once there is a row — the keyboard is moved off a button before it goes inert. */
+  /** Scan while idle, Stop while running (or starting), Copy once there is a row — the keyboard is moved off a button before it goes inert. */
   syncScanButtons() {
-    const running = !!(this.scan && this.scan.running);
+    const running = this.scanStarting || !!(this.scan && this.scan.running);
     const start = $('[data-scan="start"]'), stop = $('[data-scan="stop"]');
     if (running) {
       stop.disabled = false;
@@ -188,12 +197,25 @@ export class ToolsPanel {
   }
 
   async startScan() {
-    if (this.scan && this.scan.running) return;
+    if (this.scanStarting || (this.scan && this.scan.running)) return;
     const target = this.scanTarget.value.trim();
     if (!target) return toast('Enter a CIDR, an address range or a host', 'warn');
     const int = (sel, def) => { const v = parseInt($(sel).value, 10); return Number.isInteger(v) ? v : def; };
-    const r = await window.api.tools.scanStart({ target, method: $('#scan-method').value, ports: $('#scan-ports').value, concurrency: int('#scan-concurrency', 64), timeout: int('#scan-timeout', 600), reverseDns: $('#scan-rdns').checked });
-    if (!r || r.error) return toast(r ? r.error : 'The scan could not start', 'warn');
+    // Scan goes inert at once: a second click or Enter before the main process answered would start another run
+    // that nothing here tracks or can stop (main refuses a second start too)
+    this.scanStarting = true;
+    this.scanStopRequested = false;
+    this.syncScanButtons();
+    let r;
+    try {
+      r = await window.api.tools.scanStart({ target, method: $('#scan-method').value, ports: $('#scan-ports').value, concurrency: int('#scan-concurrency', 64), timeout: int('#scan-timeout', 600), reverseDns: $('#scan-rdns').checked });
+    } finally {
+      this.scanStarting = false;
+    }
+    if (!r || r.error) {
+      this.syncScanButtons();
+      return toast(r ? r.error : 'The scan could not start', 'warn');
+    }
     this.scan = { id: r.id, total: r.total, done: 0, rows: [], running: true, cancelled: false, ms: 0, target };
     this.scanBody.replaceChildren();
     $('#scan-progress').hidden = false;
@@ -201,11 +223,25 @@ export class ToolsPanel {
     this.renderScanProgress();
     this.renderScanEmpty();
     this.syncScanButtons();
+    this.fitScanResults();
+    if (this.scanStopRequested) this.stopScan();
   }
 
   async stopScan() {
+    if (this.scanStarting) { this.scanStopRequested = true; return; } // the id is not known yet: stop it once it is
     if (!this.scan || !this.scan.running) return;
     await window.api.tools.scanStop(this.scan.id); // the run's 'done' event (cancelled) closes it
+  }
+
+  /**
+   * A short panel (the 900×560 window, a narrow sidebar whose rows wrap): the results table keeps a minimum height
+   * (styles.css) and the panel scrolls for the rest — so the Wake-on-LAN group folds up when the table would
+   * otherwise push past the bottom, and the table is scrolled into view (the forms above it move up, not off).
+   */
+  fitScanResults() {
+    const panel = $('#panel-tools'), wol = $('#tools-wol');
+    if (wol.open && panel.scrollHeight > panel.clientHeight + 1) wol.open = false;
+    if (panel.scrollHeight > panel.clientHeight + 1) $('#scan-results').scrollIntoView({ block: 'nearest' });
   }
 
   onScanEvent(ev) {
@@ -240,9 +276,12 @@ export class ToolsPanel {
     $('#scan-empty').hidden = !this.scan || this.scan.running || this.scan.rows.length > 0;
   }
 
-  /** A header click sorts by that column; the same column again flips the direction (aria-sort says which). */
+  /**
+   * A header click sorts by that column; the same column again flips the direction (aria-sort says which). Ports
+   * starts descending — the hosts with the most open ports first, what a scan is run for — and says so in aria-sort.
+   */
   sortScan(key) {
-    this.scanSort = this.scanSort.key === key ? { key, dir: -this.scanSort.dir } : { key, dir: 1 };
+    this.scanSort = this.scanSort.key === key ? { key, dir: -this.scanSort.dir } : { key, dir: key === 'ports' ? -1 : 1 };
     for (const b of document.querySelectorAll('#scan-results th button[data-sort]')) {
       const on = b.dataset.sort === key;
       b.classList.toggle('on', on);
@@ -258,14 +297,14 @@ export class ToolsPanel {
       ip: byIp,
       hostname: (a, b) => (a.hostname || '').localeCompare(b.hostname || '') || byIp(a, b),
       rtt: (a, b) => (a.rtt ?? Infinity) - (b.rtt ?? Infinity) || byIp(a, b),
-      ports: (a, b) => b.ports.length - a.ports.length || (a.ports[0] ?? 1e6) - (b.ports[0] ?? 1e6) || byIp(a, b),
+      ports: (a, b) => comparePorts(a, b) || byIp(a, b), // ascending: fewest open ports first (the indicator's direction)
     }[key] || byIp;
     return [...this.scan.rows].sort((a, b) => dir * cmp(a, b));
   }
 
   renderScanRows() {
     this.scanBody.replaceChildren(...this.sortedScanRows().map((r) => h('tr', {},
-      h('td', { class: 'mono' }, r.ip),
+      h('td', { class: 'mono', title: r.hostname || null }, r.ip), // the name stays reachable when a narrow sidebar hides the Host column
       h('td', { class: 'host', title: r.hostname || null }, r.hostname || '—'),
       h('td', { class: 'mono num' }, r.rtt == null ? '—' : fmtRtt(r.rtt)),
       h('td', { class: 'mono' }, r.ports.length ? r.ports.join(', ') : '—'),
@@ -275,9 +314,9 @@ export class ToolsPanel {
     this.syncScanButtons();
   }
 
-  /** "Add as session": the session editor with SSH to this host on port 22 filled in (named after the reverse lookup). */
+  /** "Add as session": the session editor with SSH to this host filled in — port 22 when it is open, else the SSH-looking open port (2222…), else the first open one (named after the reverse lookup). */
   addScanSession(r) {
-    const s = { type: 'ssh', host: r.ip, port: 22 };
+    const s = { type: 'ssh', host: r.ip, port: sshPortOf(r.ports) };
     if (r.hostname) s.name = r.hostname;
     this.app.editSession(s);
   }

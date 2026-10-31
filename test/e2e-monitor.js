@@ -3,8 +3,9 @@
 //   test/qa/run.sh test/e2e-monitor.js <out-dir> 150000
 // The bar appears within seconds of the connection with sane values, toggling hides / shows it and re-fits the
 // terminal, polling stops while the pane is off screen and resumes on return, a host that cannot run the snippet
-// shows "monitor unavailable" and is not polled again, disconnecting hides it, Settings and the session option
-// decide the default, and the bar is photographed in two themes.
+// shows "monitor unavailable" and is not polled again, one failed poll dims the strip as stale with the sample's age,
+// disconnecting hides it, Settings and the session option decide the default, a narrow pane folds the strip by
+// priority instead of clipping it, and the bar is photographed in two themes.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -132,6 +133,24 @@
     await waitFor(() => !pane.monitorFailed && pane.monitorSample, 8000, 'recovered after the toggle');
     results.toggleRetries = true;
 
+    // 5b. one failed poll (a stuck host: the snippet hangs past the 10 s exec limit) — the last sample stays, but
+    //     dimmed, with its age ("stale (14 s)") and the error in the tooltip; the next good poll clears it
+    await window.api.app.testMonitorCommand('sleep 12');
+    await waitFor(() => pane.monitorEl.classList.contains('stale'), 20000, 'stale after a timed-out poll');
+    await window.api.app.testMonitorCommand(null); // well before the third failure would say "unavailable"
+    const staleEl = pane.monitorEl.querySelector('.mon-stale');
+    results.staleShown = !!staleEl && /^stale \(\d+ s\)$/.test(staleEl.textContent) && /^Last sample \d+ s ago; the last poll failed: timed out after 10 s$/.test(staleEl.title)
+      && pane.monitorErrors === 1 && pane.monitorOn === true && !pane.monitorEl.classList.contains('unavailable') && pane.monitorEl.querySelectorAll('.mon-item').length === 7;
+    results.staleDimmed = parseFloat(getComputedStyle(pane.monitorEl.querySelector('.mon-item')).opacity) < 1 && parseFloat(getComputedStyle(staleEl).opacity) === 1;
+    const age1 = parseInt((staleEl.textContent.match(/\((\d+) s\)/) || [])[1], 10);
+    await sleep(1500);
+    const age2 = parseInt((pane.monitorEl.querySelector('.mon-stale')?.textContent.match(/\((\d+) s\)/) || [])[1], 10);
+    results.staleAgeCounts = age2 > age1;
+    log('stale:', staleEl.textContent, '→', age2, 's | tooltip:', staleEl.title);
+    await shot('66-monitor-stale');
+    await waitFor(() => !pane.monitorEl.classList.contains('stale') && pane.monitorErrors === 0, 15000, 'fresh again');
+    results.staleCleared = !pane.monitorEl.querySelector('.mon-stale') && pane.monitorEl.querySelectorAll('.mon-item').length === 6 && parseFloat(getComputedStyle(pane.monitorEl.querySelector('.mon-item')).opacity) === 1;
+
     // 6. the light theme, then disconnecting hides the bar and reconnecting brings it back
     await app.saveSettings({ theme: 'light' });
     await sleep(500);
@@ -219,6 +238,43 @@
     await sleep(200);
     document.querySelector('.modal.narrow .btn.primary')?.click(); // in case a discard question appeared
     await sleep(100);
+
+    // 9. a narrow pane folds the strip by priority (host → uptime → load → the meters → network) instead of clipping
+    //    it silently: one pane at 900×560 loses the host name and more, a 2x2 grid at 900×560 keeps CPU / Mem / Disk;
+    //    the whole line is in the strip's tooltip; wide again, everything is back
+    const fits = (p) => p.monitorEl.scrollWidth <= p.monitorEl.clientWidth + 1;
+    app.workspace.activate(pOn.tab);
+    await waitFor(() => pOn.monitorSample && pOn.monitorEl.dataset.fit === '0', 8000, 'pOn strip at full width');
+    results.wideShowsAll = fits(pOn) && !pOn.monitorEl.querySelector('.mon-host').hidden && pOn.monitorEl.title === '';
+    await window.api.app.testResize(900, 560);
+    await sleep(600);
+    await waitFor(() => Number(pOn.monitorEl.dataset.fit || 0) > 0, 5000, 'strip folded');
+    const line = pOn.monitorEl.title;
+    results.narrowFolds = fits(pOn) && pOn.monitorEl.querySelector('.mon-host').hidden === true && !pOn.monitorEl.querySelector('.mon-item').hidden
+      && new RegExp(`^CPU \\d+% · Mem [\\d.]+ [KMGT]B / [\\d.]+ [KMGT]B · Disk \\d+% · ↓ .* ↑ .* · load [\\d. ]+ · up \\S+.* · host ${app.info.hostname.replace(/\./g, '\\.')}$`).test(line);
+    log('fit at 900x560:', pOn.monitorEl.dataset.fit, 'width', pOn.monitorEl.clientWidth, '| tooltip:', line);
+    await shot('67-monitor-narrow-single');
+    const gridSessions = [];
+    for (const i of [1, 2, 3, 4]) gridSessions.push(await app.saveSession({ ...base, name: 'grid-mon-' + i, monitor: true }));
+    await app.openSessionsInGrid(gridSessions, 2);
+    const gridTab = app.workspace.active;
+    const gp = gridTab.panes().filter((p) => p.kind === 'ssh');
+    await waitFor(() => gp.length === 4 && gp.every((p) => p.status === 'connected' && p.monitorSample), 30000, 'grid panes with samples');
+    await sleep(800);
+    results.gridFolds = gp.length === 4 && gp.every((p) => fits(p) && !p.monitorEl.hidden && Number(p.monitorEl.dataset.fit) > 0 && !p.monitorEl.querySelector('.mon-item').hidden && p.monitorEl.title.includes('host '));
+    log('2x2 at 900x560:', gp.map((p) => `${p.monitorEl.clientWidth}px fit=${p.monitorEl.dataset.fit} items=${[...p.monitorEl.querySelectorAll('.mon-item')].filter((i) => !i.hidden).length}`).join(' | '));
+    await shot('68-monitor-grid-900x560');
+    await window.api.app.testResize(1400, 880);
+    await sleep(800);
+    results.gridWiderShowsMore = gp.every((p) => fits(p) && Number(p.monitorEl.dataset.fit) < 7 && [...p.monitorEl.querySelectorAll('.mon-item')].filter((i) => !i.hidden).length >= 4);
+    log('2x2 at 1400x880:', gp.map((p) => `${p.monitorEl.clientWidth}px fit=${p.monitorEl.dataset.fit}`).join(' | '));
+    await shot('69-monitor-grid-1400x880');
+    await app.closeTab(gridTab);
+    await sleep(300);
+    await window.api.app.testResize(size0.w, size0.h);
+    await sleep(600);
+    app.workspace.activate(pOn.tab);
+    results.wideUnfolds = await waitFor(() => pOn.monitorEl.dataset.fit === '0' && !pOn.monitorEl.querySelector('.mon-host').hidden && pOn.monitorEl.title === '', 8000, 'unfolded').then(() => true).catch(() => false);
     results.allPanes = app.workspace.allPanes().filter((p) => p.kind === 'ssh').length;
   } catch (e) {
     results.error = e.message;

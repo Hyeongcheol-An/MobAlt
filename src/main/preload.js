@@ -69,6 +69,7 @@ contextBridge.exposeInMainWorld('api', {
     testNextDialog: (result) => invoke('test:next-dialog', result),
     testWolListen: (port) => invoke('test:wol-listen', port), // UDP listener on 127.0.0.1:<port> for magic packets (test mode only)
     testWolPackets: () => invoke('test:wol-packets'), // what it received: [{ from, port, length, hex }]
+    testSilentListen: (port) => invoke('test:silent-listen', port), // TCP listener on 127.0.0.1:<port> that accepts and never speaks (test mode only)
     testMonitorStats: () => invoke('test:monitor-stats'), // { execCount, samples }: exec channels opened, monitor polls started (test mode only)
     testMonitorCommand: (cmd) => invoke('test:monitor-command', cmd), // run this instead of the monitoring snippet (null = the snippet; test mode only)
     testFs: (op, ...args) => invoke('test:fs', op, ...args),

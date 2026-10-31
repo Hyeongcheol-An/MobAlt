@@ -1,9 +1,12 @@
 // Expert SSH algorithm settings end to end (Session editor → Advanced SSH → Algorithms).
 //   test/start-sshd.sh start
-//   test/qa/run.sh test/e2e-algorithms.js <out-dir> 120000
+//   test/qa/run.sh test/e2e-algorithms.js <out-dir> 180000
 // The editor pre-fills ssh2's defaults, validates every name, keeps "Legacy algorithms" as a preset and stores only
 // lists that differ; a restricted-but-valid set connects to the test sshd, an impossible one fails with a message
-// that names what both sides offer.
+// that names what both sides offer. The last part is an "old device": test/start-sshd-legacy.sh (an sshd on
+// 127.0.0.1:2223 offering only diffie-hellman-group14-sha1 + group1-sha1 and CBC ciphers), started and stopped from
+// here through an exec on the 2222 sshd — the defaults fail with the "tick Legacy algorithms" hint, the preset
+// connects and installs a key (test/sshd-runtime/authorized_keys is restored at the end).
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -48,13 +51,24 @@
     return m;
   };
   const session = (id) => app.sessions.sessions.find((x) => x.id === id);
+  // a shell on the 2222 sshd (this Mac) runs the helper script and restores authorized_keys; set once pane4 is up
+  let ctl = null, legacySshd = false, authBefore = null, authFile = null;
+  const addedBlobs = [];
+  const sh = async (cmd) => { const r = await window.api.ssh.exec(ctl.termId, cmd); return { ...r, out: (r.stdout + r.stderr).trim() }; };
   try {
     await app.saveSettings({ confirmClose: false });
     const user = app.info.home.split('/').pop();
     const keyDir = app.info.appPath + '/test/sshd-runtime';
+    authFile = keyDir + '/authorized_keys';
     const base = { type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'key', privateKeyPath: keyDir + '/client_ed25519', sftpAuto: false };
     const A = app.algorithms;
-    results.tablesLoaded = !!A && A.defaults.kex.includes('curve25519-sha256') && A.supported.kex.includes('diffie-hellman-group1-sha1') && !A.defaults.kex.includes('diffie-hellman-group1-sha1') && A.legacy.cipher.includes('aes256-cbc');
+    results.tablesLoaded = !!A && A.defaults.kex.includes('curve25519-sha256') && A.supported.kex.includes('diffie-hellman-group14-sha1') && !A.defaults.kex.includes('diffie-hellman-group14-sha1') && A.legacy.cipher.includes('aes256-cbc');
+    // the 2048-bit SHA-1 group leads the preset; the 1024-bit one is listed only when this build's crypto has it
+    // (Electron 45's Node 24 does not: it is "unavailable", never offered, never "unknown")
+    const g1 = 'diffie-hellman-group1-sha1';
+    results.legacyOrder = A.legacy.kex[0] === 'diffie-hellman-group14-sha1' && A.legacy.kex[1] === 'diffie-hellman-group-exchange-sha1';
+    results.group1Probed = Array.isArray(A.unavailable.kex) && A.unavailable.kex.includes(g1) === !A.supported.kex.includes(g1) && A.legacy.kex.includes(g1) === A.supported.kex.includes(g1);
+    log('group1-sha1 available in this build:', A.supported.kex.includes(g1));
 
     // 1. the editor pre-fills ssh2's defaults; nothing is stored for them
     let s = await app.saveSession({ ...base, name: 'algos' });
@@ -66,6 +80,13 @@
     // 2. an unknown name is an inline error while typing and blocks Save (the Advanced tab comes to the front)
     setVal(kex(), 'curve25519-sha256, nope-kex');
     results.inlineError = errorsShown(m).includes('Unknown key exchange algorithm: nope-kex') && kex().classList.contains('invalid') && kex().getAttribute('aria-invalid') === 'true';
+    // the MAC list's error reads like the main process's ("MAC", not "mac"); the 1024-bit group gets its own sentence when the build lacks it
+    setVal(macs(), 'hmac-sha2-256, bogus-one');
+    results.macWording = errorsShown(m).includes('Unknown MAC algorithm: bogus-one');
+    setVal(macs(), A.defaults.hmac.join(', '));
+    setVal(kex(), `curve25519-sha256, ${g1}`);
+    results.group1Wording = A.supported.kex.includes(g1) ? !errorsShown(m).length : errorsShown(m).includes(`Not available in this build: ${g1} (1024-bit Diffie-Hellman was removed from its crypto)`);
+    setVal(kex(), 'curve25519-sha256, nope-kex');
     [...m.querySelectorAll('.mtabs button')][0].click(); // Basic in front, then Save
     m.querySelector('.modal-foot .btn.primary').click();
     await sleep(300);
@@ -150,10 +171,86 @@
     const pane4 = await app.openSession(session(badC.id)); // the saved session, fresh (a pane's Reconnect keeps its own copy)
     await waitFor(() => pane4.status === 'connected' || pane4.status === 'failed', 15000, 'connect after reset');
     results.connectsAfterReset = pane4.status === 'connected';
+
+    // 7. an old device: an sshd on 127.0.0.1:2223 that only speaks group14-sha1 + group1-sha1 and CBC ciphers,
+    //    started on this Mac through the 2222 shell (pane4) — test/start-sshd-legacy.sh
+    ctl = pane4;
+    const legacyScript = app.info.appPath + '/test/start-sshd-legacy.sh';
+    const started = await sh(`bash ${legacyScript} start`);
+    log('legacy sshd:', started.out);
+    legacySshd = /started on 127\.0\.0\.1:2223|already running/.test(started.out);
+    results.legacySshdStarted = legacySshd;
+    authBefore = (await sh(`cat ${authFile}`)).stdout;
+    // 7a. the defaults against it: no raw "Unknown DH group", a sentence that names the preset
+    const old = await app.saveSession({ ...base, name: 'old-device-defaults', port: 2223 });
+    const p5 = await app.openSession(old);
+    await waitFor(() => p5.status === 'failed' || p5.status === 'connected', 20000, 'old device with the defaults');
+    await sleep(500);
+    const t5 = text(p5);
+    results.oldDeviceDefaultsFail = p5.status === 'failed';
+    results.oldDeviceHint = /Connection failed: no matching key exchange: this session offers [^;]*; the server offers diffie-hellman-group14-sha1, diffie-hellman-group1-sha1\. The server only speaks old algorithms: tick "Legacy algorithms \(old devices\)" in Advanced SSH/.test(t5);
+    results.oldDeviceNoRawDh = !/Unknown DH group/.test(t5);
+    log('old device text:\n' + t5.trim().split('\n').slice(-5).join('\n'));
+    const outDir = (await shot('34-algorithms-old-device-hint')).replace(/\/shots\/[^/]+$/, '');
+    // 7b. the preset connects (the key of [127.0.0.1]:2223 is new to the app: one prompt, accepted)
+    const leg = await app.saveSession({ ...base, name: 'old-device-legacy', port: 2223, legacyAlgorithms: true });
+    const p6o = app.openSession(leg);
+    const hk6 = await waitFor(() => document.querySelector('.modal .btn.primary'), 15000, 'host key dialog for :2223');
+    hk6.click();
+    const p6 = await p6o;
+    await waitFor(() => p6.status === 'connected' || p6.status === 'failed', 20000, 'legacy preset against the old device');
+    results.legacyPresetConnectsOldDevice = p6.status === 'connected';
+    if (p6.status !== 'connected') log('legacy preset text:\n' + text(p6).trim().split('\n').slice(-5).join('\n'));
+    await sleep(300);
+    await shot('35-algorithms-legacy-old-device');
+    // 7c. Generate SSH key → Install on a server → that session: the install connection takes the preset too
+    app.action('keygen');
+    const km = await waitFor(() => modal(), 5000, 'keygen dialog');
+    await sleep(200);
+    const keyPath = outDir + '/keys/id_legacy';
+    setVal(fieldOf(km, 'Save as'), keyPath);
+    cbOf(km, 'Install on a server').click();
+    await sleep(100);
+    setVal(fieldOf(km, 'Server'), leg.id);
+    setVal(fieldOf(km, 'Remote file'), authFile);
+    btnOf(km, 'Generate').click();
+    await waitFor(() => visible(km.querySelector('.keygen-result')), 40000, 'key generated and installed');
+    const blob = km.querySelector('.keygen-pub').value.split(/\s+/)[1];
+    addedBlobs.push(blob);
+    const steps = [...km.querySelectorAll('.keygen-step')].map((st) => st.className + ': ' + st.textContent);
+    log('install steps:', steps.join(' | '));
+    results.keygenInstallOnOldDevice = steps.some((st) => new RegExp(`keygen-step ok: Installed on ${user}@127\\.0\\.0\\.1:2223 in `).test(st)) && (await sh(`grep -cF -- '${blob}' ${authFile}`)).out === '1';
+    await shot('36-algorithms-keygen-install-legacy');
+    km.querySelector('.modal-foot .btn').click(); // Close
+    await sleep(200);
+    // 7d. and the new key logs in over the preset
+    const gen = await app.saveSession({ ...base, name: 'old-device-new-key', port: 2223, legacyAlgorithms: true, privateKeyPath: keyPath });
+    const p7 = await app.openSession(gen);
+    await waitFor(() => p7.status === 'connected' || p7.status === 'failed', 20000, 'new key on the old device');
+    results.newKeyLogsInOldDevice = p7.status === 'connected';
+    await p7.disconnect();
+    await p6.disconnect();
+    await sleep(300);
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-algos] FAIL', e.message, e.stack);
     await shot('99-algos-fail').catch(() => {});
+  } finally {
+    // the old device's sshd goes away and its authorized_keys loses the line installed above (cat > keeps the mode)
+    if (ctl && ctl.status === 'connected') {
+      try {
+        if (authBefore !== null) {
+          for (const b of addedBlobs) await sh(`grep -vF -- '${b}' ${authFile} > ${authFile}.e2e && cat ${authFile}.e2e > ${authFile} && rm ${authFile}.e2e`);
+          results.authorizedKeysRestored = (await sh(`cat ${authFile}`)).stdout === authBefore;
+        }
+        if (legacySshd) {
+          const stopped = await sh(`bash ${app.info.appPath}/test/start-sshd-legacy.sh stop`);
+          results.legacySshdStopped = /stopped/.test(stopped.out);
+        }
+      } catch (e) {
+        results.cleanup = 'FAILED: ' + e.message;
+      }
+    }
   }
   log('RESULTS ' + JSON.stringify(results));
   log('DONE');
