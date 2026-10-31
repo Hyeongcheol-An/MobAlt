@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
-const { readBundleVersion, compareVersions, bundlePath, readPlistXml } = require('../../src/main/bundlewatch');
+const { readBundleVersion, compareVersions, bundlePath, readPlistXml, relaunchOptions } = require('../../src/main/bundlewatch');
 
 const PLIST = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -46,6 +46,16 @@ test('compareVersions orders dotted versions numerically, pre-releases before th
 
 test('bundlePath climbs out of Contents/MacOS', () => {
   assert.equal(bundlePath('/Applications/MobAlt.app/Contents/MacOS/MobAlt'), '/Applications/MobAlt.app');
+});
+
+test('relaunchOptions restarts a bundle through LaunchServices (open -n -a), plain relaunch without a bundle', () => {
+  const bundle = '/Applications/MobAlt.app';
+  const seen = [];
+  const exists = (p) => { seen.push(p); return true; };
+  assert.deepEqual(relaunchOptions(bundle, exists), { execPath: '/usr/bin/open', args: ['-n', '-a', bundle] });
+  assert.deepEqual(seen, [path.join(bundle, 'Contents', 'Info.plist')], 'the bundle is recognised by its Info.plist');
+  assert.equal(relaunchOptions(bundle, () => false), null, 'no Info.plist (running from source): caller uses app.relaunch()');
+  assert.equal(relaunchOptions('/nonexistent/MobAlt.app'), null, 'default existence check against the real file system');
 });
 
 test('readPlistXml reads an XML plist as is and converts a binary one (macOS plutil)', { skip: process.platform !== 'darwin' ? 'needs plutil' : false }, async () => {

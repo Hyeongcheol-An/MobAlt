@@ -195,6 +195,8 @@ class App {
       this.updateStatusRight();
     });
     window.api.app.onBundleUpdated((info) => this.onBundleUpdated(info));
+    // main-process errors (uncaughtException) reach the user instead of only the terminal that launched the app
+    window.api.app.onNotice((n) => toast(String((n && n.text) || n), (n && n.level) || 'error', 8000));
   }
 
   // ---------- UI wiring ----------

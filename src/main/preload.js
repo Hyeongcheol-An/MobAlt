@@ -28,7 +28,10 @@ contextBridge.exposeInMainWorld('api', {
     testKey: (keyCode) => invoke('test:key', keyCode),
     testQuitCheck: () => invoke('test:quit-check'),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
+    testNotice: (text) => invoke('test:notice', text),
     checkUpdates: () => invoke('app:check-updates'),
+    // main-process notices ({ level, text }): internal errors that would otherwise be lost in the console
+    onNotice: (fn) => on('app:notice', fn),
     // a different MobAlt.app is on disk (brew upgrade / dragged DMG): { version, current }; relaunch() restarts into it
     onBundleUpdated: (fn) => on('app:bundle-updated', fn),
     relaunch: () => invoke('app:relaunch'),

@@ -16,7 +16,7 @@ const tools = require('./tools');
 const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
 const { liveConnections, quitQuestion } = require('./live');
-const { startBundleWatch } = require('./bundlewatch');
+const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 
 const pkg = require('../../package.json');
 app.setName('MobAlt');
@@ -53,7 +53,9 @@ function confirmQuit() {
  * Restart into the bundle now on disk (the relaunch banner, or the updater finding that version already
  * installed). The quit question is asked here, once, when connections are live; `quitting` keeps the
  * before-quit handler from asking again. app.quit() rather than app.exit() so that the window's beforeunload
- * saves the workspace and before-quit tears the connections down, exactly like ⌘Q. Returns true when the
+ * saves the workspace and before-quit tears the connections down, exactly like ⌘Q. The new instance starts
+ * through LaunchServices (`open -n -a`), which clears a Homebrew/DMG bundle's quarantine the way a Finder
+ * launch does; a raw exec of the new binary could be refused (see relaunchOptions). Returns true when the
  * restart is under way (in test mode: recorded, not performed).
  */
 function relaunch() {
@@ -64,7 +66,9 @@ function relaunch() {
   }
   quitting = true;
   if (win && !win.isDestroyed() && !win.isFullScreen()) store.setSettings({ windowBounds: win.getBounds() }); // what the debounced resize/move save may still owe
-  app.relaunch();
+  const opts = relaunchOptions();
+  if (opts) app.relaunch(opts);
+  else app.relaunch(); // no bundle (running from source)
   app.quit();
   return true;
 }
@@ -430,6 +434,13 @@ function registerIpc() {
   ipcMain.handle('test:bundle-updated', (_e, version) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     return bundleWatch ? bundleWatch.send(String(version)) : false;
+  });
+  // Test-only: a main-process notice (what the uncaughtException handler sends) with the given text.
+  ipcMain.handle('test:notice', (_e, text) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    if (!win || win.isDestroyed()) return false;
+    win.webContents.send('app:notice', { level: 'error', text: String(text) });
+    return true;
   });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only

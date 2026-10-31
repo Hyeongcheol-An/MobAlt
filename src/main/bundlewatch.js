@@ -49,6 +49,20 @@ function bundlePath(execPath = process.execPath) {
   return path.resolve(execPath, '..', '..', '..');
 }
 
+/**
+ * How to restart into the bundle on disk. A bundle that Homebrew (or a browser download) wrote still carries the
+ * quarantine attribute until LaunchServices opens it, and a raw exec of its binary can be refused or show a
+ * confusing prompt — so the relaunch goes through `open -n -a <bundle>` (Chromium's relauncher execs it only
+ * after this process has exited, so no second instance). Returns null when there is no bundle (running from
+ * source): plain app.relaunch() is right then.
+ * @param bundle   …/MobAlt.app (default: the running executable's bundle)
+ * @param exists   fs.existsSync, injectable for tests
+ */
+function relaunchOptions(bundle = bundlePath(), exists = fs.existsSync) {
+  if (!exists(path.join(bundle, 'Contents', 'Info.plist'))) return null;
+  return { execPath: '/usr/bin/open', args: ['-n', '-a', bundle] };
+}
+
 /** An Info.plist as XML text; a binary plist goes through plutil. Rejects when the file cannot be read. */
 function readPlistXml(file) {
   return new Promise((resolve, reject) => {
@@ -115,4 +129,4 @@ function startBundleWatch({ getWin, intervalMs = 60000, enabled } = {}) {
   return { active, current, plist, check, announce, send, diskVersion, stop };
 }
 
-module.exports = { startBundleWatch, readBundleVersion, compareVersions, bundlePath, readPlistXml };
+module.exports = { startBundleWatch, readBundleVersion, compareVersions, bundlePath, readPlistXml, relaunchOptions };

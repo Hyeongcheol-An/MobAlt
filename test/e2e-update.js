@@ -1,7 +1,7 @@
 // On-disk update banner: a different MobAlt.app written over the running one (brew upgrade --cask mobalt, a
 // dragged DMG) is announced by the main process; the banner offers a relaunch, "Later" silences that version
 // only, and Relaunch goes through the quit question (nothing is live here) before restarting — recorded, not
-// performed, in test mode.
+// performed, in test mode. Also: a main-process notice (app:notice) shows up as an error toast.
 //   test/qa/run.sh test/e2e-update.js <out-dir>
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -57,6 +57,14 @@
     results.relaunchRequested = after.relaunchRequested === true;
     const ws = await window.api.workspace.get();
     results.workspaceSavedBeforeRelaunch = !!ws && Array.isArray(ws.tabs) && ws.tabs.length >= 1;
+
+    // main-process notices (uncaughtException → app:notice) surface as an error toast
+    const noticeText = 'Internal error: sample notice from main';
+    await window.api.app.testNotice(noticeText);
+    await sleep(200);
+    const noticeToast = [...document.querySelectorAll('#toast-root .toast')].find((t) => t.textContent === noticeText);
+    results.noticeToast = !!noticeToast && noticeToast.classList.contains('error');
+    await shot('61-main-notice-toast');
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-update] FAIL', e.message, e.stack);
