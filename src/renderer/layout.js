@@ -304,6 +304,7 @@ export class Workspace {
     if (name === null) return;
     tab.autoTitle = !name.trim();
     tab.title = name.trim() || (tab.activePane ? tab.activePane.title : 'Terminal');
+    if (tab.autoTitle) this.app.deriveTabTitle?.(tab); // back to automatic: the session's name and icon again
     this.updateTab(tab);
   }
 
@@ -439,6 +440,7 @@ export class Workspace {
       tab.activePane = first || null;
       if (first) this.app.focusPane(first, true);
     }
+    this.app.syncTabTitle?.(tab); // the pane the tab was named after may be the one that went
     return false;
   }
 

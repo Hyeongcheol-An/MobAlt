@@ -139,7 +139,8 @@
     await waitFor(() => app.workspace.active.panes().length === 3 && app.workspace.active.panes().every((p) => p.status === 'connected'), 20000, 'edge split connected');
     results.edgeSplit = app.workspace.active.panes().length;
     // move the local-sshd tab's pane into this tab via "tab drop"
-    const srcTab = app.workspace.tabs.find((t) => t.title === 'local-sshd');
+    // the other tab holding a local-sshd pane: the active one took that name when s1 was split into it (a session names its tab)
+    const srcTab = app.workspace.tabs.find((t) => t !== app.workspace.active && t.panes().some((p) => p.session?.id === s1.id));
     await app.dropOnPane(app.activePane(), { tabId: srcTab.id }, 'down');
     await sleep(800);
     results.tabMoved = app.workspace.tabs.length === 2 && app.workspace.active.panes().length === 4;

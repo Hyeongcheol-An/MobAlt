@@ -129,11 +129,15 @@ class App {
       if (!panes.length) continue;
       const tab = this.workspace.newTab(panes[0], td.title || panes[0].title);
       tab.autoTitle = td.autoTitle !== false;
+      if (td.title) tab.title = td.title; // newTab's focus may have named the tab after panes[0]'s session: the saved name stands (for good when it was typed)
       tab.color = td.color || null;
       tab.icon = td.icon || null;
       tab.root = root;
       for (const p of panes) p.tab = tab;
       tab.activePane = panes[Math.min(td.active || 0, panes.length - 1)];
+      // a session tab is named after its session again (its current name and icon), whichever pane was focused at the
+      // save; a shell-only tab keeps the saved folder title until its shell reports one
+      if (tab.autoTitle && this.tabTitlePane(tab)?.session) this.deriveTabTitle(tab);
       this.workspace.render(tab);
       this.workspace.updateTab(tab);
       for (const p of panes) starts.push(p.start().catch(() => {}));
@@ -369,6 +373,7 @@ class App {
     pane.el.classList.add('focused');
     if (pane.tab) {
       pane.tab.activePane = pane;
+      if (this.tabTitlePane(pane.tab)?.session) this.syncTabTitle(pane.tab); // a session tab keeps its session's name and icon whichever pane is used
       if (!viaTab && this.workspace.active !== pane.tab) this.workspace.activate(pane.tab);
     }
     pane.focus();
@@ -622,12 +627,33 @@ class App {
     this.saveWorkspaceSoon();
   }
 
+  /**
+   * The pane an auto-titled tab is named after: its first session pane (a tab opened for a session keeps that
+   * session's name and icon, like its colour, while a helper shell or another session is split into it), else the
+   * active pane (a shell-only tab shows the folder of the shell being used).
+   */
+  tabTitlePane(tab) {
+    return tab.panes().find((p) => p.session) || tab.activePane || null;
+  }
+
+  /** Set an auto-titled tab's title and icon from the pane it is named after; true when either changed. */
+  deriveTabTitle(tab) {
+    if (!tab.autoTitle) return false;
+    const owner = this.tabTitlePane(tab);
+    if (!owner) return false;
+    const title = owner.session ? owner.session.name : owner.title, icon = owner.session?.icon || null;
+    if (tab.title === title && tab.icon === icon) return false;
+    tab.title = title;
+    tab.icon = icon;
+    return true;
+  }
+
+  syncTabTitle(tab) {
+    if (tab && this.deriveTabTitle(tab)) this.workspace.updateTab(tab);
+  }
+
   onPaneTitle(pane) {
-    if (pane.tab && pane.tab.autoTitle && pane.tab.activePane === pane) {
-      pane.tab.title = pane.session ? pane.session.name : pane.title;
-      pane.tab.icon = pane.session?.icon || null;
-      this.workspace.updateTab(pane.tab);
-    }
+    if (pane.tab && pane.tab.autoTitle && this.tabTitlePane(pane.tab) === pane) this.syncTabTitle(pane.tab);
   }
 
   onPaneStatus(pane, msg) {

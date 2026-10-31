@@ -179,6 +179,36 @@
     results.tabDragMovesTerminal = app.workspace.tabs.length === before - 1 && dstTab.panes().length === 2 && app.workspace.active === dstTab;
     await shot('52-after-tab-drag');
 
+    // --- a session tab keeps its session's name and icon while a helper shell split into it is used (shell focused,
+    //     tab switched, workspace saved); the shell's folder names the tab only once the session pane is gone
+    const iconic = await app.saveSession({ name: 'Icon shell', type: 'local', cwd: '/tmp', icon: '🐧', color: '#4caf50' });
+    const sp = await app.openSession(iconic);
+    await waitFor(() => sp.status === 'connected', 8000, 'icon shell');
+    const stab = sp.tab;
+    const shownTab = () => ({ title: stab.tabEl.querySelector('.title').textContent, icon: stab.tabEl.querySelector('.tabico').textContent, iconHidden: stab.tabEl.querySelector('.tabico').hidden });
+    results.sessionTabNamed = stab.title === 'Icon shell' && stab.icon === '🐧' && shownTab().icon === '🐧' && !shownTab().iconHidden;
+    await app.splitActive('right', sp);
+    const helper = app.activePane();
+    await helper.becomeLocal();
+    await waitFor(() => helper.status === 'connected' && helper.title !== 'Local', 8000, 'helper shell titled by its folder');
+    await sleep(300);
+    results.sessionTabKeptWithHelper = app.activePane() === helper && stab.title === 'Icon shell' && stab.icon === '🐧' && shownTab().title === 'Icon shell' && shownTab().icon === '🐧' && !shownTab().iconHidden;
+    app.focusPane(sp);
+    await sleep(200);
+    results.sessionTabKeptOnRefocus = stab.title === 'Icon shell' && stab.icon === '🐧';
+    app.workspace.activate(second.tab);
+    await sleep(200);
+    app.workspace.activate(stab);
+    await sleep(200);
+    results.sessionTabKeptAfterSwitch = stab.title === 'Icon shell' && stab.icon === '🐧' && shownTab().title === 'Icon shell';
+    const wsTab = app.serializeWorkspace().tabs.find((t) => t.root.t === 'split' && t.icon === '🐧');
+    results.sessionTabSaved = !!wsTab && wsTab.title === 'Icon shell' && wsTab.color === '#4caf50';
+    await shot('54-session-tab-with-helper');
+    await app.closePane(sp, true);
+    await sleep(300);
+    results.helperNamesTabAlone = stab.panes().length === 1 && stab.title === helper.title && stab.title !== 'Icon shell' && !stab.icon && shownTab().iconHidden;
+    log('tab after the session pane closed:', JSON.stringify(shownTab()));
+
     // --- empty workspace hint after closing the last tab; a dropped session reopens
     for (const t of [...app.workspace.tabs]) await app.closeTab(t);
     await sleep(300);
