@@ -16,7 +16,7 @@
     "test:sshd": "node test/start-sshd.js",
     "test": "node --test \"test/unit/**/*.test.js\"",
     "release": "semantic-release",
-    "icon": "python3 scripts/make-icon.py",
+    "assets": "bash scripts/make-assets.sh",
     "install:local": "bash scripts/install-local.sh"
   },
   "dependencies": {

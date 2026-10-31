@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MobAlt DMG window background, 600x400 (rendered at 1x and 2x by scripts/make-assets.sh).
+  Layout follows package.json build.dmg: iconSize 110, app icon centred at (150,190),
+  Applications alias at (450,190). Finder draws the two icons and their labels on top of this.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#22395f"/>
+      <stop offset="0.6" stop-color="#15223f"/>
+      <stop offset="1" stop-color="#0c1428"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.82" cy="1.1" r="0.75">
+      <stop offset="0" stop-color="#2a6fc4" stop-opacity="0.45"/>
+      <stop offset="0.6" stop-color="#2a6fc4" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#2a6fc4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/>
+      <stop offset="0.5" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- soft disc under each drop target so the icons sit on something -->
+    <radialGradient id="pad" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.07"/>
+      <stop offset="0.75" stop-color="#ffffff" stop-opacity="0.025"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="600" height="400" fill="url(#bg)"/>
+  <rect width="600" height="400" fill="url(#glow)"/>
+  <rect width="600" height="400" fill="url(#sheen)"/>
+  <!-- top rim highlight -->
+  <rect x="0" y="0" width="600" height="1" fill="#ffffff" fill-opacity="0.18"/>
+
+  <!-- watermark: the icon's prompt glyph, very faint, bottom-right -->
+  <g fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-linecap="round" stroke-linejoin="round" stroke-width="95" transform="translate(292 70) scale(0.52)">
+    <path d="M 300 330 L 490 512 L 300 694"/>
+    <path d="M 620 694 L 740 694"/>
+  </g>
+
+  <!-- wordmark + tagline -->
+  <text x="28" y="46" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="26" font-weight="700" letter-spacing="-0.5" fill="#f3f6fc">MobAlt</text>
+  <text x="28" y="68" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="12.5" fill="#93a3c2">SSH · SFTP · terminal workbench for macOS</text>
+
+  <!-- drop-target pads, centred on the icon positions -->
+  <circle cx="150" cy="190" r="84" fill="url(#pad)"/>
+  <circle cx="450" cy="190" r="84" fill="url(#pad)"/>
+
+  <!-- arrow: x 225 -> 375 at y 190 -->
+  <g fill="none" stroke="#6fb0f5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 228 190 L 370 190"/>
+    <path d="M 356 176 L 372 190 L 356 204"/>
+  </g>
+
+  <!-- caption, below the icons and their Finder labels -->
+  <text x="300" y="316" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" fill="#aab6cf">Drag MobAlt to the Applications folder</text>
+</svg>
