@@ -90,9 +90,18 @@ test('trailingText: the text-looking tail of a stream remainder, whole UTF-8 cha
   assert.equal(t(Buffer.concat([junk, Buffer.from('\r\n\x1b[1m\x1b[7m%\x1b[27m\r\r안녕 % ', 'utf8')])), '\r\n\x1b[1m\x1b[7m%\x1b[27m\r\r안녕 % ', 'zsh\'s partial-line marker, escapes and Hangul count as text');
   assert.equal(t(Buffer.concat([junk, Buffer.from([0x80, 0x80]), Buffer.from('ok')])), 'ok', 'stray continuation bytes are not a character');
   assert.equal(t(Buffer.from([0xe1, 0x84, 0x80, 0x41])), '\u1100A', 'a three-byte character before the text is kept whole');
+  assert.equal(t(Buffer.concat([junk, Buffer.from([0xf0, 0x9f, 0x98, 0x80]), Buffer.from('$ ')])), '\u{1f600}$ ', 'a four-byte character too');
   assert.equal(t(Buffer.alloc(0)), '');
   assert.equal(t(junk), '');
   assert.equal(trailingText(Buffer.from('x'.repeat(5000)), 100).length, 100, 'bounded');
+  // strictly text: UTF-8-shaped pairs that decode to a C1 control, overlongs, surrogates, lone leads, DEL and a
+  // malformed or cut-off escape sequence are frame, not prompt — the suffix starts after them
+  for (const [bad, what] of [[[0xc2, 0x9a], 'C1 control'], [[0xc0, 0x80], 'overlong'], [[0xed, 0xa0, 0x80], 'surrogate'], [[0xf5, 0x80, 0x80, 0x80], 'beyond U+10FFFF'], [[0xe1, 0x84], 'cut-off character'], [[0x7f], 'DEL'], [[0x1b, 0x5d, 0x31, 0x31, 0x3b], 'unterminated OSC'], [[0x1b, 0x5b, 0x31, 0x3b, 0xff], 'CSI with a stray byte'], [[0x1b], 'lone ESC']]) {
+    assert.equal(t(Buffer.concat([Buffer.from('\r\n'), Buffer.from(bad), Buffer.from('\x1b[1m%\x1b[0m\r\n$ ')])), '\x1b[1m%\x1b[0m\r\n$ ', what);
+  }
+  assert.equal(t(Buffer.from('\x1b]7;file://h/p\x07\x1b[?2004h\x1b(B\x1b=user@host ~ % ')), '\x1b]7;file://h/p\x07\x1b[?2004h\x1b(B\x1b=user@host ~ % ', 'OSC, DECSET, charset and keypad sequences of a prompt stay');
+  assert.equal(t(Buffer.from('**\x18B0100000000a87c\r\nOO\r\n$ ')), '\r\n$ ', 'the OO that closes a session is frame');
+  assert.equal(t(Buffer.concat([Buffer.from('text before '), Buffer.from([0x18, 0x58]), Buffer.from('X$ ')])), 'X$ ', 'anything before the last CAN is frame, even when it reads as text');
 });
 
 test('fmtBytes / expandHome', () => {

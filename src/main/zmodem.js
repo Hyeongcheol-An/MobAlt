@@ -58,6 +58,8 @@ const BS = 0x08;
 /** lrzsz's own cancel string (zm.c canit): eight CANs — five are the protocol's, three are insurance for a peer whose readline ate one — and ten backspaces to erase them from a command line. */
 const CANISTR = Buffer.from([CAN, CAN, CAN, CAN, CAN, CAN, CAN, CAN, BS, BS, BS, BS, BS, BS, BS, BS, BS, BS]);
 const ABORT_SEQ = Buffer.from([CAN, CAN, CAN, CAN, CAN]);
+/** What a ZDLE (CAN) inside a frame is followed by: the escaped control bytes (c ^ 0x40), the frame-end and ZRUB codes. */
+const ZDLE_ESCAPED = new Set([0x50, 0x51, 0x53, 0x58, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0xd0, 0xd1, 0xd3]);
 
 /** Settings → Features → Transfers → "Zmodem transfers (rz/sz)"; on unless switched off. */
 function zmodemEnabled(settings) {
@@ -138,25 +140,79 @@ function leadingText(held) {
   return lead;
 }
 
+/** Length of the strictly valid UTF-8 character at b[i] (2–4), or 0: overlongs, surrogates, > U+10FFFF and the C1 controls U+0080–U+009F are not text. */
+function utf8CharLen(b, i) {
+  const c = b[i], n = b.length;
+  const cont = (k) => k < n && (b[k] & 0xc0) === 0x80;
+  if (c >= 0xc2 && c <= 0xdf) return cont(i + 1) && !(c === 0xc2 && b[i + 1] < 0xa0) ? 2 : 0;
+  if (c >= 0xe0 && c <= 0xef) {
+    if (!cont(i + 1) || !cont(i + 2)) return 0;
+    if (c === 0xe0 && b[i + 1] < 0xa0) return 0; // overlong
+    if (c === 0xed && b[i + 1] > 0x9f) return 0; // a surrogate
+    return 3;
+  }
+  if (c >= 0xf0 && c <= 0xf4) {
+    if (!cont(i + 1) || !cont(i + 2) || !cont(i + 3)) return 0;
+    if (c === 0xf0 && b[i + 1] < 0x90) return 0; // overlong
+    if (c === 0xf4 && b[i + 1] > 0x8f) return 0; // beyond U+10FFFF
+    return 4;
+  }
+  return 0;
+}
+
 /**
- * The text at the end of a byte sequence that the terminal should still see once a transfer has been torn down: the
- * longest tail that reads as text (printable ASCII, TAB / LF / CR / BEL / BS / ESC, whole UTF-8 characters), without
- * the backspaces lrzsz's cancel string ends with. Everything before it is the binary remainder of the stream.
+ * The escape sequence at b[i] (an ESC): its length when complete — CSI with its final byte, OSC / DCS / APC / PM / SOS
+ * up to BEL or ST, ESC + one final (with intermediates) — or, negated, the span of a malformed or cut-off one (the
+ * ESC and the bytes that belonged to it), which is frame rather than prompt.
+ */
+function escLen(b, i) {
+  const n = b.length;
+  if (i + 1 >= n) return -1;
+  const k = b[i + 1];
+  if (k === 0x5b) { // CSI: parameters 0x30-0x3f, intermediates 0x20-0x2f, final 0x40-0x7e
+    let j = i + 2;
+    while (j < n && b[j] >= 0x30 && b[j] <= 0x3f) j++;
+    while (j < n && b[j] >= 0x20 && b[j] <= 0x2f) j++;
+    return j < n && b[j] >= 0x40 && b[j] <= 0x7e ? j + 1 - i : -(Math.min(j, n) - i);
+  }
+  if (k === 0x5d || k === 0x50 || k === 0x5e || k === 0x5f || k === 0x58) { // string: printable payload until BEL or ESC \
+    for (let j = i + 2; j < n; j++) {
+      if (b[j] === 0x07) return j + 1 - i;
+      if (b[j] === 0x1b) return j + 1 < n && b[j + 1] === 0x5c ? j + 2 - i : -(j - i); // another ESC aborts the string
+      if (b[j] < 0x20 || b[j] > 0x7e) { const u = utf8CharLen(b, j); if (!u) return -(j - i); j += u - 1; }
+    }
+    return -(n - i);
+  }
+  let j = i + 1; // ESC with intermediates and one final byte
+  while (j < n && b[j] >= 0x20 && b[j] <= 0x2f) j++;
+  return j < n && b[j] >= 0x30 && b[j] <= 0x7e ? j + 1 - i : -(Math.min(j, n) - i);
+}
+
+/**
+ * The text at the end of a byte sequence that the terminal should still see once a transfer has been torn down —
+ * the prompt, lrzsz's message. Whatever precedes the last CAN run (a cancel string, a frame's ZDLE) or the "OO" that
+ * closes a session is frame, and after that only the suffix made of printable ASCII, TAB / LF / CR / BEL / BS,
+ * strictly valid UTF-8 characters (no C1 control, overlong or surrogate) and complete escape sequences is kept; the
+ * backspaces lrzsz's cancel string ends with are dropped. A byte that is none of those restarts the suffix after it.
  */
 function trailingText(bytes, max = DRAIN_TAIL) {
-  const b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes || []);
-  let i = b.length;
-  while (i > 0 && b.length - i < max) {
-    const c = b[i - 1];
-    if ((c >= 0x20 && c <= 0x7e) || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x07 || c === 0x08 || c === 0x1b) { i--; continue; }
-    let k = i - 1, n = 0; // a UTF-8 character: its continuation bytes, then a lead byte that announces that many
-    while (k >= 0 && n < 3 && (b[k] & 0xc0) === 0x80) { k--; n++; }
-    const lead = k >= 0 ? b[k] : 0;
-    if (n >= 1 && ((n === 1 && (lead & 0xe0) === 0xc0) || (n === 2 && (lead & 0xf0) === 0xe0) || (n === 3 && (lead & 0xf8) === 0xf0))) { i = k; continue; }
-    break;
+  let b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes || []);
+  if (b.length > max) b = b.subarray(b.length - max);
+  const can = b.lastIndexOf(CAN), oo = b.lastIndexOf('OO', b.length - 1, 'latin1');
+  let start = Math.max(can + 1, oo < 0 ? 0 : oo + 2);
+  if (can >= 0 && start === can + 1 && start < b.length && ZDLE_ESCAPED.has(b[start])) start++; // the byte that ZDLE escaped is frame too
+  let i = start;
+  while (i < b.length) {
+    const c = b[i];
+    let len = 0;
+    if ((c >= 0x20 && c <= 0x7e) || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x07 || c === BS) len = 1;
+    else if (c === 0x1b) len = escLen(b, i);
+    else if (c >= 0x80) len = utf8CharLen(b, i);
+    if (len > 0) i += len;
+    else { i += Math.max(1, -len); start = i; } // not text (a malformed sequence as a whole): whatever came before it is frame
   }
-  while (i < b.length && b[i] === BS) i++;
-  return b.subarray(i);
+  while (start < b.length && b[start] === BS) start++;
+  return b.subarray(start);
 }
 
 /** The reason shown for a session that failed: zmodem.js throws strings as well as its own Error class. */
