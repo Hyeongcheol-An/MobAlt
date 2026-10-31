@@ -1,4 +1,4 @@
-// Keyword highlighting in the terminal (Settings → Terminal → Keyword highlighting): decorations appear on the lines a
+// Keyword highlighting in the terminal (Settings → Features → Keyword highlighting): decorations appear on the lines a
 // local shell prints with the theme-derived colours, in Moba Dark and Light; disabling removes them; a session's own
 // override; a rule added through the settings table applies live; an invalid regex is skipped with a toast; ⌘K
 // disposes; 2000-line bursts stay within the budget with a bounded decoration count; find highlights and the mouse

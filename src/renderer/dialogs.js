@@ -788,7 +788,9 @@ export function settingsDialog(app) {
       ...field('Cursor', h('div', { class: 'inline' }, cursorStyle, cursorBlink.el)), // the blink toggle shares the row: Terminal is the tallest section and must fit the 560px window
       ...field('Scrollback lines', scrollback),
       ...field('Theme', h('div', { class: 'inline theme-field' }, theme, themePreview), 'Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme'),
-      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el),
+      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
+    )],
+    ['features', 'Features', h('div', { class: 'form-grid' },
       h('label', {}, 'Paste guard'), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el),
       h('label', {}, 'Monitoring'), h('div', { class: 'checks' }, monitorBar.el, h('label', { class: 'mon-every' }, 'every', monitorInterval, 's')),
       h('label', {}, 'Keyword highlighting'), h('div', { class: 'checks hl-row' }, hlEnabled.el, hlRulesBtn)

@@ -238,7 +238,7 @@
     await sleep(400);
     {
       const m = modal();
-      [...m.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Terminal').click();
+      [...m.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Features').click();
       await sleep(100);
       const row = [...m.querySelectorAll('.mpage.active.form-grid > label')].find((l) => l.textContent === 'Paste guard')?.nextElementSibling; // the Terminal page is the form grid
       const cbs = row ? [...row.querySelectorAll('label')] : [];
@@ -251,7 +251,7 @@
       app.action('settings');
       await sleep(400);
       const m2 = modal();
-      [...m2.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Terminal').click();
+      [...m2.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Features').click();
       const row2 = [...m2.querySelectorAll('.mpage.active.form-grid > label')].find((l) => l.textContent === 'Paste guard')?.nextElementSibling;
       const cbs2 = [...row2.querySelectorAll('input[type=checkbox]')];
       results.settingsShown = cbs2[0].checked === false && cbs2[1].checked === true;
