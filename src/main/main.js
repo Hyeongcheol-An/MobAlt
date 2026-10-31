@@ -56,7 +56,8 @@ let relaunchRequested = false; // test mode: app:relaunch records the request in
  * quitting may proceed. No dialog when the setting is off, during a confirmed quit, or in the headless test
  * runs (their scripts must quit unattended).
  */
-function confirmQuit(verb = t('Quit')) {
+function confirmQuit(action = 'quit') {
+  const verb = action === 'relaunch' ? t('Relaunch') : t('Quit');
   if (quitting) return true;
   if (process.env.MOBALT_TEST_SCRIPT || process.env.MOBALT_SCREENSHOT) return true;
   const live = liveConnections(registry, ftp);
@@ -66,7 +67,7 @@ function confirmQuit(verb = t('Quit')) {
     buttons: [verb, t('Cancel')],
     defaultId: 1,
     cancelId: 1,
-    message: quitQuestion(live, verb),
+    message: quitQuestion(live, action),
   });
   return r === 0;
 }
@@ -81,7 +82,7 @@ function confirmQuit(verb = t('Quit')) {
  * restart is under way (in test mode: recorded, not performed).
  */
 function relaunch() {
-  if (!confirmQuit(t('Relaunch'))) return false;
+  if (!confirmQuit('relaunch')) return false;
   if (process.env.MOBALT_TEST_SCRIPT) {
     relaunchRequested = true;
     return true;
@@ -653,7 +654,7 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const live = liveConnections(registry, ftp);
     const wouldAsk = !quitting && live.total > 0 && !!store.getSettings().confirmClose;
-    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live, verb || t('Quit')) : null, relaunchRequested };
+    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live, verb === 'Relaunch' || verb === 'relaunch' ? 'relaunch' : 'quit') : null, relaunchRequested };
   });
   // Test-only: pretend that MobAlt `version` is now on disk — the same renderer event the bundle watch sends
   // (no de-duplication here, so the renderer's own "Later" logic is what gets exercised).

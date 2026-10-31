@@ -19,11 +19,14 @@ function liveConnections(registry, ftp) {
 
 /**
  * The question shown before the app goes away with live connections, e.g. "2 connections are still open
- * (1 SSH, 1 FTP). Quit anyway?". `verb` is what the user chose: "Quit" (⌘Q, close button) or "Relaunch" (the banner).
+ * (1 SSH, 1 FTP). Quit anyway?". `action` is what the user chose: 'quit' (⌘Q, the close button) or 'relaunch' (the
+ * banner) — whole sentences per action, so a translation can conjugate instead of quoting a menu label.
  */
-function quitQuestion(live, verb = t('Quit')) {
-  const kinds = Object.keys(LABEL).filter((k) => live[k]).map((k) => t('{n} {kind}', { n: live[k], kind: LABEL[k] })).join(', ');
-  return tn('{n} connection is still open ({kinds}). {verb} anyway?', '{n} connections are still open ({kinds}). {verb} anyway?', live.total, { kinds, verb });
+function quitQuestion(live, action = 'quit') {
+  const kinds = Object.keys(LABEL).filter((k) => live[k]).map((k) => t('{n} {kind}', { n: live[k], kind: LABEL[k] })).join(t(', '));
+  const n = live.total;
+  if (action === 'relaunch') return tn('{n} connection is still open ({kinds}). Relaunch anyway?', '{n} connections are still open ({kinds}). Relaunch anyway?', n, { kinds });
+  return tn('{n} connection is still open ({kinds}). Quit anyway?', '{n} connections are still open ({kinds}). Quit anyway?', n, { kinds });
 }
 
 module.exports = { liveConnections, quitQuestion };
