@@ -1,468 +1,1007 @@
 {
   "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
   "strings": {
+    "\"{pattern}\" is not a valid regular expression: {error}": {
+      "refs": [
+        "src/renderer/dialogs.js:751"
+      ]
+    },
+    "(default login shell)": {
+      "refs": [
+        "src/renderer/dialogs.js:332"
+      ]
+    },
+    "(default)": {
+      "refs": [
+        "src/renderer/dialogs.js:325"
+      ]
+    },
+    "(keep)": {
+      "refs": [
+        "src/renderer/dialogs.js:720"
+      ]
+    },
     "(line {n})": {
       "refs": [
-        "src/renderer/dialogs.js:985"
+        "src/renderer/dialogs.js:1004"
       ]
     },
     "(login shell)": {
       "refs": [
-        "src/renderer/dialogs.js:776"
+        "src/renderer/dialogs.js:795"
       ]
     },
     "(no saved SSH session yet)": {
       "refs": [
-        "src/renderer/dialogs.js:1118"
+        "src/renderer/dialogs.js:1137"
+      ]
+    },
+    "(no serial devices found)": {
+      "refs": [
+        "src/renderer/dialogs.js:353"
+      ]
+    },
+    "(no SSH sessions yet — create one in the Sessions panel)": {
+      "refs": [
+        "src/renderer/dialogs.js:661"
+      ]
+    },
+    "(none)": {
+      "refs": [
+        "src/renderer/dialogs.js:252",
+        "src/renderer/dialogs.js:721"
+      ]
+    },
+    "(root)": {
+      "refs": [
+        "src/renderer/dialogs.js:213"
+      ]
+    },
+    "(scanning…)": {
+      "refs": [
+        "src/renderer/dialogs.js:344"
+      ]
+    },
+    "(select a port)": {
+      "refs": [
+        "src/renderer/dialogs.js:353"
       ]
     },
     "{file} is replaced by the temp file path; omit it to append the path": {
       "refs": [
-        "src/renderer/dialogs.js:809"
+        "src/renderer/dialogs.js:828"
+      ]
+    },
+    "{label} (custom)": {
+      "refs": [
+        "src/renderer/dialogs.js:704"
+      ]
+    },
+    "{label} algorithms": {
+      "refs": [
+        "src/renderer/dialogs.js:297"
       ]
     },
     "{n} character": {
       "plural": "{n} characters",
       "refs": [
-        "src/renderer/dialogs.js:989"
+        "src/renderer/dialogs.js:1008"
       ]
     },
     "{n} line": {
       "plural": "{n} lines",
       "refs": [
-        "src/renderer/dialogs.js:989"
+        "src/renderer/dialogs.js:1008"
+      ]
+    },
+    "{theme}: the terminal colours": {
+      "refs": [
+        "src/renderer/dialogs.js:23"
+      ]
+    },
+    "•••••••• (saved — leave blank to keep)": {
+      "refs": [
+        "src/renderer/dialogs.js:221"
+      ]
+    },
+    "•••••••• (saved)": {
+      "refs": [
+        "src/renderer/dialogs.js:237"
       ]
     },
     "← → ↑ ↓ / ⏎ or Space": {
       "refs": [
-        "src/renderer/dialogs.js:1049"
+        "src/renderer/dialogs.js:1068"
       ]
     },
     "⇧F10 / Menu key": {
       "refs": [
-        "src/renderer/dialogs.js:1043"
+        "src/renderer/dialogs.js:1062"
       ]
     },
     "⇧F10 or Menu / Del or ⌘⌫ / ⌫": {
       "refs": [
-        "src/renderer/dialogs.js:1044"
+        "src/renderer/dialogs.js:1063"
       ]
     },
     "⇧Right-click": {
       "refs": [
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056"
+      ]
+    },
+    "＋ Add rule": {
+      "refs": [
+        "src/renderer/dialogs.js:735"
+      ]
+    },
+    "＋ Add tunnel": {
+      "refs": [
+        "src/renderer/dialogs.js:372"
+      ]
+    },
+    "＋ New tunnel…": {
+      "refs": [
+        "src/renderer/dialogs.js:677"
       ]
     },
     "⌘⏎ or ⇧⏎ / ⌫": {
       "refs": [
-        "src/renderer/dialogs.js:1042"
+        "src/renderer/dialogs.js:1061"
       ]
     },
     "⌘⏎ pastes, Esc cancels": {
       "refs": [
-        "src/renderer/dialogs.js:989"
+        "src/renderer/dialogs.js:1008"
       ]
     },
     "⚠️ Host key changed!": {
       "refs": [
-        "src/renderer/dialogs.js:874"
+        "src/renderer/dialogs.js:893"
       ]
     },
     "⚠️ Host key changed! — {name}": {
       "refs": [
-        "src/renderer/dialogs.js:874"
+        "src/renderer/dialogs.js:893"
+      ]
+    },
+    "1 stop bit": {
+      "refs": [
+        "src/renderer/dialogs.js:363"
+      ]
+    },
+    "2 stop bits": {
+      "refs": [
+        "src/renderer/dialogs.js:363"
+      ]
+    },
+    "7 data bits": {
+      "refs": [
+        "src/renderer/dialogs.js:361"
+      ]
+    },
+    "8 data bits": {
+      "refs": [
+        "src/renderer/dialogs.js:361"
       ]
     },
     "A paste with more than one line, or over {n} characters, asks first and can be edited": {
       "refs": [
-        "src/renderer/dialogs.js:762"
+        "src/renderer/dialogs.js:781"
       ]
     },
     "A saved SSH session; it connects with its usual authentication (you may be asked for its password) and appends the public key like ssh-copy-id": {
       "refs": [
-        "src/renderer/dialogs.js:1122"
+        "src/renderer/dialogs.js:1141"
+      ]
+    },
+    "Accent": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
+      ]
+    },
+    "Accent (dim)": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
       ]
     },
     "Accept": {
       "refs": [
-        "src/renderer/dialogs.js:885"
+        "src/renderer/dialogs.js:904"
       ]
     },
     "Accept new key": {
       "refs": [
-        "src/renderer/dialogs.js:885"
+        "src/renderer/dialogs.js:904"
       ]
     },
     "Accept to continue and remember this key.": {
       "refs": [
-        "src/renderer/dialogs.js:881"
+        "src/renderer/dialogs.js:900"
+      ]
+    },
+    "Accept untrusted / self-signed certificate": {
+      "refs": [
+        "src/renderer/dialogs.js:265"
+      ]
+    },
+    "active": {
+      "refs": [
+        "src/renderer/dialogs.js:33"
+      ]
+    },
+    "Adaptive (default)": {
+      "refs": [
+        "src/renderer/dialogs.js:263"
       ]
     },
     "Add to ssh-agent (ssh-add --apple-use-keychain)": {
       "refs": [
-        "src/renderer/dialogs.js:1113"
+        "src/renderer/dialogs.js:1132"
       ]
     },
     "Added to ssh-agent ({message})": {
       "refs": [
-        "src/renderer/dialogs.js:1211"
+        "src/renderer/dialogs.js:1230"
       ]
     },
     "Adding the key to ssh-agent…": {
       "refs": [
-        "src/renderer/dialogs.js:1209"
+        "src/renderer/dialogs.js:1228"
+      ]
+    },
+    "Advanced SSH": {
+      "refs": [
+        "src/renderer/dialogs.js:403"
+      ]
+    },
+    "Agent forwarding": {
+      "refs": [
+        "src/renderer/dialogs.js:256"
+      ]
+    },
+    "Algorithms": {
+      "refs": [
+        "src/renderer/dialogs.js:460"
       ]
     },
     "Already present on {host} in {file}": {
       "refs": [
-        "src/renderer/dialogs.js:1217"
+        "src/renderer/dialogs.js:1236"
+      ]
+    },
+    "Always": {
+      "refs": [
+        "src/renderer/dialogs.js:263"
       ]
     },
     "Authentication": {
       "refs": [
-        "src/renderer/dialogs.js:912"
+        "src/renderer/dialogs.js:429",
+        "src/renderer/dialogs.js:931"
+      ]
+    },
+    "Automatic (key → agent → password)": {
+      "refs": [
+        "src/renderer/dialogs.js:220"
+      ]
+    },
+    "Background": {
+      "refs": [
+        "src/renderer/dialogs.js:715"
       ]
     },
     "Bar": {
       "refs": [
-        "src/renderer/dialogs.js:752"
+        "src/renderer/dialogs.js:771"
+      ]
+    },
+    "Basic": {
+      "refs": [
+        "src/renderer/dialogs.js:403"
+      ]
+    },
+    "Baud rate": {
+      "refs": [
+        "src/renderer/dialogs.js:419"
       ]
     },
     "Behaviour": {
       "refs": [
-        "src/renderer/dialogs.js:807"
+        "src/renderer/dialogs.js:470",
+        "src/renderer/dialogs.js:826"
+      ]
+    },
+    "Bind": {
+      "refs": [
+        "src/renderer/dialogs.js:377",
+        "src/renderer/dialogs.js:616",
+        "src/renderer/dialogs.js:639"
+      ]
+    },
+    "Bind address": {
+      "refs": [
+        "src/renderer/dialogs.js:607"
+      ]
+    },
+    "Bind port": {
+      "refs": [
+        "src/renderer/dialogs.js:608"
+      ]
+    },
+    "Bind port is required (0-65535)": {
+      "refs": [
+        "src/renderer/dialogs.js:621"
       ]
     },
     "Blink cursor": {
       "refs": [
-        "src/renderer/dialogs.js:753"
+        "src/renderer/dialogs.js:772"
       ]
     },
     "Block": {
       "refs": [
-        "src/renderer/dialogs.js:752"
+        "src/renderer/dialogs.js:771"
+      ]
+    },
+    "Blue": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
+      ]
+    },
+    "bold": {
+      "refs": [
+        "src/renderer/dialogs.js:722"
+      ]
+    },
+    "Bold": {
+      "refs": [
+        "src/renderer/dialogs.js:715"
       ]
     },
     "Browse…": {
       "refs": [
-        "src/renderer/dialogs.js:1112"
+        "src/renderer/dialogs.js:227",
+        "src/renderer/dialogs.js:341",
+        "src/renderer/dialogs.js:1131"
+      ]
+    },
+    "Built-in rules restored": {
+      "refs": [
+        "src/renderer/dialogs.js:736"
       ]
     },
     "Cancel": {
       "refs": [
-        "src/renderer/dialogs.js:842",
-        "src/renderer/dialogs.js:884",
-        "src/renderer/dialogs.js:901",
-        "src/renderer/dialogs.js:918",
-        "src/renderer/dialogs.js:1007",
-        "src/renderer/dialogs.js:1158"
+        "src/renderer/dialogs.js:506",
+        "src/renderer/dialogs.js:618",
+        "src/renderer/dialogs.js:746",
+        "src/renderer/dialogs.js:861",
+        "src/renderer/dialogs.js:903",
+        "src/renderer/dialogs.js:920",
+        "src/renderer/dialogs.js:937",
+        "src/renderer/dialogs.js:1026",
+        "src/renderer/dialogs.js:1177"
       ]
     },
     "Check for updates at startup": {
       "refs": [
-        "src/renderer/dialogs.js:786"
+        "src/renderer/dialogs.js:805"
       ]
     },
     "Check now": {
       "refs": [
-        "src/renderer/dialogs.js:801"
+        "src/renderer/dialogs.js:820"
       ]
     },
     "Checking…": {
       "refs": [
-        "src/renderer/dialogs.js:794"
+        "src/renderer/dialogs.js:813"
+      ]
+    },
+    "Choose the folder the shell starts in": {
+      "refs": [
+        "src/renderer/dialogs.js:337"
       ]
     },
     "Choose where to save the key": {
       "refs": [
-        "src/renderer/dialogs.js:1187"
+        "src/renderer/dialogs.js:1206"
+      ]
+    },
+    "Ciphers": {
+      "refs": [
+        "src/renderer/dialogs.js:273"
+      ]
+    },
+    "Clear saved password": {
+      "refs": [
+        "src/renderer/dialogs.js:222"
       ]
     },
     "Clear terminal": {
       "refs": [
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056"
       ]
     },
     "Close": {
       "refs": [
-        "src/renderer/dialogs.js:1056",
-        "src/renderer/dialogs.js:1245"
+        "src/renderer/dialogs.js:683",
+        "src/renderer/dialogs.js:1075",
+        "src/renderer/dialogs.js:1264"
       ]
     },
     "Close (Esc)": {
       "refs": [
-        "src/renderer/dialogs.js:1173"
+        "src/renderer/dialogs.js:1192"
       ]
     },
     "Close pane": {
       "refs": [
-        "src/renderer/dialogs.js:1036"
+        "src/renderer/dialogs.js:1055"
       ]
     },
     "Close tab": {
       "refs": [
-        "src/renderer/dialogs.js:1031"
+        "src/renderer/dialogs.js:1050"
+      ]
+    },
+    "Colour": {
+      "refs": [
+        "src/renderer/dialogs.js:201",
+        "src/renderer/dialogs.js:412",
+        "src/renderer/dialogs.js:715"
       ]
     },
     "Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme": {
       "refs": [
-        "src/renderer/dialogs.js:817"
+        "src/renderer/dialogs.js:836"
       ]
     },
     "Comment": {
       "refs": [
-        "src/renderer/dialogs.js:1139"
+        "src/renderer/dialogs.js:1158"
       ]
     },
     "comment (who / what this key is for)": {
       "refs": [
-        "src/renderer/dialogs.js:1090"
+        "src/renderer/dialogs.js:1109"
+      ]
+    },
+    "Compression": {
+      "refs": [
+        "src/renderer/dialogs.js:257"
       ]
     },
     "Confirm": {
       "refs": [
-        "src/renderer/dialogs.js:1140"
+        "src/renderer/dialogs.js:1159"
       ]
     },
     "Confirm multi-line pastes": {
       "refs": [
-        "src/renderer/dialogs.js:762"
+        "src/renderer/dialogs.js:781"
       ]
     },
     "Confirm quit with open connections (SSH, Mosh, SFTP, FTP)": {
       "refs": [
-        "src/renderer/dialogs.js:779"
+        "src/renderer/dialogs.js:798"
+      ]
+    },
+    "connecting": {
+      "refs": [
+        "src/renderer/dialogs.js:33"
+      ]
+    },
+    "Conns": {
+      "refs": [
+        "src/renderer/dialogs.js:639"
       ]
     },
     "Context menu: focused tab, row, macro, SFTP entry": {
       "refs": [
-        "src/renderer/dialogs.js:1043"
+        "src/renderer/dialogs.js:1062"
       ]
     },
     "Copy": {
       "refs": [
-        "src/renderer/dialogs.js:1231"
+        "src/renderer/dialogs.js:1250"
       ]
     },
     "Copy / Paste": {
       "refs": [
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056"
       ]
     },
     "Copy on select": {
       "refs": [
-        "src/renderer/dialogs.js:759"
+        "src/renderer/dialogs.js:778"
       ]
     },
     "CPU, memory, disk, network, load and uptime under each SSH terminal, polled over the session's own connection; a session (Advanced SSH) or a pane (its head, the View menu) can differ": {
       "refs": [
-        "src/renderer/dialogs.js:765"
+        "src/renderer/dialogs.js:784"
+      ]
+    },
+    "CPU, memory, disk, network, load and uptime under the terminal, polled over this connection every few seconds (Settings → Features sets the default and the refresh); the pane head and the View menu toggle it per pane": {
+      "refs": [
+        "src/renderer/dialogs.js:466"
       ]
     },
     "Cursor": {
       "refs": [
-        "src/renderer/dialogs.js:815"
+        "src/renderer/dialogs.js:834"
+      ]
+    },
+    "Custom colour": {
+      "refs": [
+        "src/renderer/dialogs.js:200",
+        "src/renderer/dialogs.js:200"
+      ]
+    },
+    "Custom…": {
+      "refs": [
+        "src/renderer/dialogs.js:703"
+      ]
+    },
+    "Cyan": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
       ]
     },
     "Data": {
       "refs": [
-        "src/renderer/dialogs.js:811"
+        "src/renderer/dialogs.js:830"
+      ]
+    },
+    "Data bits": {
+      "refs": [
+        "src/renderer/dialogs.js:361"
+      ]
+    },
+    "Default (by session type)": {
+      "refs": [
+        "src/renderer/dialogs.js:195"
+      ]
+    },
+    "Default (Settings)": {
+      "refs": [
+        "src/renderer/dialogs.js:327"
+      ]
+    },
+    "Destination": {
+      "refs": [
+        "src/renderer/dialogs.js:377",
+        "src/renderer/dialogs.js:612",
+        "src/renderer/dialogs.js:639"
+      ]
+    },
+    "Destination host": {
+      "refs": [
+        "src/renderer/dialogs.js:609"
+      ]
+    },
+    "Destination host is required": {
+      "refs": [
+        "src/renderer/dialogs.js:622"
+      ]
+    },
+    "Destination port": {
+      "refs": [
+        "src/renderer/dialogs.js:610"
+      ]
+    },
+    "Destination port must be 1-65535": {
+      "refs": [
+        "src/renderer/dialogs.js:623"
+      ]
+    },
+    "Device path": {
+      "refs": [
+        "src/renderer/dialogs.js:418"
       ]
     },
     "Dialog tabs: previous / next, first / last section": {
       "refs": [
-        "src/renderer/dialogs.js:1050"
+        "src/renderer/dialogs.js:1069"
       ]
     },
     "Dialog: confirm / close": {
       "refs": [
-        "src/renderer/dialogs.js:1050"
+        "src/renderer/dialogs.js:1069"
       ]
     },
     "Dialog: next / previous control": {
       "refs": [
-        "src/renderer/dialogs.js:1050"
+        "src/renderer/dialogs.js:1069"
       ]
     },
     "Dialogs": {
       "refs": [
-        "src/renderer/dialogs.js:1048"
+        "src/renderer/dialogs.js:1067"
+      ]
+    },
+    "Dim": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
+      ]
+    },
+    "Discard": {
+      "refs": [
+        "src/renderer/dialogs.js:503"
+      ]
+    },
+    "Discard changes": {
+      "refs": [
+        "src/renderer/dialogs.js:503"
+      ]
+    },
+    "Discard the changes to this session?": {
+      "refs": [
+        "src/renderer/dialogs.js:503"
+      ]
+    },
+    "disconnected": {
+      "refs": [
+        "src/renderer/dialogs.js:33"
       ]
     },
     "Download folder": {
       "refs": [
-        "src/renderer/dialogs.js:810"
+        "src/renderer/dialogs.js:829"
       ]
     },
     "Duplicate session": {
       "refs": [
-        "src/renderer/dialogs.js:1031"
+        "src/renderer/dialogs.js:1050"
+      ]
+    },
+    "Dynamic (-D): SOCKS5 proxy": {
+      "refs": [
+        "src/renderer/dialogs.js:605"
       ]
     },
     "e.g. code --wait {file}   (blank = TextEdit)": {
       "refs": [
-        "src/renderer/dialogs.js:778"
+        "src/renderer/dialogs.js:797"
       ]
     },
     "Ed25519 (recommended)": {
       "refs": [
-        "src/renderer/dialogs.js:1084"
+        "src/renderer/dialogs.js:1103"
+      ]
+    },
+    "Edit session — {name}": {
+      "refs": [
+        "src/renderer/dialogs.js:500"
+      ]
+    },
+    "Enter manually…": {
+      "refs": [
+        "src/renderer/dialogs.js:252"
+      ]
+    },
+    "Enter sends": {
+      "refs": [
+        "src/renderer/dialogs.js:422"
+      ]
+    },
+    "error": {
+      "refs": [
+        "src/renderer/dialogs.js:33"
+      ]
+    },
+    "Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Features": {
+      "refs": [
+        "src/renderer/dialogs.js:472"
+      ]
+    },
+    "Even": {
+      "refs": [
+        "src/renderer/dialogs.js:362"
       ]
     },
     "every {n} s": {
       "refs": [
-        "src/renderer/dialogs.js:822"
+        "src/renderer/dialogs.js:841"
+      ]
+    },
+    "Experimental": {
+      "refs": [
+        "src/renderer/dialogs.js:263"
       ]
     },
     "External editor": {
       "refs": [
-        "src/renderer/dialogs.js:809"
+        "src/renderer/dialogs.js:828"
       ]
     },
     "Fair passphrase": {
       "refs": [
-        "src/renderer/dialogs.js:1074"
+        "src/renderer/dialogs.js:1093"
       ]
     },
     "Features": {
       "refs": [
-        "src/renderer/dialogs.js:820"
+        "src/renderer/dialogs.js:839"
       ]
     },
     "Find": {
       "refs": [
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056"
       ]
     },
     "Fingerprint": {
       "refs": [
-        "src/renderer/dialogs.js:1237"
+        "src/renderer/dialogs.js:1256"
+      ]
+    },
+    "Flow control": {
+      "refs": [
+        "src/renderer/dialogs.js:364"
       ]
     },
     "Focused macro: play / delete, context menu": {
       "refs": [
-        "src/renderer/dialogs.js:1043"
+        "src/renderer/dialogs.js:1062"
       ]
     },
     "Focused session row: move / fold / open": {
       "refs": [
-        "src/renderer/dialogs.js:1042"
+        "src/renderer/dialogs.js:1061"
       ]
     },
     "Focused session row: open in split / delete": {
       "refs": [
-        "src/renderer/dialogs.js:1042"
+        "src/renderer/dialogs.js:1061"
       ]
     },
     "Focused tab: move / activate / close": {
       "refs": [
-        "src/renderer/dialogs.js:1032"
+        "src/renderer/dialogs.js:1051"
+      ]
+    },
+    "Folder": {
+      "refs": [
+        "src/renderer/dialogs.js:411"
       ]
     },
     "Font family": {
       "refs": [
-        "src/renderer/dialogs.js:814"
+        "src/renderer/dialogs.js:833"
       ]
     },
     "Font size": {
       "refs": [
-        "src/renderer/dialogs.js:814"
+        "src/renderer/dialogs.js:471",
+        "src/renderer/dialogs.js:833"
+      ]
+    },
+    "Framing": {
+      "refs": [
+        "src/renderer/dialogs.js:420"
+      ]
+    },
+    "FTPS: explicit TLS (AUTH TLS)": {
+      "refs": [
+        "src/renderer/dialogs.js:264"
       ]
     },
     "General": {
       "refs": [
-        "src/renderer/dialogs.js:805"
+        "src/renderer/dialogs.js:824"
       ]
     },
     "Generate": {
       "refs": [
-        "src/renderer/dialogs.js:1160"
+        "src/renderer/dialogs.js:1179"
+      ]
+    },
+    "Generate a new key pair (ssh-keygen)": {
+      "refs": [
+        "src/renderer/dialogs.js:229"
       ]
     },
     "Generate SSH key": {
       "refs": [
-        "src/renderer/dialogs.js:1152"
+        "src/renderer/dialogs.js:1171"
+      ]
+    },
+    "Generate…": {
+      "refs": [
+        "src/renderer/dialogs.js:236"
       ]
     },
     "Generating {type} key…": {
       "refs": [
-        "src/renderer/dialogs.js:1194"
+        "src/renderer/dialogs.js:1213"
+      ]
+    },
+    "Green": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
       ]
     },
     "Grid 2 / 4 / 6 / 8 panes": {
       "refs": [
-        "src/renderer/dialogs.js:1036"
+        "src/renderer/dialogs.js:1055"
       ]
     },
     "Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes": {
       "refs": [
-        "src/renderer/dialogs.js:769"
+        "src/renderer/dialogs.js:788"
+      ]
+    },
+    "Host": {
+      "refs": [
+        "src/renderer/dialogs.js:426"
+      ]
+    },
+    "Host is required": {
+      "refs": [
+        "src/renderer/dialogs.js:520"
+      ]
+    },
+    "Host key": {
+      "refs": [
+        "src/renderer/dialogs.js:273"
+      ]
+    },
+    "hostname or IP": {
+      "refs": [
+        "src/renderer/dialogs.js:215"
+      ]
+    },
+    "Icon": {
+      "refs": [
+        "src/renderer/dialogs.js:192",
+        "src/renderer/dialogs.js:412"
       ]
     },
     "Icon & colour picks: move / choose": {
       "refs": [
-        "src/renderer/dialogs.js:1049"
+        "src/renderer/dialogs.js:1068"
+      ]
+    },
+    "ignore case": {
+      "refs": [
+        "src/renderer/dialogs.js:719"
+      ]
+    },
+    "Ignore case": {
+      "refs": [
+        "src/renderer/dialogs.js:714"
       ]
     },
     "Install on a server…": {
       "refs": [
-        "src/renderer/dialogs.js:1114"
+        "src/renderer/dialogs.js:1133"
       ]
     },
     "Installed on {host} in {file}": {
       "refs": [
-        "src/renderer/dialogs.js:1217"
+        "src/renderer/dialogs.js:1236"
       ]
     },
     "Installing the public key on {name}…": {
       "refs": [
-        "src/renderer/dialogs.js:1215"
+        "src/renderer/dialogs.js:1234"
       ]
     },
     "Installing the public key on the server…": {
       "refs": [
-        "src/renderer/dialogs.js:1215"
+        "src/renderer/dialogs.js:1234"
       ]
     },
     "Invisible or control characters, a trailing newline, curl | sh, writes to shell profiles, rm -rf / and look-alike letters are listed, with a \"Paste cleaned\" option": {
       "refs": [
-        "src/renderer/dialogs.js:763"
+        "src/renderer/dialogs.js:782"
+      ]
+    },
+    "Jump host": {
+      "refs": [
+        "src/renderer/dialogs.js:452"
+      ]
+    },
+    "Jump host address": {
+      "refs": [
+        "src/renderer/dialogs.js:253"
+      ]
+    },
+    "Keep-alive (s)": {
+      "refs": [
+        "src/renderer/dialogs.js:453"
+      ]
+    },
+    "Key exchange": {
+      "refs": [
+        "src/renderer/dialogs.js:273"
       ]
     },
     "Key pair saved: {private} (private, 0600) and {public} (public, 0644)": {
       "refs": [
-        "src/renderer/dialogs.js:1234"
+        "src/renderer/dialogs.js:1253"
+      ]
+    },
+    "Key passphrase": {
+      "refs": [
+        "src/renderer/dialogs.js:242"
       ]
     },
     "Key type": {
       "refs": [
-        "src/renderer/dialogs.js:1139"
+        "src/renderer/dialogs.js:1158"
       ]
     },
     "Keyboard shortcuts": {
       "refs": [
-        "src/renderer/dialogs.js:1056"
+        "src/renderer/dialogs.js:1075"
       ]
     },
     "Keyword highlighting": {
       "refs": [
-        "src/renderer/dialogs.js:823"
+        "src/renderer/dialogs.js:472",
+        "src/renderer/dialogs.js:842"
+      ]
+    },
+    "Keyword highlighting rules": {
+      "refs": [
+        "src/renderer/dialogs.js:739"
+      ]
+    },
+    "Label": {
+      "refs": [
+        "src/renderer/dialogs.js:616"
       ]
     },
     "Language": {
       "refs": [
-        "src/renderer/dialogs.js:790",
-        "src/renderer/dialogs.js:806"
+        "src/renderer/dialogs.js:809",
+        "src/renderer/dialogs.js:825"
+      ]
+    },
+    "Leave blank for your login shell": {
+      "refs": [
+        "src/renderer/dialogs.js:414"
+      ]
+    },
+    "leave blank to be prompted": {
+      "refs": [
+        "src/renderer/dialogs.js:221"
+      ]
+    },
+    "Leave the username empty for anonymous FTP. Files are browsed, transferred and edited in the Sftp panel.": {
+      "refs": [
+        "src/renderer/dialogs.js:441"
+      ]
+    },
+    "Legacy algorithms (old devices)": {
+      "refs": [
+        "src/renderer/dialogs.js:258"
       ]
     },
     "Line height": {
       "refs": [
-        "src/renderer/dialogs.js:814"
+        "src/renderer/dialogs.js:833"
+      ]
+    },
+    "Local (-L)": {
+      "refs": [
+        "src/renderer/dialogs.js:31"
+      ]
+    },
+    "Local (-L): local port → remote destination": {
+      "refs": [
+        "src/renderer/dialogs.js:605"
+      ]
+    },
+    "Local echo": {
+      "refs": [
+        "src/renderer/dialogs.js:365"
       ]
     },
     "Local shell": {
       "refs": [
-        "src/renderer/dialogs.js:808"
+        "src/renderer/dialogs.js:827"
       ]
     },
     "Local X server: {display}": {
@@ -473,72 +1012,154 @@
     },
     "Log folder": {
       "refs": [
-        "src/renderer/dialogs.js:827"
+        "src/renderer/dialogs.js:846"
+      ]
+    },
+    "Log session output to file": {
+      "refs": [
+        "src/renderer/dialogs.js:324"
       ]
     },
     "Logging": {
       "refs": [
-        "src/renderer/dialogs.js:826"
+        "src/renderer/dialogs.js:845"
+      ]
+    },
+    "login user": {
+      "refs": [
+        "src/renderer/dialogs.js:217"
+      ]
+    },
+    "MACs": {
+      "refs": [
+        "src/renderer/dialogs.js:273"
+      ]
+    },
+    "Magenta": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
       ]
     },
     "marks on the first {painted} of {total} places": {
       "refs": [
-        "src/renderer/dialogs.js:991"
+        "src/renderer/dialogs.js:1010"
+      ]
+    },
+    "Matches in every terminal take the rule's colour. Plain text matches anywhere in a line; Regex is a JavaScript regular expression. Colours come from the terminal theme, so they read on every palette. Where rules overlap, the earlier match wins, then the longer one.": {
+      "refs": [
+        "src/renderer/dialogs.js:742"
       ]
     },
     "Menus, panels and dialogs switch at once; terminal output is not translated": {
       "refs": [
-        "src/renderer/dialogs.js:806"
+        "src/renderer/dialogs.js:825"
       ]
     },
     "Monitoring": {
       "refs": [
-        "src/renderer/dialogs.js:822"
+        "src/renderer/dialogs.js:465",
+        "src/renderer/dialogs.js:841"
       ]
     },
     "Monitoring bar refresh, seconds": {
       "refs": [
-        "src/renderer/dialogs.js:766"
+        "src/renderer/dialogs.js:785"
+      ]
+    },
+    "mosh-server (path on the remote host, optional)": {
+      "refs": [
+        "src/renderer/dialogs.js:262"
+      ]
+    },
+    "Mosh: the preset and these lists apply to the host-key check before mosh starts and to the SFTP companion connection; mosh's own ssh keeps its defaults.": {
+      "refs": [
+        "src/renderer/dialogs.js:454"
       ]
     },
     "Mouse / keys": {
       "refs": [
-        "src/renderer/dialogs.js:818"
+        "src/renderer/dialogs.js:837"
       ]
     },
     "MultiExec": {
       "refs": [
-        "src/renderer/dialogs.js:1038"
+        "src/renderer/dialogs.js:1057"
+      ]
+    },
+    "Name": {
+      "refs": [
+        "src/renderer/dialogs.js:411"
+      ]
+    },
+    "Needs the mosh client on this Mac (brew install mosh) and mosh-server on the remote host; UDP ports 60000-61000 must be reachable.": {
+      "refs": [
+        "src/renderer/dialogs.js:436"
+      ]
+    },
+    "Never": {
+      "refs": [
+        "src/renderer/dialogs.js:263"
+      ]
+    },
+    "New connection: {name}": {
+      "refs": [
+        "src/renderer/dialogs.js:659"
       ]
     },
     "New local terminal": {
       "refs": [
-        "src/renderer/dialogs.js:1031"
+        "src/renderer/dialogs.js:1050"
       ]
     },
     "New session": {
       "refs": [
-        "src/renderer/dialogs.js:1031"
+        "src/renderer/dialogs.js:500",
+        "src/renderer/dialogs.js:1050"
       ]
     },
     "Newline in TUI apps (ESC+CR)": {
       "refs": [
-        "src/renderer/dialogs.js:1038"
+        "src/renderer/dialogs.js:1057"
       ]
     },
     "Next / previous tab": {
       "refs": [
-        "src/renderer/dialogs.js:1032"
+        "src/renderer/dialogs.js:1051"
       ]
     },
     "Next pane": {
       "refs": [
-        "src/renderer/dialogs.js:1036"
+        "src/renderer/dialogs.js:1055"
+      ]
+    },
+    "No active tunnels.": {
+      "refs": [
+        "src/renderer/dialogs.js:649"
+      ]
+    },
+    "No colour": {
+      "refs": [
+        "src/renderer/dialogs.js:205"
+      ]
+    },
+    "No flow control": {
+      "refs": [
+        "src/renderer/dialogs.js:364"
+      ]
+    },
+    "No parity": {
+      "refs": [
+        "src/renderer/dialogs.js:362"
       ]
     },
     "No passphrase: anyone who copies the private key file can use it": {
       "refs": [
-        "src/renderer/dialogs.js:1064"
+        "src/renderer/dialogs.js:1083"
+      ]
+    },
+    "No SSH session available": {
+      "refs": [
+        "src/renderer/dialogs.js:667"
       ]
     },
     "No X server found (install XQuartz for X11 forwarding)": {
@@ -547,436 +1168,832 @@
         "src/renderer/app.js:1198"
       ]
     },
+    "Not available in this build: {list} (1024-bit Diffie-Hellman was removed from its crypto)": {
+      "refs": [
+        "src/renderer/dialogs.js:288"
+      ]
+    },
+    "Notes": {
+      "refs": [
+        "src/renderer/dialogs.js:328",
+        "src/renderer/dialogs.js:473"
+      ]
+    },
+    "Odd": {
+      "refs": [
+        "src/renderer/dialogs.js:362"
+      ]
+    },
+    "Off": {
+      "refs": [
+        "src/renderer/dialogs.js:327"
+      ]
+    },
     "OK": {
       "refs": [
-        "src/renderer/dialogs.js:902",
-        "src/renderer/dialogs.js:919"
+        "src/renderer/dialogs.js:619",
+        "src/renderer/dialogs.js:747",
+        "src/renderer/dialogs.js:921",
+        "src/renderer/dialogs.js:938"
+      ]
+    },
+    "On": {
+      "refs": [
+        "src/renderer/dialogs.js:327",
+        "src/renderer/dialogs.js:377"
+      ]
+    },
+    "One command per line, typed once the terminal is ready\ne.g. cd /var/log": {
+      "refs": [
+        "src/renderer/dialogs.js:320"
       ]
     },
     "One line for ~/.ssh/authorized_keys on the servers this key should open": {
       "refs": [
-        "src/renderer/dialogs.js:1236"
+        "src/renderer/dialogs.js:1255"
       ]
     },
     "Open config folder": {
       "refs": [
-        "src/renderer/dialogs.js:811"
+        "src/renderer/dialogs.js:830"
+      ]
+    },
+    "Open connection: {title}": {
+      "refs": [
+        "src/renderer/dialogs.js:658"
+      ]
+    },
+    "Open SFTP browser automatically": {
+      "refs": [
+        "src/renderer/dialogs.js:322"
+      ]
+    },
+    "Opens in macOS Screen Sharing (vnc:// URL).": {
+      "refs": [
+        "src/renderer/dialogs.js:446"
+      ]
+    },
+    "Opens in Windows App / Microsoft Remote Desktop via a generated .rdp file.": {
+      "refs": [
+        "src/renderer/dialogs.js:446"
       ]
     },
     "Option key acts as Meta/Alt": {
       "refs": [
-        "src/renderer/dialogs.js:760"
+        "src/renderer/dialogs.js:779"
+      ]
+    },
+    "optional": {
+      "refs": [
+        "src/renderer/dialogs.js:237"
+      ]
+    },
+    "optional label": {
+      "refs": [
+        "src/renderer/dialogs.js:611"
       ]
     },
     "optional: protects the private key file": {
       "refs": [
-        "src/renderer/dialogs.js:1091"
+        "src/renderer/dialogs.js:1110"
       ]
     },
     "Options": {
       "refs": [
-        "src/renderer/dialogs.js:1142"
+        "src/renderer/dialogs.js:421",
+        "src/renderer/dialogs.js:457",
+        "src/renderer/dialogs.js:1161"
+      ]
+    },
+    "or type a device path, e.g. /dev/cu.usbserial-1410": {
+      "refs": [
+        "src/renderer/dialogs.js:345"
       ]
     },
     "Panes & terminal": {
       "refs": [
-        "src/renderer/dialogs.js:1035"
+        "src/renderer/dialogs.js:1054"
+      ]
+    },
+    "Parity": {
+      "refs": [
+        "src/renderer/dialogs.js:362"
       ]
     },
     "Passphrase": {
       "refs": [
-        "src/renderer/dialogs.js:1140"
+        "src/renderer/dialogs.js:1159"
       ]
     },
     "Password": {
       "refs": [
-        "src/renderer/dialogs.js:892",
-        "src/renderer/dialogs.js:895"
+        "src/renderer/dialogs.js:220",
+        "src/renderer/dialogs.js:239",
+        "src/renderer/dialogs.js:911",
+        "src/renderer/dialogs.js:914"
       ]
     },
     "Paste": {
       "refs": [
-        "src/renderer/dialogs.js:994",
-        "src/renderer/dialogs.js:1009"
+        "src/renderer/dialogs.js:1013",
+        "src/renderer/dialogs.js:1028"
       ]
     },
     "Paste (terminal)": {
       "refs": [
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056"
       ]
     },
     "Paste {n} line into {where}?": {
       "plural": "Paste {n} lines into {where}?",
       "refs": [
-        "src/renderer/dialogs.js:976"
+        "src/renderer/dialogs.js:995"
       ]
     },
     "Paste as is": {
       "refs": [
-        "src/renderer/dialogs.js:994"
+        "src/renderer/dialogs.js:1013"
       ]
     },
     "Paste cleaned": {
       "refs": [
-        "src/renderer/dialogs.js:1008"
+        "src/renderer/dialogs.js:1027"
       ]
     },
     "Paste cleaned removes the hidden characters and the trailing newline": {
       "refs": [
-        "src/renderer/dialogs.js:990"
+        "src/renderer/dialogs.js:1009"
       ]
     },
     "Paste guard": {
       "refs": [
-        "src/renderer/dialogs.js:821"
+        "src/renderer/dialogs.js:840"
       ]
     },
     "Paste guard (multi-line or suspicious paste): paste / cancel": {
       "refs": [
-        "src/renderer/dialogs.js:1051"
+        "src/renderer/dialogs.js:1070"
+      ]
+    },
+    "Pattern": {
+      "refs": [
+        "src/renderer/dialogs.js:714"
       ]
     },
     "Pin / unpin tab, detach tab to its own window": {
       "refs": [
-        "src/renderer/dialogs.js:1033"
+        "src/renderer/dialogs.js:1052"
+      ]
+    },
+    "Port": {
+      "refs": [
+        "src/renderer/dialogs.js:426"
+      ]
+    },
+    "Port forwards started automatically when this session connects.": {
+      "refs": [
+        "src/renderer/dialogs.js:400"
+      ]
+    },
+    "Port must be between 1 and 65535": {
+      "refs": [
+        "src/renderer/dialogs.js:526"
+      ]
+    },
+    "Prediction": {
+      "refs": [
+        "src/renderer/dialogs.js:435"
+      ]
+    },
+    "Private key": {
+      "refs": [
+        "src/renderer/dialogs.js:220",
+        "src/renderer/dialogs.js:241"
+      ]
+    },
+    "ProxyJump: connect through a bastion": {
+      "refs": [
+        "src/renderer/dialogs.js:452"
       ]
     },
     "Public key": {
       "refs": [
-        "src/renderer/dialogs.js:1236"
+        "src/renderer/dialogs.js:1255"
       ]
     },
     "Public key copied": {
       "refs": [
-        "src/renderer/dialogs.js:1230"
+        "src/renderer/dialogs.js:1249"
       ]
     },
     "Quick connect": {
       "refs": [
-        "src/renderer/dialogs.js:1031"
+        "src/renderer/dialogs.js:1050"
       ]
     },
     "Reconnect": {
       "refs": [
-        "src/renderer/dialogs.js:1031"
+        "src/renderer/dialogs.js:1050"
+      ]
+    },
+    "Red": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
+      ]
+    },
+    "Regex": {
+      "refs": [
+        "src/renderer/dialogs.js:714"
+      ]
+    },
+    "regular expression": {
+      "refs": [
+        "src/renderer/dialogs.js:717",
+        "src/renderer/dialogs.js:718"
+      ]
+    },
+    "Regular expression": {
+      "refs": [
+        "src/renderer/dialogs.js:714"
       ]
     },
     "Releases on GitHub; a newer version is offered in a dialog and installed only when you agree": {
       "refs": [
-        "src/renderer/dialogs.js:832"
+        "src/renderer/dialogs.js:851"
+      ]
+    },
+    "Remote (-R)": {
+      "refs": [
+        "src/renderer/dialogs.js:31"
+      ]
+    },
+    "Remote (-R): remote port → local destination": {
+      "refs": [
+        "src/renderer/dialogs.js:605"
       ]
     },
     "Remote file": {
       "refs": [
-        "src/renderer/dialogs.js:1123"
+        "src/renderer/dialogs.js:1142"
       ]
     },
     "Remote monitoring bar on SSH sessions": {
       "refs": [
-        "src/renderer/dialogs.js:765"
+        "src/renderer/dialogs.js:784"
+      ]
+    },
+    "Remove": {
+      "refs": [
+        "src/renderer/dialogs.js:383",
+        "src/renderer/dialogs.js:724"
+      ]
+    },
+    "Remove rule {n}": {
+      "refs": [
+        "src/renderer/dialogs.js:724"
+      ]
+    },
+    "Remove tunnel {port}": {
+      "refs": [
+        "src/renderer/dialogs.js:383"
       ]
     },
     "repeat the passphrase": {
       "refs": [
-        "src/renderer/dialogs.js:1092"
+        "src/renderer/dialogs.js:1111"
+      ]
+    },
+    "Rescan ports": {
+      "refs": [
+        "src/renderer/dialogs.js:358",
+        "src/renderer/dialogs.js:358"
+      ]
+    },
+    "Reset to defaults": {
+      "refs": [
+        "src/renderer/dialogs.js:317"
+      ]
+    },
+    "Restore defaults": {
+      "refs": [
+        "src/renderer/dialogs.js:736"
       ]
     },
     "Restore tabs & split layout at startup": {
       "refs": [
-        "src/renderer/dialogs.js:780"
+        "src/renderer/dialogs.js:799"
       ]
     },
     "Right-click": {
       "refs": [
-        "src/renderer/dialogs.js:1037",
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056",
+        "src/renderer/dialogs.js:1056"
       ]
     },
     "Right-click pastes (⇧-right-click for menu)": {
       "refs": [
-        "src/renderer/dialogs.js:758"
+        "src/renderer/dialogs.js:777"
+      ]
+    },
+    "Rule {n}: {what}": {
+      "refs": [
+        "src/renderer/dialogs.js:710"
+      ]
+    },
+    "Rule {n}: background": {
+      "refs": [
+        "src/renderer/dialogs.js:721"
+      ]
+    },
+    "Rule {n}: colour": {
+      "refs": [
+        "src/renderer/dialogs.js:720"
+      ]
+    },
+    "Rule {n}: pattern": {
+      "refs": [
+        "src/renderer/dialogs.js:717"
       ]
     },
     "Rules…": {
       "refs": [
-        "src/renderer/dialogs.js:774"
+        "src/renderer/dialogs.js:793"
       ]
     },
     "Save": {
       "refs": [
-        "src/renderer/dialogs.js:843"
+        "src/renderer/dialogs.js:508",
+        "src/renderer/dialogs.js:862"
+      ]
+    },
+    "Save & Connect": {
+      "refs": [
+        "src/renderer/dialogs.js:507"
       ]
     },
     "Save an SSH session first to install the key on it": {
       "refs": [
-        "src/renderer/dialogs.js:1192"
+        "src/renderer/dialogs.js:1211"
       ]
     },
     "Save as": {
       "refs": [
-        "src/renderer/dialogs.js:1141"
+        "src/renderer/dialogs.js:1160"
       ]
     },
     "Save in session \"{name}\" (Keychain-encrypted)": {
       "refs": [
-        "src/renderer/dialogs.js:899"
+        "src/renderer/dialogs.js:918"
       ]
     },
     "Save private key as": {
       "refs": [
-        "src/renderer/dialogs.js:1110"
+        "src/renderer/dialogs.js:1129"
       ]
     },
     "Scrollback lines": {
       "refs": [
-        "src/renderer/dialogs.js:816"
+        "src/renderer/dialogs.js:835"
       ]
     },
     "Seconds between two polls (2–30)": {
       "refs": [
-        "src/renderer/dialogs.js:766"
+        "src/renderer/dialogs.js:785"
+      ]
+    },
+    "Security": {
+      "refs": [
+        "src/renderer/dialogs.js:440"
+      ]
+    },
+    "Select private key": {
+      "refs": [
+        "src/renderer/dialogs.js:225"
+      ]
+    },
+    "Select start folder": {
+      "refs": [
+        "src/renderer/dialogs.js:339"
+      ]
+    },
+    "Serial device path is required": {
+      "refs": [
+        "src/renderer/dialogs.js:515"
+      ]
+    },
+    "Serial port": {
+      "refs": [
+        "src/renderer/dialogs.js:417"
       ]
     },
     "Server": {
       "refs": [
-        "src/renderer/dialogs.js:1122"
+        "src/renderer/dialogs.js:1141"
       ]
     },
     "Session logs": {
       "refs": [
-        "src/renderer/dialogs.js:828"
+        "src/renderer/dialogs.js:847"
+      ]
+    },
+    "Session name (defaults to \"Local\")": {
+      "refs": [
+        "src/renderer/dialogs.js:482"
+      ]
+    },
+    "Session name (defaults to device @ baud)": {
+      "refs": [
+        "src/renderer/dialogs.js:482"
+      ]
+    },
+    "Session name (defaults to user@host)": {
+      "refs": [
+        "src/renderer/dialogs.js:185",
+        "src/renderer/dialogs.js:482"
       ]
     },
     "Session tree, SFTP list: jump to a name": {
       "refs": [
-        "src/renderer/dialogs.js:1046"
+        "src/renderer/dialogs.js:1065"
       ]
     },
     "Sessions / SFTP / Tools / Macros": {
       "refs": [
-        "src/renderer/dialogs.js:1041"
+        "src/renderer/dialogs.js:1060"
       ]
     },
     "Sessions & tabs": {
       "refs": [
-        "src/renderer/dialogs.js:1030"
+        "src/renderer/dialogs.js:1049"
       ]
     },
     "Settings": {
       "refs": [
-        "src/renderer/dialogs.js:838",
-        "src/renderer/dialogs.js:1049"
+        "src/renderer/dialogs.js:857",
+        "src/renderer/dialogs.js:1068"
+      ]
+    },
+    "SFTP follows terminal folder (injects prompt hook)": {
+      "refs": [
+        "src/renderer/dialogs.js:323"
       ]
     },
     "SFTP list: context menu / delete / parent folder": {
       "refs": [
-        "src/renderer/dialogs.js:1044"
+        "src/renderer/dialogs.js:1063"
       ]
     },
     "SFTP list: extend selection / toggle row / select all": {
       "refs": [
-        "src/renderer/dialogs.js:1045"
+        "src/renderer/dialogs.js:1064"
       ]
     },
     "SFTP list: move / open": {
       "refs": [
-        "src/renderer/dialogs.js:1044"
+        "src/renderer/dialogs.js:1063"
       ]
     },
     "SFTP list: sort by a column": {
       "refs": [
-        "src/renderer/dialogs.js:1045"
+        "src/renderer/dialogs.js:1064"
+      ]
+    },
+    "Shell": {
+      "refs": [
+        "src/renderer/dialogs.js:414"
+      ]
+    },
+    "Show remote monitoring bar": {
+      "refs": [
+        "src/renderer/dialogs.js:260"
+      ]
+    },
+    "Shown on the session, its tab and pane": {
+      "refs": [
+        "src/renderer/dialogs.js:412"
       ]
     },
     "Sidebar, SFTP & lists": {
       "refs": [
-        "src/renderer/dialogs.js:1040"
+        "src/renderer/dialogs.js:1059"
+      ]
+    },
+    "SOCKS (-D)": {
+      "refs": [
+        "src/renderer/dialogs.js:31"
       ]
     },
     "Split right / down": {
       "refs": [
-        "src/renderer/dialogs.js:1036"
+        "src/renderer/dialogs.js:1055"
+      ]
+    },
+    "SSH agent": {
+      "refs": [
+        "src/renderer/dialogs.js:220"
       ]
     },
     "SSH keep-alive (s)": {
       "refs": [
-        "src/renderer/dialogs.js:810"
+        "src/renderer/dialogs.js:829"
       ]
     },
     "SSH key generated": {
       "refs": [
-        "src/renderer/dialogs.js:1243"
+        "src/renderer/dialogs.js:1262"
+      ]
+    },
+    "SSH Tunnels (port forwarding)": {
+      "refs": [
+        "src/renderer/dialogs.js:680"
       ]
     },
     "ssh-agent: {error}": {
       "refs": [
-        "src/renderer/dialogs.js:1211"
+        "src/renderer/dialogs.js:1230"
+      ]
+    },
+    "Start folder": {
+      "refs": [
+        "src/renderer/dialogs.js:414"
+      ]
+    },
+    "starting": {
+      "refs": [
+        "src/renderer/dialogs.js:33"
+      ]
+    },
+    "Startup commands": {
+      "refs": [
+        "src/renderer/dialogs.js:469"
+      ]
+    },
+    "Status": {
+      "refs": [
+        "src/renderer/dialogs.js:639"
       ]
     },
     "Steps": {
       "refs": [
-        "src/renderer/dialogs.js:1238"
+        "src/renderer/dialogs.js:1257"
+      ]
+    },
+    "Stop": {
+      "refs": [
+        "src/renderer/dialogs.js:647"
+      ]
+    },
+    "Stop bits": {
+      "refs": [
+        "src/renderer/dialogs.js:363"
+      ]
+    },
+    "stopped": {
+      "refs": [
+        "src/renderer/dialogs.js:33"
       ]
     },
     "Strip colours and control sequences from session logs (plain text)": {
       "refs": [
-        "src/renderer/dialogs.js:784"
+        "src/renderer/dialogs.js:803"
       ]
     },
     "Strong passphrase": {
       "refs": [
-        "src/renderer/dialogs.js:1074"
+        "src/renderer/dialogs.js:1093"
       ]
     },
     "Switch to SFTP panel when SSH connects": {
       "refs": [
-        "src/renderer/dialogs.js:781"
+        "src/renderer/dialogs.js:800"
       ]
     },
     "Switch to tab 1-9": {
       "refs": [
-        "src/renderer/dialogs.js:1032"
+        "src/renderer/dialogs.js:1051"
       ]
     },
     "System default ({name})": {
       "refs": [
-        "src/renderer/dialogs.js:790"
+        "src/renderer/dialogs.js:809"
       ]
     },
     "Tab to a header, ⏎ or Space": {
       "refs": [
-        "src/renderer/dialogs.js:1045"
+        "src/renderer/dialogs.js:1064"
       ]
     },
     "Terminal": {
       "refs": [
-        "src/renderer/dialogs.js:813"
+        "src/renderer/dialogs.js:403",
+        "src/renderer/dialogs.js:832"
       ]
     },
     "Terminal → Start Session Log, or a session's Logging option, writes here": {
       "refs": [
-        "src/renderer/dialogs.js:827"
+        "src/renderer/dialogs.js:846"
       ]
     },
     "Terminal menu": {
       "refs": [
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056"
+      ]
+    },
+    "text": {
+      "refs": [
+        "src/renderer/dialogs.js:717"
+      ]
+    },
+    "Text": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
       ]
     },
     "Text to paste (editable)": {
       "refs": [
-        "src/renderer/dialogs.js:967"
+        "src/renderer/dialogs.js:986"
       ]
     },
     "The authenticity of host {host}:{port} can't be established.": {
       "refs": [
-        "src/renderer/dialogs.js:878"
+        "src/renderer/dialogs.js:897"
       ]
     },
     "The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.": {
       "refs": [
-        "src/renderer/dialogs.js:878"
+        "src/renderer/dialogs.js:897"
       ]
     },
     "The passphrases do not match": {
       "refs": [
-        "src/renderer/dialogs.js:1179"
+        "src/renderer/dialogs.js:1198"
       ]
     },
     "The public key goes next to it with .pub; ~/.ssh is created private when missing": {
       "refs": [
-        "src/renderer/dialogs.js:1141"
+        "src/renderer/dialogs.js:1160"
       ]
     },
     "Theme": {
       "refs": [
-        "src/renderer/dialogs.js:817"
+        "src/renderer/dialogs.js:471",
+        "src/renderer/dialogs.js:836"
       ]
     },
     "Toggle sidebar": {
       "refs": [
-        "src/renderer/dialogs.js:1041"
+        "src/renderer/dialogs.js:1060"
       ]
     },
     "Transfers": {
       "refs": [
-        "src/renderer/dialogs.js:824"
+        "src/renderer/dialogs.js:843"
+      ]
+    },
+    "Tunnel": {
+      "refs": [
+        "src/renderer/dialogs.js:615"
+      ]
+    },
+    "Tunnel {port} enabled": {
+      "refs": [
+        "src/renderer/dialogs.js:382"
       ]
     },
     "Tunnels": {
       "refs": [
-        "src/renderer/dialogs.js:1049"
+        "src/renderer/dialogs.js:403",
+        "src/renderer/dialogs.js:1068"
+      ]
+    },
+    "Type": {
+      "refs": [
+        "src/renderer/dialogs.js:377",
+        "src/renderer/dialogs.js:616",
+        "src/renderer/dialogs.js:639"
       ]
     },
     "type its first letters": {
       "refs": [
-        "src/renderer/dialogs.js:1046"
+        "src/renderer/dialogs.js:1065"
+      ]
+    },
+    "underline": {
+      "refs": [
+        "src/renderer/dialogs.js:723"
       ]
     },
     "Underline": {
       "refs": [
-        "src/renderer/dialogs.js:752"
+        "src/renderer/dialogs.js:715",
+        "src/renderer/dialogs.js:771"
+      ]
+    },
+    "Unknown {label} algorithm: {list}": {
+      "refs": [
+        "src/renderer/dialogs.js:286"
+      ]
+    },
+    "Unknown {label} algorithms: {list}": {
+      "refs": [
+        "src/renderer/dialogs.js:287"
       ]
     },
     "Unknown host key": {
       "refs": [
-        "src/renderer/dialogs.js:875"
+        "src/renderer/dialogs.js:894"
       ]
     },
     "Unknown host key — {name}": {
       "refs": [
-        "src/renderer/dialogs.js:875"
+        "src/renderer/dialogs.js:894"
       ]
     },
     "Unsplit": {
       "refs": [
-        "src/renderer/dialogs.js:1036"
+        "src/renderer/dialogs.js:1055"
       ]
     },
     "Updates": {
       "refs": [
-        "src/renderer/dialogs.js:830",
-        "src/renderer/dialogs.js:831"
+        "src/renderer/dialogs.js:849",
+        "src/renderer/dialogs.js:850"
       ]
     },
     "Use in this session": {
       "refs": [
-        "src/renderer/dialogs.js:1159"
+        "src/renderer/dialogs.js:1178"
+      ]
+    },
+    "Used by the ssh bootstrap; agent keys and password prompts work in the terminal": {
+      "refs": [
+        "src/renderer/dialogs.js:434"
+      ]
+    },
+    "user@bastion[:port]": {
+      "refs": [
+        "src/renderer/dialogs.js:253"
+      ]
+    },
+    "Username": {
+      "refs": [
+        "src/renderer/dialogs.js:426"
+      ]
+    },
+    "Via": {
+      "refs": [
+        "src/renderer/dialogs.js:639",
+        "src/renderer/dialogs.js:665"
       ]
     },
     "Wait for the key to be generated and installed": {
       "refs": [
-        "src/renderer/dialogs.js:1173"
+        "src/renderer/dialogs.js:1192"
       ]
     },
     "Warn about suspicious pastes": {
       "refs": [
-        "src/renderer/dialogs.js:763"
+        "src/renderer/dialogs.js:782"
       ]
     },
     "Weak passphrase: use 12 characters or more with mixed case, digits or symbols, or a few words": {
       "refs": [
-        "src/renderer/dialogs.js:1073"
+        "src/renderer/dialogs.js:1092"
+      ]
+    },
+    "What this session offers the server, most preferred first (comma or newline separated). \"Legacy algorithms\" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.": {
+      "refs": [
+        "src/renderer/dialogs.js:461"
+      ]
+    },
+    "X11 forwarding (XQuartz)": {
+      "refs": [
+        "src/renderer/dialogs.js:255"
+      ]
+    },
+    "Yellow": {
+      "refs": [
+        "src/renderer/dialogs.js:36"
       ]
     },
     "Zmodem transfers (rz/sz)": {
       "refs": [
-        "src/renderer/dialogs.js:775"
+        "src/renderer/dialogs.js:794"
       ]
     },
     "Zoom": {
       "refs": [
-        "src/renderer/dialogs.js:1037"
+        "src/renderer/dialogs.js:1056"
       ]
     },
     "Zoom pane (fill the tab) / restore": {
       "refs": [
-        "src/renderer/dialogs.js:1036"
+        "src/renderer/dialogs.js:1055"
       ]
     },
     "zsh/bash integration (folder following)": {
       "refs": [
-        "src/renderer/dialogs.js:777"
+        "src/renderer/dialogs.js:796"
       ]
     }
   }

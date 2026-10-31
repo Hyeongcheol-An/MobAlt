@@ -12,20 +12,29 @@ const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.
  * tokens), so the preview reads the same whatever the window currently looks like.
  */
 function paintThemePreview(el, name) {
-  const t = THEMES[name] || THEMES['moba-dark'];
+  const th = THEMES[name] || THEMES['moba-dark'];
   el.replaceChildren(
-    h('span', { style: { color: t.green } }, 'user@host'), ':', h('span', { style: { color: t.blue } }, '~'), '$ ls ',
-    h('span', { style: { color: t.cyan } }, 'src '), h('span', { style: { color: t.magenta } }, 'docs '), h('span', { style: { color: t.yellow } }, 'README')
+    h('span', { style: { color: th.green } }, 'user@host'), ':', h('span', { style: { color: th.blue } }, '~'), '$ ls ',
+    h('span', { style: { color: th.cyan } }, 'src '), h('span', { style: { color: th.magenta } }, 'docs '), h('span', { style: { color: th.yellow } }, 'README')
   );
   // the outline: the theme's bright black where it shows against the chip (Solarized's equals its background), else a mid-tone of its text
-  const border = t.brightBlack && contrast(t.brightBlack, t.background) >= 1.5 ? t.brightBlack : mix(t.foreground, t.background, 0.5);
-  Object.assign(el.style, { background: t.background, color: t.foreground, borderColor: border });
-  el.title = `${themeLabel(name)}: the terminal colours`;
+  const border = th.brightBlack && contrast(th.brightBlack, th.background) >= 1.5 ? th.brightBlack : mix(th.foreground, th.background, 0.5);
+  Object.assign(el.style, { background: th.background, color: th.foreground, borderColor: border });
+  el.title = t('{theme}: the terminal colours', { theme: themeLabel(name) });
   return el;
 }
 const clamp = (v, min, max, def) => (Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : def);
 const DEFAULT_PORT = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
 const BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
+// Labels looked up when a row is rendered (never at module load), so they follow the interface language.
+/** A tunnel's type as the session editor's Tunnels table shows it. */
+const tunnelTypeLabel = (type) => (type === 'remote' ? t('Remote (-R)') : type === 'dynamic' ? t('SOCKS (-D)') : t('Local (-L)'));
+/** A tunnel's status word (tunnels.js) as the Tunnels dialog's badge shows it; an unknown one shows as it is. */
+const TUNNEL_STATUS = { active: () => t('active'), starting: () => t('starting'), connecting: () => t('connecting'), error: () => t('error'), disconnected: () => t('disconnected'), stopped: () => t('stopped') };
+const tunnelStatusLabel = (status) => (TUNNEL_STATUS[status] ? TUNNEL_STATUS[status]() : String(status || ''));
+/** The highlight colour slots (highlight.js COLOR_KEYS) with their user-facing names; a slot without one keeps its own label. */
+const COLOUR_NAME = { red: () => t('Red'), yellow: () => t('Yellow'), green: () => t('Green'), blue: () => t('Blue'), magenta: () => t('Magenta'), cyan: () => t('Cyan'), accent: () => t('Accent'), 'accent-dim': () => t('Accent (dim)'), dim: () => t('Dim'), text: () => t('Text') };
+const colourOptions = () => COLOR_KEYS.map(([k, label]) => [k, COLOUR_NAME[k] ? COLOUR_NAME[k]() : label]);
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 /**
@@ -173,27 +182,27 @@ export function sessionEditor(app, initial = {}) {
   const folders = app.sessionTree.collectFolders().sort();
 
   // --- common
-  const name = text(s.name, { placeholder: 'Session name (defaults to user@host)' });
+  const name = text(s.name, { placeholder: t('Session name (defaults to user@host)') });
 
   // icon + color (like MobaXterm's per-session icon and tab colour)
   const ICON_CHOICES = ['🐧', '🖥️', '🪟', '🍎', '☁️', '🐳', '🗄️', '🌐', '🔒', '🔑', '⚙️', '🧪', '🚀', '⭐', '🔥', '📦', '💾', '📡', '🏠', '🏢', '🎮', '🤖', '📊'];
   const COLOR_CHOICES = ['#e5534b', '#f08c3a', '#e6b422', '#4caf50', '#2fbfa7', '#4ea1ff', '#7a7dff', '#bd93f9', '#ff79c6', '#8a93a2'];
   let iconVal = s.icon || '';
   let colorVal = s.color || '';
-  const iconRow = pickRow('Icon');
+  const iconRow = pickRow(t('Icon'));
   const renderIcons = () => {
     iconRow.fill(
-      pick('—', !iconVal, 'Default (by session type)', () => { iconVal = ''; renderIcons(); }),
+      pick('—', !iconVal, t('Default (by session type)'), () => { iconVal = ''; renderIcons(); }),
       ...ICON_CHOICES.map((ic) => pick(ic, ic === iconVal, ic, () => { iconVal = ic; renderIcons(); }))
     );
   };
   renderIcons();
-  const customColor = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(colorVal) ? colorVal : '#4ea1ff', title: 'Custom colour', 'aria-label': 'Custom colour' });
-  const colorRow = pickRow('Colour');
+  const customColor = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(colorVal) ? colorVal : '#4ea1ff', title: t('Custom colour'), 'aria-label': t('Custom colour') });
+  const colorRow = pickRow(t('Colour'));
   const renderColors = () => {
     // a custom colour (the colour input) is none of the swatches: "—" then holds the group's Tab stop without being chosen
     colorRow.fill(
-      pick('—', !colorVal, 'No colour', () => { colorVal = ''; renderColors(); }, { stop: !COLOR_CHOICES.includes(colorVal) }),
+      pick('—', !colorVal, t('No colour'), () => { colorVal = ''; renderColors(); }, { stop: !COLOR_CHOICES.includes(colorVal) }),
       ...COLOR_CHOICES.map((c) => pick('', c === colorVal, c, () => { colorVal = c; renderColors(); }, { class: 'swatch', style: { background: c } })),
       customColor
     );
@@ -201,36 +210,36 @@ export function sessionEditor(app, initial = {}) {
   customColor.addEventListener('input', () => { colorVal = customColor.value; renderColors(); });
   renderColors();
 
-  const folder = text(s.folder || '', { list: 'folder-list', placeholder: '(root)' });
+  const folder = text(s.folder || '', { list: 'folder-list', placeholder: t('(root)') });
   const dl = h('datalist', { id: 'folder-list' }, folders.map((f) => h('option', { value: f })));
-  const host = text(s.host, { placeholder: 'hostname or IP' });
+  const host = text(s.host, { placeholder: t('hostname or IP') });
   const port = num(s.port ?? DEFAULT_PORT[type], { min: 1, max: 65535 });
-  const username = text(s.username, { placeholder: 'login user' });
+  const username = text(s.username, { placeholder: t('login user') });
 
   // --- ssh auth
-  const authMethod = select([['auto', 'Automatic (key → agent → password)'], ['password', 'Password'], ['key', 'Private key'], ['agent', 'SSH agent']], s.authMethod);
-  const password = h('input', { type: 'password', placeholder: s.hasPassword ? '•••••••• (saved — leave blank to keep)' : 'leave blank to be prompted', autocomplete: 'new-password' });
-  const clearPw = check('Clear saved password', false);
+  const authMethod = select([['auto', t('Automatic (key → agent → password)')], ['password', t('Password')], ['key', t('Private key')], ['agent', t('SSH agent')]], s.authMethod);
+  const password = h('input', { type: 'password', placeholder: s.hasPassword ? t('•••••••• (saved — leave blank to keep)') : t('leave blank to be prompted'), autocomplete: 'new-password' });
+  const clearPw = check(t('Clear saved password'), false);
   const keyPath = text(s.privateKeyPath, { placeholder: '~/.ssh/id_ed25519' });
   const keyBrowse = h('button', { class: 'btn small', type: 'button', onclick: async () => {
-    const r = await window.api.dialog.open({ title: 'Select private key', defaultPath: app.info.home + '/.ssh', properties: ['openFile', 'showHiddenFiles'] });
+    const r = await window.api.dialog.open({ title: t('Select private key'), defaultPath: app.info.home + '/.ssh', properties: ['openFile', 'showHiddenFiles'] });
     if (!r.canceled && r.filePaths[0]) keyPath.value = r.filePaths[0].replace(app.info.home, '~');
-  } }, 'Browse…');
+  } }, t('Browse…'));
   // Generate… opens the key generator on top of the editor; "Use in this session" there fills the key field
-  const keyGen = h('button', { class: 'btn small', type: 'button', title: 'Generate a new key pair (ssh-keygen)', onclick: async () => {
+  const keyGen = h('button', { class: 'btn small', type: 'button', title: t('Generate a new key pair (ssh-keygen)'), onclick: async () => {
     const r = await keygenDialog(app, { forSession: true });
     if (r && r.privateKeyPath) {
       keyPath.value = r.privateKeyPath.replace(app.info.home, '~');
       if (authMethod.value === 'password' || authMethod.value === 'agent') { authMethod.value = 'auto'; applyAuth(); }
       markDirty();
     }
-  } }, 'Generate…');
-  const passphrase = h('input', { type: 'password', placeholder: s.hasPassphrase ? '•••••••• (saved)' : 'optional', autocomplete: 'new-password' });
+  } }, t('Generate…'));
+  const passphrase = h('input', { type: 'password', placeholder: s.hasPassphrase ? t('•••••••• (saved)') : t('optional'), autocomplete: 'new-password' });
   // rows whose relevance depends on the authentication method
-  const pwRow = field('Password', password);
+  const pwRow = field(t('Password'), password);
   const clearRow = [h('div', {}), h('div', { class: 'checks' }, clearPw.el)];
-  const keyRow = field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse, keyGen));
-  const ppRow = field('Key passphrase', passphrase);
+  const keyRow = field(t('Private key'), h('div', { class: 'inline' }, keyPath, keyBrowse, keyGen));
+  const ppRow = field(t('Key passphrase'), passphrase);
   const applyAuth = () => {
     const m = authMethod.value;
     const showPw = m === 'auto' || m === 'password';
@@ -240,20 +249,20 @@ export function sessionEditor(app, initial = {}) {
   };
   authMethod.addEventListener('change', applyAuth);
   const sshSessions = app.sessions.sessions.filter((x) => x.type === 'ssh' && x.id !== s.id);
-  const jumpSel = select([['', '(none)'], ...sshSessions.map((x) => [x.id, `${x.name} (${x.username ? x.username + '@' : ''}${x.host})`]), ['__manual', 'Enter manually…']], s.jumpSessionId || (s.jumpHost ? '__manual' : ''));
-  const jumpHost = text(s.jumpHost, { placeholder: 'user@bastion[:port]', 'aria-label': 'Jump host address', hidden: jumpSel.value !== '__manual' });
+  const jumpSel = select([['', t('(none)')], ...sshSessions.map((x) => [x.id, `${x.name} (${x.username ? x.username + '@' : ''}${x.host})`]), ['__manual', t('Enter manually…')]], s.jumpSessionId || (s.jumpHost ? '__manual' : ''));
+  const jumpHost = text(s.jumpHost, { placeholder: t('user@bastion[:port]'), 'aria-label': t('Jump host address'), hidden: jumpSel.value !== '__manual' });
   jumpSel.addEventListener('change', () => (jumpHost.hidden = jumpSel.value !== '__manual'));
-  const x11 = check('X11 forwarding (XQuartz)', s.x11);
-  const agentFwd = check('Agent forwarding', s.agentForward);
-  const compression = check('Compression', s.compression);
-  const legacy = check('Legacy algorithms (old devices)', s.legacyAlgorithms);
+  const x11 = check(t('X11 forwarding (XQuartz)'), s.x11);
+  const agentFwd = check(t('Agent forwarding'), s.agentForward);
+  const compression = check(t('Compression'), s.compression);
+  const legacy = check(t('Legacy algorithms (old devices)'), s.legacyAlgorithms);
   // the remote monitoring bar: a session without its own value shows Settings → Features' default and saves it explicitly
-  const monitor = check('Show remote monitoring bar', s.monitor ?? app.settings.monitorBar !== false);
+  const monitor = check(t('Show remote monitoring bar'), s.monitor ?? app.settings.monitorBar !== false);
   // --- mosh / ftp
-  const moshServer = text(s.moshServer, { placeholder: 'mosh-server (path on the remote host, optional)' });
-  const moshPredict = select([['adaptive', 'Adaptive (default)'], ['always', 'Always'], ['never', 'Never'], ['experimental', 'Experimental']], s.moshPredict || 'adaptive');
-  const ftps = check('FTPS: explicit TLS (AUTH TLS)', s.ftps);
-  const ftpsInsecure = check('Accept untrusted / self-signed certificate', s.ftpsInsecure);
+  const moshServer = text(s.moshServer, { placeholder: t('mosh-server (path on the remote host, optional)') });
+  const moshPredict = select([['adaptive', t('Adaptive (default)')], ['always', t('Always')], ['never', t('Never')], ['experimental', t('Experimental')]], s.moshPredict || 'adaptive');
+  const ftps = check(t('FTPS: explicit TLS (AUTH TLS)'), s.ftps);
+  const ftpsInsecure = check(t('Accept untrusted / self-signed certificate'), s.ftpsInsecure);
   const keepAlive = num(s.keepAliveInterval ?? app.settings.keepAliveInterval ?? 30, { min: 0, max: 3600 });
 
   // --- algorithms (Advanced SSH): what this session offers for key exchange, host key, cipher and MAC, pre-filled
@@ -261,9 +270,9 @@ export function sessionEditor(app, initial = {}) {
   // name is checked against what ssh2 supports (an unknown one is an inline error and never saved). Only lists that
   // differ from the preset are stored, as `algorithms: { kex, serverHostKey, cipher, hmac }`.
   const algo = app.algorithms; // { defaults, supported, legacy } from the main process; null when it could not be read
-  const ALGO_CATS = [['kex', 'Key exchange'], ['serverHostKey', 'Host key'], ['cipher', 'Ciphers'], ['hmac', 'MACs']];
+  const ALGO_CATS = [['kex', t('Key exchange')], ['serverHostKey', t('Host key')], ['cipher', t('Ciphers')], ['hmac', t('MACs')]];
   const uniq = (l) => [...new Set(l)];
-  const parseAlgos = (t) => uniq(String(t || '').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean));
+  const parseAlgos = (v) => uniq(String(v || '').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean));
   const algoPreset = (cat, legacyOn) => (legacyOn ? uniq([...algo.defaults[cat], ...algo.legacy[cat]]) : [...algo.defaults[cat]]);
   const algoArea = {}, algoErr = {};
   // the same wording as the main process (algorithms.js validate): its labels ("MAC", not "mac"), and a name ssh2
@@ -272,9 +281,11 @@ export function sessionEditor(app, initial = {}) {
     const list = parseAlgos(algoArea[cat].value);
     const missing = list.filter((a) => ((algo.unavailable && algo.unavailable[cat]) || []).includes(a));
     const unknown = list.filter((a) => !algo.supported[cat].includes(a) && !missing.includes(a));
-    const label = (algo.labels && algo.labels[cat]) || ALGO_CATS.find((c) => c[0] === cat)[1].toLowerCase().replace(/s$/, '');
-    algoErr[cat].textContent = unknown.length ? `Unknown ${label} algorithm${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`
-      : missing.length ? `Not available in this build: ${missing.join(', ')} (1024-bit Diffie-Hellman was removed from its crypto)` : '';
+    const label = (algo.labels && algo.labels[cat]) || ALGO_CATS.find((c) => c[0] === cat)[1];
+    // one sentence per count (not tn(): the count itself is not shown, the names are)
+    algoErr[cat].textContent = unknown.length === 1 ? t('Unknown {label} algorithm: {list}', { label, list: unknown[0] })
+      : unknown.length ? t('Unknown {label} algorithms: {list}', { label, list: unknown.join(', ') })
+      : missing.length ? t('Not available in this build: {list} (1024-bit Diffie-Hellman was removed from its crypto)', { list: missing.join(', ') }) : '';
     const bad = !!(unknown.length || missing.length);
     algoErr[cat].hidden = !bad;
     algoArea[cat].classList.toggle('invalid', bad);
@@ -283,7 +294,7 @@ export function sessionEditor(app, initial = {}) {
   };
   if (algo) {
     for (const [cat, label] of ALGO_CATS) {
-      const ta = h('textarea', { class: 'algo-list', spellcheck: false, rows: 2, 'aria-label': `${label} algorithms` });
+      const ta = h('textarea', { class: 'algo-list', spellcheck: false, rows: 2, 'aria-label': t('{label} algorithms', { label }) });
       const own = s.algorithms && Array.isArray(s.algorithms[cat]) && s.algorithms[cat].length ? s.algorithms[cat] : null;
       ta.value = (own || algoPreset(cat, !!s.legacyAlgorithms)).join(', ');
       ta.addEventListener('input', () => checkAlgos(cat));
@@ -303,27 +314,35 @@ export function sessionEditor(app, initial = {}) {
   const algoReset = h('button', { class: 'btn small', type: 'button', onclick: () => {
     for (const [cat] of ALGO_CATS) { algoArea[cat].value = algoPreset(cat, legacy.cb.checked).join(', '); checkAlgos(cat); }
     markDirty();
-  } }, 'Reset to defaults');
+  } }, t('Reset to defaults'));
 
   // --- terminal / behaviour
-  const startup = h('textarea', { spellcheck: false, placeholder: 'One command per line, typed once the terminal is ready\ne.g. cd /var/log' });
+  const startup = h('textarea', { spellcheck: false, placeholder: t('One command per line, typed once the terminal is ready\ne.g. cd /var/log') });
   startup.value = s.startupCommand || '';
-  const sftpAuto = check('Open SFTP browser automatically', s.sftpAuto !== false);
-  const followCwd = check('SFTP follows terminal folder (injects prompt hook)', s.followCwd);
-  const logging = check('Log session output to file', s.logging);
-  const theme = select([['', '(default)'], ...Object.keys(THEMES).map((t) => [t, themeLabel(t)])], s.theme || '');
+  const sftpAuto = check(t('Open SFTP browser automatically'), s.sftpAuto !== false);
+  const followCwd = check(t('SFTP follows terminal folder (injects prompt hook)'), s.followCwd);
+  const logging = check(t('Log session output to file'), s.logging);
+  const theme = select([['', t('(default)')], ...Object.keys(THEMES).map((k) => [k, themeLabel(k)])], s.theme || '');
   const fontSize = num(s.fontSize || '', { min: 8, max: 40, placeholder: String(app.settings.fontSize) });
-  const highlight = select([['', 'Default (Settings)'], ['on', 'On'], ['off', 'Off']], s.highlight === 'on' || s.highlight === 'off' ? s.highlight : '');
-  const notes = h('textarea', { spellcheck: false, placeholder: 'Notes' });
+  const highlight = select([['', t('Default (Settings)')], ['on', t('On')], ['off', t('Off')]], s.highlight === 'on' || s.highlight === 'off' ? s.highlight : '');
+  const notes = h('textarea', { spellcheck: false, placeholder: t('Notes') });
   notes.value = s.notes || '';
 
   // --- local
-  const shell = text(s.shell, { placeholder: app.settings.localShell || '(default login shell)' });
+  const shell = text(s.shell, { placeholder: app.settings.localShell || t('(default login shell)') });
   const cwd = text(s.cwd, { placeholder: '~' });
+  // Browse…: a folder dialog fills the field with the absolute path, which is what the shell is started in (the value
+  // goes to the pty as typed — nothing expands a leading ~, so the picked path is not shortened like a key path is);
+  // Cancel leaves the field as it was. The field's own path, when absolute, is where the dialog opens.
+  const cwdBrowse = h('button', { class: 'btn small', type: 'button', title: t('Choose the folder the shell starts in'), onclick: async () => {
+    const cur = cwd.value.trim();
+    const r = await window.api.dialog.open({ title: t('Select start folder'), defaultPath: cur.startsWith('/') ? cur : app.info.home, properties: ['openDirectory', 'createDirectory'] });
+    if (!r.canceled && r.filePaths[0]) { cwd.value = r.filePaths[0]; markDirty(); }
+  } }, t('Browse…'));
 
   // --- serial
-  const serialSel = select([['', '(scanning…)']], '');
-  const serialCustom = text(s.serialPath || '', { placeholder: 'or type a device path, e.g. /dev/cu.usbserial-1410' });
+  const serialSel = select([['', t('(scanning…)')]], '');
+  const serialCustom = text(s.serialPath || '', { placeholder: t('or type a device path, e.g. /dev/cu.usbserial-1410') });
   const loadPorts = async () => {
     let ports = [];
     try {
@@ -331,37 +350,37 @@ export function sessionEditor(app, initial = {}) {
     } catch {}
     const cur = serialCustom.value.trim() || s.serialPath || '';
     serialSel.replaceChildren(
-      h('option', { value: '' }, ports.length ? '(select a port)' : '(no serial devices found)'),
+      h('option', { value: '' }, ports.length ? t('(select a port)') : t('(no serial devices found)')),
       ...ports.map((p) => h('option', { value: p.path, selected: p.path === cur }, `${p.path}${p.manufacturer ? ' — ' + p.manufacturer : ''}`))
     );
   };
   serialSel.addEventListener('change', () => { if (serialSel.value) serialCustom.value = serialSel.value; });
-  const serialRefresh = h('button', { class: 'btn small', type: 'button', title: 'Rescan ports', 'aria-label': 'Rescan ports', onclick: () => loadPorts() }, '↻');
+  const serialRefresh = h('button', { class: 'btn small', type: 'button', title: t('Rescan ports'), 'aria-label': t('Rescan ports'), onclick: () => loadPorts() }, '↻');
   const baud = select(BAUD_RATES.map((b) => [String(b), String(b)]), String(s.baudRate || 115200));
   // the four Framing selects share one visible caption: each carries its own name
-  const dataBits = select([['8', '8 data bits'], ['7', '7 data bits'], ['6', '6'], ['5', '5']], String(s.dataBits || 8), { 'aria-label': 'Data bits' });
-  const parity = select([['none', 'No parity'], ['even', 'Even'], ['odd', 'Odd']], s.parity || 'none', { 'aria-label': 'Parity' });
-  const stopBits = select([['1', '1 stop bit'], ['2', '2 stop bits']], String(s.stopBits || 1), { 'aria-label': 'Stop bits' });
-  const flow = select([['none', 'No flow control'], ['rtscts', 'RTS/CTS'], ['xonxoff', 'XON/XOFF']], s.flow || 'none', { 'aria-label': 'Flow control' });
-  const localEcho = check('Local echo', s.localEcho);
+  const dataBits = select([['8', t('8 data bits')], ['7', t('7 data bits')], ['6', '6'], ['5', '5']], String(s.dataBits || 8), { 'aria-label': t('Data bits') });
+  const parity = select([['none', t('No parity')], ['even', t('Even')], ['odd', t('Odd')]], s.parity || 'none', { 'aria-label': t('Parity') });
+  const stopBits = select([['1', t('1 stop bit')], ['2', t('2 stop bits')]], String(s.stopBits || 1), { 'aria-label': t('Stop bits') });
+  const flow = select([['none', t('No flow control')], ['rtscts', 'RTS/CTS'], ['xonxoff', 'XON/XOFF']], s.flow || 'none', { 'aria-label': t('Flow control') });
+  const localEcho = check(t('Local echo'), s.localEcho);
   const newline = select([['cr', 'CR'], ['lf', 'LF'], ['crlf', 'CR+LF']], s.newline || 'cr');
 
   // --- tunnels
-  const tunnels = (s.tunnels || []).map((t) => ({ ...t }));
+  const tunnels = (s.tunnels || []).map((tu) => ({ ...tu }));
   const tunnelRows = h('div');
   // the button stays the same element across re-renders: the Tunnel sub-dialog hands focus back to it when it closes
-  const addTunnel = h('button', { class: 'btn small', type: 'button', onclick: async () => { const t = await tunnelForm(); if (t) { tunnels.push({ ...t, enabled: true }); markDirty(); renderTunnels(); } } }, '＋ Add tunnel');
+  const addTunnel = h('button', { class: 'btn small', type: 'button', onclick: async () => { const tf = await tunnelForm(); if (tf) { tunnels.push({ ...tf, enabled: true }); markDirty(); renderTunnels(); } } }, t('＋ Add tunnel'));
   const tunnelTable = h('div', {}, tunnelRows, h('div', { style: { marginTop: '8px' } }, addTunnel));
   const renderTunnels = () => {
     tunnelRows.replaceChildren(
       h('table', { class: 'list-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, 'Type'), h('th', {}, 'Bind'), h('th', {}, 'Destination'), h('th', {}, 'On'), h('th', {}))),
-        h('tbody', {}, tunnels.map((t, i) => h('tr', {},
-          h('td', {}, { local: 'Local (-L)', remote: 'Remote (-R)', dynamic: 'SOCKS (-D)' }[t.type]),
-          h('td', { class: 'mono' }, `${t.bindHost || '127.0.0.1'}:${t.bindPort}`),
-          h('td', { class: 'mono' }, t.type === 'dynamic' ? '—' : `${t.destHost}:${t.destPort}`),
-          h('td', {}, h('input', { type: 'checkbox', checked: t.enabled !== false, 'aria-label': `Tunnel ${t.bindPort} enabled`, onchange: (e) => (t.enabled = e.target.checked) })),
-          h('td', {}, h('button', { class: 'btn small icon-only', type: 'button', title: 'Remove', 'aria-label': `Remove tunnel ${t.bindPort}`, onclick: (e) => {
+        h('thead', {}, h('tr', {}, h('th', {}, t('Type')), h('th', {}, t('Bind')), h('th', {}, t('Destination')), h('th', {}, t('On')), h('th', {}))),
+        h('tbody', {}, tunnels.map((tu, i) => h('tr', {},
+          h('td', {}, tunnelTypeLabel(tu.type)),
+          h('td', { class: 'mono' }, `${tu.bindHost || '127.0.0.1'}:${tu.bindPort}`),
+          h('td', { class: 'mono' }, tu.type === 'dynamic' ? '—' : `${tu.destHost}:${tu.destPort}`),
+          h('td', {}, h('input', { type: 'checkbox', checked: tu.enabled !== false, 'aria-label': t('Tunnel {port} enabled', { port: tu.bindPort }), onchange: (e) => (tu.enabled = e.target.checked) })),
+          h('td', {}, h('button', { class: 'btn small icon-only', type: 'button', title: t('Remove'), 'aria-label': t('Remove tunnel {port}', { port: tu.bindPort }), onclick: (e) => {
             const viaKeyboard = e.currentTarget === document.activeElement;
             tunnels.splice(i, 1);
             markDirty();
@@ -378,96 +397,96 @@ export function sessionEditor(app, initial = {}) {
     basic: h('div', { class: 'mpage active form-grid' }),
     advanced: h('div', { class: 'mpage form-grid' }),
     terminal: h('div', { class: 'mpage form-grid' }),
-    tunnels: h('div', { class: 'mpage' }, h('p', { style: { color: 'var(--fg-dim)', marginTop: 0 } }, 'Port forwards started automatically when this session connects.'), tunnelTable),
+    tunnels: h('div', { class: 'mpage' }, h('p', { style: { color: 'var(--fg-dim)', marginTop: 0 } }, t('Port forwards started automatically when this session connects.')), tunnelTable),
   };
   // the same tablist / tab / tabpanel strip as Settings and Keyboard shortcuts (arrows between the sections, aria-selected on the one in front)
-  const { strip: tabs, btns: tabBtns, show: showPage } = modalTabs([['basic', 'Basic', pages.basic], ['advanced', 'Advanced SSH', pages.advanced], ['terminal', 'Terminal', pages.terminal], ['tunnels', 'Tunnels', pages.tunnels]]);
+  const { strip: tabs, btns: tabBtns, show: showPage } = modalTabs([['basic', t('Basic'), pages.basic], ['advanced', t('Advanced SSH'), pages.advanced], ['terminal', t('Terminal'), pages.terminal], ['tunnels', t('Tunnels'), pages.tunnels]]);
 
   const typeBtns = {};
-  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '💻', telnet: '☎️', serial: '🔌', ftp: '📁', rdp: '🪟', vnc: '🖥️' }[t]), TYPE_LABEL[t]))));
+  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((k) => (typeBtns[k] = h('button', { type: 'button', class: k === type ? 'active' : '', onclick: () => setType(k) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '💻', telnet: '☎️', serial: '🔌', ftp: '📁', rdp: '🪟', vnc: '🖥️' }[k]), TYPE_LABEL[k]))));
 
   const buildBasic = () => {
     const b = pages.basic;
     b.replaceChildren();
-    b.append(...field('Name', name), ...field('Folder', h('div', { class: 'inline' }, folder, dl)),
-      ...field('Icon', iconRow), ...field('Colour', colorRow, 'Shown on the session, its tab and pane'));
+    b.append(...field(t('Name'), name), ...field(t('Folder'), h('div', { class: 'inline' }, folder, dl)),
+      ...field(t('Icon'), iconRow), ...field(t('Colour'), colorRow, t('Shown on the session, its tab and pane')));
     if (type === 'local') {
-      b.append(...field('Shell', shell, 'Leave blank for your login shell'), ...field('Start folder', cwd));
+      b.append(...field(t('Shell'), shell, t('Leave blank for your login shell')), ...field(t('Start folder'), h('div', { class: 'inline' }, cwd, cwdBrowse)));
     } else if (type === 'serial') {
       b.append(
-        ...field('Serial port', h('div', { class: 'inline' }, serialSel, serialRefresh)),
-        ...field('Device path', serialCustom),
-        ...field('Baud rate', baud),
-        h('label', {}, 'Framing'), h('div', { class: 'inline' }, dataBits, parity, stopBits, flow),
-        h('label', {}, 'Options'), h('div', { class: 'checks' }, localEcho.el),
-        ...field('Enter sends', newline)
+        ...field(t('Serial port'), h('div', { class: 'inline' }, serialSel, serialRefresh)),
+        ...field(t('Device path'), serialCustom),
+        ...field(t('Baud rate'), baud),
+        h('label', {}, t('Framing')), h('div', { class: 'inline' }, dataBits, parity, stopBits, flow),
+        h('label', {}, t('Options')), h('div', { class: 'checks' }, localEcho.el),
+        ...field(t('Enter sends'), newline)
       );
       loadPorts();
     } else {
-      b.append(...field('Host', host), ...field('Port', port), ...field('Username', username));
+      b.append(...field(t('Host'), host), ...field(t('Port'), port), ...field(t('Username'), username));
     }
     if (type === 'ssh') {
-      b.append(...field('Authentication', authMethod), ...pwRow, ...clearRow, ...keyRow, ...ppRow);
+      b.append(...field(t('Authentication'), authMethod), ...pwRow, ...clearRow, ...keyRow, ...ppRow);
       applyAuth();
     }
     if (type === 'mosh') {
       // the same key row as SSH (moving the inputs into a new wrapper would empty the SSH row after a type round-trip)
-      b.append(...keyRow, h('div', { class: 'form-help' }, 'Used by the ssh bootstrap; agent keys and password prompts work in the terminal'),
-        ...field('mosh-server', moshServer), ...field('Prediction', moshPredict),
-        h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, 'Needs the mosh client on this Mac (brew install mosh) and mosh-server on the remote host; UDP ports 60000-61000 must be reachable.'));
+      b.append(...keyRow, h('div', { class: 'form-help' }, t('Used by the ssh bootstrap; agent keys and password prompts work in the terminal')),
+        ...field('mosh-server', moshServer), ...field(t('Prediction'), moshPredict),
+        h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, t('Needs the mosh client on this Mac (brew install mosh) and mosh-server on the remote host; UDP ports 60000-61000 must be reachable.')));
     }
     if (type === 'ftp') {
       b.append(...pwRow, ...clearRow,
-        h('label', {}, 'Security'), h('div', { class: 'checks' }, ftps.el, ftpsInsecure.el),
-        h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, 'Leave the username empty for anonymous FTP. Files are browsed, transferred and edited in the Sftp panel.'));
+        h('label', {}, t('Security')), h('div', { class: 'checks' }, ftps.el, ftpsInsecure.el),
+        h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, t('Leave the username empty for anonymous FTP. Files are browsed, transferred and edited in the Sftp panel.')));
     }
     if (type === 'mosh') for (const el of keyRow) el.hidden = false;
     if (type === 'ftp') for (const el of [...pwRow, ...clearRow]) el.hidden = false;
     if (type === 'rdp' || type === 'vnc') {
-      b.append(h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, type === 'rdp' ? 'Opens in Windows App / Microsoft Remote Desktop via a generated .rdp file.' : 'Opens in macOS Screen Sharing (vnc:// URL).'));
+      b.append(h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, type === 'rdp' ? t('Opens in Windows App / Microsoft Remote Desktop via a generated .rdp file.') : t('Opens in macOS Screen Sharing (vnc:// URL).')));
     }
   };
   // the rows that are SSH's alone: a Mosh session keeps the legacy preset, the algorithm lists and the monitoring
   // bar (they drive its host-key check and its SFTP companion connection), not the jump host, X11, agent
   // forwarding, compression or keep-alive (the mosh client's own ssh does not take them)
-  const jumpRows = field('Jump host', h('div', { class: 'inline', style: { flexDirection: 'column', alignItems: 'stretch' } }, jumpSel, jumpHost), 'ProxyJump: connect through a bastion');
-  const keepAliveRows = field('Keep-alive (s)', keepAlive);
-  const moshAlgoNote = h('div', { class: 'form-help', hidden: true }, 'Mosh: the preset and these lists apply to the host-key check before mosh starts and to the SFTP companion connection; mosh\'s own ssh keeps its defaults.');
+  const jumpRows = field(t('Jump host'), h('div', { class: 'inline', style: { flexDirection: 'column', alignItems: 'stretch' } }, jumpSel, jumpHost), t('ProxyJump: connect through a bastion'));
+  const keepAliveRows = field(t('Keep-alive (s)'), keepAlive);
+  const moshAlgoNote = h('div', { class: 'form-help', hidden: true }, t('Mosh: the preset and these lists apply to the host-key check before mosh starts and to the SFTP companion connection; mosh\'s own ssh keeps its defaults.'));
   pages.advanced.append(
     ...jumpRows,
-    h('label', {}, 'Options'), h('div', { class: 'checks' }, x11.el, agentFwd.el, compression.el, legacy.el),
+    h('label', {}, t('Options')), h('div', { class: 'checks' }, x11.el, agentFwd.el, compression.el, legacy.el),
     ...keepAliveRows,
     ...(algo ? [
-      h('label', { class: 'algo-title' }, 'Algorithms'), h('div', { class: 'algo-head' }, algoReset),
-      h('div', { class: 'form-help' }, 'What this session offers the server, most preferred first (comma or newline separated). "Legacy algorithms" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.'),
+      h('label', { class: 'algo-title' }, t('Algorithms')), h('div', { class: 'algo-head' }, algoReset),
+      h('div', { class: 'form-help' }, t('What this session offers the server, most preferred first (comma or newline separated). "Legacy algorithms" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.')),
       moshAlgoNote,
       ...ALGO_CATS.flatMap(([cat, label]) => [...field(label, algoArea[cat]), algoErr[cat]]),
     ] : []),
-    h('label', {}, 'Monitoring'), h('div', { class: 'checks' }, monitor.el),
-    h('div', { class: 'form-help' }, 'CPU, memory, disk, network, load and uptime under the terminal, polled over this connection every few seconds (Settings → Features sets the default and the refresh); the pane head and the View menu toggle it per pane')
+    h('label', {}, t('Monitoring')), h('div', { class: 'checks' }, monitor.el),
+    h('div', { class: 'form-help' }, t('CPU, memory, disk, network, load and uptime under the terminal, polled over this connection every few seconds (Settings → Features sets the default and the refresh); the pane head and the View menu toggle it per pane'))
   );
   pages.terminal.append(
-    ...field('Startup commands', startup),
-    h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, sftpAuto.el, followCwd.el, logging.el),
-    ...field('Theme', theme), ...field('Font size', fontSize),
-    ...field('Keyword highlighting', highlight, 'Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Features'),
-    ...field('Notes', notes)
+    ...field(t('Startup commands'), startup),
+    h('label', {}, t('Behaviour')), h('div', { class: 'checks' }, sftpAuto.el, followCwd.el, logging.el),
+    ...field(t('Theme'), theme), ...field(t('Font size'), fontSize),
+    ...field(t('Keyword highlighting'), highlight, t('Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Features')),
+    ...field(t('Notes'), notes)
   );
 
   let prevType = s.type;
-  const setType = (t) => {
-    for (const [k, b] of Object.entries(typeBtns)) b.classList.toggle('active', k === t);
+  const setType = (ty) => {
+    for (const [k, b] of Object.entries(typeBtns)) b.classList.toggle('active', k === ty);
     // keep a custom port, but follow the type's default when the port was still the previous type's default
-    if (!port.value || +port.value === DEFAULT_PORT[prevType] || +port.value === 0) port.value = DEFAULT_PORT[t] || '';
-    prevType = type = t;
-    name.placeholder = t === 'local' ? 'Session name (defaults to "Local")' : t === 'serial' ? 'Session name (defaults to device @ baud)' : 'Session name (defaults to user@host)';
-    tabBtns.advanced.hidden = t !== 'ssh' && t !== 'mosh'; // Mosh: the preset / lists (host-key check, SFTP companion) and the monitoring bar
-    for (const el of [...jumpRows, ...keepAliveRows, x11.el, agentFwd.el, compression.el]) el.hidden = t !== 'ssh';
-    moshAlgoNote.hidden = t !== 'mosh';
-    tabBtns.tunnels.hidden = t !== 'ssh';
-    tabBtns.terminal.hidden = t === 'rdp' || t === 'vnc' || t === 'ftp';
-    sftpAuto.el.hidden = t !== 'ssh' && t !== 'mosh'; // Mosh: opens the SFTP companion connection automatically
-    followCwd.el.hidden = t !== 'ssh';
+    if (!port.value || +port.value === DEFAULT_PORT[prevType] || +port.value === 0) port.value = DEFAULT_PORT[ty] || '';
+    prevType = type = ty;
+    name.placeholder = ty === 'local' ? t('Session name (defaults to "Local")') : ty === 'serial' ? t('Session name (defaults to device @ baud)') : t('Session name (defaults to user@host)');
+    tabBtns.advanced.hidden = ty !== 'ssh' && ty !== 'mosh'; // Mosh: the preset / lists (host-key check, SFTP companion) and the monitoring bar
+    for (const el of [...jumpRows, ...keepAliveRows, x11.el, agentFwd.el, compression.el]) el.hidden = ty !== 'ssh';
+    moshAlgoNote.hidden = ty !== 'mosh';
+    tabBtns.tunnels.hidden = ty !== 'ssh';
+    tabBtns.terminal.hidden = ty === 'rdp' || ty === 'vnc' || ty === 'ftp';
+    sftpAuto.el.hidden = ty !== 'ssh' && ty !== 'mosh'; // Mosh: opens the SFTP companion connection automatically
+    followCwd.el.hidden = ty !== 'ssh';
     buildBasic();
     showPage('basic');
   };
@@ -478,33 +497,33 @@ export function sessionEditor(app, initial = {}) {
   body.addEventListener('change', () => { dirty = true; });
   body.addEventListener('click', (e) => { if (e.target.closest('.pick-row, .type-picker')) dirty = true; });
   const modal = showModal({
-    title: s.id ? `Edit session — ${s.name}` : 'New session',
+    title: s.id ? t('Edit session — {name}', { name: s.name }) : t('New session'),
     width: 'wide',
     closeOnBackdrop: false,
-    beforeClose: () => !dirty || confirmDialog('Discard the changes to this session?', { title: 'Discard changes', okLabel: 'Discard', danger: true }),
+    beforeClose: () => !dirty || confirmDialog(t('Discard the changes to this session?'), { title: t('Discard changes'), okLabel: t('Discard'), danger: true }),
     body,
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'Save & Connect', action: (api) => { const out = collect(); if (out) api.close({ ...out, _connect: true }); } },
-      { label: 'Save', primary: true, action: (api) => { const out = collect(); if (out) api.close(out); } },
+      { label: t('Cancel'), value: null },
+      { label: t('Save & Connect'), action: (api) => { const out = collect(); if (out) api.close({ ...out, _connect: true }); } },
+      { label: t('Save'), primary: true, action: (api) => { const out = collect(); if (out) api.close(out); } },
     ],
   });
   function collect() {
     const serialPath = serialCustom.value.trim() || serialSel.value;
     if (type === 'serial' && !serialPath) {
       serialCustom.focus();
-      toast('Serial device path is required', 'warn');
+      toast(t('Serial device path is required'), 'warn');
       return null;
     }
     if (type !== 'local' && type !== 'serial' && !host.value.trim()) {
       host.focus();
-      toast('Host is required', 'warn');
+      toast(t('Host is required'), 'warn');
       return null;
     }
     if (type !== 'local' && type !== 'serial') {
       const pn = /^\d+$/.test(port.value.trim()) ? parseInt(port.value, 10) : NaN; // integers only (12.5 / 1e3 are not ports)
       if (!(pn >= 1 && pn <= 65535)) {
-        toast('Port must be between 1 and 65535', 'warn');
+        toast(t('Port must be between 1 and 65535'), 'warn');
         showPage('basic');
         port.focus();
         return null;
@@ -583,25 +602,25 @@ export function sessionEditor(app, initial = {}) {
 }
 
 export function tunnelForm(initial = {}) {
-  const type = select([['local', 'Local (-L): local port → remote destination'], ['remote', 'Remote (-R): remote port → local destination'], ['dynamic', 'Dynamic (-D): SOCKS5 proxy']], initial.type || 'local');
+  const type = select([['local', t('Local (-L): local port → remote destination')], ['remote', t('Remote (-R): remote port → local destination')], ['dynamic', t('Dynamic (-D): SOCKS5 proxy')]], initial.type || 'local');
   // host:port pairs share one visible label (Bind / Destination): each box carries its own name
-  const bindHost = text(initial.bindHost || '127.0.0.1', { 'aria-label': 'Bind address' });
-  const bindPort = num(initial.bindPort || '', { min: 0, max: 65535, placeholder: '8080', 'aria-label': 'Bind port' });
-  const destHost = text(initial.destHost || '', { placeholder: 'localhost', 'aria-label': 'Destination host' });
-  const destPort = num(initial.destPort || '', { min: 1, max: 65535, placeholder: '80', 'aria-label': 'Destination port' });
-  const name = text(initial.name || '', { placeholder: 'optional label' });
-  const destRow = field('Destination', h('div', { class: 'inline' }, destHost, ':', destPort));
+  const bindHost = text(initial.bindHost || '127.0.0.1', { 'aria-label': t('Bind address') });
+  const bindPort = num(initial.bindPort || '', { min: 0, max: 65535, placeholder: '8080', 'aria-label': t('Bind port') });
+  const destHost = text(initial.destHost || '', { placeholder: 'localhost', 'aria-label': t('Destination host') });
+  const destPort = num(initial.destPort || '', { min: 1, max: 65535, placeholder: '80', 'aria-label': t('Destination port') });
+  const name = text(initial.name || '', { placeholder: t('optional label') });
+  const destRow = field(t('Destination'), h('div', { class: 'inline' }, destHost, ':', destPort));
   type.addEventListener('change', () => destRow.forEach((e) => (e.hidden = type.value === 'dynamic')));
   const m = showModal({
-    title: 'Tunnel',
-    body: h('div', { class: 'form-grid' }, ...field('Type', type), ...field('Label', name), ...field('Bind', h('div', { class: 'inline' }, bindHost, ':', bindPort)), ...destRow),
+    title: t('Tunnel'),
+    body: h('div', { class: 'form-grid' }, ...field(t('Type'), type), ...field(t('Label'), name), ...field(t('Bind'), h('div', { class: 'inline' }, bindHost, ':', bindPort)), ...destRow),
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'OK', primary: true, action: (api) => {
+      { label: t('Cancel'), value: null },
+      { label: t('OK'), primary: true, action: (api) => {
         const bp = parseInt(bindPort.value, 10);
-        if (isNaN(bp) || bp < 0 || bp > 65535) { toast('Bind port is required (0-65535)', 'warn'); return bindPort.focus(); }
-        if (type.value !== 'dynamic' && !destHost.value.trim()) { toast('Destination host is required', 'warn'); return destHost.focus(); }
-        if (type.value !== 'dynamic' && !(parseInt(destPort.value, 10) >= 1 && parseInt(destPort.value, 10) <= 65535)) { toast('Destination port must be 1-65535', 'warn'); return destPort.focus(); }
+        if (isNaN(bp) || bp < 0 || bp > 65535) { toast(t('Bind port is required (0-65535)'), 'warn'); return bindPort.focus(); }
+        if (type.value !== 'dynamic' && !destHost.value.trim()) { toast(t('Destination host is required'), 'warn'); return destHost.focus(); }
+        if (type.value !== 'dynamic' && !(parseInt(destPort.value, 10) >= 1 && parseInt(destPort.value, 10) <= 65535)) { toast(t('Destination port must be 1-65535'), 'warn'); return destPort.focus(); }
         api.close({ type: type.value, name: name.value.trim(), bindHost: bindHost.value.trim() || '127.0.0.1', bindPort: bp, destHost: destHost.value.trim(), destPort: parseInt(destPort.value, 10) || 0 });
       } },
     ],
@@ -617,17 +636,17 @@ export async function tunnelsDialog(app, preset = {}) {
     table.replaceChildren(
       list.length
         ? h('table', { class: 'list-table' },
-          h('thead', {}, h('tr', {}, h('th', {}, 'Type'), h('th', {}, 'Bind'), h('th', {}, 'Destination'), h('th', {}, 'Via'), h('th', {}, 'Status'), h('th', {}, 'Conns'), h('th', {}))),
-          h('tbody', {}, list.map((t) => h('tr', {},
-            h('td', {}, { local: '-L', remote: '-R', dynamic: '-D' }[t.type]),
-            h('td', { class: 'mono' }, `${t.bindHost || '127.0.0.1'}:${t.bindPort}`),
-            h('td', { class: 'mono' }, t.type === 'dynamic' ? 'SOCKS5' : `${t.destHost}:${t.destPort}`),
-            h('td', {}, t.sessionName || t.connId || ''),
-            h('td', {}, h('span', { class: 'badge ' + t.status, title: t.error || '' }, t.status), t.error ? h('div', { class: 'form-help', style: { gridColumn: 'auto', color: 'var(--danger-fg)', marginTop: '2px' } }, t.error) : null),
-            h('td', {}, String(t.connections || 0)),
-            h('td', {}, h('button', { class: 'btn small', onclick: async () => { await window.api.tunnels.stop(t.id); render(); } }, 'Stop'))
+          h('thead', {}, h('tr', {}, h('th', {}, t('Type')), h('th', {}, t('Bind')), h('th', {}, t('Destination')), h('th', {}, t('Via')), h('th', {}, t('Status')), h('th', {}, t('Conns')), h('th', {}))),
+          h('tbody', {}, list.map((tu) => h('tr', {},
+            h('td', {}, { local: '-L', remote: '-R', dynamic: '-D' }[tu.type]),
+            h('td', { class: 'mono' }, `${tu.bindHost || '127.0.0.1'}:${tu.bindPort}`),
+            h('td', { class: 'mono' }, tu.type === 'dynamic' ? 'SOCKS5' : `${tu.destHost}:${tu.destPort}`),
+            h('td', {}, tu.sessionName || tu.connId || ''),
+            h('td', {}, h('span', { class: 'badge ' + tu.status, title: tu.error || '' }, tunnelStatusLabel(tu.status)), tu.error ? h('div', { class: 'form-help', style: { gridColumn: 'auto', color: 'var(--danger-fg)', marginTop: '2px' } }, tu.error) : null),
+            h('td', {}, String(tu.connections || 0)),
+            h('td', {}, h('button', { class: 'btn small', onclick: async () => { await window.api.tunnels.stop(tu.id); render(); } }, t('Stop')))
           ))))
-        : h('div', { style: { color: 'var(--fg-faint)', padding: '10px 0' } }, 'No active tunnels.')
+        : h('div', { style: { color: 'var(--fg-faint)', padding: '10px 0' } }, t('No active tunnels.'))
     );
   };
   const off = window.api.on('tunnels:changed', () => render());
@@ -636,32 +655,32 @@ export async function tunnelsDialog(app, preset = {}) {
   const openConns = app.workspace.allPanes().filter((p) => p.kind === 'ssh' && p.status === 'connected');
   const sessions = app.sessions.sessions.filter((x) => x.type === 'ssh');
   const viaOptions = [
-    ...openConns.map((p) => ['conn:' + p.termId, `Open connection: ${p.title}`]),
-    ...sessions.map((x) => ['sess:' + x.id, `New connection: ${x.name}`]),
+    ...openConns.map((p) => ['conn:' + p.termId, t('Open connection: {title}', { title: p.title })]),
+    ...sessions.map((x) => ['sess:' + x.id, t('New connection: {name}', { name: x.name })]),
   ];
-  const via = select(viaOptions.length ? viaOptions : [['', '(no SSH sessions yet — create one in the Sessions panel)']],
+  const via = select(viaOptions.length ? viaOptions : [['', t('(no SSH sessions yet — create one in the Sessions panel)')]],
     preset.sessionId ? 'sess:' + preset.sessionId : openConns[0] ? 'conn:' + openConns[0].termId : '');
   if (!viaOptions.length) via.disabled = true;
   const form = h('div', { class: 'form-grid', style: { marginTop: '12px' } },
-    ...field('Via', via),
+    ...field(t('Via'), via),
     h('label', {}), h('div', {}, h('button', { class: 'btn primary small', disabled: !viaOptions.length, onclick: async () => {
-      if (!via.value) return toast('No SSH session available', 'warn');
-      const t = await tunnelForm();
-      if (!t) return;
+      if (!via.value) return toast(t('No SSH session available'), 'warn');
+      const tf = await tunnelForm();
+      if (!tf) return;
       const [kind, id] = via.value.split(':');
       try {
-        await window.api.tunnels.start(kind === 'conn' ? { ...t, connId: id } : { ...t, sessionId: id });
+        await window.api.tunnels.start(kind === 'conn' ? { ...tf, connId: id } : { ...tf, sessionId: id });
       } catch (e) {
         toast(e.message, 'error');
       }
       render();
-    } }, '＋ New tunnel…'))
+    } }, t('＋ New tunnel…')))
   );
   const m = showModal({
-    title: 'SSH Tunnels (port forwarding)',
+    title: t('SSH Tunnels (port forwarding)'),
     width: 'wide',
     body: h('div', {}, table, form),
-    buttons: [{ label: 'Close', value: null }],
+    buttons: [{ label: t('Close'), value: null }],
     onClose: () => off(),
   });
   return m.promise;
@@ -681,28 +700,28 @@ export function highlightRulesDialog(initial) {
   // a colour cell: the theme's slots, or Custom… with a colour well
   const colourCell = (value, none, label, onChange) => {
     const custom = HEX_COLOR.test(value);
-    const sel = select([['', none], ...COLOR_KEYS, ['custom', 'Custom…']], custom ? 'custom' : value, { 'aria-label': label });
-    const well = h('input', { type: 'color', value: custom ? value : '#ff8800', hidden: !custom, 'aria-label': `${label} (custom)` });
+    const sel = select([['', none], ...colourOptions(), ['custom', t('Custom…')]], custom ? 'custom' : value, { 'aria-label': label });
+    const well = h('input', { type: 'color', value: custom ? value : '#ff8800', hidden: !custom, 'aria-label': t('{label} (custom)', { label }) });
     const emit = () => onChange(sel.value === 'custom' ? well.value.toLowerCase() : sel.value);
     sel.addEventListener('change', () => { well.hidden = sel.value !== 'custom'; emit(); });
     well.addEventListener('input', emit);
     return h('div', { class: 'inline' }, sel, well);
   };
-  const flag = (r, key, label, i) => h('input', { type: 'checkbox', checked: r[key], 'aria-label': `Rule ${i + 1}: ${label}`, onchange: (e) => (r[key] = e.target.checked) });
+  const flag = (r, key, label, i) => h('input', { type: 'checkbox', checked: r[key], 'aria-label': t('Rule {n}: {what}', { n: i + 1, what: label }), onchange: (e) => (r[key] = e.target.checked) });
   let addBtn;
   const render = (focusRow) => {
     rows.replaceChildren(h('table', { class: 'list-table' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Pattern'), h('th', { title: 'Regular expression' }, 'Regex'), h('th', { title: 'Ignore case' }, 'Aa'),
-        h('th', {}, 'Colour'), h('th', {}, 'Background'), h('th', { title: 'Bold' }, 'B'), h('th', { title: 'Underline' }, 'U'), h('th', {}))),
+      h('thead', {}, h('tr', {}, h('th', {}, t('Pattern')), h('th', { title: t('Regular expression') }, t('Regex')), h('th', { title: t('Ignore case') }, 'Aa'),
+        h('th', {}, t('Colour')), h('th', {}, t('Background')), h('th', { title: t('Bold') }, 'B'), h('th', { title: t('Underline') }, 'U'), h('th', {}))),
       h('tbody', {}, rules.map((r, i) => h('tr', {},
-        h('td', { class: 'pat' }, text(r.pattern, { placeholder: r.regex ? 'regular expression' : 'text', 'aria-label': `Rule ${i + 1}: pattern`, oninput: (e) => (r.pattern = e.target.value) })),
-        h('td', {}, flag(r, 'regex', 'regular expression', i)),
-        h('td', {}, flag(r, 'ci', 'ignore case', i)),
-        h('td', {}, colourCell(r.color, '(keep)', `Rule ${i + 1}: colour`, (v) => (r.color = v))),
-        h('td', {}, colourCell(r.bg, '(none)', `Rule ${i + 1}: background`, (v) => (r.bg = v))),
-        h('td', {}, flag(r, 'bold', 'bold', i)),
-        h('td', {}, flag(r, 'underline', 'underline', i)),
-        h('td', {}, h('button', { class: 'btn small icon-only', type: 'button', title: 'Remove', 'aria-label': `Remove rule ${i + 1}`, onclick: (e) => {
+        h('td', { class: 'pat' }, text(r.pattern, { placeholder: r.regex ? t('regular expression') : t('text'), 'aria-label': t('Rule {n}: pattern', { n: i + 1 }), oninput: (e) => (r.pattern = e.target.value) })),
+        h('td', {}, flag(r, 'regex', t('regular expression'), i)),
+        h('td', {}, flag(r, 'ci', t('ignore case'), i)),
+        h('td', {}, colourCell(r.color, t('(keep)'), t('Rule {n}: colour', { n: i + 1 }), (v) => (r.color = v))),
+        h('td', {}, colourCell(r.bg, t('(none)'), t('Rule {n}: background', { n: i + 1 }), (v) => (r.bg = v))),
+        h('td', {}, flag(r, 'bold', t('bold'), i)),
+        h('td', {}, flag(r, 'underline', t('underline'), i)),
+        h('td', {}, h('button', { class: 'btn small icon-only', type: 'button', title: t('Remove'), 'aria-label': t('Remove rule {n}', { n: i + 1 }), onclick: (e) => {
           const viaKeyboard = e.currentTarget === document.activeElement;
           rules.splice(i, 1);
           render();
@@ -713,23 +732,23 @@ export function highlightRulesDialog(initial) {
     for (const i of rows.querySelectorAll('tbody input[type=text]')) { try { i.setSelectionRange(0, 0); } catch {} } // a focused pattern reads from its start, not scrolled to its end
     if (focusRow !== undefined) rows.querySelectorAll('tbody input[type=text]')[focusRow]?.focus();
   };
-  addBtn = h('button', { class: 'btn small', type: 'button', onclick: () => { rules.push(normalizeRule({ color: 'red' })); render(rules.length - 1); } }, '＋ Add rule');
-  const restoreBtn = h('button', { class: 'btn small', type: 'button', onclick: () => { rules.splice(0, rules.length, ...DEFAULT_RULES.map((r) => ({ ...r }))); render(); toast('Built-in rules restored', 'info'); } }, 'Restore defaults');
+  addBtn = h('button', { class: 'btn small', type: 'button', onclick: () => { rules.push(normalizeRule({ color: 'red' })); render(rules.length - 1); } }, t('＋ Add rule'));
+  const restoreBtn = h('button', { class: 'btn small', type: 'button', onclick: () => { rules.splice(0, rules.length, ...DEFAULT_RULES.map((r) => ({ ...r }))); render(); toast(t('Built-in rules restored'), 'info'); } }, t('Restore defaults'));
   render();
   const m = showModal({
-    title: 'Keyword highlighting rules',
+    title: t('Keyword highlighting rules'),
     width: 'wide',
     body: h('div', {},
-      h('div', { class: 'hl-help' }, 'Matches in every terminal take the rule\'s colour. Plain text matches anywhere in a line; Regex is a JavaScript regular expression. Colours come from the terminal theme, so they read on every palette. Where rules overlap, the earlier match wins, then the longer one.'),
+      h('div', { class: 'hl-help' }, t('Matches in every terminal take the rule\'s colour. Plain text matches anywhere in a line; Regex is a JavaScript regular expression. Colours come from the terminal theme, so they read on every palette. Where rules overlap, the earlier match wins, then the longer one.')),
       rows,
       h('div', { class: 'hl-actions' }, addBtn, restoreBtn)),
     buttons: [
-      { label: 'Cancel', value: null },
-      { label: 'OK', primary: true, action: (api) => {
+      { label: t('Cancel'), value: null },
+      { label: t('OK'), primary: true, action: (api) => {
         const { invalid } = compileRules(rules.map((r) => ({ ...r, enabled: true })));
         if (invalid.length) {
           const { index, rule, error } = invalid[0];
-          toast(`"${rule.pattern}" is not a valid regular expression: ${error}`, 'warn', 6000);
+          toast(t('"{pattern}" is not a valid regular expression: {error}', { pattern: rule.pattern, error }), 'warn', 6000);
           rows.querySelectorAll('tbody input[type=text]')[index]?.focus();
           return;
         }
