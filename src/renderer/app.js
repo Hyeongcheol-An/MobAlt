@@ -13,6 +13,9 @@ const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
 /** Pane kind for a session type (rdp/vnc never get a pane). */
 const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh');
 
+/** The message of an error thrown by a main-process handler, without Electron's "Error invoking remote method" wrapper. */
+const ipcMessage = (e) => String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+
 class App {
   constructor() {
     this.settings = null;
@@ -860,6 +863,22 @@ class App {
   }
 
   // ---------- sessions / settings persistence ----------
+  /**
+   * One toast for an importer's { imported, updated?, skipped, errors }: a file that could not be used at all
+   * (nothing imported or skipped, one reason) is an error — "<refused>: <reason>"; anything else is a summary —
+   * "Imported 5 sessions from MobaXterm.ini, updated 2 already in the tree, skipped 1: …" — shown as a warning
+   * when entries were skipped, with up to three of their reasons.
+   */
+  importToast(r, { from = '', refused = 'Import failed' } = {}) {
+    const errors = r.errors || [];
+    if (!r.imported && !r.updated && !r.skipped && errors.length) return toast(`${refused}: ${errors[0]}`, 'error', 8000);
+    const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+    let msg = `Imported ${count(r.imported, 'session')}${from ? ` from ${from}` : ''}`;
+    if (r.updated) msg += `, updated ${r.updated} already in the tree`;
+    if (r.skipped) msg += `, skipped ${r.skipped}: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '; …' : ''}`;
+    return toast(msg, r.skipped ? 'warn' : 'success', r.skipped ? 8000 : undefined);
+  }
+
   async reloadSessions() {
     this.sessions = await window.api.sessions.list();
     this.sessionTree.render();
@@ -984,17 +1003,17 @@ class App {
         return;
       }
       case 'import-moba': {
-        const r = await window.api.sessions.importMoba();
+        const r = await window.api.sessions.importMoba().catch((e) => ({ imported: 0, skipped: 0, errors: [ipcMessage(e)] }));
         if (!r) return;
         await this.reloadSessions();
-        toast(`Imported ${r.imported} session(s) from MobaXterm.ini`, 'success');
+        this.importToast(r, { from: 'MobaXterm.ini', refused: 'Not a MobaXterm.ini file' });
         return;
       }
       case 'import-json': {
-        const r = await window.api.sessions.importJson();
+        const r = await window.api.sessions.importJson().catch((e) => ({ imported: 0, skipped: 0, errors: [ipcMessage(e)] }));
         if (!r) return;
         await this.reloadSessions();
-        toast(`Imported ${r.imported} session(s)`, 'success');
+        this.importToast(r, { refused: 'Not a MobAlt sessions file' });
         return;
       }
       case 'export-json': {

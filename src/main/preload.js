@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld('api', {
     testQuitCheck: (verb) => invoke('test:quit-check', verb),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testNotice: (text) => invoke('test:notice', text),
+    testNextDialog: (result) => invoke('test:next-dialog', result),
     checkUpdates: () => invoke('app:check-updates'),
     // main-process notices ({ level, text }): internal errors that would otherwise be lost in the console
     onNotice: (fn) => on('app:notice', fn),

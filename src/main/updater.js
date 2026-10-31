@@ -4,7 +4,8 @@
 // request and installed on quit (or right away when the user picks "Restart now"). A release that is
 // already on disk (brew upgrade / a dragged DMG while running) is never downloaded again: the bundle
 // watch's relaunch banner takes over.
-const { app, dialog } = require('electron');
+const { app } = require('electron');
+const dialogs = require('./dialogs'); // sheets go through the wrapper so that test runs can answer them
 const { compareVersions } = require('./bundlewatch');
 
 let autoUpdater = null;
@@ -36,7 +37,7 @@ function setupUpdater(store, getWin, hooks = {}) {
       check: async (manual, { quiet = false } = {}) => {
         const message = 'Updates are only checked in packaged builds';
         if (manual && !quiet) {
-          await dialog.showMessageBox(win(), {
+          await dialogs.showMessageBox(win(), {
             type: 'info', message,
             detail: `This is MobAlt ${app.getVersion()} running from source.`,
           });
@@ -75,7 +76,7 @@ function setupUpdater(store, getWin, hooks = {}) {
       try { hooks.bundleOnDisk && hooks.bundleOnDisk(disk); } catch {}
       finish({ status: 'on-disk', version: disk, message });
       if (manual) {
-        const r = await dialog.showMessageBox(win(), {
+        const r = await dialogs.showMessageBox(win(), {
           type: 'info',
           message: `MobAlt ${message}`,
           detail: `You are running ${app.getVersion()}. Nothing needs to be downloaded; relaunching starts the version that is on disk.`,
@@ -86,23 +87,23 @@ function setupUpdater(store, getWin, hooks = {}) {
       return;
     }
     finish({ status: 'available', version: info.version, message: `MobAlt ${info.version} is available` });
-    const r = await dialog.showMessageBox(win(), {
+    const r = await dialogs.showMessageBox(win(), {
       type: 'info',
       message: `MobAlt ${info.version} is available`,
       detail: `You are using ${app.getVersion()}. Download it now? It is installed when you quit, or right away if you choose to restart after the download.`,
       buttons: ['Download', 'Later'], defaultId: 0, cancelId: 1,
     });
     if (r.response === 0) {
-      autoUpdater.downloadUpdate().catch((e) => dialog.showMessageBox(win(), { type: 'error', message: 'Download failed', detail: e.message }));
+      autoUpdater.downloadUpdate().catch((e) => dialogs.showMessageBox(win(), { type: 'error', message: 'Download failed', detail: e.message }));
     }
   });
   autoUpdater.on('update-not-available', () => {
     const manual = loud();
     finish({ status: 'up-to-date', version: app.getVersion(), message: `MobAlt ${app.getVersion()} is up to date` });
-    if (manual) dialog.showMessageBox(win(), { type: 'info', message: 'MobAlt is up to date', detail: `Version ${app.getVersion()}` });
+    if (manual) dialogs.showMessageBox(win(), { type: 'info', message: 'MobAlt is up to date', detail: `Version ${app.getVersion()}` });
   });
   autoUpdater.on('update-downloaded', async (info) => {
-    const r = await dialog.showMessageBox(win(), {
+    const r = await dialogs.showMessageBox(win(), {
       type: 'info',
       message: `MobAlt ${info.version} is ready to install`,
       detail: 'Restart now to install it, or keep working: it is installed when you quit.',
@@ -116,7 +117,7 @@ function setupUpdater(store, getWin, hooks = {}) {
   autoUpdater.on('error', (e) => {
     const manual = loud();
     finish({ status: 'error', message: `Update check failed: ${e.message}` });
-    if (manual) dialog.showMessageBox(win(), { type: 'error', message: 'Update check failed', detail: e.message });
+    if (manual) dialogs.showMessageBox(win(), { type: 'error', message: 'Update check failed', detail: e.message });
   });
 
   const check = (manual, { quiet = false } = {}) => {

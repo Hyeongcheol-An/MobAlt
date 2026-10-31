@@ -17,6 +17,7 @@ const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
 const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
+const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
 
 const pkg = require('../../package.json');
 app.setName('MobAlt');
@@ -445,6 +446,14 @@ function registerIpc() {
     win.webContents.send('app:notice', { level: 'error', text: String(text) });
     return true;
   });
+  // Test-only: the answer the next native file picker / sheet gives instead of opening ({ canceled, filePaths?,
+  // filePath?, response? }); answers queue up in order and the real dialog is back once the queue is empty.
+  // Without a result it only reports how many answers are still waiting.
+  ipcMain.handle('test:next-dialog', (_e, result) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    if (result === undefined || result === null) return { pending: dialogs.pending() };
+    return { pending: dialogs.enqueue(result) };
+  });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
@@ -507,11 +516,11 @@ function registerIpc() {
       const base = s.downloadDir || app.getPath('downloads');
       const name = path.posix.basename(remote);
       if (isDir) {
-        const r = await dialog.showOpenDialog(win, { title: `Download folder "${name}" into…`, defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
+        const r = await dialogs.showOpenDialog(win, { title: `Download folder "${name}" into…`, defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
         if (r.canceled || !r.filePaths[0]) return null;
         local = path.join(r.filePaths[0], name);
       } else {
-        const r = await dialog.showSaveDialog(win, { title: 'Download to…', defaultPath: path.join(base, name) });
+        const r = await dialogs.showSaveDialog(win, { title: 'Download to…', defaultPath: path.join(base, name) });
         if (r.canceled || !r.filePath) return null;
         local = r.filePath;
       }
@@ -520,7 +529,7 @@ function registerIpc() {
   });
   ipcMain.handle('sftp:upload', async (_e, id, locals, remoteDir) => {
     if (!locals || !locals.length) {
-      const r = await dialog.showOpenDialog(win, { title: `Upload to ${remoteDir}`, properties: ['openFile', 'openDirectory', 'multiSelections'] });
+      const r = await dialogs.showOpenDialog(win, { title: `Upload to ${remoteDir}`, properties: ['openFile', 'openDirectory', 'multiSelections'] });
       if (r.canceled) return [];
       locals = r.filePaths;
     }
@@ -557,38 +566,67 @@ function registerIpc() {
     }
     return { imported: n, found: found.length };
   });
+  // Both importers answer { imported, updated?, skipped, errors } (errors: one line per skipped entry, or the single
+  // reason when the file could not be used at all — then imported and skipped are 0) for one summary toast.
   ipcMain.handle('sessions:import-moba', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
+    const r = await dialogs.showOpenDialog(win, { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
-    const found = importers.parseMobaXtermIni(r.filePaths[0]);
-    let n = 0;
-    for (const s of found) {
-      await store.upsertSession(s);
-      n++;
+    let parsed;
+    try {
+      parsed = importers.parseMobaXtermIniDetailed(r.filePaths[0]);
+    } catch (e) {
+      return { imported: 0, updated: 0, skipped: 0, errors: [e.message] };
     }
-    return { imported: n, found: found.length };
+    // A bookmark imported before (same folder, name and host) is refreshed in place rather than added again: its
+    // connection facts follow the .ini, while its id, saved secrets, icon, colour, tunnels, auth method and a key
+    // path set by hand stay. Re-importing the same file is therefore a no-op.
+    const keyOf = (s) => `${s.folder}|${s.name}|${s.host}`;
+    const existing = new Map((await store.getSessions()).sessions.map((s) => [keyOf(s), s]));
+    let imported = 0, updated = 0;
+    for (const s of parsed.sessions) {
+      const old = existing.get(keyOf(s));
+      if (!old) {
+        existing.set(keyOf(s), await store.upsertSession(s));
+        imported++;
+        continue;
+      }
+      const facts = { type: s.type, host: s.host, port: s.port, username: s.username, x11: s.x11, compression: s.compression };
+      if (s.privateKeyPath) Object.assign(facts, { privateKeyPath: s.privateKeyPath, notes: s.notes });
+      await store.upsertSession({ ...old, ...facts });
+      updated++;
+    }
+    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`) };
   });
   ipcMain.handle('sessions:export', async () => {
-    const r = await dialog.showSaveDialog(win, { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
+    const r = await dialogs.showSaveDialog(win, { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
     if (r.canceled || !r.filePath) return null;
     const d = await store.getSessions();
     fs.writeFileSync(r.filePath, JSON.stringify({ folders: d.folders, sessions: d.sessions.map(publicSession) }, null, 2));
     return r.filePath;
   });
   ipcMain.handle('sessions:import-json', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
+    const r = await dialogs.showOpenDialog(win, { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
-    const data = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8'));
+    let parsed;
+    try {
+      parsed = importers.parseSessionsJson(fs.readFileSync(r.filePaths[0], 'utf8'));
+    } catch (e) {
+      parsed = { error: e.message }; // unreadable file
+    }
+    if (parsed.error) return { imported: 0, skipped: 0, errors: [parsed.error] };
     let n = 0;
-    for (const s of data.sessions || []) {
-      if (!s.name) continue;
-      await store.upsertSession({ ...s, id: s.id || crypto.randomUUID() });
+    for (const s of parsed.sessions) {
+      // mergeSecrets drops the exporter's hasPassword/… flags (an export carries no secret) and, for a session already
+      // here with the same id that the file has no secret for, keeps the saved one; a password written into the file
+      // by hand is taken as is and stored encrypted by the store.
+      await store.upsertSession(await mergeSecrets(s));
       n++;
     }
-    const d = await store.getSessions();
-    const folders = new Set([...(d.folders || []), ...((data.folders || []).filter(Boolean))]);
-    await store.saveSessions({ sessions: d.sessions, folders: [...folders] });
-    return { imported: n };
+    if (parsed.folders.length) {
+      const d = await store.getSessions();
+      await store.saveSessions({ sessions: d.sessions, folders: [...new Set([...d.folders, ...parsed.folders])] });
+    }
+    return { imported: n, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`) };
   });
 
   ipcMain.handle('settings:get', () => store.getSettings());
@@ -599,9 +637,9 @@ function registerIpc() {
     try { store.saveWorkspace(data); } catch {}
   });
 
-  ipcMain.handle('dialog:open', (_e, opts) => dialog.showOpenDialog(win, opts));
-  ipcMain.handle('dialog:save', (_e, opts) => dialog.showSaveDialog(win, opts));
-  ipcMain.handle('dialog:message', (_e, opts) => dialog.showMessageBox(win, opts));
+  ipcMain.handle('dialog:open', (_e, opts) => dialogs.showOpenDialog(win, opts));
+  ipcMain.handle('dialog:save', (_e, opts) => dialogs.showSaveDialog(win, opts));
+  ipcMain.handle('dialog:message', (_e, opts) => dialogs.showMessageBox(win, opts));
   ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url));
   ipcMain.handle('shell:show-item', (_e, p) => shell.showItemInFolder(p));
   ipcMain.handle('shell:open-path', (_e, p) => shell.openPath(p));
