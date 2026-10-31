@@ -155,7 +155,7 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   서버들은 탭을 분할(또는 그리드)해서 나란히 띄우세요. 배너에 보이는 수신 터미널 수가 표시되고 탭을
   바꾸면 그에 맞춰 바뀝니다.
 - **원격 모니터링 바**: SSH 페인마다 머리글 아래 한 줄로 CPU, 메모리 사용량/전체, 루트 디스크 사용률,
-  네트워크 ↓/↑ 속도, 부하 평균, 가동 시간, 호스트명을 보여 주고 3초마다 갱신합니다(Settings → Terminal →
+  네트워크 ↓/↑ 속도, 부하 평균, 가동 시간, 호스트명을 보여 주고 3초마다 갱신합니다(Settings → Features →
   Monitoring, 2–30초). 작은 POSIX `sh` 스니펫 하나를 세션 자체 연결 위에서 돌리므로 추가 로그인이 없고, 점프
   호스트 너머에서도 되고, 터미널에는 아무것도 출력되지 않습니다. Linux는 `/proc`를 읽고 macOS·BSD는 `sysctl`,
   `vm_stat`, `netstat`를 씁니다. 스니펫을 못 돌리는 호스트(`sh` 없음, 권한 거부)는 흐린 *monitor unavailable*을
@@ -175,10 +175,10 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   ⌘K로 모두 지워집니다.
 - **Zmodem(rz/sz)**: 터미널 자체로 파일을 옮깁니다. SFTP를 못 쓰는 시리얼 콘솔이나 점프 호스트 너머에서 쓰던 고전적
   방식입니다. 원격에서 `sz 파일 …`을 실행하면 Mac으로 내려받고, `rz`를 실행하면 Mac에서 올려보냅니다. MobAlt가 스트림에서
-  전송을 감지해 터미널을 잠시 멈추고, 파일 패널의 전송 목록(취소 버튼 포함)과 상태 표시줄 카운터에 표시합니다. 내려받기는
+  전송을 감지해 터미널을 잠시 멈추고, Sftp 패널의 전송 목록(취소 버튼 포함)과 상태 표시줄 카운터에 표시합니다. 내려받기는
   Download 폴더(Settings → General)로, 폴더가 비어 있으면 그때 고르는 폴더로 저장되고, 올려보내기는 파일 선택 창을 엽니다.
   SSH·로컬·텔넷·시리얼 페인에서 동작하며 Mosh는 지원하지 않습니다(스트림이 mosh 클라이언트 것이라 원시 바이트 스트림이 아님).
-  Settings → Terminal → *Zmodem transfers (rz/sz)*(기본 켜짐)로 끌 수 있고, 꺼 두면 `rz`/`sz` 바이트는 예전처럼 그냥
+  Settings → Features → Transfers → *Zmodem transfers (rz/sz)*(기본 켜짐)로 끌 수 있고, 꺼 두면 `rz`/`sz` 바이트는 예전처럼 그냥
   깨진 문자로 보입니다. 페인에서 Ctrl-C를 누르면 전송이 취소됩니다.
 - **클립보드**: 선택하면 복사(Settings → Terminal → Copy on select), 우클릭은 붙여넣기(⇧+우클릭은 메뉴). Finder
   파일을 SSH 터미널에 놓으면 업로드, 로컬 터미널에 놓으면 경로가 붙여넣어집니다.
@@ -278,7 +278,7 @@ to SFTP panel when SSH connects").
 
 설정은 다섯 개의 탭으로 나뉘고 어느 탭이든 최소 창 크기에서 스크롤 없이 들어갑니다. **General**(종료 확인,
 SFTP 패널 전환, 작업대 복원, 로컬 셸과 폴더 통합, 외부 편집기, 다운로드 폴더, SSH keep-alive, 저장 위치를
-보여 주는 "Open config folder"), **Terminal**(글꼴, 줄 간격, 커서, 스크롤백, 테마(창 전체의 외관, *테마·외관* 참고), 마우스/키), **Features**(붙여넣기 보호, 원격 모니터링 바와 갱신 주기, 키워드 강조와 규칙 표), **Logging**(로그
+보여 주는 "Open config folder"), **Terminal**(글꼴, 줄 간격, 커서, 스크롤백, 테마(창 전체의 외관, *테마·외관* 참고), 마우스/키), **Features**(붙여넣기 보호, 원격 모니터링 바와 갱신 주기, 키워드 강조와 규칙 표, Zmodem 전송), **Logging**(로그
 폴더, 일반 텍스트 세션 로그), **Updates**(시작 시 확인과 "Check now").
 
 ## 단축키

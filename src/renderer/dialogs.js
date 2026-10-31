@@ -774,7 +774,7 @@ export function settingsDialog(app) {
       updStatus.textContent = e.message;
     }
   } }, 'Check now');
-  // Four section tabs (General / Terminal / Logging / Updates): each fits the 900×560 minimum window without scrolling.
+  // Five section tabs (General / Terminal / Features / Logging / Updates): each fits the 900×560 minimum window without scrolling.
   // Every field stays in the DOM whichever tab is in front, so Save reads them all.
   const tabs = modalTabs([
     ['general', 'General', h('div', { class: 'form-grid' },

@@ -129,7 +129,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 로그 / 저장 / 인쇄 | 🟡 | 폴더로 세션 로그. "터미널 텍스트 저장"이나 인쇄는 없음(Select All 후 복사) |
 | 스크롤백 | ✅ | Settings → Terminal → Scrollback lines(100 – 1,000,000, 기본 10,000). ⌘K로 지움 |
 | 붙여넣기 동작(우클릭, 여러 줄 미리보기, 지연) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V. 브래킷 붙여넣기 지원. 여러 줄·긴 붙여넣기는 편집 가능한 미리보기로 먼저 확인(Settings → Features → Paste guard). 줄별 지연은 없음 |
-| 악성 붙여넣기 경고 | ✅ | 모든 붙여넣기에서 폭 없는 문자·bidi·제어 문자, 마지막 줄바꿈, 줄 안의 CR, `curl \| sh`, 셸 프로필과 `authorized_keys` 쓰기, `rm -rf /` 류 명령, 동형 문자를 검사. 발견 항목은 목록과 미리보기 표시로 보여 주고 "Paste cleaned"가 숨은 문자를 걷어냄(Settings → Terminal → "Warn about suspicious pastes") |
+| 악성 붙여넣기 경고 | ✅ | 모든 붙여넣기에서 폭 없는 문자·bidi·제어 문자, 마지막 줄바꿈, 줄 안의 CR, `curl \| sh`, 셸 프로필과 `authorized_keys` 쓰기, `rm -rf /` 류 명령, 동형 문자를 검사. 발견 항목은 목록과 미리보기 표시로 보여 주고 "Paste cleaned"가 숨은 문자를 걷어냄(Settings → Features → Paste guard → "Warn about suspicious pastes") |
 | 선택하면 복사 | ✅ | Settings → Terminal → Copy on select(기본 켜짐) |
 | 선택 모드(단어, 사각형) | ✅ | 더블클릭 단어, 트리플클릭 줄, ⌥-드래그 사각형 선택(xterm.js 열 선택). 단어 구분 문자는 설정 불가 |
 | Ctrl+클릭 URL / 경로 | 🟡 | URL은 밑줄이 그어지고 클릭하면 브라우저로 열림. 파일·폴더 경로는 링크되지 않음 |
@@ -350,18 +350,11 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 
 위의 ❌ 행을 우선순위로 나눈 목록입니다. 크기는 대략적인 추정입니다(S = 며칠, M = 1–2주, L = 그 이상).
 
-**P1 — 가치가 크고 만들 수 있는 것**
+**P1** — 0.13에서 출시: 편집 가능한 미리보기와 악성 붙여넣기 검사가 있는 붙여넣기 보호, 원격 모니터링 바, Wake-on-LAN과
+네트워크 스캐너, 탭 고정 / 왼쪽·오른쪽 닫기 / 창으로 분리, SSH 키 생성기, 전문가 SSH 알고리즘 설정(모두 위의 ✅ 행).
+다음 우선순위는 P2입니다.
 
-| 항목 | 이유 | 크기 |
-|---|---|---|
-| 편집 가능한 미리보기와 악성 붙여넣기 검사(동형 문자, 셸로 파이프, 프로필 리디렉션, 폭 없는 공백)가 있는 여러 줄 붙여넣기 보호 | MobaXterm에서 가장 자주 언급되는 안전장치. xterm.js가 붙여넣기 경로를 이미 노출함 | M |
-| SSH 연결의 exec 채널을 주기적으로 돌리는 원격 모니터링 바(CPU / RAM / 디스크 / 네트워크) | MobaXterm은 25.2부터 기본 켜짐. ssh2 연결은 이미 있음 | M |
-| Tools 패널의 Wake-on-LAN과 서브넷 / 네트워크 스캐너 | Tools를 완성함. WoL은 UDP 매직 패킷, 스캐너는 포트 스캔 워커를 재사용 | S + M |
-| 탭 고정, 왼쪽/오른쪽 닫기, 창으로 분리 | 탭 색상은 이미 있음. 분리는 터미널 레지스트리를 공유하는 두 번째 BrowserWindow가 필요 | M |
-| SSH 키 생성 UI(`ssh-keygen` 래퍼) | 가장 흔한 "SSH 첫걸음" 작업. MobaKeyGen 공백도 메움 | S |
-| 전문가 SSH 알고리즘 / KEX / 암호 / MAC 설정 | 레거시 토글 하나로는 너무 거칠다. ssh2의 `algorithms` 옵션이 명시적 목록을 받음(ML-KEM은 ssh2를 기다려야 함) | S |
-
-**P2**
+**P2 — 다음**
 
 | 항목 | 이유 | 크기 |
 |---|---|---|

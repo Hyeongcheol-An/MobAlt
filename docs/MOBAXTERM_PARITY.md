@@ -130,7 +130,7 @@ MobAlt has 52 in full, 40 in a narrower or different form and lacks 32.
 | Logging / save / print | 🟡 | session log to a folder; no "Save terminal text" or print (Select All + copy instead) |
 | Scrollback | ✅ | Settings → Terminal → Scrollback lines (100 – 1,000,000; default 10,000); ⌘K clears |
 | Paste behaviour (right-click, multi-line preview, delay) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V; bracketed paste honoured; a multi-line or long paste asks first with an editable preview (Settings → Features → Paste guard); no per-line delay |
-| Malicious-paste guard | ✅ | every paste is checked for zero-width / bidi / control characters, a trailing newline, a lone CR, `curl \| sh`, writes to shell profiles and `authorized_keys`, `rm -rf /`-style commands and look-alike letters; findings are listed and marked in the preview, "Paste cleaned" strips the hidden characters (Settings → Terminal → "Warn about suspicious pastes") |
+| Malicious-paste guard | ✅ | every paste is checked for zero-width / bidi / control characters, a trailing newline, a lone CR, `curl \| sh`, writes to shell profiles and `authorized_keys`, `rm -rf /`-style commands and look-alike letters; findings are listed and marked in the preview, "Paste cleaned" strips the hidden characters (Settings → Features → Paste guard → "Warn about suspicious pastes") |
 | Copy on select | ✅ | Settings → Terminal → Copy on select (on by default) |
 | Selection modes (word, rectangular) | ✅ | double-click word, triple-click line, ⌥-drag rectangular (xterm.js column selection); word delimiters not configurable |
 | Ctrl+click URLs / paths | 🟡 | URLs are underlined and open in the browser on click; file and folder paths are not linked |
@@ -351,18 +351,11 @@ Each item is verified against the 0.12.0 source.
 
 Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a week or two, L = more).
 
-**P1 — high value, feasible**
+**P1** — shipped in 0.13: the paste guard with its editable preview and malicious-paste checks, the remote monitoring
+bar, Wake-on-LAN and the network scanner, tab pin / close left-right / detach-to-window, the SSH key generator and the
+expert SSH algorithm settings (all ✅ rows above). P2 is the next priority.
 
-| Item | Why | Size |
-|---|---|---|
-| Multi-line paste guard with editable preview and malicious-paste checks (homographs, pipe-to-shell, profile redirects, zero-width spaces) | the single most-cited MobaXterm safety net; xterm.js exposes the paste path already | M |
-| Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
-| Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
-| Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
-| SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
-| Expert SSH algorithm / KEX / cipher / MAC settings | one legacy toggle is too coarse; ssh2's `algorithms` option takes explicit lists (ML-KEM waits on ssh2) | S |
-
-**P2**
+**P2 — next**
 
 | Item | Why | Size |
 |---|---|---|
