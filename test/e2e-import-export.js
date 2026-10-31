@@ -29,7 +29,7 @@
   const pendingAnswers = async () => (await window.api.app.testNextDialog()).pending;
   const sess = () => app.sessions.sessions;
   const byName = (name) => sess().find((s) => s.name === name);
-  const SECRETS = ['hunter2-not-real', 'kp-secret-phrase', 'jump-secret-word'];
+  const SECRETS = ['hunter2-not-real', 'kp-secret-phrase', 'jump-secret-word', 'local-pw-after-import', 'hand-written-pw', 'moba-pw-local'];
   const fresh = async () => {
     await app.saveAllSessions({ sessions: [], folders: [] });
     await app.reloadSessions();
@@ -121,13 +121,14 @@
     n = toasts.length;
     await answer({ canceled: false, filePaths: [exportFile] });
     await app.action('import-json');
-    results.importToast = toastsSince(n).some((t) => t.text === `Imported ${before.count} session(s)` && !t.error);
+    results.importToast = toastsSince(n).some((t) => t.text === `Imported ${before.count} sessions` && !t.error);
     results.importRestoresAll = sess().length === before.count && sess().map((s) => s.id).sort().join() === before.ids.join()
       && sess().map((s) => s.name).sort().join() === before.names.join() && [...app.sessions.folders].sort().join() === before.folders.join();
     results.importRestoresFields = byName('app-01')?.host === 'app-01.example.internal' && byName('app-01')?.folder === 'Export/Prod' && byName('bastion')?.jumpHost === 'jump.example.internal' && byName('Build shell')?.icon === '🔧';
     // what the file did not carry stays gone: no password / passphrase after the round trip
     results.importNoSecretsBack = byName('app-01')?.hasPassword === false && byName('bastion')?.hasPassphrase === false && byName('bastion')?.hasJumpPassword === false;
     info.importedDiskRow = Object.keys(JSON.parse(await readLocal(app.info.userData + '/sessions.json')).sessions.find((s) => s.name === 'app-01')).filter((k) => /^has/.test(k));
+    results.importNoJunkFlagsOnDisk = info.importedDiskRow.length === 0; // the exporter's hasPassword/… flags are not persisted
     results.treeShowsImported = document.querySelectorAll('#session-tree .tree-row[data-session]').length === before.count
       && ['Export', 'Export/Prod', 'Export/Lab', 'Export/Empty', 'Test'].every((f) => document.querySelector(`#session-tree .tree-row.folder[data-folder="${f}"]`));
     app.showPanel('sessions');
@@ -143,6 +144,19 @@
     await app.action('import-json');
     results.reimportFileWinsById = sess().find((s) => s.id === renamed.id)?.name === 'legacy-switch' && !byName('renamed-locally');
     results.reimportKeepsLocalExtra = sess().some((s) => s.id === extra.id) && sess().length === before.count + 1;
+    // a password saved here for a session the file also has (same id; the file carries no secret) survives the
+    // re-import, and a password written into a file by hand is taken and stored encrypted
+    await app.saveSession({ ...byName('app-01'), password: SECRETS[3] });
+    await answer({ canceled: false, filePaths: [exportFile] });
+    await app.action('import-json');
+    results.reimportKeepsSavedSecret = byName('app-01')?.hasPassword === true;
+    const handWritten = scratch + '/hand-written.json';
+    await sftp.write(connId, handWritten, JSON.stringify({ sessions: [{ name: 'hand-written', type: 'ssh', host: 'hand.example.internal', username: 'u', password: SECRETS[4] }] }));
+    await answer({ canceled: false, filePaths: [handWritten] });
+    await app.action('import-json');
+    const diskAfter = await readLocal(app.info.userData + '/sessions.json');
+    const handRow = JSON.parse(diskAfter).sessions.find((s) => s.name === 'hand-written');
+    results.handWrittenSecretEncrypted = byName('hand-written')?.hasPassword === true && /^(enc|b64):/.test(handRow?.password || '') && !SECRETS.some((x) => diskAfter.includes(x));
     // a file without ids (hand-written, or another MobAlt's export edited down): every named session is added anew
     const noIds = scratch + '/no-ids.json';
     await sftp.write(connId, noIds, JSON.stringify({ folders: ['Hand/Written', ''], sessions: [
@@ -152,13 +166,44 @@
     n = toasts.length;
     await answer({ canceled: false, filePaths: [noIds] });
     await app.action('import-json');
-    results.importWithoutIdAdds = sess().filter((s) => s.name === 'app-01').length === 2 && toastsSince(n).some((t) => t.text === 'Imported 1 session(s)')
+    results.importWithoutIdAdds = sess().filter((s) => s.name === 'app-01').length === 2 && toastsSince(n).some((t) => t.text === 'Imported 1 session, skipped 1: entry 2: no name' && !t.error)
       && !sess().some((s) => s.host === 'nameless.example.internal') && app.sessions.folders.includes('Hand/Written') && !app.sessions.folders.includes('');
-    info.importJsonSemantics = 'upsert by id (file wins), sessions without id or name: added anew / skipped, folders unioned, never deletes';
+    info.importJsonSemantics = 'upsert by id (file wins, saved secrets kept), id-less entries added, nameless / unknown type / bad port skipped and counted, folders unioned, never deletes; not a sessions file → error toast';
+    // a file that is not a sessions file: an error toast names the reason and nothing changes; bad entries are skipped and counted
+    const countBefore = sess().length, foldersBefore = app.sessions.folders.length;
+    const notJson = scratch + '/not-json.json', noSessions = scratch + '/no-sessions.json', badEntries = scratch + '/bad-entries.json';
+    await sftp.write(connId, notJson, 'this is not json\n');
+    await sftp.write(connId, noSessions, JSON.stringify({ folders: ['X'], hosts: [] }));
+    await sftp.write(connId, badEntries, JSON.stringify({ sessions: [
+      { name: 'hand-02', type: 'telnet', host: 'hand-02.example.internal', port: '2323' },
+      { name: 'bad-port', host: 'x.example.internal', port: 'abc' },
+      { name: 'bad-type', type: 'gopher', host: 'y.example.internal' },
+      42,
+    ] }));
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [notJson] });
+    await app.action('import-json');
+    const t1 = toastsSince(n);
+    results.malformedFileErrorToast = t1.length === 1 && t1[0].error && /^Not a MobAlt sessions file: not JSON \(/.test(t1[0].text);
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [noSessions] });
+    await app.action('import-json');
+    const t2 = toastsSince(n);
+    results.noSessionsArrayErrorToast = t2.length === 1 && t2[0].error && t2[0].text === 'Not a MobAlt sessions file: no "sessions" array';
+    results.malformedLeavesStore = sess().length === countBefore && app.sessions.folders.length === foldersBefore && !app.sessions.folders.includes('X');
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [badEntries] });
+    await app.action('import-json');
+    const t3 = toastsSince(n);
+    results.badEntriesSummaryToast = t3.length === 1 && !t3[0].error && t3[0].text === 'Imported 1 session, skipped 3: "bad-port": bad port "abc"; "bad-type": unknown type "gopher"; entry 4: not an object';
+    results.badEntriesSkipped = byName('hand-02')?.port === 2323 && byName('hand-02')?.type === 'telnet' && !byName('bad-port') && !byName('bad-type') && sess().length === countBefore + 1;
+    if (!results.malformedFileErrorToast || !results.badEntriesSummaryToast) log('import toasts:', JSON.stringify([t1, t2, t3]));
 
-    // --- 6. MobaXterm.ini: cancel, then the synthetic fixture; a second import duplicates (new ids every time)
+    // --- 6. MobaXterm.ini: cancel, then the synthetic fixture (its two unusable bookmarks are counted as skipped on every
+    //        import); a second import refreshes what is already there instead of duplicating it
     results.freshStore2 = await fresh();
     const ini = root + '/test/fixtures/mobaxterm-sample.ini';
+    const MOBA_SKIPPED = ', skipped 2: "unsupported-type": unsupported session type #999; "no-host": no host';
     n = toasts.length;
     await answer({ canceled: true });
     await app.action('import-moba');
@@ -166,7 +211,7 @@
     n = toasts.length;
     await answer({ canceled: false, filePaths: [ini] });
     await app.action('import-moba');
-    results.mobaToast = toastsSince(n).some((t) => t.text === 'Imported 7 session(s) from MobaXterm.ini' && !t.error);
+    results.mobaToast = toastsSince(n).some((t) => t.text === 'Imported 7 sessions from MobaXterm.ini' + MOBA_SKIPPED && !t.error);
     const expectMoba = [
       ['web-01', 'ssh', 'web-01.example.internal', 22, 'deploy', 'MobaXterm'],
       ['core-switch', 'telnet', 'core-sw.example.internal', 23, 'admin', 'MobaXterm/Lab/Network'],
@@ -190,10 +235,28 @@
     app.showPanel('sessions');
     await sleep(150);
     await shot('72-moba-tree');
+    // re-import: a bookmark already in the tree (same folder, name and host) is refreshed in place, not added again —
+    // its connection facts follow the .ini while its id, saved password, icon and the rest stay; a session whose host
+    // was changed here no longer matches, so the bookmark comes in beside it
+    const web = byName('web-01'), bastionOld = byName('bastion');
+    await app.saveSession({ ...web, username: 'changed-here', icon: '🐧', password: SECRETS[5] });
+    await app.saveSession({ ...bastionOld, host: 'moved.example.internal' });
+    n = toasts.length;
     await answer({ canceled: false, filePaths: [ini] });
     await app.action('import-moba');
-    results.mobaReimportDuplicates = sess().length === 14 && sess().filter((s) => s.name === 'web-01').length === 2;
-    info.mobaImportSemantics = 'always adds (fresh id per bookmark): importing the same .ini twice doubles the sessions';
+    const t4 = toastsSince(n);
+    results.mobaReimportNoDuplicates = sess().length === 8 && sess().filter((s) => s.name === 'web-01').length === 1 && t4.length === 1 && !t4[0].error
+      && t4[0].text === 'Imported 1 session from MobaXterm.ini, updated 6 already in the tree' + MOBA_SKIPPED;
+    const web2 = byName('web-01');
+    results.mobaReimportRefreshesAndKeeps = web2?.id === web.id && web2?.username === 'deploy' && web2?.icon === '🐧' && web2?.hasPassword === true;
+    results.mobaChangedHostAddsBeside = sess().filter((s) => s.name === 'bastion').length === 2 && sess().some((s) => s.id === bastionOld.id && s.host === 'moved.example.internal')
+      && sess().some((s) => s.name === 'bastion' && s.id !== bastionOld.id && s.host === 'bastion.example.internal');
+    if (!results.mobaReimportNoDuplicates) log('moba re-import toasts:', JSON.stringify(t4), 'count', sess().length);
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [ini] });
+    await app.action('import-moba');
+    results.mobaThirdImportNoop = sess().length === 8 && toastsSince(n).some((t) => t.text === 'Imported 0 sessions from MobaXterm.ini, updated 7 already in the tree' + MOBA_SKIPPED);
+    info.mobaImportSemantics = 'bookmark matched by folder|name|host → refreshed in place (facts from the .ini; id, secrets, icon kept); otherwise added';
 
     // --- 7. the private-key picker in the session editor
     app.action('new-session');
@@ -250,11 +313,12 @@
     await app.sftpPanel.download([fileEntry()]);
     await waitFor(() => transfers().some((t) => t.local === dl && t.status === 'done'), 10000, 'file download done');
     results.downloadToPickedFile = (await readLocal(dl)) === 'hello from the test sshd\n';
+    n = toasts.length;
     tBefore = transfers().length;
     await answer({ canceled: true });
     await app.sftpPanel.download([dirEntry()]);
     await sleep(300);
-    results.downloadDirCancelQuiet = transfers().length === tBefore && !(await exists(scratch + '/dl/sub')) && errorToasts().length === 0;
+    results.downloadDirCancelQuiet = transfers().length === tBefore && !(await exists(scratch + '/dl/sub')) && toastsSince(n).length === 0;
     await answer({ canceled: false, filePaths: [scratch + '/dl'] }); // folder picker: the folder lands inside the chosen directory
     await app.sftpPanel.download([dirEntry()]);
     await waitFor(() => transfers().some((t) => t.local === scratch + '/dl/sub' && t.status === 'done'), 10000, 'folder download done');
@@ -283,8 +347,9 @@
 
     // --- 10. the queue is empty, and nothing errored along the way
     results.noAnswersLeft = (await pendingAnswers()) === 0;
-    results.noErrorToasts = errorToasts().length === 0;
-    if (!results.noErrorToasts) log('error toasts:', JSON.stringify(errorToasts()));
+    const unexpected = errorToasts().filter((x) => !x.startsWith('Not a MobAlt sessions file: '));
+    results.noUnexpectedErrorToasts = unexpected.length === 0;
+    if (unexpected.length) log('error toasts:', JSON.stringify(unexpected));
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-impexp] FAIL', e.message, e.stack);

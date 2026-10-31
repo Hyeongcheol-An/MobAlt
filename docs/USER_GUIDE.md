@@ -81,13 +81,17 @@ pane header, so a red "production" session is hard to confuse with a green "stag
 **Import / export**: the panel footer imports `~/.ssh/config` (hosts, users, ports, keys, ProxyJump) and a
 MobaXterm `MobaXterm.ini` (bookmarks). Export / import all sessions as JSON from the tree's
 context menu. The JSON file holds every session and folder but never a password or passphrase: those stay in
-MobAlt's encrypted store on this Mac, and the file only records that one was saved (`hasPassword`), so an
-imported session asks again on its first connection. Import merges into what you have: a session whose `id`
-matches an existing one is replaced by the file's version, every other one is added (a hand-written entry
-without an `id` is always added, one without a `name` is skipped), folders are added and nothing is deleted,
-so importing the same file twice changes nothing. `~/.ssh/config` skips hosts you already have (same folder
-and name); a MobaXterm import always adds its bookmarks under a `MobaXterm` folder, so importing the same
-`.ini` twice duplicates them.
+MobAlt's encrypted store on this Mac, and the file only records that one was saved (`hasPassword`), so a
+session imported on another Mac asks on its first connection. Import merges into what you have: a session
+whose `id` matches an existing one is replaced by the file's version (a password saved here for it is kept),
+every other one is added — a hand-written entry without an `id` is always added, and a `password` written
+into the file is taken and stored encrypted — folders are added and nothing is deleted, so importing the same
+file twice changes nothing. Entries without a name, with an unknown type or a bad port are skipped and
+counted in the toast; a file that is not a MobAlt sessions file is refused with the reason. `~/.ssh/config`
+skips hosts you already have (same folder and name). MobaXterm bookmarks go under a `MobaXterm` folder; one
+imported before (same folder, name and host) is refreshed in place — host, port, user, X11 and compression
+follow the `.ini`, while its saved password, icon, colour, tunnels and a key path you set stay — so importing
+the same `.ini` twice changes nothing either.
 
 **Startup commands** (Terminal tab): one command per line, typed into the terminal once it is
 ready. For SSH that is right after login; for local shells right after the prompt appears. Example:

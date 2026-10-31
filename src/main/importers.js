@@ -114,8 +114,14 @@ const MOBA_TYPES = { 109: 'ssh', 98: 'telnet', 91: 'rdp', 128: 'vnc', 100: 'loca
 
 /** Parse MobaXterm.ini bookmark sections. Best effort (format is undocumented). */
 function parseMobaXtermIni(file) {
+  return parseMobaXtermIniDetailed(file).sessions;
+}
+
+/** parseMobaXtermIni plus the bookmarks it could not use, as { entry, reason }: { sessions, skipped }. */
+function parseMobaXtermIniDetailed(file) {
   const text = decodeIni(fs.readFileSync(file));
   const sessions = [];
+  const skipped = [];
   let section = null;
   let folder = '';
   for (const raw of text.split(/\r?\n/)) {
@@ -140,7 +146,10 @@ function parseMobaXtermIni(file) {
     const m = /^#(\d+)#(\d+)%(.*)$/.exec(val);
     if (!m) continue;
     const type = MOBA_TYPES[m[1]];
-    if (!type) continue;
+    if (!type) {
+      skipped.push({ entry: `"${key}"`, reason: `unsupported session type #${m[1]}` });
+      continue;
+    }
     const body = m[3].split('#')[0];
     const f = body.split('%');
     const s = {
@@ -163,8 +172,51 @@ function parseMobaXtermIni(file) {
       s.notes = 'Imported key path from Windows; convert .ppk with puttygen and fix the path.';
     }
     if (s.host) sessions.push(s);
+    else skipped.push({ entry: `"${key}"`, reason: 'no host' });
   }
-  return sessions;
+  return { sessions, skipped };
 }
 
-module.exports = { parseSshConfig, parseMobaXtermIni };
+const SESSION_TYPES = ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'];
+
+/**
+ * Validate the text of a MobAlt sessions export, or a hand-written file of the same shape. Returns
+ * { sessions, folders, skipped }: the usable sessions normalised (trimmed string name, a known type with 'ssh'
+ * when absent, an integer port when one is given, a string id — fresh when missing — and a string folder) and
+ * the rejected entries as { entry, reason }; or { error } when the file is not a sessions file at all (not
+ * JSON, no top-level object, no "sessions" array). Secrets and the exporter's hasPassword/… flags are passed
+ * through untouched: what to do with them is the store's business.
+ */
+function parseSessionsJson(text) {
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    return { error: `not JSON (${e.message})` };
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return { error: 'the top level is not an object' };
+  if (!Array.isArray(data.sessions)) return { error: 'no "sessions" array' };
+  const sessions = [];
+  const skipped = [];
+  data.sessions.forEach((s, i) => {
+    const named = !!(s && typeof s === 'object' && typeof s.name === 'string' && s.name.trim());
+    const entry = named ? `"${s.name.trim()}"` : `entry ${i + 1}`;
+    const skip = (reason) => skipped.push({ entry, reason });
+    if (!s || typeof s !== 'object' || Array.isArray(s)) return skip('not an object');
+    if (!named) return skip('no name');
+    const type = s.type === undefined || s.type === null || s.type === '' ? 'ssh' : s.type;
+    if (!SESSION_TYPES.includes(type)) return skip(`unknown type ${JSON.stringify(s.type)}`);
+    const out = { ...s, name: s.name.trim(), type, id: typeof s.id === 'string' && s.id ? s.id : crypto.randomUUID(), folder: typeof s.folder === 'string' ? s.folder : '' };
+    if (s.port === undefined || s.port === null || s.port === '') delete out.port;
+    else {
+      const port = typeof s.port === 'number' ? s.port : /^\s*\d+\s*$/.test(String(s.port)) ? parseInt(s.port, 10) : NaN;
+      if (!Number.isInteger(port) || port < 1 || port > 65535) return skip(`bad port ${JSON.stringify(s.port)}`);
+      out.port = port;
+    }
+    sessions.push(out);
+  });
+  const folders = Array.isArray(data.folders) ? data.folders.filter((f) => typeof f === 'string' && f.trim()) : [];
+  return { sessions, folders, skipped };
+}
+
+module.exports = { parseSshConfig, parseMobaXtermIni, parseMobaXtermIniDetailed, parseSessionsJson, SESSION_TYPES };

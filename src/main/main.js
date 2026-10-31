@@ -565,16 +565,36 @@ function registerIpc() {
     }
     return { imported: n, found: found.length };
   });
+  // Both importers answer { imported, updated?, skipped, errors } (errors: one line per skipped entry, or the single
+  // reason when the file could not be used at all — then imported and skipped are 0) for one summary toast.
   ipcMain.handle('sessions:import-moba', async () => {
     const r = await dialogs.showOpenDialog(win, { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
-    const found = importers.parseMobaXtermIni(r.filePaths[0]);
-    let n = 0;
-    for (const s of found) {
-      await store.upsertSession(s);
-      n++;
+    let parsed;
+    try {
+      parsed = importers.parseMobaXtermIniDetailed(r.filePaths[0]);
+    } catch (e) {
+      return { imported: 0, updated: 0, skipped: 0, errors: [e.message] };
     }
-    return { imported: n, found: found.length };
+    // A bookmark imported before (same folder, name and host) is refreshed in place rather than added again: its
+    // connection facts follow the .ini, while its id, saved secrets, icon, colour, tunnels, auth method and a key
+    // path set by hand stay. Re-importing the same file is therefore a no-op.
+    const keyOf = (s) => `${s.folder}|${s.name}|${s.host}`;
+    const existing = new Map((await store.getSessions()).sessions.map((s) => [keyOf(s), s]));
+    let imported = 0, updated = 0;
+    for (const s of parsed.sessions) {
+      const old = existing.get(keyOf(s));
+      if (!old) {
+        existing.set(keyOf(s), await store.upsertSession(s));
+        imported++;
+        continue;
+      }
+      const facts = { type: s.type, host: s.host, port: s.port, username: s.username, x11: s.x11, compression: s.compression };
+      if (s.privateKeyPath) Object.assign(facts, { privateKeyPath: s.privateKeyPath, notes: s.notes });
+      await store.upsertSession({ ...old, ...facts });
+      updated++;
+    }
+    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`) };
   });
   ipcMain.handle('sessions:export', async () => {
     const r = await dialogs.showSaveDialog(win, { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
@@ -586,17 +606,26 @@ function registerIpc() {
   ipcMain.handle('sessions:import-json', async () => {
     const r = await dialogs.showOpenDialog(win, { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
-    const data = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8'));
+    let parsed;
+    try {
+      parsed = importers.parseSessionsJson(fs.readFileSync(r.filePaths[0], 'utf8'));
+    } catch (e) {
+      parsed = { error: e.message }; // unreadable file
+    }
+    if (parsed.error) return { imported: 0, skipped: 0, errors: [parsed.error] };
     let n = 0;
-    for (const s of data.sessions || []) {
-      if (!s.name) continue;
-      await store.upsertSession({ ...s, id: s.id || crypto.randomUUID() });
+    for (const s of parsed.sessions) {
+      // mergeSecrets drops the exporter's hasPassword/… flags (an export carries no secret) and, for a session already
+      // here with the same id that the file has no secret for, keeps the saved one; a password written into the file
+      // by hand is taken as is and stored encrypted by the store.
+      await store.upsertSession(await mergeSecrets(s));
       n++;
     }
-    const d = await store.getSessions();
-    const folders = new Set([...(d.folders || []), ...((data.folders || []).filter(Boolean))]);
-    await store.saveSessions({ sessions: d.sessions, folders: [...folders] });
-    return { imported: n };
+    if (parsed.folders.length) {
+      const d = await store.getSessions();
+      await store.saveSessions({ sessions: d.sessions, folders: [...new Set([...d.folders, ...parsed.folders])] });
+    }
+    return { imported: n, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`) };
   });
 
   ipcMain.handle('settings:get', () => store.getSettings());

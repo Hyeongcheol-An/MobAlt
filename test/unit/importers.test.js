@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { parseSshConfig, parseMobaXtermIni } = require('../../src/main/importers');
+const { parseSshConfig, parseMobaXtermIni, parseMobaXtermIniDetailed, parseSessionsJson } = require('../../src/main/importers');
 
 function tmpdir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mobalt-test-'));
@@ -95,4 +95,57 @@ test('parseMobaXtermIni: utf-16le file with BOM', () => {
   const s = parseMobaXtermIni(file);
   assert.equal(s.length, 4);
   assert.equal(s[0].name, 'web01');
+});
+
+test('parseMobaXtermIniDetailed: the bookmarks that were not usable come back with a reason', () => {
+  const file = path.join(tmpdir(), 'MobaXterm.ini');
+  fs.writeFileSync(file, INI + '\r\nno-host=#109#0%%22%%#MobaFont#0# #-1', 'utf8');
+  const d = parseMobaXtermIniDetailed(file);
+  assert.equal(d.sessions.length, 4);
+  assert.deepEqual(d.skipped, [{ entry: '"unknown"', reason: 'unsupported session type #999' }, { entry: '"no-host"', reason: 'no host' }]);
+});
+
+test('parseSessionsJson: refuses what is not a sessions file', () => {
+  assert.match(parseSessionsJson('this is not json').error, /^not JSON \(/);
+  assert.equal(parseSessionsJson('[1, 2]').error, 'the top level is not an object');
+  assert.equal(parseSessionsJson('null').error, 'the top level is not an object');
+  assert.equal(parseSessionsJson('{"folders": []}').error, 'no "sessions" array');
+});
+
+test('parseSessionsJson: normalises the usable entries and skips the rest with a reason', () => {
+  const r = parseSessionsJson(JSON.stringify({ folders: ['A', '', 3, 'B/C'], sessions: [
+    { id: 'keep', name: ' web ', type: 'ssh', host: 'h', port: '2222', folder: 'A', hasPassword: true, password: 'hand' },
+    { name: 'default-type', host: 'h', id: 7 },
+    { name: 'bad-port', port: 70000 },
+    { name: 'bad-port-2', port: '22x' },
+    { name: 'bad-type', type: 'gopher' },
+    { host: 'nameless' },
+    { name: '   ' },
+    'junk',
+    null,
+    { name: 'no-port', port: '', folder: 7, type: 'local' },
+  ] }));
+  assert.equal(r.error, undefined);
+  assert.deepEqual(r.folders, ['A', 'B/C']);
+  assert.deepEqual(r.sessions.map((s) => s.name), ['web', 'default-type', 'no-port']);
+  const [web, def, noPort] = r.sessions;
+  assert.equal(web.id, 'keep');
+  assert.equal(web.port, 2222);
+  assert.equal(web.hasPassword, true, 'flags and secrets pass through; the store decides');
+  assert.equal(web.password, 'hand');
+  assert.equal(def.type, 'ssh');
+  assert.match(def.id, /^[0-9a-f-]{36}$/, 'a non-string id is replaced');
+  assert.equal(def.folder, '');
+  assert.equal('port' in noPort, false);
+  assert.equal(noPort.folder, '');
+  assert.equal(noPort.type, 'local');
+  assert.deepEqual(r.skipped, [
+    { entry: '"bad-port"', reason: 'bad port 70000' },
+    { entry: '"bad-port-2"', reason: 'bad port "22x"' },
+    { entry: '"bad-type"', reason: 'unknown type "gopher"' },
+    { entry: 'entry 6', reason: 'no name' },
+    { entry: 'entry 7', reason: 'no name' },
+    { entry: 'entry 8', reason: 'not an object' },
+    { entry: 'entry 9', reason: 'not an object' },
+  ]);
 });
