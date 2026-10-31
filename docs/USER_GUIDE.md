@@ -98,6 +98,8 @@ the same `.ini` twice changes nothing either.
 **Startup commands** (Terminal tab): one command per line, typed into the terminal once it is
 ready. For SSH that is right after login; for local shells right after the prompt appears. Example:
 a local session with *Start folder* set to a project and `claude --resume <id>` as the command.
+The *Start folder* of a local session takes a path typed in full or picked with its Browse… button, which opens a
+folder dialog and leaves the field as it was when you cancel.
 
 ## Connecting
 

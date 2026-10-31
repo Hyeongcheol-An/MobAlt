@@ -1,6 +1,7 @@
 // Native file dialogs driven in test mode (window.api.app.testNextDialog): session export / import as JSON,
-// the MobaXterm.ini importer, the session editor's private-key picker, the SFTP download-to / upload-from
-// pickers — each with its cancel path (state untouched, no error toast) — plus the session log (no dialog).
+// the MobaXterm.ini importer, the session editor's private-key picker and a local session's Start folder picker,
+// the SFTP download-to / upload-from pickers — each with its cancel path (state untouched, no error toast) — plus
+// the session log (no dialog).
 // Needs the local test sshd (test/start-sshd.sh start): the exported files are read back over it.
 //   test/qa/run.sh test/e2e-import-export.js <out-dir> 90000
 (async () => {
@@ -371,6 +372,31 @@
     await sleep(300);
     results.keyPickCancelKeepsValue = keyInput.value === '/opt/keys/deploy_ed25519';
     await shot('73-key-picker');
+
+    // --- 7b. a local session's Start folder "Browse…": a folder dialog answered the same way; the field takes the
+    // path as chosen (absolute, never shortened to ~: the shell is started in it as typed), Cancel keeps it as it is
+    [...document.querySelectorAll('.modal .type-picker button')].find((b) => b.textContent.includes('Local')).click();
+    const cwdInput = await waitFor(() => document.querySelector('.modal #fld-start-folder'), 3000, 'local session fields');
+    const cwdBrowse = cwdInput.parentElement.querySelector('button');
+    results.cwdBrowseButton = !!cwdBrowse && cwdBrowse.textContent === 'Browse…' && cwdBrowse.type === 'button' && !!cwdBrowse.title && cwdBrowse.tabIndex === 0;
+    cwdInput.value = '';
+    await answer({ canceled: true });
+    cwdBrowse.click();
+    await sleep(300);
+    results.cwdPickCancelKeepsField = cwdInput.value === '' && (await pendingAnswers()) === 0 && !!document.querySelector('.modal .type-picker');
+    await answer({ canceled: false, filePaths: [home + '/Projects/demo'] });
+    cwdBrowse.click();
+    await waitFor(() => cwdInput.value !== '', 3000, 'start folder set');
+    results.cwdPickSetsField = cwdInput.value === home + '/Projects/demo';
+    await answer({ canceled: false, filePaths: ['/opt/work'] });
+    cwdBrowse.click();
+    await waitFor(() => cwdInput.value.startsWith('/opt'), 3000, 'start folder set (second pick)');
+    results.cwdPickReplacesField = cwdInput.value === '/opt/work';
+    await answer({ canceled: true });
+    cwdBrowse.click();
+    await sleep(300);
+    results.cwdPickCancelKeepsValue = cwdInput.value === '/opt/work' && (await pendingAnswers()) === 0;
+    await shot('73b-folder-picker');
     await closeEditor();
     results.editorClosed = !document.querySelector('.modal');
 

@@ -92,6 +92,8 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
 **시작 명령**(Terminal 탭): 한 줄에 명령 하나씩 적으면 터미널이 준비됐을 때 자동으로 입력됩니다. SSH는
 로그인 직후, 로컬 셸은 프롬프트가 뜬 직후입니다. 예: 로컬 세션의 Start folder를 프로젝트 폴더로,
 명령을 `claude --resume <id>`로.
+로컬 세션의 Start folder에는 경로를 전체로 적거나 옆의 Browse… 버튼으로 고를 수 있습니다. 폴더 선택 창이
+열리고, 취소하면 필드는 그대로 남습니다.
 
 ## 접속
 
