@@ -1,5 +1,5 @@
 // SFTP browser panel (left sidebar "Sftp" tab) bound to the active SSH pane's connection.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead } from './ui.js';
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 
@@ -89,7 +89,16 @@ export class SftpPanel {
         this.menu(e.clientX, e.clientY, null);
       }
     });
+    // keyboard: the rows are options of a multi-select listbox with one Tab stop (roving tabindex), see onKey()
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-multiselectable', 'true');
+    list.setAttribute('aria-label', 'Files');
     list.addEventListener('keydown', (e) => this.onKey(e));
+    list.addEventListener('focusin', (e) => {
+      const r = e.target.closest('.sftp-row[data-name]');
+      if (r && r.dataset.name !== '..') this._rove(r);
+    });
+    this._typeAhead = typeAhead(); // letters typed on a row jump to the next entry whose name starts with them
     list.addEventListener('click', (e) => {
       if (e.target === list) this.clearSelection();
     });
@@ -199,6 +208,9 @@ export class SftpPanel {
       if (path === '~' || (path || '').startsWith('~/')) path = (await window.api.sftp.home(connId)) + path.slice(1);
       const r = await window.api.sftp.list(connId, path || '.');
       if (this.connId !== connId) return;
+      const from = st.path;
+      // keyboard cursor: stays put on a refresh, lands on the folder just left when going up, else on the first entry
+      if (from !== r.path) st.lastSel = from && parentPath(from) === r.path ? from.replace(/\/$/, '').split('/').pop() : null;
       st.path = r.path;
       st.entries = r.entries;
       st.selected.clear();
@@ -219,11 +231,9 @@ export class SftpPanel {
     }
   }
 
-  renderList() {
-    const st = this.state();
-    if (!st) return;
-    const list = this.els.list;
-    list.replaceChildren();
+  /** Entries as shown: hidden files left out unless asked for, folders first, then the chosen sort. */
+  visibleEntries(st = this.state()) {
+    if (!st) return [];
     st.sort = st.sort || { key: 'name', dir: 1 };
     const cmp = (a, b) => {
       if (a.type !== b.type) return a.type === 'd' ? -1 : 1; // folders first, whatever the sort key
@@ -231,7 +241,16 @@ export class SftpPanel {
       const d = k === 'size' ? a.size - b.size : k === 'mtime' ? a.mtime - b.mtime : a.name.localeCompare(b.name);
       return (d || a.name.localeCompare(b.name)) * st.sort.dir;
     };
-    const entries = st.entries.filter((e) => st.hidden || !e.name.startsWith('.')).sort(cmp);
+    return st.entries.filter((e) => st.hidden || !e.name.startsWith('.')).sort(cmp);
+  }
+
+  renderList() {
+    const st = this.state();
+    if (!st) return;
+    const list = this.els.list;
+    const hadFocus = list.contains(document.activeElement); // keep the keyboard in the list across a re-render
+    list.replaceChildren();
+    const entries = this.visibleEntries(st);
     const headCell = (key, label, cls) => {
       const active = st.sort.key === key;
       return h('span', { class: cls + (active ? ' sorted' : ''), title: 'Sort by ' + label.toLowerCase(), onclick: () => {
@@ -239,9 +258,9 @@ export class SftpPanel {
         this.renderList();
       } }, label + (active ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''));
     };
-    list.append(h('div', { class: 'sftp-row sftp-head' }, h('span', {}), headCell('name', 'Name', 'name'), headCell('size', 'Size', 'size'), headCell('mtime', 'Modified', 'date')));
+    list.append(h('div', { class: 'sftp-row sftp-head', role: 'presentation' }, h('span', {}), headCell('name', 'Name', 'name'), headCell('size', 'Size', 'size'), headCell('mtime', 'Modified', 'date')));
     if (st.path !== '/') {
-      const up = h('div', { class: 'sftp-row dir', dataset: { name: '..' } }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' }));
+      const up = h('div', { class: 'sftp-row dir', dataset: { name: '..' }, role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' }));
       up.addEventListener('dblclick', () => this.cmd('up'));
       list.append(up);
     }
@@ -250,6 +269,7 @@ export class SftpPanel {
       const row = h('div', {
         class: 'sftp-row' + (e.type === 'd' ? ' dir' : '') + (e.link ? ' link' : '') + (e.name.startsWith('.') ? ' hidden-file' : '') + (st.selected.has(e.name) ? ' selected' : ''),
         dataset: { name: e.name }, title: `${e.modeStr} ${e.owner}:${e.group}${e.target ? ' → ' + e.target : ''}`,
+        role: 'option', tabindex: -1, 'aria-selected': String(st.selected.has(e.name)),
       },
         h('span', {}, e.type === 'd' ? '📁' : fileGlyph(e.name)),
         h('span', { class: 'name' }, e.name),
@@ -265,6 +285,45 @@ export class SftpPanel {
       });
       list.append(row);
     }
+    this._syncRoving(hadFocus);
+  }
+
+  /** Rows the keyboard cursor moves over, in display order (".." is focusable but outside the sequence). */
+  rows() {
+    return [...this.els.list.querySelectorAll('.sftp-row[data-name]')].filter((r) => r.dataset.name !== '..');
+  }
+
+  rowFor(name) {
+    return name == null ? null : this.els.list.querySelector(`.sftp-row[data-name="${CSS.escape(name)}"]`);
+  }
+
+  /** The keyboard cursor's row: the last selected entry while it is shown, else the first entry. */
+  cursorRow() {
+    const st = this.state();
+    return (st && this.rows().find((r) => r.dataset.name === st.lastSel)) || this.rows()[0] || null;
+  }
+
+  /** Roving tabindex: `row` is the list's single Tab stop; the list itself is one only while it has no rows. */
+  _rove(row) {
+    for (const r of this.els.list.querySelectorAll('.sftp-row[data-name]')) r.tabIndex = r === row ? 0 : -1;
+    this.els.list.tabIndex = row ? -1 : 0;
+  }
+
+  _syncRoving(focus) {
+    const row = this.cursorRow();
+    this._rove(row);
+    if (focus) (row || this.els.list).focus({ preventScroll: true });
+  }
+
+  /** Move the keyboard cursor (DOM focus and the Tab stop) to `row`, keeping it clear of the sticky header. */
+  focusRow(row) {
+    if (!row) return;
+    this._rove(row);
+    row.focus({ preventScroll: true });
+    row.scrollIntoView({ block: 'nearest' });
+    const head = this.els.list.querySelector('.sftp-head');
+    const hb = head ? head.getBoundingClientRect().bottom : 0, rt = row.getBoundingClientRect().top;
+    if (rt < hb) this.els.list.scrollTop -= hb - rt;
   }
 
   select(e, ev) {
@@ -274,7 +333,7 @@ export class SftpPanel {
       if (st.selected.has(e.name)) st.selected.delete(e.name);
       else st.selected.add(e.name);
     } else if (ev && ev.shiftKey && st.lastSel) {
-      const names = st.entries.filter((x) => st.hidden || !x.name.startsWith('.')).map((x) => x.name);
+      const names = this.rows().map((r) => r.dataset.name);
       const a = names.indexOf(st.lastSel), b = names.indexOf(e.name);
       for (let i = Math.min(a, b); i <= Math.max(a, b); i++) st.selected.add(names[i]);
     } else {
@@ -282,15 +341,23 @@ export class SftpPanel {
       st.selected.add(e.name);
     }
     st.lastSel = e.name;
-    for (const r of this.els.list.querySelectorAll('.sftp-row')) r.classList.toggle('selected', st.selected.has(r.dataset.name));
-    this.els.list.focus();
+    this._paintSelection(st);
+    this.focusRow(this.rowFor(e.name));
+  }
+
+  _paintSelection(st) {
+    for (const r of this.els.list.querySelectorAll('.sftp-row[data-name]')) {
+      const on = st.selected.has(r.dataset.name);
+      r.classList.toggle('selected', on);
+      r.setAttribute('aria-selected', String(on));
+    }
   }
 
   clearSelection() {
     const st = this.state();
     if (!st) return;
     st.selected.clear();
-    for (const r of this.els.list.querySelectorAll('.sftp-row')) r.classList.remove('selected');
+    this._paintSelection(st);
   }
 
   selectedEntries() {
@@ -303,39 +370,60 @@ export class SftpPanel {
     return (st.path === '/' ? '' : st.path) + '/' + name;
   }
 
+  /**
+   * Keys on the list or a focused row: ↑/↓, Home/End, PgUp/PgDn move the cursor (⇧ extends the selection), Enter
+   * opens the selected entry (or the focused row; ".." goes up), ⌫ goes up, Delete / ⌘⌫ deletes, ⌘A selects all,
+   * ⇧F10 / Menu key open the row's menu; letters (no modifier) are Finder-style type-ahead over the shown names.
+   */
   onKey(e) {
     const st = this.state();
-    if (!st) return;
+    if (!st || e.target.matches('input, textarea, select')) return;
     const sel = this.selectedEntries();
-    if (e.key === 'Enter' && sel.length === 1) this.open(sel[0]);
-    else if (e.key === 'Backspace' && !e.metaKey) this.cmd('up');
-    else if ((e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) && sel.length) this.cmd('delete');
-    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      const names = st.entries.filter((x) => st.hidden || !x.name.startsWith('.')).map((x) => x.name);
-      const i = names.indexOf(st.lastSel);
-      const n = names[Math.max(0, Math.min(names.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))];
-      if (n) {
-        this.select(st.entries.find((x) => x.name === n), e.shiftKey ? e : null);
-        const row = this.els.list.querySelector(`.sftp-row[data-name="${CSS.escape(n)}"]`);
-        row && row.scrollIntoView({ block: 'nearest' });
-      }
+    const rows = this.rows(), names = rows.map((r) => r.dataset.name);
+    const focused = e.target.closest('.sftp-row[data-name]');
+    const onUp = !!focused && focused.dataset.name === '..';
+    const i = focused && !onUp ? rows.indexOf(focused) : -1; // -1: the list itself has the focus, no cursor yet
+    const go = (j, extend) => { // cursor to row j (clamped); ⇧ extends the selection from the last selected entry
+      const n = names[Math.max(0, Math.min(names.length - 1, j))];
+      if (n !== undefined) this.select(st.entries.find((x) => x.name === n), extend ? e : null);
       e.preventDefault();
-    } else if (e.key === 'a' && e.metaKey) {
-      st.entries.forEach((x) => (st.hidden || !x.name.startsWith('.')) && st.selected.add(x.name));
+    };
+    const page = () => Math.max(1, Math.floor(this.els.list.clientHeight / ((rows[0] && rows[0].offsetHeight) || 24)) - 1);
+    if (e.key === 'Enter') {
+      if (onUp) this.cmd('up');
+      else if (sel.length === 1) this.open(sel[0]);
+      else if (!sel.length && i >= 0) this.open(st.entries.find((x) => x.name === names[i]));
+    } else if (e.key === 'Backspace' && !e.metaKey) this.cmd('up');
+    else if ((e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) && sel.length) this.cmd('delete');
+    else if (e.key === 'ArrowDown') go(i + 1, e.shiftKey);
+    else if (e.key === 'ArrowUp') go(i < 0 ? names.length - 1 : i - 1, e.shiftKey);
+    else if (e.key === 'Home') go(0, e.shiftKey);
+    else if (e.key === 'End') go(names.length - 1, e.shiftKey);
+    else if (e.key === 'PageDown') go(i + page(), e.shiftKey);
+    else if (e.key === 'PageUp') go(i < 0 ? names.length - 1 : i - page(), e.shiftKey);
+    else if (e.key === 'a' && e.metaKey) {
+      this.visibleEntries(st).forEach((x) => st.selected.add(x.name));
       this.renderList();
       e.preventDefault();
     } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) { // ⇧F10 / Menu key, like a right-click
       e.preventDefault();
-      this.menuFromKeyboard();
+      this.menuFromKeyboard(i >= 0 ? focused : null);
+    } else {
+      const j = this._typeAhead(e, names, i);
+      if (j >= 0) go(j, false);
     }
   }
 
-  /** Context menu of the keyboard cursor's row (the last selected entry), or the background menu when nothing is selected. */
-  menuFromKeyboard() {
+  /** Context menu of the focused row (selecting it first, like a right-click), else of the last selected entry, else the background menu. */
+  menuFromKeyboard(row) {
     const st = this.state();
+    let cur = row ? st.entries.find((x) => x.name === row.dataset.name) : null;
+    if (cur && !st.selected.has(cur.name)) this.select(cur);
     const sel = this.selectedEntries();
-    const cur = sel.find((x) => x.name === st.lastSel) || sel[0] || null;
-    const row = cur && this.els.list.querySelector(`.sftp-row[data-name="${CSS.escape(cur.name)}"]`);
+    if (!cur) {
+      cur = sel.find((x) => x.name === st.lastSel) || sel[0] || null;
+      row = cur && this.rowFor(cur.name);
+    }
     const r = (row || this.els.list).getBoundingClientRect();
     this.menu(r.left + 24, row ? r.bottom : r.top + 30, cur);
   }
@@ -353,8 +441,7 @@ export class SftpPanel {
     switch (name) {
       case 'up': {
         if (st.path === '/') return;
-        const parent = st.path.replace(/\/[^/]+\/?$/, '') || '/';
-        return this.navigate(parent);
+        return this.navigate(parentPath(st.path));
       }
       case 'home': return this.navigate('.');
       case 'refresh': return this.navigate(st.path);
@@ -435,6 +522,10 @@ export class SftpPanel {
     const ok = await confirmDialog(`Delete ${what} on the remote host? This cannot be undone.`, { title: 'Delete', okLabel: 'Delete', danger: true });
     if (!ok) return;
     const st = this.state();
+    // the keyboard cursor moves to the row after the deleted ones (else the one before them)
+    const names = this.rows().map((r) => r.dataset.name), gone = new Set(entries.map((e) => e.name));
+    const after = names.slice(names.findLastIndex((n) => gone.has(n)) + 1).find((n) => !gone.has(n));
+    const before = names.slice(0, Math.max(0, names.findIndex((n) => gone.has(n)))).reverse().find((n) => !gone.has(n));
     for (const e of entries) {
       try {
         await window.api.sftp.remove(this.connId, this.join(e.name), e.type === 'd');
@@ -442,6 +533,7 @@ export class SftpPanel {
         toast(`${e.name}: ${errMsg(err)}`, 'error');
       }
     }
+    if (gone.has(st.lastSel)) st.lastSel = after ?? before ?? null;
     this.navigate(st.path);
   }
 
@@ -462,7 +554,8 @@ export class SftpPanel {
       }
       if (this.connId !== connId) return;
       await window.api.sftp.rename(connId, this.join(e.name), this.join(n));
-      this.navigate(this.state().path);
+      if (st.lastSel === e.name) st.lastSel = n; // the keyboard cursor follows the renamed entry
+      this.navigate(st.path);
     } catch (err) {
       toast(errMsg(err), 'error');
     }
@@ -617,4 +710,8 @@ function fileGlyph(name) {
 
 export function shellQuote(p) {
   return /^[\w./-]+$/.test(p) ? p : `'${p.replace(/'/g, `'\\''`)}'`;
+}
+
+function parentPath(p) {
+  return p.replace(/\/[^/]+\/?$/, '') || '/';
 }

@@ -183,7 +183,8 @@ workspace restore and the update check. "Open config folder" shows where everyth
 | Focused tab: move / activate / close, context menu | ← → / ⏎ / ⌫, ⇧F10 |
 | Focused session row: move / fold / open / open in split / delete | ↑ ↓ / ← → / ⏎ / ⌘⏎ / ⌫ |
 | Focused macro: move / play / delete, context menu | ↑ ↓ / ⏎ / ⌫, ⇧F10 |
-| SFTP list: move / open / parent folder / delete, context menu | ↑ ↓ / ⏎ / ⌫ / Del, ⇧F10 |
+| SFTP list: move / open / parent folder / delete, context menu | ↑ ↓ Home End PgUp PgDn / ⏎ / ⌫ / Del, ⇧F10 |
+| Session tree and SFTP list: jump to a name | type its first letters (the same letter again: next match) |
 | Icon and colour picks in the session editor: move / choose | ← → ↑ ↓ / ⏎ or Space |
 
 Help → Keyboard Shortcuts shows the same list inside the app. Tab reaches the toolbar, the side

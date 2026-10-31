@@ -22,6 +22,34 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 
+/**
+ * Finder-style type-ahead for a list of names. Printable keys typed within `ms` of each other form a prefix and the
+ * cursor moves to the next item whose name starts with it (case-insensitive, wrapping; a prefix that grows refines
+ * the current match, the same letter typed again cycles through the items starting with it). Returns the index to
+ * move to, or -1 when nothing matches or the key is not type-ahead at all (a modifier is held, Space, a non-printable
+ * key, IME composition) — the caller then treats the key as before.
+ */
+export function typeAhead(ms = 700) {
+  let prefix = '', at = 0;
+  return (e, names, cur) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || e.key.length !== 1 || e.key === ' ') return -1;
+    const now = Date.now();
+    if (now - at > ms) prefix = '';
+    at = now;
+    prefix += e.key.toLowerCase();
+    const n = names.length;
+    if (!n) return -1;
+    const same = prefix.length > 1 && [...prefix].every((c) => c === prefix[0]);
+    const q = same ? prefix[0] : prefix;
+    const from = same || prefix.length === 1 ? cur + 1 : cur;
+    for (let k = 0; k < n; k++) {
+      const i = (((from + k) % n) + n) % n;
+      if (String(names[i]).toLowerCase().startsWith(q)) return i;
+    }
+    return -1;
+  };
+}
+
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }

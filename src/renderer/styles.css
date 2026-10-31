@@ -467,3 +467,8 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 .pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: var(--fg-dim); }
 .pane .pane-placeholder.ftp-info.failed .big, .pane .pane-placeholder.ftp-info.disconnected .big { opacity: .75; }
 .pane .pane-placeholder.ftp-info .ftp-err { max-width: 70%; padding: 6px 10px; border: 1px solid var(--red); border-radius: var(--radius); color: var(--red); font-size: 12px; text-align: center; word-break: break-word; }
+/* ---- list focus ---- */
+/* SFTP rows are the keyboard cursor now (roving tabindex, like the session tree): an inset ring on the focused row,
+   white on the blue selected fill. The list itself only takes the focus while it has no rows (loading, empty root). */
+.sftp-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.sftp-row.selected:focus-visible { outline-color: #fff; }

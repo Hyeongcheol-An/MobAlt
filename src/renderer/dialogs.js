@@ -592,7 +592,8 @@ export function shortcutsDialog(app) {
     ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'],
     ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'], ['Focused session row: move / fold / open', '↑ ↓ / ← → / ⏎'],
     ['Focused session row: open in split / delete', '⌘⏎ / ⌫'], ['Context menu for focused tab or row', '⇧F10'],
-    ['Focused macro: play / delete', '⏎ / ⌫'], ['SFTP list: open / parent / delete', '⏎ / ⌫ / Del'], ['Icon & colour picks: move / choose', '← → / ⏎'],
+    ['Focused macro: play / delete', '⏎ / ⌫'], ['SFTP list: move / open / parent / delete', '↑ ↓ Home End PgUp PgDn / ⏎ / ⌫ / Del'],
+    ['Session tree, SFTP list: jump to a name', 'type its first letters'], ['Icon & colour picks: move / choose', '← → / ⏎'],
   ];
   showModal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
 }
