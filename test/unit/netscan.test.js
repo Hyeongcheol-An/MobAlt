@@ -132,3 +132,42 @@ test('scan: cancel() ends a run at once — the probes in flight are dropped and
   assert.ok(took < 1500, `the 5 s connects did not hold it up: ${took} ms`);
   s.cancel(); // a second cancel is harmless
 });
+
+test('scan: a dual-stack name is tried on its IPv4 address first — localhost finds a service listening on 127.0.0.1 only', async () => {
+  const srv = net.createServer(() => {});
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const port = srv.address().port;
+  const events = [];
+  await scan(['localhost'], { method: 'tcp', ports: [port], timeout: 500, reverseDns: false }, (e) => events.push(e)).promise;
+  srv.close();
+  const hit = events.find((e) => e.type === 'hit');
+  assert.ok(hit, 'a hit: ' + JSON.stringify(events));
+  assert.equal(hit.ip, '127.0.0.1', 'the address that answered');
+  assert.equal(hit.host, 'localhost');
+  assert.equal(hit.hostname, 'localhost');
+  assert.deepEqual(hit.ports, [port]);
+  assert.equal(events.filter((e) => e.type === 'error').length, 0);
+});
+
+test('scan: a name none of whose addresses answers says which ones were tried', async () => {
+  const dns = require('dns');
+  const all = await dns.promises.lookup('localhost', { all: true });
+  const events = [];
+  await scan(['localhost'], { method: 'tcp', ports: [1], timeout: 500, reverseDns: false }, (e) => events.push(e)).promise;
+  assert.equal(events.filter((e) => e.type === 'hit').length, 0);
+  const err = events.find((e) => e.type === 'error');
+  if (all.length > 1) {
+    assert.ok(err, 'a note: ' + JSON.stringify(events));
+    assert.match(err.message, /^No answer from localhost \(tried 127\.0\.0\.1/);
+    if (all.some((a) => a.family === 6)) assert.match(err.message, /::1\)$/);
+  } else assert.equal(err, undefined, 'a single address: no note');
+});
+
+test('scan: an IPv6 address is pinged (ping6 on macOS, ping -6 on Linux)', { skip: process.platform === 'win32' }, async () => {
+  const events = [];
+  await scan(['::1'], { method: 'ping', timeout: 1000, reverseDns: false }, (e) => events.push(e)).promise;
+  const hit = events.find((e) => e.type === 'hit');
+  assert.ok(hit, '::1 answers a ping: ' + JSON.stringify(events));
+  assert.equal(hit.ip, '::1');
+  assert.ok(typeof hit.rtt === 'number' && hit.rtt >= 0, 'rtt from ping6: ' + hit.rtt);
+});

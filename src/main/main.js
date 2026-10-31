@@ -961,6 +961,8 @@ function registerIpc() {
   // { error } instead of a rejection, so the renderer shows the message as it is.
   ipcMain.handle('tools:wake', (_e, opts) => wol.wake(opts || {}).then((r) => ({ ok: true, ...r }), (e) => ({ ok: false, error: e.message })));
   ipcMain.handle('tools:scan-start', (_e, opts = {}) => {
+    // one scan at a time: a second start (a double click before the first answered) would run untracked, with no Stop
+    if (scans.size) return { error: 'A scan is already running — stop it first' };
     let targets, ports;
     try {
       targets = netscan.expandTargets(opts.target);
