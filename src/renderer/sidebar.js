@@ -1,8 +1,13 @@
 // Sessions tree (left panel): folders, filter, drag to folder, context menus.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead, repointOpeners, plural } from './ui.js';
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead, repointOpeners } from './ui.js';
+import { t, tn, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
+
+/** A translated sentence whose {name} placeholders are DOM nodes (links): the pieces in the order the translation puts them. */
+function sentence(template, parts) {
+  return template.split(/(\{\w+\})/).filter(Boolean).map((piece) => { const m = /^\{(\w+)\}$/.exec(piece); return m && parts[m[1]] ? parts[m[1]] : piece; });
+}
 
 export class SessionTree {
   constructor(app) {
@@ -42,7 +47,7 @@ export class SessionTree {
     });
     // keyboard: rows are tree items with a roving tabindex (one Tab stop), see onKey()
     this.el.setAttribute('role', 'tree');
-    this.el.setAttribute('aria-label', 'Saved sessions');
+    this.el.setAttribute('aria-label', t('Saved sessions'));
     this.el.addEventListener('keydown', (e) => this.onKey(e));
     this._typeAhead = typeAhead(); // letters typed on a row jump to the next row whose name starts with them
     this.el.addEventListener('focusin', (e) => {
@@ -60,6 +65,11 @@ export class SessionTree {
       if (id) return this.moveToFolder(id, '');
       const src = e.dataTransfer.getData('text/x-mobalt-folder');
       if (src) this.moveFolder(src, '');
+    });
+    // a language switch: the tree keeps its labels on screen (empty state, tooltips, the connected dot) → render again
+    onChange(() => {
+      this.el.setAttribute('aria-label', t('Saved sessions'));
+      this.render();
     });
   }
 
@@ -153,7 +163,11 @@ export class SessionTree {
     };
     renderNode(root, 0, this.el);
     if (!this.el.children.length) {
-      this.el.append(h('div', { class: 'tree-empty' }, q ? 'No sessions match.' : 'No saved sessions yet.', h('br'), h('button', { class: 'link-btn', onclick: () => this.app.action('new-session') }, 'Create a session'), ' or ', h('button', { class: 'link-btn', onclick: () => this.app.action('import-sshconfig') }, 'import ~/.ssh/config')));
+      // "Create a session or import ~/.ssh/config": the two links stay links, the sentence around them is translated as a whole
+      this.el.append(h('div', { class: 'tree-empty' }, q ? t('No sessions match.') : t('No saved sessions yet.'), h('br'), sentence(t('{create} or {import}'), {
+        create: h('button', { class: 'link-btn', onclick: () => this.app.action('new-session') }, t('Create a session')),
+        import: h('button', { class: 'link-btn', onclick: () => this.app.action('import-sshconfig') }, t('import ~/.ssh/config')),
+      })));
     }
     this._syncRoving();
     if (focused) {
@@ -223,7 +237,7 @@ export class SessionTree {
 
   sessionRow(s) {
     const open = this.app.workspace.allPanes().some((p) => p.session && p.session.id === s.id && p.status === 'connected');
-    const sub = s.type === 'local' ? 'local'
+    const sub = s.type === 'local' ? t('local')
       : s.type === 'serial' ? `${(s.serialPath || '').replace('/dev/', '')} @ ${s.baudRate || ''}`
       : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
     // the session's colour is never a text colour (a yellow pick is unreadable on the light chrome): a coloured session
@@ -235,7 +249,7 @@ export class SessionTree {
     const row = h('div', { class: 'tree-row' + (this.selected === s.id ? ' selected' : ''), dataset: { session: s.id }, draggable: true, title: `${s.name}\n${sub}`, role: 'treeitem', tabindex: -1 },
       ico,
       h('span', { class: 'label' }, s.name),
-      open ? h('span', { class: 'dot', title: 'connected' }) : null,
+      open ? h('span', { class: 'dot', title: t('connected') }) : null,
       h('span', { class: 'sub' }, sub)
     );
     row._session = s;
@@ -363,7 +377,7 @@ export class SessionTree {
   /** Re-parent a folder (drag-drop): "a/b" into "c" becomes "c/b"; descendants and sessions follow. */
   async moveFolder(srcPath, destPath) {
     if (!srcPath || srcPath === destPath) return;
-    if (destPath && (destPath + '/').startsWith(srcPath + '/')) return toast('Cannot move a folder into itself', 'warn');
+    if (destPath && (destPath + '/').startsWith(srcPath + '/')) return toast(t('Cannot move a folder into itself'), 'warn');
     const name = srcPath.split('/').pop();
     const target = destPath ? destPath + '/' + name : name;
     if (target === srcPath) return;
@@ -387,52 +401,52 @@ export class SessionTree {
   }
 
   async deleteSession(s) {
-    if (!(await confirmDialog(`Delete session "${s.name}"?`, { title: 'Delete session', okLabel: 'Delete', danger: true }))) return false;
+    if (!(await confirmDialog(t('Delete session "{name}"?', { name: s.name }), { title: t('Delete session'), okLabel: t('Delete'), danger: true }))) return false;
     await this.app.deleteSession(s.id);
-    toast(`Deleted ${s.name}`, 'info');
+    toast(t('Deleted {name}', { name: s.name }), 'info');
     return true;
   }
 
   sessionMenu(x, y, s) {
     contextMenu(x, y, [
-      { label: 'Open', key: '⏎', action: () => this.app.openSession(s) },
-      { label: 'Open in Split Right', action: () => this.app.openSession(s, { split: 'right' }) },
-      { label: 'Open in Split Down', action: () => this.app.openSession(s, { split: 'down' }) },
+      { label: t('Open'), key: '⏎', action: () => this.app.openSession(s) },
+      { label: t('Open in Split Right'), action: () => this.app.openSession(s, { split: 'right' }) },
+      { label: t('Open in Split Down'), action: () => this.app.openSession(s, { split: 'down' }) },
       '-',
-      { label: 'Edit…', action: () => this.app.editSession(s) },
-      { label: 'Duplicate', action: () => this.app.saveSession({ ...s, id: undefined, name: s.name + ' copy' }) },
-      { label: 'Move to Folder…', action: () => this.moveDialog(s) },
-      s.type === 'ssh' ? { label: 'Start Tunnel via this Session…', action: () => this.app.action('tunnels', { sessionId: s.id }) } : null,
+      { label: t('Edit…'), action: () => this.app.editSession(s) },
+      { label: t('Duplicate'), action: () => this.app.saveSession({ ...s, id: undefined, name: t('{name} copy', { name: s.name }) }) },
+      { label: t('Move to Folder…'), action: () => this.moveDialog(s) },
+      s.type === 'ssh' ? { label: t('Start Tunnel via this Session…'), action: () => this.app.action('tunnels', { sessionId: s.id }) } : null,
       '-',
-      { label: 'Delete', key: '⌫', danger: true, action: () => { const row = this.rowFor(s); return row ? this._deleteRow(row) : this.deleteSession(s); } },
+      { label: t('Delete'), key: '⌫', danger: true, action: () => { const row = this.rowFor(s); return row ? this._deleteRow(row) : this.deleteSession(s); } },
     ]);
   }
 
   folderMenu(x, y, f) {
     contextMenu(x, y, [
-      { label: 'New Session Here…', action: () => this.app.editSession({ folder: f.path, type: 'ssh' }) },
-      { label: 'New Subfolder…', action: () => this.newFolder(f.path) },
-      { label: 'Rename Folder…', action: () => this.renameFolder(f) },
-      { label: 'Move to Folder…', action: () => this.moveDialog(null, f) },
-      { label: 'Open All in Grid (2 columns)', action: () => this.app.openSessionsInGrid(this.collectSessions(f)) },
-      { label: 'Connect All Sessions (tabs)', action: () => this.connectAll(f) },
+      { label: t('New Session Here…'), action: () => this.app.editSession({ folder: f.path, type: 'ssh' }) },
+      { label: t('New Subfolder…'), action: () => this.newFolder(f.path) },
+      { label: t('Rename Folder…'), action: () => this.renameFolder(f) },
+      { label: t('Move to Folder…'), action: () => this.moveDialog(null, f) },
+      { label: t('Open All in Grid (2 columns)'), action: () => this.app.openSessionsInGrid(this.collectSessions(f)) },
+      { label: t('Connect All Sessions (tabs)'), action: () => this.connectAll(f) },
       '-',
-      { label: 'Delete Folder', danger: true, action: () => { const row = this.rowFor(null, f); return row ? this._deleteRow(row) : this.deleteFolder(f); } },
+      { label: t('Delete Folder'), danger: true, action: () => { const row = this.rowFor(null, f); return row ? this._deleteRow(row) : this.deleteFolder(f); } },
     ]);
   }
 
   rootMenu(x, y) {
     contextMenu(x, y, [
-      { label: 'New Session…', key: '⌘N', action: () => this.app.action('new-session') },
-      { label: 'New Folder…', action: () => this.newFolder('') },
+      { label: t('New Session…'), key: '⌘N', action: () => this.app.action('new-session') },
+      { label: t('New Folder…'), action: () => this.newFolder('') },
       '-',
-      { label: 'Import ~/.ssh/config', action: () => this.app.action('import-sshconfig') },
-      { label: 'Import MobaXterm.ini…', action: () => this.app.action('import-moba') },
-      { label: 'Import JSON…', action: () => this.app.action('import-json') },
-      { label: 'Export JSON…', action: () => this.app.action('export-json') },
+      { label: t('Import ~/.ssh/config'), action: () => this.app.action('import-sshconfig') },
+      { label: t('Import MobaXterm.ini…'), action: () => this.app.action('import-moba') },
+      { label: t('Import JSON…'), action: () => this.app.action('import-json') },
+      { label: t('Export JSON…'), action: () => this.app.action('export-json') },
       '-',
-      { label: 'Expand All', action: () => { this.collapsed.clear(); this.saveCollapsed(); this.render(); } },
-      { label: 'Collapse All', action: () => { this.collectFolders().forEach((p) => this.collapsed.add(p)); this.saveCollapsed(); this.render(); } },
+      { label: t('Expand All'), action: () => { this.collapsed.clear(); this.saveCollapsed(); this.render(); } },
+      { label: t('Collapse All'), action: () => { this.collectFolders().forEach((p) => this.collapsed.add(p)); this.saveCollapsed(); this.render(); } },
     ]);
   }
 
@@ -450,9 +464,9 @@ export class SessionTree {
   }
 
   async newFolder(parent) {
-    const name = await promptDialog('New folder', { label: parent ? `Inside "${parent}"` : 'Folder name', placeholder: 'Production' });
+    const name = await promptDialog(t('New folder'), { label: parent ? t('Inside "{folder}"', { folder: parent }) : t('Folder name'), placeholder: t('Production') });
     if (!name || !name.trim()) return;
-    if (name.includes('/')) return toast('Folder names cannot contain "/" — use New Subfolder to nest folders', 'warn');
+    if (name.includes('/')) return toast(t('Folder names cannot contain "/" — use New Subfolder to nest folders'), 'warn');
     const path = (parent ? parent + '/' : '') + name.trim();
     const folders = new Set(this.app.sessions.folders || []);
     folders.add(path);
@@ -461,10 +475,10 @@ export class SessionTree {
   }
 
   async renameFolder(f) {
-    const name = await promptDialog('Rename folder', { value: f.name });
+    const name = await promptDialog(t('Rename folder'), { value: f.name });
     if (!name || !name.trim() || name.trim() === f.name) return;
     const parent = f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '';
-    if (name.includes('/')) return toast('Folder names cannot contain "/"', 'warn');
+    if (name.includes('/')) return toast(t('Folder names cannot contain "/"'), 'warn');
     const np = (parent ? parent + '/' : '') + name.trim();
     const re = (p) => (p === f.path ? np : p.startsWith(f.path + '/') ? np + p.slice(f.path.length) : p);
     const sessions = this.app.sessions.sessions.map((s) => ({ ...s, folder: re(s.folder || '') }));
@@ -476,7 +490,7 @@ export class SessionTree {
 
   async deleteFolder(f) {
     const n = this.countSessions(f);
-    const ok = await confirmDialog(n ? `Delete folder "${f.name}" and its ${plural(n, 'session')}?` : `Delete folder "${f.name}"?`, { title: 'Delete folder', okLabel: 'Delete', danger: true });
+    const ok = await confirmDialog(n ? tn('Delete folder "{name}" and its {n} session?', 'Delete folder "{name}" and its {n} sessions?', n, { name: f.name }) : t('Delete folder "{name}"?', { name: f.name }), { title: t('Delete folder'), okLabel: t('Delete'), danger: true });
     if (!ok) return false;
     const inside = (p) => p === f.path || (p || '').startsWith(f.path + '/');
     const sessions = this.app.sessions.sessions.filter((s) => !inside(s.folder || ''));
@@ -501,13 +515,13 @@ export class SessionTree {
     const inside = (p) => !!f && (p === f.path || p.startsWith(f.path + '/'));
     const folders = this.collectFolders().sort().filter((p) => !inside(p));
     const current = s ? s.folder || '' : f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '';
-    const sel = h('select', { id: 'fld-move-folder' }, h('option', { value: '' }, '(root)'), folders.map((p) => h('option', { value: p, selected: p === current }, p)));
+    const sel = h('select', { id: 'fld-move-folder' }, h('option', { value: '' }, t('(root)')), folders.map((p) => h('option', { value: p, selected: p === current }, p)));
     const { showModal } = await import('./ui.js');
     const m = showModal({
-      title: 'Move to folder',
+      title: t('Move to folder'),
       width: 'narrow',
-      body: h('div', { class: 'form-grid' }, h('label', { for: sel.id }, s ? 'Folder' : `Move "${f.name}" into`), sel),
-      buttons: [{ label: 'Cancel', value: null }, { label: 'Move', primary: true, action: (api) => api.close(sel.value) }],
+      body: h('div', { class: 'form-grid' }, h('label', { for: sel.id }, s ? t('Folder') : t('Move "{name}" into', { name: f.name })), sel),
+      buttons: [{ label: t('Cancel'), value: null }, { label: t('Move'), primary: true, action: (api) => api.close(sel.value) }],
     });
     const r = await m.promise;
     if (r === null) return;

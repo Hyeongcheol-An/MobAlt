@@ -1,10 +1,10 @@
 // Tools panel (ping/traceroute/port scan/DNS/net info, Wake-on-LAN, network scanner) and Macros panel.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, showModal, plural } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, showModal } from './ui.js';
 import { normMac, trimLabel, parsePort, sshPortOf, comparePorts } from './nettools.js';
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { t, tn, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 const ipKey = (ip) => (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip.split('.').map((o) => o.padStart(3, '0')).join('.') : '~' + ip); // IPv4 in address order, anything else after
-const fmtRtt = (ms) => (ms >= 100 ? String(Math.round(ms)) : ms.toFixed(ms < 10 ? 2 : 1)) + ' ms';
+const fmtRtt = (ms) => t('{rtt} ms', { rtt: ms >= 100 ? String(Math.round(ms)) : ms.toFixed(ms < 10 ? 2 : 1) });
 
 export class ToolsPanel {
   constructor(app) {
@@ -23,6 +23,7 @@ export class ToolsPanel {
     });
     this.initWol();
     this.initScanner();
+    onChange(() => { if (this.scan) this.renderScanRows(); }); // a language switch: the result rows' "Add as session" buttons and RTT units (the <pre> output is a log and stays)
   }
 
   append(text) {
@@ -42,7 +43,7 @@ export class ToolsPanel {
       if (this.running) await window.api.tools.stop(this.running); // its "[stopped]" line is the answer to the click
       return;
     }
-    if (tool !== 'netinfo' && !host) return toast('Enter a host', 'warn');
+    if (tool !== 'netinfo' && !host) return toast(t('Enter a host'), 'warn');
     // From here the panel belongs to this run: the previous tool's "[stopped]" line (sent when the kill lands, after
     // stop() has answered) and a still-pending lookup or port scan are dropped instead of landing in this output.
     const run = ++this.runSeq;
@@ -61,7 +62,7 @@ export class ToolsPanel {
         if (run === this.runSeq) this.running = id;
         else window.api.tools.stop(id); // superseded while starting: never show its output
       } else if (tool === 'lookup') {
-        append(`Resolving ${host}…\n`);
+        append(t('Resolving {host}…', { host }) + '\n');
         const r = await window.api.tools.lookup(host);
         const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':');
         const mx = r.mx || [], txt = r.txt || [], ptr = r.reverse || [];
@@ -72,15 +73,15 @@ export class ToolsPanel {
         for (const p of ptr) append(`  PTR   ${p}\n`);
         // say explicitly what was not found instead of ending the listing silently
         if (isIp) {
-          if (!ptr.length) append(`  (no PTR record: ${host} has no reverse DNS name)\n`);
+          if (!ptr.length) append('  ' + t('(no PTR record: {host} has no reverse DNS name)', { host }) + '\n');
         } else if (!r.error) {
-          if (!mx.length) append('  (no MX records)\n');
-          if (!txt.length) append('  (no TXT records)\n');
+          if (!mx.length) append('  ' + t('(no MX records)') + '\n');
+          if (!txt.length) append('  ' + t('(no TXT records)') + '\n');
         }
-        if (!r.error && !(r.addresses || []).length && !ptr.length) append('  no records\n');
+        if (!r.error && !(r.addresses || []).length && !ptr.length) append('  ' + t('no records') + '\n');
       } else if (tool === 'netinfo') {
         const r = await window.api.tools.netinfo();
-        append(`Hostname: ${r.hostname}\nDNS: ${r.dns.join(', ')}\n`);
+        append(t('Hostname: {hostname}', { hostname: r.hostname }) + '\n' + t('DNS: {servers}', { servers: r.dns.join(', ') }) + '\n');
         let last = null;
         for (const i of r.interfaces) {
           if (i.name !== last) { append(`\n${i.name}${i.mac && i.mac !== '00:00:00:00:00:00' ? `  (${i.mac})` : ''}\n`); last = i.name; }
@@ -89,16 +90,16 @@ export class ToolsPanel {
       } else if (tool === 'portscan') {
         const from = $('#tool-port-from').value.trim() === '' ? 1 : parseInt($('#tool-port-from').value, 10);
         const to = $('#tool-port-to').value.trim() === '' ? 1024 : parseInt($('#tool-port-to').value, 10);
-        if (!(from >= 1 && from <= 65535) || !(to >= 1 && to <= 65535)) return toast('Ports must be between 1 and 65535', 'warn');
-        if (from > to) return toast('The first port must not be greater than the last', 'warn');
-        append(`Scanning ${host} ports ${from}-${to}…\n`);
+        if (!(from >= 1 && from <= 65535) || !(to >= 1 && to <= 65535)) return toast(t('Ports must be between 1 and 65535'), 'warn');
+        if (from > to) return toast(t('The first port must not be greater than the last'), 'warn');
+        append(t('Scanning {host} ports {from}-{to}…', { host, from, to }) + '\n');
         const t0 = Date.now();
         const open = await window.api.tools.portScan(host, from, to);
-        append(open.length ? open.map((p) => `  ${p}/tcp open`).join('\n') + '\n' : '  no open ports found\n');
-        append(`done in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
+        append(open.length ? open.map((p) => '  ' + t('{port}/tcp open', { port: p })).join('\n') + '\n' : '  ' + t('no open ports found') + '\n');
+        append(t('done in {seconds}s', { seconds: ((Date.now() - t0) / 1000).toFixed(1) }) + '\n');
       }
     } catch (e) {
-      append(`error: ${e.message}\n`);
+      append(t('error: {message}', { message: e.message }) + '\n');
     }
   }
 
@@ -134,7 +135,7 @@ export class ToolsPanel {
   async wake() {
     if (this.waking) return;
     const mac = this.wolMac.value.trim();
-    if (!mac) return toast('Enter a MAC address', 'warn');
+    if (!mac) return toast(t('Enter a MAC address'), 'warn');
     const port = parsePort(this.wolPort.value); // "1.5" is refused here (parseInt would have sent to port 1)
     if (port.error) {
       this.wolPort.focus();
@@ -152,9 +153,10 @@ export class ToolsPanel {
       await this.app.saveSettings({ wolHistory }, true);
       this.renderWolHistory();
       this.wolMac.value = r.mac; // the spelling the history keeps
-      toast(`Magic packet sent to ${label ? `${label} (${r.mac})` : r.mac} via ${r.broadcast}:${r.port}`, 'success');
+      const p = { label, mac: r.mac, broadcast: r.broadcast, port: r.port };
+      toast(label ? t('Magic packet sent to {label} ({mac}) via {broadcast}:{port}', p) : t('Magic packet sent to {mac} via {broadcast}:{port}', p), 'success');
     } catch (e) {
-      toast(`Wake-on-LAN failed: ${e.message}`, 'error');
+      toast(t('Wake-on-LAN failed: {message}', { message: e.message }), 'error');
     } finally {
       this.waking = false;
     }
@@ -200,7 +202,7 @@ export class ToolsPanel {
   async startScan() {
     if (this.scanStarting || (this.scan && this.scan.running)) return;
     const target = this.scanTarget.value.trim();
-    if (!target) return toast('Enter a CIDR, an address range or a host', 'warn');
+    if (!target) return toast(t('Enter a CIDR, an address range or a host'), 'warn');
     const int = (sel, def) => { const v = parseInt($(sel).value, 10); return Number.isInteger(v) ? v : def; };
     // Scan goes inert at once: a second click or Enter before the main process answered would start another run
     // that nothing here tracks or can stop (main refuses a second start too)
@@ -215,7 +217,7 @@ export class ToolsPanel {
     }
     if (!r || r.error) {
       this.syncScanButtons();
-      return toast(r ? r.error : 'The scan could not start', 'warn');
+      return toast(r ? r.error : t('The scan could not start'), 'warn');
     }
     this.scan = { id: r.id, total: r.total, done: 0, rows: [], running: true, cancelled: false, ms: 0, target };
     this.scanBody.replaceChildren();
@@ -261,8 +263,8 @@ export class ToolsPanel {
       this.renderScanProgress();
       this.renderScanEmpty();
       this.syncScanButtons();
-      const up = plural(s.rows.length, 'host');
-      toast(ev.cancelled ? `Scan stopped: ${up} up, ${ev.done}/${ev.total} scanned` : `Scan finished: ${up} up of ${ev.total} in ${(ev.ms / 1000).toFixed(1)} s`, ev.cancelled ? 'warn' : 'success');
+      const n = s.rows.length, p = { done: ev.done, total: ev.total, seconds: (ev.ms / 1000).toFixed(1) };
+      toast(ev.cancelled ? tn('Scan stopped: {n} host up, {done}/{total} scanned', 'Scan stopped: {n} hosts up, {done}/{total} scanned', n, p) : tn('Scan finished: {n} host up of {total} in {seconds} s', 'Scan finished: {n} hosts up of {total} in {seconds} s', n, p), ev.cancelled ? 'warn' : 'success');
     }
   }
 
@@ -309,7 +311,7 @@ export class ToolsPanel {
       h('td', { class: 'host', title: r.hostname || null }, r.hostname || '—'),
       h('td', { class: 'mono num' }, r.rtt == null ? '—' : fmtRtt(r.rtt)),
       h('td', { class: 'mono' }, r.ports.length ? r.ports.join(', ') : '—'),
-      h('td', { class: 'act' }, h('button', { type: 'button', class: 'scan-add', title: `Add ${r.ip} as an SSH session`, 'aria-label': `Add ${r.ip} as session`, onclick: () => this.addScanSession(r) }, '＋')),
+      h('td', { class: 'act' }, h('button', { type: 'button', class: 'scan-add', title: t('Add {ip} as an SSH session', { ip: r.ip }), 'aria-label': t('Add {ip} as session', { ip: r.ip }), onclick: () => this.addScanSession(r) }, '＋')),
     )));
     this.renderScanEmpty();
     this.syncScanButtons();
@@ -324,14 +326,14 @@ export class ToolsPanel {
 
   /** "Copy as text": the table as it is sorted, in aligned columns. */
   async copyScan() {
-    if (!this.scan || !this.scan.rows.length) return toast('No scan results to copy', 'warn');
+    if (!this.scan || !this.scan.rows.length) return toast(t('No scan results to copy'), 'warn');
     const rows = this.sortedScanRows();
-    const cols = [['IP', (r) => r.ip], ['Hostname', (r) => r.hostname || '-'], ['RTT', (r) => (r.rtt == null ? '-' : fmtRtt(r.rtt))], ['Open ports', (r) => (r.ports.length ? r.ports.join(',') : '-')]];
+    const cols = [['IP', (r) => r.ip], [t('Hostname'), (r) => r.hostname || '-'], ['RTT', (r) => (r.rtt == null ? '-' : fmtRtt(r.rtt))], [t('Open ports'), (r) => (r.ports.length ? r.ports.join(',') : '-')]];
     const cells = rows.map((r) => cols.map(([, f]) => f(r)));
     const widths = cols.map(([name], i) => Math.max(name.length, ...cells.map((c) => c[i].length)));
     const line = (c) => c.map((v, i) => (i === cols.length - 1 ? v : v.padEnd(widths[i]))).join('  ');
     await window.api.clipboard.write([line(cols.map(([name]) => name)), ...cells.map(line)].join('\n') + '\n');
-    toast(`Copied ${plural(rows.length, 'host')} as text`, 'success');
+    toast(tn('Copied {n} host as text', 'Copied {n} hosts as text', rows.length), 'success');
   }
 }
 
@@ -343,13 +345,18 @@ export class MacrosPanel {
     for (const b of document.querySelectorAll('[data-macro]')) b.addEventListener('click', () => this.cmd(b.dataset.macro));
     // keyboard: the rows are options of a listbox with one Tab stop (roving tabindex), see onKey()
     this.list.setAttribute('role', 'listbox');
-    this.list.setAttribute('aria-label', 'Macros');
+    this.list.setAttribute('aria-label', t('Macros'));
     this.list.addEventListener('keydown', (e) => this.onKey(e));
     this.list.addEventListener('focusin', (e) => {
       const r = e.target.closest('.tree-row');
       if (r) this._rove(r);
     });
     this.render();
+    onChange(() => { // a language switch: the list (empty state, "{n} ch") and the record button, whose text this panel rewrites
+      this.list.setAttribute('aria-label', t('Macros'));
+      this.recBtn.textContent = this.app.macroRecorder ? t('■ Stop') : t('● Rec');
+      this.render();
+    });
   }
 
   rows() {
@@ -397,18 +404,18 @@ export class MacrosPanel {
 
   rowMenu(m, x, y) {
     contextMenu(x, y, [
-      { label: 'Play in Active Terminal', key: '⏎', action: () => this.play(m) },
-      { label: 'Play in All Terminals', action: () => this.play(m, true) },
+      { label: t('Play in Active Terminal'), key: '⏎', action: () => this.play(m) },
+      { label: t('Play in All Terminals'), action: () => this.play(m, true) },
       '-',
-      { label: 'Edit…', action: () => this.edit(m) },
-      { label: 'Rename…', action: async () => { const n = await promptDialog('Rename macro', { value: m.name }); if (n) this.save(this.macros.map((x) => (x.id === m.id ? { ...x, name: n } : x))); } },
+      { label: t('Edit…'), action: () => this.edit(m) },
+      { label: t('Rename…'), action: async () => { const n = await promptDialog(t('Rename macro'), { value: m.name }); if (n) this.save(this.macros.map((x) => (x.id === m.id ? { ...x, name: n } : x))); } },
       '-',
-      { label: 'Delete', key: '⌫', danger: true, action: () => this.remove(m) },
+      { label: t('Delete'), key: '⌫', danger: true, action: () => this.remove(m) },
     ]);
   }
 
   async remove(m) {
-    if (await confirmDialog(`Delete macro "${m.name}"?`, { okLabel: 'Delete', danger: true })) this.save(this.macros.filter((x) => x.id !== m.id));
+    if (await confirmDialog(t('Delete macro "{name}"?', { name: m.name }), { okLabel: t('Delete'), danger: true })) this.save(this.macros.filter((x) => x.id !== m.id));
   }
 
   get macros() {
@@ -426,12 +433,12 @@ export class MacrosPanel {
     const focused = fa && fa.classList.contains('tree-row') && this.list.contains(fa) ? { id: fa._macro?.id, index: this.rows().indexOf(fa) } : null;
     this.list.replaceChildren();
     if (!this.macros.length) {
-      this.list.append(h('div', { class: 'tree-empty' }, 'No macros. Press ● Rec to record keystrokes in the active terminal, or ＋ to type one.'));
+      this.list.append(h('div', { class: 'tree-empty' }, t('No macros. Press ● Rec to record keystrokes in the active terminal, or ＋ to type one.')));
       if (focused) $('[data-macro="new"]').focus(); // the last macro was deleted from the keyboard: ＋ is the nearest control
       return;
     }
     for (const m of this.macros) {
-      const row = h('div', { class: 'tree-row', title: m.text.slice(0, 200), role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', { class: 'ico' }, '▶'), h('span', { class: 'label' }, m.name), h('span', { class: 'sub' }, `${m.text.length} ch`));
+      const row = h('div', { class: 'tree-row', title: m.text.slice(0, 200), role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', { class: 'ico' }, '▶'), h('span', { class: 'label' }, m.name), h('span', { class: 'sub' }, t('{n} ch', { n: m.text.length })));
       row._macro = m;
       row.addEventListener('dblclick', () => this.play(m));
       row.addEventListener('contextmenu', (e) => {
@@ -448,7 +455,7 @@ export class MacrosPanel {
 
   play(m, all = false) {
     const panes = all ? this.app.workspace.allPanes() : [this.app.activePane()].filter(Boolean);
-    if (!panes.length) return toast('No active terminal', 'warn');
+    if (!panes.length) return toast(t('No active terminal'), 'warn');
     for (const p of panes) p.write(m.text);
     if (!all) panes[0].focus();
   }
@@ -459,22 +466,23 @@ export class MacrosPanel {
         const text = this.app.macroRecorder.text;
         this.app.macroRecorder = null;
         this.recBtn.classList.remove('on');
-        this.recBtn.textContent = '● Rec';
-        if (!text) return toast('Nothing recorded', 'warn');
-        let n = await promptDialog('Save macro', { label: `${text.length} characters recorded`, placeholder: 'macro name' });
+        this.recBtn.textContent = t('● Rec');
+        if (!text) return toast(t('Nothing recorded'), 'warn');
+        const ask = () => promptDialog(t('Save macro'), { label: tn('{n} character recorded', '{n} characters recorded', text.length), placeholder: t('macro name') });
+        let n = await ask();
         while (n !== null && !n.trim()) {
-          toast('Give the macro a name', 'warn');
-          n = await promptDialog('Save macro', { label: `${text.length} characters recorded`, placeholder: 'macro name' });
+          toast(t('Give the macro a name'), 'warn');
+          n = await ask();
         }
         if (!n) return;
         this.save([...this.macros, { id: 'm' + Date.now(), name: n, text }]);
       } else {
-        if (!this.app.activePane()) return toast('Focus a terminal first', 'warn');
+        if (!this.app.activePane()) return toast(t('Focus a terminal first'), 'warn');
         this.app.macroRecorder = { text: '' };
         this.recBtn.classList.add('on');
-        this.recBtn.textContent = '■ Stop';
+        this.recBtn.textContent = t('■ Stop');
         this.app.activePane().focus();
-        toast('Recording keystrokes… press ■ Stop when done', 'info');
+        toast(t('Recording keystrokes… press ■ Stop when done'), 'info');
       }
     } else if (name === 'new') {
       this.edit(null);
@@ -482,15 +490,15 @@ export class MacrosPanel {
   }
 
   edit(m) {
-    const name = h('input', { type: 'text', id: 'fld-macro-name', value: m ? m.name : '', placeholder: 'name' });
-    const text = h('textarea', { id: 'fld-macro-text', spellcheck: false, placeholder: 'Text to send. Use \\n for Enter, \\t for Tab, \\x03 for Ctrl-C.', style: { minHeight: '140px' } });
+    const name = h('input', { type: 'text', id: 'fld-macro-name', value: m ? m.name : '', placeholder: t('name') });
+    const text = h('textarea', { id: 'fld-macro-text', spellcheck: false, placeholder: t('Text to send. Use \\n for Enter, \\t for Tab, \\x03 for Ctrl-C.'), style: { minHeight: '140px' } });
     text.value = m ? m.text.replace(/\r/g, '\\n').replace(/\t/g, '\\t').replace(/[\x00-\x08\x0b-\x1f]/g, (c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0')) : '';
     const modal = showModal({
-      title: m ? 'Edit macro' : 'New macro',
-      body: h('div', { class: 'form-grid' }, h('label', { for: name.id }, 'Name'), name, h('label', { for: text.id }, 'Text'), text),
+      title: m ? t('Edit macro') : t('New macro'),
+      body: h('div', { class: 'form-grid' }, h('label', { for: name.id }, t('Name')), name, h('label', { for: text.id }, t('Text')), text),
       buttons: [
-        { label: 'Cancel', value: null },
-        { label: 'Save', primary: true, action: (api) => {
+        { label: t('Cancel'), value: null },
+        { label: t('Save'), primary: true, action: (api) => {
           if (!name.value.trim()) return name.focus();
           const raw = text.value.replace(/\\x([0-9a-f]{2})/gi, (_, x) => String.fromCharCode(parseInt(x, 16))).replace(/\\n/g, '\r').replace(/\\t/g, '\t');
           const macro = { id: m ? m.id : 'm' + Date.now(), name: name.value.trim(), text: raw };
