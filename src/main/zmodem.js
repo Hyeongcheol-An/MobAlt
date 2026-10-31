@@ -35,7 +35,7 @@ const HOLD_MAX = 4096; // bytes of terminal output held back while a detection w
 const ZM_START = Buffer.from([0x2a, 0x2a, 0x18, 0x42]); // "**" ZDLE "B": the hex header that starts every session
 const CAN = 0x18;
 
-/** Settings → Terminal → "Zmodem transfers (rz/sz)"; on unless switched off. */
+/** Settings → Features → Transfers → "Zmodem transfers (rz/sz)"; on unless switched off. */
 function zmodemEnabled(settings) {
   return !settings || settings.zmodem !== false;
 }
