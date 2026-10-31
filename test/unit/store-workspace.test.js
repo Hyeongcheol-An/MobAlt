@@ -38,3 +38,11 @@ test('workspace: round-trips tabs + layout, ignores bad shapes', () => {
   store.saveWorkspace({ tabs: 'nope' });
   assert.deepEqual(store.getWorkspace(), ws);
 });
+
+test('settings: every toggle the Settings dialog shows has a default, so app.settings matches the dialog before the first Save', () => {
+  const { DEFAULT_SETTINGS } = require('../../src/main/store');
+  for (const k of ['rightClickPaste', 'copyOnSelect', 'macOptionIsMeta', 'cursorBlink', 'localShellIntegration', 'confirmClose', 'sftpAutoOpen', 'restoreWorkspace', 'autoUpdate', 'logPlainText']) {
+    assert.equal(typeof DEFAULT_SETTINGS[k], 'boolean', k);
+  }
+  assert.equal(DEFAULT_SETTINGS.macOptionIsMeta, true); // the dialog shows "Option key acts as Meta/Alt" checked unless it was saved off
+});

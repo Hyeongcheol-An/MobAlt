@@ -86,6 +86,7 @@ const DEFAULT_SETTINGS = {
   theme: 'moba-dark',
   rightClickPaste: true,
   copyOnSelect: true,
+  macOptionIsMeta: true, // Option key acts as Meta/Alt (xterm macOptionIsMeta); what Settings shows before the first Save
   bell: 'none',
   localShell: '',
   localShellArgs: ['-l'],
