@@ -2053,7 +2053,8 @@
     },
     "Empty": {
       "refs": [
-        "src/renderer/terminal.js"
+        "src/renderer/terminal.js",
+        "src/renderer/ui.js"
       ]
     },
     "Empty folder": {
