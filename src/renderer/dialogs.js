@@ -1099,10 +1099,14 @@ export async function keygenDialog(app, { forSession = false } = {}) {
   const result = h('div', { class: 'keygen-result', hidden: true });
   const body = h('div', { class: 'keygen' }, form, result, status);
   let done = null; // { privateKeyPath, publicKeyPath, publicKey } once generated
+  // while the key is generated / added to the agent / installed, the dialog cannot be dismissed (Cancel, ✕, Esc):
+  // the key pair is on disk by then, and closing early would hide its path and the install's outcome
+  let busyNow = false;
   const m = showModal({
     title: 'Generate SSH key',
     width: 'wide',
     closeOnBackdrop: false,
+    beforeClose: () => !busyNow,
     body,
     buttons: [
       { label: 'Cancel', value: null },
@@ -1111,9 +1115,17 @@ export async function keygenDialog(app, { forSession = false } = {}) {
     ],
   });
   const [cancelBtn, useBtn, genBtn] = m.el.querySelectorAll('.modal-foot .btn');
+  const closeX = m.el.querySelector('.modal-title .close');
   useBtn.hidden = true;
   const controls = () => [...form.querySelectorAll('input, select, button')];
-  const busy = (on) => { for (const el of controls()) el.disabled = on || (el === target && !sshSessions.length); genBtn.disabled = on; };
+  const busy = (on) => {
+    busyNow = on;
+    for (const el of controls()) el.disabled = on || (el === target && !sshSessions.length);
+    genBtn.disabled = on;
+    cancelBtn.disabled = on;
+    closeX.disabled = on;
+    closeX.title = on ? 'Wait for the key to be generated and installed' : 'Close (Esc)';
+  };
 
   async function generate() {
     passErr.hidden = pathErr.hidden = true;
@@ -1159,6 +1171,7 @@ export async function keygenDialog(app, { forSession = false } = {}) {
       steps.push({ ok: i.ok, text: i.ok ? (i.added ? `Installed on ${i.host} in ${i.remoteFile}` : `Already present on ${i.host} in ${i.remoteFile}`) : i.error });
     }
     status.textContent = '';
+    busy(false); // the result can be closed again
     showResult(r, steps);
   }
 
