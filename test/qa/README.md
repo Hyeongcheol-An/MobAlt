@@ -31,6 +31,7 @@ await window.api.app.testKey('F19');        // one real key press: raises the wi
 await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
 (await window.api.app.testQuitCheck()).relaunchRequested; // true once the banner's Relaunch ran (test mode records, never restarts)
 await window.api.app.testNotice('Internal error: x'); // a main-process notice (app:notice) → error toast (test mode only)
+await window.api.app.testSilentListen(2213);            // → { port }: a TCP listener on 127.0.0.1 that accepts and never speaks — an SSH connection to it waits for the banner (test mode only)
 window.api.app.bootChrome();                   // the chrome the preload put on <html> before the first paint ({ background, scheme, theme, vars }; no vars on a first launch)
 window.api.app.testFirstFrames();              // the first 12 animation frames of this launch: [{ t, html, body, scheme }] (test mode only; see test/e2e-theme-boot.js)
 await window.api.app.testNextDialog({ canceled: false, filePaths: ['/f'] }); // answer the next native file dialog / sheet instead of showing it (test mode only; see below)

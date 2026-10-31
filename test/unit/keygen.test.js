@@ -65,6 +65,10 @@ test('installCommand: ssh-copy-id semantics in one sh -c, the key body quoted, ~
   assert.match(keygen.installCommand('', blob), /authorized_keys/);
   assert.throws(() => keygen.installCommand('~/.ssh/authorized_keys', 'AAAA"; rm -rf /; "'), /Not a public key/);
   assert.throws(() => keygen.installCommand('/a\nb', blob), /Bad remote file name/);
+  // "~bob/…" inside the quotes would be a folder literally named ~bob under the login's home
+  assert.throws(() => keygen.installCommand('~bob/.ssh/authorized_keys', blob), /^Error: ~user paths are not supported for the remote file — use ~\/ \(the login's home\) or an absolute path$/);
+  assert.doesNotThrow(() => keygen.installCommand('~', blob));
+  assert.doesNotThrow(() => keygen.installCommand('~/x', blob));
 });
 
 test('installCommand runs: appends once, keeps the file at 0600, creates a private folder, ends a missing newline', { skip: process.platform === 'win32' }, () => {
@@ -110,6 +114,11 @@ test('generate: a real ed25519 key in a temp folder, 0600 / 0644, public key and
   await assert.rejects(keygen.generate({ type: 'ed25519', path: file }), /already exists — choose another file name/);
   await assert.rejects(keygen.generate({ type: 'ed25519', path: '' }), /Choose where to save/);
   await assert.rejects(keygen.generate({ type: 'ed25519', path: 'relative/name' }), /must be absolute/);
+  // a folder (a trailing slash, or an existing directory) and a ~user path get their own sentences, before ssh-keygen runs
+  await assert.rejects(keygen.generate({ type: 'ed25519', path: path.join(dir, 'sub') + '/' }), /^Error: That is a folder; add a file name$/);
+  await assert.rejects(keygen.generate({ type: 'ed25519', path: path.join(dir, 'keys') }), /^Error: .*\/keys is a folder; add a file name$/);
+  await assert.rejects(keygen.generate({ type: 'ed25519', path: '~bob/id_ed25519' }), /^Error: ~user paths are not supported — use ~\/ for your own home folder or an absolute path$/);
+  await assert.rejects(keygen.generate({ type: 'ed25519', path: '~bob' }), /~user paths are not supported/);
   await assert.rejects(keygen.generate({ type: 'ed25519', path: path.join(dir, 'x') }, { bin: path.join(dir, 'no-such-ssh-keygen') }), /ssh-keygen was not found/);
   fs.rmSync(dir, { recursive: true, force: true });
 });
