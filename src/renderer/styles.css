@@ -823,3 +823,21 @@ body.detached #toolbar .brand::after { color: var(--fg-dim); opacity: 1; }
 .pane-mx .mx-caption { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pane.focused .pane-mx { color: var(--fg); }
 .pane-mx .mx-box:focus-visible { outline: 2px solid var(--fg-strong); outline-offset: 1px; }
+/* Background label (the pane menu's Background Label ▸, Pane Settings…, a session's Terminal tab): a large, dim name
+   behind the terminal text, like iTerm2's badge. xterm paints an opaque background on its canvas, so the label is an
+   overlay above it (z-index 1, under the overlay / drop zones) in the pane's foreground colour at 16 % opacity,
+   pointer-events none: never part of the buffer, a selection, a copy or a log. Centred, or top right; the size follows
+   the pane (container query units; .pane-term is a size container); hidden in cells under 90 px. */
+.pane-term .pane-badge { position: absolute; inset: 2px 0 0 4px; display: flex; align-items: center; justify-content: center; padding: 0 6%; box-sizing: border-box; pointer-events: none; user-select: none; z-index: 1; color: var(--term-fg, var(--fg)); opacity: .16; }
+.pane-term .pane-badge[hidden] { display: none; }
+.pane-term .pane-badge .badge-text { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 700 clamp(22px, 16cqh, 96px)/1.1 -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; letter-spacing: .02em; }
+.pane-term .pane-badge.top-right { align-items: flex-start; justify-content: flex-end; padding: 3% 4% 0 0; }
+.pane-term .pane-badge.top-right .badge-text { font-size: clamp(18px, 9cqh, 56px); }
+@container (max-height: 90px) { .pane-term .pane-badge { display: none; } }
+/* Read-Only (the pane menu): a chip in the head like the zoomed one, in the warning colour. */
+.pane-head .ro-badge { border-color: var(--warn); color: var(--warn); }
+.pane-head .ro-badge[hidden] { display: none; }
+/* Sub-menus (Background Label ▸, Font Size ▸): a › in the key slot; the open row keeps the selection fill while its sub-menu is beside it. */
+.ctx-item.has-sub .k { font-size: 14px; line-height: 1; }
+.ctx-item.has-sub[aria-expanded="true"] { background: var(--selection); color: var(--selection-fg); }
+.ctx-item.has-sub[aria-expanded="true"] .k { color: var(--selection-fg-dim); }

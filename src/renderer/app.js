@@ -6,7 +6,7 @@ import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
-import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog } from './dialogs.js';
+import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog, paneSettingsDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
 import { t, tn, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
 
@@ -100,6 +100,11 @@ class App {
         }
       }
       if (p.kind === 'local' && p.cwd) d.cwd = p.cwd;
+      // the pane menu's per-terminal state: a name of the user's, Pane Settings… overrides, the background label, Read-Only
+      if (p.titleLocked) d.paneTitle = p.title;
+      if (p.overrides && Object.keys(p.overrides).length) d.overrides = { ...p.overrides };
+      if (p.badge) d.badge = { ...p.badge };
+      if (p.readOnly) d.readOnly = true;
       if (live) Object.assign(d, p.transferState());
       return d;
     };
@@ -167,7 +172,9 @@ class App {
       let kind = d.kind;
       if (!attach && kind !== 'local' && kind !== 'empty' && !session) kind = 'empty'; // session was deleted (a live terminal keeps its pane)
       if (kind === 'rdp' || kind === 'vnc') kind = 'empty';
-      const pane = new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined });
+      const pane = new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined,
+        title: typeof d.paneTitle === 'string' && d.paneTitle ? d.paneTitle : null, overrides: d.overrides && typeof d.overrides === 'object' ? d.overrides : null,
+        badge: d.badge && typeof d.badge === 'object' ? d.badge : null, readOnly: d.readOnly === true }); // what the pane menu set, back with the pane
       if (attach && kind !== 'empty') pane._transfer = d;
       return pane;
     };
@@ -801,6 +808,37 @@ class App {
     this.focusPane(ap, true);
   }
 
+  /**
+   * Pane Settings… (the pane menu): MobaXterm's per-running-terminal reconfiguration. The dialog's values become this
+   * pane's own overrides (pane > session > Settings; kept with the pane through zoom, detach and the workspace) and,
+   * with "Save to session", also the saved session's fields that exist there — theme, font size, keyword highlighting,
+   * monitoring bar, background label — so every pane opened from it later follows (saveSession tells the open ones).
+   */
+  async paneSettings(pane) {
+    pane = pane || this.activePane();
+    if (!pane || pane.kind === 'empty' || pane.kind === 'ftp') return toast(t('Pane settings need a terminal pane'), 'info');
+    const r = await paneSettingsDialog(this, pane);
+    if (!r || pane.disposed) return;
+    pane.applyOverrides(r.overrides);
+    pane.setReadOnly(r.readOnly);
+    pane.setBadge(r.badge);
+    if (pane.monitorAllowed() && r.monitor !== pane.monitorOverride) {
+      pane.monitorOverride = r.monitor;
+      pane.monitorFailed = false;
+      pane.syncMonitor();
+    }
+    const stored = r.save && pane.session?.id ? this.sessions.sessions.find((s) => s.id === pane.session.id) : null;
+    if (stored) {
+      const next = { ...stored, theme: r.overrides.theme || '', fontSize: r.overrides.fontSize || undefined, highlight: r.overrides.highlight || '',
+        backgroundName: r.badge.text || '', backgroundShown: !!r.badge.show, backgroundPosition: r.badge.position || 'center' };
+      if (pane.monitorAllowed() && r.monitor !== null) next.monitor = r.monitor;
+      const saved = await this.saveSession(next);
+      pane.session = saved; // the pane's copy of the session follows (an override cleared later falls back to these)
+      toast(t('Pane settings saved to session "{name}"', { name: saved.name }), 'success');
+    } else toast(t('Pane settings applied'), 'success');
+    pane.focus();
+  }
+
   splitMenu(anchor) {
     const r = anchor.getBoundingClientRect();
     const ap = this.activePane();
@@ -958,7 +996,7 @@ class App {
     if (!tab.autoTitle) return false;
     const owner = this.tabTitlePane(tab);
     if (!owner) return false;
-    const title = owner.session ? owner.session.name : owner.title, icon = owner.session?.icon || null;
+    const title = owner.titleLocked ? owner.title : owner.session ? owner.session.name : owner.title, icon = owner.session?.icon || null; // a renamed pane (Rename Pane…) names its tab
     if (tab.title === title && tab.icon === icon) return false;
     tab.title = title;
     tab.icon = icon;
@@ -983,7 +1021,7 @@ class App {
   onPaneCwd(pane) {
     if (this.activePane() === pane) this.setStatusCwd(pane.remoteCwd);
     // local shells: the tab/pane title follows the folder (until the shell or the user sets a title)
-    if (pane.kind === 'local' && !pane.session && pane.remoteCwd && (pane.title === 'Local' || pane.title === t('Local') || pane._cwdTitled)) { // the untitled shell (terminal.js's fallback, in either language)
+    if (pane.kind === 'local' && !pane.session && !pane.titleLocked && pane.remoteCwd && (pane.title === 'Local' || pane.title === t('Local') || pane._cwdTitled)) { // the untitled shell (terminal.js's fallback, in either language); a renamed pane keeps its name
       const cwd = pane.remoteCwd.replace(/\/+$/, '');
       pane.title = cwd === this.info.home ? '~' : cwd.split('/').pop() || '/';
       pane._cwdTitled = true;
@@ -1211,12 +1249,17 @@ class App {
   async saveSession(s) {
     const saved = await window.api.sessions.save(s);
     await this.reloadSessions();
-    // an open pane of this session takes its new keyword-highlighting override at once (the rest applies on the next connect)
+    // an open pane of this session takes its new keyword-highlighting override and background label at once (the rest applies on the next connect)
     for (const p of this.workspace.allPanes()) {
-      if (p.session && p.session.id === saved.id && (p.session.highlight || '') !== (saved.highlight || '')) {
+      if (!p.session || p.session.id !== saved.id) continue;
+      if ((p.session.highlight || '') !== (saved.highlight || '')) {
         p.session.highlight = saved.highlight;
         p._syncHighlight(this.settings);
       }
+      p.session.backgroundName = saved.backgroundName;
+      p.session.backgroundShown = saved.backgroundShown;
+      p.session.backgroundPosition = saved.backgroundPosition;
+      p.syncBadge?.(); // the pane's own label setting, if any, stays on top
     }
     return saved;
   }

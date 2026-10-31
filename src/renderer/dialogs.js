@@ -325,6 +325,10 @@ export function sessionEditor(app, initial = {}) {
   const theme = select([['', t('(default)')], ...Object.keys(THEMES).map((k) => [k, themeLabel(k)])], s.theme || '');
   const fontSize = num(s.fontSize || '', { min: 8, max: 40, placeholder: String(app.settings.fontSize) });
   const highlight = select([['', t('Default (Settings)')], ['on', t('On')], ['off', t('Off')]], s.highlight === 'on' || s.highlight === 'off' ? s.highlight : '');
+  // the background label (iTerm2's badge): a large, dim name behind the terminal of every pane opened from this session
+  const bgShown = check(t('Show a background label'), !!s.backgroundShown);
+  const bgName = text(s.backgroundName || '', { placeholder: t('(session name)') });
+  const bgPos = select([['center', t('Centre')], ['top-right', t('Top right')]], s.backgroundPosition === 'top-right' ? 'top-right' : 'center');
   const notes = h('textarea', { spellcheck: false, placeholder: t('Notes') });
   notes.value = s.notes || '';
 
@@ -470,6 +474,9 @@ export function sessionEditor(app, initial = {}) {
     h('label', {}, t('Behaviour')), h('div', { class: 'checks' }, sftpAuto.el, followCwd.el, logging.el),
     ...field(t('Theme'), theme), ...field(t('Font size'), fontSize),
     ...field(t('Keyword highlighting'), highlight, t('Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Features')),
+    h('label', {}, t('Background label')), h('div', { class: 'checks' }, bgShown.el),
+    ...field(t('Label text'), bgName, t('Large, dim text behind the terminal so you can tell the server at a glance; empty = the session name. A pane can change its own (right-click → Background Label)')),
+    ...field(t('Label position'), bgPos),
     ...field(t('Notes'), notes)
   );
 
@@ -564,6 +571,9 @@ export function sessionEditor(app, initial = {}) {
       theme: theme.value,
       fontSize: parseInt(fontSize.value, 10) || undefined,
       highlight: highlight.value,
+      backgroundShown: bgShown.cb.checked,
+      backgroundName: bgName.value.trim(),
+      backgroundPosition: bgPos.value,
       notes: notes.value,
       shell: shell.value.trim(),
       cwd: cwd.value.trim(),
@@ -598,6 +608,72 @@ export function sessionEditor(app, initial = {}) {
     else delete out.passphrase;
     return out;
   }
+  return modal.promise;
+}
+
+/**
+ * Pane Settings… (the pane menu): MobaXterm's per-running-terminal reconfiguration. This pane's own theme, font family
+ * and size, cursor style and blink, scrollback, keyword highlighting, monitoring bar (SSH / Mosh), read-only state and
+ * background label, over the session's and Settings' values — a blank field follows them. "Apply to this pane" changes
+ * this pane alone (the values travel with it: zoom, detach, the workspace); "Save to session" (a saved session only)
+ * also writes the fields the session has (app.js paneSettings). Resolves { overrides, readOnly, monitor, badge, save } or null.
+ */
+export function paneSettingsDialog(app, pane) {
+  const s = app.settings, ses = pane.session || {}, o = pane.overrides || {}, badge = pane.badgeState();
+  const theme = select([['', t('(session / Settings)')], ...Object.keys(THEMES).map((k) => [k, themeLabel(k)])], o.theme || '');
+  const themePreview = paintThemePreview(h('span', { class: 'theme-preview', 'aria-hidden': 'true' }), o.theme || ses.theme || s.theme);
+  theme.addEventListener('change', () => paintThemePreview(themePreview, theme.value || ses.theme || s.theme));
+  const fontFamily = text(o.fontFamily || '', { placeholder: s.fontFamily });
+  const fontSize = num(o.fontSize || '', { min: 8, max: 40, placeholder: String(ses.fontSize || s.fontSize) });
+  const cursorStyle = select([['', t('(Settings)')], ['block', t('Block')], ['underline', t('Underline')], ['bar', t('Bar')]], o.cursorStyle || '');
+  const cursorBlink = select([['', t('(Settings)')], ['on', t('On')], ['off', t('Off')]], o.cursorBlink === true ? 'on' : o.cursorBlink === false ? 'off' : '');
+  const scrollback = num(o.scrollback || '', { min: 100, max: 1000000, placeholder: String(s.scrollback || 10000) });
+  const highlight = select([['', t('(session / Settings)')], ['on', t('On')], ['off', t('Off')]], o.highlight === 'on' || o.highlight === 'off' ? o.highlight : '');
+  const monitor = select([['', t('(session / Settings)')], ['on', t('On')], ['off', t('Off')]], pane.monitorOverride === true ? 'on' : pane.monitorOverride === false ? 'off' : '');
+  const readOnly = check(t('Read-only: keystrokes and pastes to this pane are dropped'), pane.readOnly);
+  const badgeShow = check(t('Show a background label'), badge.show);
+  const badgeText = text(String(pane.badge?.text ?? ses.backgroundName ?? ''), { placeholder: ses.name || pane.title });
+  const badgePos = select([['center', t('Centre')], ['top-right', t('Top right')]], badge.position === 'top-right' ? 'top-right' : 'center');
+  const body = h('div', { class: 'form-grid' },
+    ...field(t('Theme'), h('div', { class: 'inline theme-field' }, theme, themePreview), t('This pane\'s terminal colours; the window keeps the global theme')),
+    ...field(t('Font family'), fontFamily),
+    ...field(t('Font size'), fontSize, t('⌘= / ⌘- step from here, ⌘0 comes back to it')),
+    ...field(t('Cursor'), cursorStyle),
+    ...field(t('Cursor blink'), cursorBlink),
+    ...field(t('Scrollback lines'), scrollback),
+    ...field(t('Keyword highlighting'), highlight),
+    ...(pane.monitorAllowed() ? field(t('Monitoring bar'), monitor) : []),
+    h('label', {}, t('Input')), h('div', { class: 'checks' }, readOnly.el),
+    h('label', {}, t('Background label')), h('div', { class: 'checks' }, badgeShow.el),
+    ...field(t('Label text'), badgeText, t('Large, dim text behind the terminal; empty = the session\'s label, else its name (or the pane title)')),
+    ...field(t('Label position'), badgePos),
+    h('div', { class: 'full form-help' }, t('Blank fields follow the session, then Settings. Font family, cursor, scrollback and read-only stay with this pane; theme, font size, keyword highlighting, monitoring and the background label can also be saved to the session.'))
+  );
+  const read = (save) => {
+    const overrides = {};
+    if (theme.value) overrides.theme = theme.value;
+    if (fontFamily.value.trim()) overrides.fontFamily = fontFamily.value.trim();
+    const fs = parseInt(fontSize.value, 10);
+    if (fs) overrides.fontSize = clamp(fs, 8, 40, 13);
+    if (cursorStyle.value) overrides.cursorStyle = cursorStyle.value;
+    if (cursorBlink.value) overrides.cursorBlink = cursorBlink.value === 'on';
+    const sb = parseInt(scrollback.value, 10);
+    if (sb) overrides.scrollback = clamp(sb, 100, 1000000, 10000);
+    if (highlight.value) overrides.highlight = highlight.value;
+    return {
+      overrides, readOnly: readOnly.cb.checked, monitor: monitor.value === 'on' ? true : monitor.value === 'off' ? false : null,
+      badge: { show: badgeShow.cb.checked, text: badgeText.value.trim(), position: badgePos.value === 'top-right' ? 'top-right' : 'center' }, save,
+    };
+  };
+  const modal = showModal({
+    title: t('Pane Settings — {title}', { title: pane.title }),
+    body,
+    buttons: [
+      { label: t('Cancel'), value: null },
+      ...(pane.session?.id ? [{ label: t('Save to session'), action: (api) => api.close(read(true)) }] : []),
+      { label: t('Apply to this pane'), primary: true, action: (api) => api.close(read(false)) },
+    ],
+  });
   return modal.promise;
 }
 

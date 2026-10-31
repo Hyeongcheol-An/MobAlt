@@ -29,19 +29,19 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 |---|---|---|---|---|---|
 | 1. 세션 종류 | 7 | 6 | 4 | 4 | 21 |
 | 2. SSH 세부 기능 | 19 | 9 | 7 | 2 | 37 |
-| 3. 터미널 | 11 | 12 | 7 | 1 | 31 |
+| 3. 터미널 | 12 | 12 | 7 | 1 | 32 |
 | 4. X 서버와 내장 Unix 도구 | 2 | 1 | 1 | 17 | 21 |
 | 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 7 | 2 | 7 | 19 | 35 |
 | 6. 작업대 기능 | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional 전용 항목과 Home 에디션 제한 | 0 | 0 | 0 | 13 | 13 |
-| **1–7절 합계(기능당 한 번)** | **53** | **39** | **32** | **59** | **183** |
+| **1–7절 합계(기능당 한 번)** | **54** | **39** | **32** | **59** | **184** |
 | 8. 최근 추가 기능(24.3 → 26.6) | 4 | 17 | 6 | 3 | 30 |
 | 9. 파워 유저가 기대는 UX | 9 | 9 | 1 | 1 | 20 |
-| **전체 표 합계** | **66** | **65** | **39** | **63** | **233** |
+| **전체 표 합계** | **67** | **65** | **39** | **63** | **234** |
 
 8절과 9절은 원본 목록의 구성을 그대로 따른 것이라 1–7절에 이미 나온 기능을 다시 세므로, "전체 표 합계"에는
 같은 기능이 두 번 들어갑니다. 인용할 때는 1–7절 합계를 쓰세요. 다르게 읽으면, macOS에서 의미가 있는 기능
-124개(1–7절에서 ➖ 제외) 가운데 MobAlt는 53개를 그대로, 39개를 더 좁거나 다른 형태로 갖고 있고, 32개는
+125개(1–7절에서 ➖ 제외) 가운데 MobAlt는 54개를 그대로, 39개를 더 좁거나 다른 형태로 갖고 있고, 32개는
 없습니다.
 
 ## 1. 세션 종류
@@ -109,7 +109,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | Known hosts | ✅ | `~/.ssh/known_hosts`와 앱 자체 목록. 첫 접속에 지문(SHA256, MD5) 표시, 바뀐 키는 경고하고 조용히 받아들이지 않음 |
 | 세션 로그 | ✅ | 세션별 "Log session output to file" 또는 Terminal → Start/Stop Session Log. 원본 또는 일반 텍스트(Settings → Logging). 시작/종료 시각만 기록, 줄별 타임스탬프 없음 |
 | IPv6 | ✅ | 호스트 칸에 IPv6 주소, Quick connect에는 `[addr]:port` |
-| 제목 고정 / 재접속 안내 | ✅ | Rename Tab(더블클릭)이 제목을 고정. 끊긴 세션은 "Press Enter to reconnect, ⌘W to close"와 Reconnect/Close 오버레이 |
+| 제목 고정 / 재접속 안내 | ✅ | Rename Tab(더블클릭)과 Rename Pane…(페인 메뉴)이 셸이 바꾸지 못하게 제목을 고정. 끊긴 세션은 "Press Enter to reconnect, ⌘W to close"와 Reconnect/Close 오버레이 |
 | 세션 프리셋 | ❌ | 기본 프리셋 없음. Duplicate로 세션 하나를 복사 |
 
 ## 3. 터미널
@@ -118,12 +118,13 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 |---|---|---|
 | 탭 터미널 | ✅ | 탭: 드래그로 순서 변경, 더블클릭 이름 변경, 가운데 클릭 닫기, ⌃Tab / ⌃⇧Tab, ⌃⌘1-9, 탭 목록 메뉴. 개수 제한 없음 |
 | 분할 모드(1 / 2 / 4) | ✅ | Split ▾: 오른쪽(⌘D), 아래(⇧⌘D), 1×2 … 2×4 = 8페인 격자(⌥⌘2/4/6/8), 분할 해제 ⌥⌘1, 페인 가장자리에 세션 드롭 |
+| Rename Terminal(분할 페인), 터미널별 재설정과 Read-only(터미널 우클릭 메뉴) | ✅ | 페인 메뉴: Rename Pane…이 페인 이름을 정하고 제목을 고정. Pane Settings…가 테마, 글꼴과 크기, 커서, 스크롤백, 키워드 강조, 모니터링 바를 그 페인에만 바꾸거나(확대·분리·재시작 뒤에도 유지) 세션에 저장. Font Size ▸. Read-Only는 키 입력과 붙여넣기를 버리고 머리글에 표시 |
 | MultiExec | ✅ | ⇧⌘M이 활성 탭에 보이는 모든 페인으로 입력을 보냄. MobaXterm처럼 터미널마다 아래에 *Exclude "이름" from MultiExec mode* 체크 상자, 우클릭 메뉴의 Activate all / Activate none / Invert selection과 Synchronize mouse wheel scrolling |
 | 분리 / 재결합 / 전체 화면 / 항상 위 | 🟡 | Detach to New Window(탭 메뉴, ⌥⌘N)가 탭을 터미널이 살아 있는 채로 별도 창으로 옮기고, 그 창을 닫으면 다시 합쳐지며, 작업대가 그런 창을 다시 엶. 창의 초록 버튼으로 macOS 전체 화면. 항상 위는 없음 |
 | 매크로(키보드) | 🟡 | Macros 패널(⌘4): ● Rec로 키 입력 녹화, `\n` / `\x1b[A` 이스케이프가 되는 텍스트 매크로, 활성 또는 모든 터미널에 재생. 대기 조건, 폴더, 중첩, 터미널 안 선택 메뉴는 없음 |
 | 그래픽 매크로(마우스 + 키보드) | ❌ | 미구현 |
-| 색상 스킴 | 🟡 | 내장 테마 6종(Settings → Terminal → Theme)과 세션별 덮어쓰기. 사용자 정의나 가져오기는 없음 |
-| 글꼴(번들 글꼴, 합자, 고정 크기) | 🟡 | 설치된 아무 글꼴, 크기, 줄 간격(Settings → Terminal), ⌘= / ⌘- / ⌘0, 세션별 글꼴 크기. 합자와 행/열 고정은 없음 |
+| 색상 스킴 | 🟡 | 내장 테마 6종(Settings → Terminal → Theme), 세션별 덮어쓰기, 페인별 덮어쓰기(Pane Settings…). 사용자 정의나 가져오기는 없음 |
+| 글꼴(번들 글꼴, 합자, 고정 크기) | 🟡 | 설치된 아무 글꼴, 크기, 줄 간격(Settings → Terminal), ⌘= / ⌘- / ⌘0, 세션별 글꼴 크기, 페인별 글꼴과 크기(Pane Settings…). 합자와 행/열 고정은 없음 |
 | 키워드 구문 강조 | ✅ | Settings → Features → Keyword highlighting: 편집 가능한 규칙 표(일반 텍스트 또는 정규식, 색, 배경, 굵게, 밑줄), 오류·경고·성공·IP 주소·URL·용량 기본 규칙, 색은 터미널 테마에서. 세션별 켜기 / 끄기 |
 | 터미널 내 검색 | ✅ | ⌘F 증분 검색, 대소문자·정규식 토글, 일치 개수 |
 | 로그 / 저장 / 인쇄 | 🟡 | 폴더로 세션 로그. "터미널 텍스트 저장"이나 인쇄는 없음(Select All 후 복사) |
@@ -134,7 +135,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 선택 모드(단어, 사각형) | ✅ | 더블클릭 단어, 트리플클릭 줄, ⌥-드래그 사각형 선택(xterm.js 열 선택). 단어 구분 문자는 설정 불가 |
 | Ctrl+클릭 URL / 경로 | 🟡 | URL은 밑줄이 그어지고 클릭하면 브라우저로 열림. 파일·폴더 경로는 링크되지 않음 |
 | 유니코드 / 문자셋 / IME | 🟡 | UTF-8만, 유니코드 11 폭 테이블, 터미널 안 IME 조합(xterm.js). 다른 문자셋은 없음 |
-| 전문가 터미널 설정 | 🟡 | 커서 모양/깜박임, 스크롤백, Option을 Meta로, 선택 시 복사, 우클릭 붙여넣기. 대체 화면, 로컬 에코, answerback, CR/LF 설정은 없음(Serial에는 로컬 에코와 Enter 전송 있음) |
+| 전문가 터미널 설정 | 🟡 | 커서 모양/깜박임, 스크롤백, Option을 Meta로, 선택 시 복사, 우클릭 붙여넣기. 커서와 스크롤백은 페인별로도(Pane Settings…). 대체 화면, 로컬 에코, answerback, CR/LF 설정은 없음(Serial에는 로컬 에코와 Enter 전송 있음) |
 | 터미널 종류(xterm, linux, OpenVMS2) | ❌ | `xterm-256color`만 |
 | 탭 색상 / 아이콘 / 고정 / 왼쪽·오른쪽 닫기 | ✅ | 세션별 색상과 이모지 아이콘이 행·탭·페인 머리글에 표시. Pin Tab(⇧⌘P)은 탭을 짧은 제목·✕ 없이 왼쪽에 고정. Close Others / Tabs to the Left / Tabs to the Right / All은 고정 탭을 건너뛰고 살아 있는 연결을 모두 세어 한 번만 물음. 가운데 클릭 닫기, Duplicate. 비활성 탭 닫기는 없음 |
 | 활동 표시(파란 점, 빨간 제목) | 🟡 | 탭의 상태 점(접속 중 / 접속됨 / 끊김)과 트리의 초록 점. 출력 활동 표시는 없음 |
@@ -338,6 +339,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 - **`MobaXterm.ini` / `.mxtsessions`와 `~/.ssh/config` 가져오기.** ProxyJump, IdentityFile, ForwardX11, ForwardAgent, Compression까지(`src/main/importers.js`).
 - **모든 세션 종류의 시작 명령** — SSH, Mosh, Local, Telnet, Serial(`src/renderer/terminal.js`의 `_sendStartup`, `src/main/ssh.js`).
 - **페인 확대**(⇧⌘⏎)를 탭마다 기억하고 재시작 후에도 유지(`src/renderer/layout.js`).
+- **페인의 배경 라벨**(페인 메뉴의 Background Label ▸, Pane Settings…, 세션의 Terminal 탭). 터미널 글자 뒤에 크고 흐리게 세션 이름을 그려 어느 서버인지 한눈에 보여 줍니다. iTerm2의 badge를 본뜬 것으로, MobaXterm은 페인 이름을 탭 줄에만 보여 줍니다(`src/renderer/terminal.js`의 `syncBadge`).
 - **SSH 자동 재접속이 있는 작업대 복원.** 로컬 셸은 쓰던 폴더로 돌아옴(`src/renderer/app.js`의 `restoreWorkspace`).
 - **세션 편집기의 시리얼 장치 자동 검색**(`src/main/terminals.js`의 `SerialPort.list()`).
 - **macOS Keychain 기반 비밀 저장.** 비밀번호와 패스프레이즈를 Electron `safeStorage`로 저장하므로 마스터 비밀번호를 칠 일이 없음(`src/main/store.js`).
