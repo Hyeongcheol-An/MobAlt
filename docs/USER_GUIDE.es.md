@@ -70,7 +70,7 @@ derecha/hacia abajo, editar, duplicar, eliminar, iniciar un túnel, nueva sesió
 | Mosh | Terminal itinerante mediante el cliente `mosh` (arrancado por SSH) |
 | Local | Tu shell de inicio de sesión de macOS (zsh/bash) con seguimiento de carpeta |
 | Telnet | Telnet clásico con negociación NAWS/TTYPE |
-| Serial | Consola USB-serie (baudios, trama, control de flujo, eco local) |
+| Serie | Consola USB-serie (baudios, trama, control de flujo, eco local) |
 | FTP | Explorador de archivos FTP / FTPS (TLS explícito) en el panel Sftp |
 | RDP / VNC | Delega en Windows App o en Compartir Pantalla de macOS |
 
@@ -105,7 +105,7 @@ carpetas y deja el campo como estaba si cancelas.
 
 ## Conexión
 
-- **Conexión rápida**: escribe `usuario@host[:puerto]` en la barra de herramientas y pulsa Intro. Los prefijos eligen
+- **Conexión rápida**: escribe `user@host[:port]` en la barra de herramientas y pulsa Intro. Los prefijos eligen
   el tipo: `ssh://`, `mosh://`, `telnet://`, `ftp://`, `ftps://`, `rdp://`, `vnc://`. Si coincide con una sesión
   guardada, se usa esa.
 - **Autenticación**: *Automática* prueba una clave configurada, la contraseña guardada, el agente SSH y las claves por
@@ -113,10 +113,10 @@ carpetas y deja el campo como estaba si cancelas.
   claves con frase de contraseña la piden una vez; marca «Guardar en la sesión» para conservarla.
 - **Claves del host**: la primera conexión muestra la huella (SHA256 y MD5). Al aceptar, la clave se guarda; una clave
   cambiada se señala de forma bien visible y nunca se acepta en silencio.
-- **Claves SSH**: Sesión → Generar clave SSH… (también en el panel Herramientas, y *Generar…* junto al campo de clave
+- **Claves SSH**: Sesión → Generar clave SSH… (también en el panel Utilidades, y *Generar…* junto al campo de clave
   privada del editor de sesiones) ejecuta el `ssh-keygen` de macOS por ti: Ed25519 (por omisión), RSA 4096 o ECDSA, un
   comentario, una frase de contraseña opcional con indicador de fortaleza y el archivo (por omisión
-  `~/.ssh/id_<tipo>`, numerado si ese nombre ya está ocupado; `~/.ssh` se crea con permisos privados si no existe, y los
+  `~/.ssh/id_<type>`, numerado si ese nombre ya está ocupado; `~/.ssh` se crea con permisos privados si no existe, y los
   archivos quedan en 0600 / 0644). Muestra la clave pública con un botón Copiar y la huella. «Añadir a ssh-agent»
   ejecuta `ssh-add --apple-use-keychain`; «Instalar en un servidor…» se conecta a una sesión guardada con su
   autenticación habitual y añade la clave pública a su `~/.ssh/authorized_keys` como `ssh-copy-id` (nunca dos veces).
@@ -202,7 +202,7 @@ carpetas y deja el campo como estaba si cancelas.
   apps a pantalla completa como vim se dejan en paz); como máximo se mantienen decoradas 2000 coincidencias por
   terminal (en una ráfaga larga, las filas más antiguas vuelven primero al texto plano) y ⌘K las descarta todas.
 - **Zmodem (rz/sz)**: mueve archivos a través del propio terminal, a la manera clásica, por una consola serie o un host
-  de salto donde SFTP no está disponible. Ejecuta `sz archivo …` en el remoto para descargar al Mac, o `rz` para subir
+  de salto donde SFTP no está disponible. Ejecuta `sz file …` en el remoto para descargar al Mac, o `rz` para subir
   desde él; MobAlt detecta la transferencia en el flujo, pausa el terminal y la muestra en la lista de transferencias
   del panel Sftp (con Cancelar) y en el contador de la barra de estado. Las descargas van a la Carpeta de descargas
   (Ajustes → General), o a una carpeta que elijas cuando no hay ninguna configurada; las subidas abren un selector de
@@ -211,7 +211,7 @@ carpetas y deja el campo como estaba si cancelas.
   (activado por omisión); con él desactivado, los bytes de `rz`/`sz` aparecen como basura, igual que antes. Ctrl-C en el
   panel o Cancelar en la lista termina una transferencia: se le dice al `sz`/`rz` remoto que pare, lo que aún tenía en
   vuelo se descarta en vez de dibujarse, y el prompt vuelve en un segundo; un `sz` remoto que muere se detecta en pocos
-  segundos. Una segunda descarga con el mismo nombre se guarda como `nombre (1).ext` y se lista con ese nombre.
+  segundos. Una segunda descarga con el mismo nombre se guarda como `name (1).ext` y se lista con ese nombre.
 - **Portapapeles**: seleccionar copia (Ajustes → Terminal → Copiar al seleccionar); el clic derecho pega (⇧-clic
   derecho abre el menú). Soltar archivos desde el Finder sobre un terminal SSH los sube; sobre un terminal local, pega
   las rutas.
@@ -294,13 +294,13 @@ avisa si alguno no consigue enlazar su puerto.
 
 ## Herramientas y macros
 
-- Panel **Herramientas**: ping, traceroute, consulta DNS, escaneo de puertos e información de la red local, con un
+- Panel **Utilidades**: ping, traceroute, consulta DNS, escaneo de puertos e información de la red local, con un
   botón Detener para las ejecuciones largas.
-- **Wake-on-LAN** (panel Herramientas): escribe la dirección MAC con cualquier notación (`aa:bb:cc:dd:ee:ff`,
+- **Wake-on-LAN** (panel Utilidades): escribe la dirección MAC con cualquier notación (`aa:bb:cc:dd:ee:ff`,
   `aa-bb-…`, `aabb.ccdd.eeff` o hexadecimal sin separadores) y pulsa Despertar: el paquete mágico sale tres veces como
   broadcast UDP (255.255.255.255, puerto 9 por omisión; un broadcast dirigido como 192.168.1.255 llega a otra subred).
   Las 10 últimas direcciones se recuerdan con una etiqueta opcional y se sugieren mientras escribes.
-- **Escáner de red** (panel Herramientas): escanea un CIDR (`192.168.1.0/24`), un rango (`10.0.0.1-10.0.0.50` o
+- **Escáner de red** (panel Utilidades): escanea un CIDR (`192.168.1.0/24`), un rango (`10.0.0.1-10.0.0.50` o
   `10.0.0.1-50`) o un solo host, hasta un /16, mediante ping ICMP y/o conexiones TCP a una lista corta de puertos (22,
   80, 443, 3389, 5900 por omisión), con concurrencia y tiempo de espera ajustables y una consulta DNS inversa de cada
   resultado. Los hosts que responden aparecen en una tabla ordenable según se encuentran (IP, nombre de host, tiempo de
@@ -330,17 +330,18 @@ formato) y **Actualizaciones** (la comprobación al iniciar y «Buscar ahora»).
 
 ### Idioma de la interfaz
 
-Los menús, la barra de herramientas, los paneles, los diálogos y los mensajes de MobAlt están en diez idiomas: English,
-한국어, 简体中文, 日本語, Tiếng Việt, हिन्दी, Deutsch, Français, Español y Português. Por omisión (**Por omisión del
-sistema**) la interfaz sigue la lista de idiomas de macOS (Ajustes del Sistema → General → Idioma y región): gana el
+Los menús, la barra de herramientas, los paneles, los diálogos y los mensajes de MobAlt están en once idiomas: English,
+한국어, 简体中文, 日本語, Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português y العربية (en árabe la ventana se
+refleja: barra lateral a la derecha, texto alineado a la derecha; los terminales siguen de izquierda a derecha). Por
+omisión (**Idioma del sistema**) la interfaz sigue la lista de idiomas de macOS (Ajustes del Sistema → General → Idioma y región): gana el
 primer idioma de esa lista que MobAlt incluya, y English cuando ninguno lo está. Ajustes → General → **Idioma** elige
 uno explícitamente; el cambio se aplica al instante en todas las ventanas (nada se reinicia, las conexiones siguen
 abiertas) y se recuerda. La salida del terminal nunca se traduce: lo que imprime un host remoto se muestra tal cual. La
-guía del usuario existe en los mismos diez idiomas (`docs/USER_GUIDE.<idioma>.md`); Ayuda → **Guía del usuario** abre la
+guía del usuario existe en los mismos once idiomas (`docs/USER_GUIDE.<language>.md`); Ayuda → **Guía del usuario** abre la
 del idioma actual.
 
 Para ejecutar MobAlt una sola vez en un idioma sin cambiar el ajuste (capturas de pantalla, una prueba), inícialo con
-`MOBALT_LANG=<código>` en el entorno (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
+`MOBALT_LANG=<code>` en el entorno (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
 
 ## Funciones rápidas de teclado
 
@@ -356,7 +357,7 @@ Para ejecutar MobAlt una sola vez en un idioma sin cambiar el ajuste (capturas d
 | Panel siguiente, pestaña siguiente / anterior, pestaña 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
 | Maximizar panel (ocupar la pestaña) / restaurar la disposición | ⇧⌘⏎ |
 | Buscar, borrar, zoom | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
-| Barra lateral, Sesiones / SFTP / Herramientas / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
+| Barra lateral, Sesiones / SFTP / Utilidades / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, túneles, ajustes | ⇧⌘M, ⇧⌘U, ⌘, |
 | Salto de línea en apps TUI | ⇧Intro o ⌥Intro |
 | Diálogo de protección de pegado (varias líneas o pegado sospechoso): pegar / cancelar | ⌘⏎ / Esc |
@@ -389,7 +390,7 @@ Detalles: [SECURITY.md](../SECURITY.md).
 ## Solución de problemas
 
 - **«Timed out while waiting for handshake» / ETIMEDOUT**: nada respondió en ese puerto. Revisa la dirección, la VPN y
-  el reenvío del router; prueba `nc -vz host puerto` en un terminal local.
+  el reenvío del router; prueba `nc -vz host port` en un terminal local.
 - **«autenticación fallida — el servidor acepta: …; se probó: …»**: el servidor no aceptó lo que MobAlt ofreció.
   Compara la lista «acepta» con el método de autenticación de tu sesión; para servidores que solo admiten clave, elige
   el archivo de clave correcto. Los fallos repetidos pueden hacer que fail2ban o las penalizaciones por origen de sshd
