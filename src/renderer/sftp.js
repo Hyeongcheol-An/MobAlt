@@ -740,6 +740,7 @@ export class SftpPanel {
       const speed = elapsed > 300 ? fmtSize((t.transferred / elapsed) * 1000) + '/s' : '';
       el.append(h('div', { class: 'xfer ' + t.status },
         h('div', { class: 'l1' }, h('span', { class: 'xfer-kind' }, icon(t.kind === 'upload' ? 'upload' : 'download')), h('span', { class: 'n', title: t.remote }, t.name),
+          t.proto === 'zmodem' ? h('span', { class: 'xfer-proto', title: 'Zmodem transfer in the terminal (rz / sz)' }, 'zmodem') : null, // from a terminal, not the Sftp panel
           t.status === 'running' ? h('button', { title: 'Cancel', 'aria-label': 'Cancel transfer', onclick: () => window.api.sftp.cancel(t.id) }, icon('x')) : null,
           t.status === 'done' && t.kind === 'download' ? h('button', { title: 'Show in Finder', onclick: () => window.api.shell.showItem(t.local) }, icon('folder')) : null),
         h('div', { class: 'bar' }, h('i', { style: { width: pct + '%' } })),

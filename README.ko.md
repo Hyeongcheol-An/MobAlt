@@ -51,6 +51,7 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | Tools | ✅ Tools 패널 | Ping, Traceroute, DNS 조회, 포트 스캔, 네트워크 정보, Wake-on-LAN, 네트워크 스캐너 |
 | Telnet | ✅ | NAWS/TTYPE 협상 |
 | Serial 콘솔 | ✅ | USB-시리얼 자동 검색, baud/framing/flow, 로컬 에코, CR/LF/CRLF |
+| Zmodem (rz/sz) | ✅ | 터미널 안 파일 전송(SSH·로컬·텔넷·시리얼). `sz`는 내려받기, `rz`는 올려보내기, 전송 목록에 진행률·취소 |
 | 로컬 터미널 | ✅ | 로그인 셸(zsh/bash) 그대로, 폴더 추종 통합 |
 | 세션 로그 | ✅ | 세션 설정 또는 탭 메뉴 |
 | RDP / VNC | ⚠️ 외부 앱 | RDP는 `.rdp` 파일을 만들어 Windows App으로, VNC는 macOS 화면 공유로 |

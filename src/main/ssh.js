@@ -434,6 +434,11 @@ class SshManager {
     registry.register(id, {
       kind: 'ssh',
       write: (d) => (info.stream ? info.stream.write(d) : (pending += d)),
+      // ZMODEM bytes: resolves when the channel has taken them (ssh2 calls back once window space allowed the send)
+      writeRaw: (buf) => new Promise((resolve, reject) => {
+        if (!info.stream || info.closed) return reject(new Error('not connected'));
+        info.stream.write(buf, (e) => (e ? reject(e) : resolve()));
+      }),
       resize: (c, r) => {
         info.cols = c;
         info.rows = r;
@@ -506,9 +511,8 @@ class SshManager {
             return;
           }
           info.stream = stream;
-          const dec = new StringDecoder('utf8');
           const decErr = new StringDecoder('utf8');
-          stream.on('data', (d) => registry.data(id, dec.write(d)));
+          stream.on('data', (d) => registry.bytes(id, d)); // raw: the Zmodem sentry sees the bytes before xterm
           stream.stderr.on('data', (d) => registry.data(id, decErr.write(d)));
           stream.on('exit', () => { info.shellExited = true; }); // exit status from the server: the shell ended on its own
           stream.on('close', () => client.end());

@@ -52,6 +52,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Tools | ✅ Tools panel | Ping, traceroute, DNS lookup, port scan, network info, Wake-on-LAN, network scanner |
 | Telnet | ✅ | NAWS/TTYPE negotiation |
 | Serial console | ✅ | USB-serial discovery, baud/framing/flow control, local echo, CR/LF/CRLF |
+| Zmodem (rz/sz) | ✅ | In-terminal file transfers for SSH, local, telnet and serial panes; `sz` downloads, `rz` uploads, with progress and cancel in the transfer list |
 | Local terminal | ✅ | Your login shell (zsh/bash) with folder-following integration |
 | Session logging | ✅ | Per session or from the tab menu |
 | RDP / VNC | ⚠️ hands off | RDP writes a `.rdp` file for Windows App; VNC opens macOS Screen Sharing |
