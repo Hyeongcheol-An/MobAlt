@@ -120,6 +120,12 @@
       <!-- Right: tabs + terminals -->
       <div id="workspace">
         <div id="multiexec-banner" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> visible terminal(s) in this tab</div>
+        <!-- a different MobAlt.app is on disk (brew upgrade / dragged DMG while running): app.js fills the text -->
+        <div id="update-banner" role="status" hidden>
+          <span id="update-banner-text"></span>
+          <button id="update-relaunch" class="btn small primary" type="button" title="Quit and start the version on disk">Relaunch</button>
+          <button id="update-later" class="btn small" type="button" title="Hide until another version appears">Later</button>
+        </div>
         <div id="tabbar">
           <button id="tab-scroll-left" class="tab-scroll" title="Scroll tabs left" aria-label="Scroll tabs left" hidden>‹</button>
           <div id="tabs"></div>

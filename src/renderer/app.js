@@ -22,6 +22,8 @@ class App {
     this.multiexec = false;
     this.macroRecorder = null;
     this.focused = null;
+    this.updateOnDisk = null; // version of the MobAlt.app on disk when it differs from the running one
+    this.updateDismissed = null; // "Later" on the banner: that version stays quiet until another shows up
   }
 
   async init() {
@@ -192,6 +194,9 @@ class App {
       $('#st-transfers').dataset.tunnels = active;
       this.updateStatusRight();
     });
+    window.api.app.onBundleUpdated((info) => this.onBundleUpdated(info));
+    // main-process errors (uncaughtException) reach the user instead of only the terminal that launched the app
+    window.api.app.onNotice((n) => toast(String((n && n.text) || n), (n && n.level) || 'error', 8000));
   }
 
   // ---------- UI wiring ----------
@@ -209,6 +214,19 @@ class App {
     });
     // toolbar clicks must not steal keyboard focus from the terminal
     for (const b of $$('#toolbar .tb-btn, #side-strip .strip-btn')) b.addEventListener('mousedown', (e) => e.preventDefault());
+    // on-disk update banner: Relaunch restarts into the bundle on disk (the main process asks about live
+    // connections first); Later hides it until another version appears. Both are ordinary Tab stops; like
+    // the toolbar, a mouse click leaves the keyboard focus in the terminal.
+    $('#update-relaunch').addEventListener('click', () => {
+      this.saveWorkspaceNow(); // sent before app:relaunch on the same channel, so it lands first
+      window.api.app.relaunch();
+    });
+    $('#update-later').addEventListener('click', () => {
+      this.updateDismissed = this.updateOnDisk;
+      this.showUpdateBanner(false);
+      this.activePane()?.focus();
+    });
+    for (const b of $$('#update-banner button')) b.addEventListener('mousedown', (e) => e.preventDefault());
     // empty workspace accepts a dropped session
     const tc = $('#tab-content');
     tc.addEventListener('dragover', (e) => { if (!this.workspace.tabs.length && e.dataTransfer.types.includes('text/x-mobalt-session')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
@@ -692,6 +710,22 @@ class App {
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
     $('#multiexec-count').textContent = String(this.multiexecTargets().length);
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
+  }
+
+  // ---------- on-disk update (brew upgrade / dragged DMG while MobAlt runs) ----------
+  /** The main process found a different MobAlt.app on disk: offer a relaunch, unless "Later" silenced that version. */
+  onBundleUpdated({ version, current }) {
+    if (!version || version === this.updateDismissed) return;
+    this.updateOnDisk = version;
+    $('#update-banner-text').replaceChildren('MobAlt ', h('b', {}, version), ' is installed on disk — you are running ', h('b', {}, current || this.info.version), '. Relaunch to use it.');
+    this.showUpdateBanner(true);
+  }
+
+  showUpdateBanner(on) {
+    const el = $('#update-banner');
+    if (el.hidden === !on) return;
+    el.hidden = !on;
+    this.workspace.allPanes().forEach((p) => p.fit()); // terminals re-measure around the bar, like the MultiExec banner
   }
 
   async startSessionTunnels(pane) {

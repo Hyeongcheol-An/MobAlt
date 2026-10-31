@@ -1,8 +1,11 @@
 'use strict';
 // Auto-update via GitHub Releases (electron-updater reads latest-mac.yml from the newest release).
 // Nothing is downloaded without the user's consent: an update is offered in a dialog, downloaded on
-// request and installed on quit (or right away when the user picks "Restart now").
+// request and installed on quit (or right away when the user picks "Restart now"). A release that is
+// already on disk (brew upgrade / a dragged DMG while running) is never downloaded again: the bundle
+// watch's relaunch banner takes over.
 const { app, dialog } = require('electron');
+const { compareVersions } = require('./bundlewatch');
 
 let autoUpdater = null;
 try {
@@ -12,8 +15,14 @@ try {
 }
 
 /**
- * @param hooks {beforeInstall?: () => void} called right before quitAndInstall, so the app can skip its
- *              quit confirmation (the user already chose "Restart now").
+ * @param hooks {beforeInstall?: () => void}            called right before quitAndInstall, so the app can skip its
+ *                                                      quit confirmation (the user already chose "Restart now")
+ *              {diskVersion?: () => Promise<string>}   version of the MobAlt.app on disk (null when unreadable)
+ *              {bundleOnDisk?: (version) => void}      that version is already installed: show the relaunch banner
+ *              {afterCheck?: () => void}               a check has concluded (the bundle watch looks at the disk again)
+ *              {relaunch?: () => void}                 restart into the bundle on disk
+ * check(manual) resolves with { status: 'available' | 'up-to-date' | 'on-disk' | 'error' | 'source', version?, message }
+ * once the updater has spoken, so the Settings → Updates line can show the outcome.
  */
 function setupUpdater(store, getWin, hooks = {}) {
   const win = () => {
@@ -23,38 +32,70 @@ function setupUpdater(store, getWin, hooks = {}) {
   if (!autoUpdater || !app.isPackaged) {
     return {
       check: async (manual) => {
+        const message = 'Updates are only checked in packaged builds';
         if (manual) {
           await dialog.showMessageBox(win(), {
-            type: 'info', message: 'Updates are only checked in packaged builds',
+            type: 'info', message,
             detail: `This is MobAlt ${app.getVersion()} running from source.`,
           });
         }
+        return { status: 'source', version: app.getVersion(), message };
       },
     };
   }
 
-  const state = { manual: false, checking: false };
+  const state = { manual: false, pending: null, done: null };
+  // One check at a time; whoever asked gets the outcome once, then the bundle watch looks at the disk again.
+  const finish = (result) => {
+    const done = state.done;
+    state.done = null;
+    state.pending = null;
+    state.manual = false;
+    if (done) done(result);
+    try { hooks.afterCheck && hooks.afterCheck(); } catch {}
+  };
+  const onDisk = async () => {
+    try { return hooks.diskVersion ? await hooks.diskVersion() : null; } catch { return null; }
+  };
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = null;
 
   autoUpdater.on('update-available', async (info) => {
-    state.checking = false;
+    const manual = state.manual;
+    // The bundle on disk already is this release (or newer): a brew upgrade or a dragged DMG replaced the app
+    // while it was running. Nothing to download; the banner (and a manual check's dialog) say to relaunch.
+    const disk = await onDisk();
+    if (disk && disk !== app.getVersion() && compareVersions(disk, info.version) >= 0) {
+      const message = `${disk} is already installed on disk; relaunch to use it`;
+      try { hooks.bundleOnDisk && hooks.bundleOnDisk(disk); } catch {}
+      finish({ status: 'on-disk', version: disk, message });
+      if (manual) {
+        const r = await dialog.showMessageBox(win(), {
+          type: 'info',
+          message: `MobAlt ${message}`,
+          detail: `You are running ${app.getVersion()}. Nothing needs to be downloaded; relaunching starts the version that is on disk.`,
+          buttons: ['Relaunch', 'Later'], defaultId: 0, cancelId: 1,
+        });
+        if (r.response === 0 && hooks.relaunch) hooks.relaunch();
+      }
+      return;
+    }
+    finish({ status: 'available', version: info.version, message: `MobAlt ${info.version} is available` });
     const r = await dialog.showMessageBox(win(), {
       type: 'info',
       message: `MobAlt ${info.version} is available`,
       detail: `You are using ${app.getVersion()}. Download it now? It is installed when you quit, or right away if you choose to restart after the download.`,
       buttons: ['Download', 'Later'], defaultId: 0, cancelId: 1,
     });
-    state.manual = false;
     if (r.response === 0) {
       autoUpdater.downloadUpdate().catch((e) => dialog.showMessageBox(win(), { type: 'error', message: 'Download failed', detail: e.message }));
     }
   });
   autoUpdater.on('update-not-available', () => {
-    if (state.manual) dialog.showMessageBox(win(), { type: 'info', message: 'MobAlt is up to date', detail: `Version ${app.getVersion()}` });
-    state.manual = false;
-    state.checking = false;
+    const manual = state.manual;
+    finish({ status: 'up-to-date', version: app.getVersion(), message: `MobAlt ${app.getVersion()} is up to date` });
+    if (manual) dialog.showMessageBox(win(), { type: 'info', message: 'MobAlt is up to date', detail: `Version ${app.getVersion()}` });
   });
   autoUpdater.on('update-downloaded', async (info) => {
     const r = await dialog.showMessageBox(win(), {
@@ -69,16 +110,17 @@ function setupUpdater(store, getWin, hooks = {}) {
     }
   });
   autoUpdater.on('error', (e) => {
-    if (state.manual) dialog.showMessageBox(win(), { type: 'error', message: 'Update check failed', detail: e.message });
-    state.manual = false;
-    state.checking = false;
+    const manual = state.manual;
+    finish({ status: 'error', message: `Update check failed: ${e.message}` });
+    if (manual) dialog.showMessageBox(win(), { type: 'error', message: 'Update check failed', detail: e.message });
   });
 
   const check = (manual) => {
-    if (state.checking) return;
-    state.checking = true;
+    if (state.pending) return state.pending; // a check is under way: share its outcome
     state.manual = !!manual;
-    autoUpdater.checkForUpdates().catch(() => { state.checking = false; });
+    state.pending = new Promise((resolve) => { state.done = resolve; });
+    autoUpdater.checkForUpdates().catch((e) => finish({ status: 'error', message: `Update check failed: ${e.message}` }));
+    return state.pending;
   };
   if (store.getSettings().autoUpdate !== false) setTimeout(() => check(false), 15000);
   return { check };

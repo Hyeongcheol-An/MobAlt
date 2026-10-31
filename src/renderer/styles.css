@@ -472,3 +472,15 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
    white on the blue selected fill. The list itself only takes the focus while it has no rows (loading, empty root). */
 .sftp-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .sftp-row.selected:focus-visible { outline-color: #fff; }
+
+/* ---- on-disk update ---- */
+/* A different MobAlt.app was written over the running one (brew upgrade, a dragged DMG): a persistent bar above the
+   tabs, in the same column as the MultiExec banner, offers a relaunch; app.js re-fits the terminals around it. */
+#update-banner { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 10px; background: #203a5a; color: #dbe9ff; font-size: 12px; border-bottom: 1px solid var(--accent-2); flex: none; }
+#update-banner[hidden] { display: none; }
+#update-banner b { font-weight: 600; color: #fff; }
+#update-banner .btn.small { height: 22px; padding: 0 9px; font-size: 11.5px; }
+#update-banner .btn.small:not(.primary) { background: transparent; border-color: #4f6f94; color: #dbe9ff; }
+#update-banner .btn.small:not(.primary):hover { background: rgba(255, 255, 255, .08); }
+#update-banner .btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; } /* the accent ring would sink into the blue bar */
+.form-grid .checks .upd-status { align-self: center; font-size: 12px; color: var(--fg-dim); } /* "Check now" outcome in Settings → Updates */

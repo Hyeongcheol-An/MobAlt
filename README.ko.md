@@ -76,6 +76,9 @@ brew install --cask mobalt
 
 이후 업데이트는 `brew upgrade --cask mobalt`. cask 파일은 이 저장소에도 있습니다(`Casks/mobalt.rb`).
 
+**업데이트**: 앱 내 업데이트, `brew upgrade --cask mobalt`, 새 DMG 모두 MobAlt가 실행 중이어도 되며, 앱이
+재시작 배너를 띄웁니다. 사용자 안내서의 [업데이트](docs/USER_GUIDE.ko.md#업데이트)를 보세요.
+
 ### DMG
 
 1. [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases)에서 `MobAlt-<버전>-arm64.dmg`(Apple Silicon)
