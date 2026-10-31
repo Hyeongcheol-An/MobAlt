@@ -908,11 +908,10 @@
       await sleep(300);
       const t0 = tabEls()[0];
       t0.focus();
-      await press('F10', { shiftKey: true }); // menu → Close (third from the end)
+      await press('F10', { shiftKey: true }); // menu → Close: up from the end past the bulk closes (disabled with one tab: skipped by ↑, so one step)
       await press('End');
-      await press('ArrowUp');
-      await press('ArrowUp');
-      results.tabMenuCloseItem = active()?.textContent.startsWith('Close') && !active()?.textContent.includes('Others') && !active()?.textContent.includes('All');
+      for (let n = 0; n < 5 && !/^Close⌘W$/.test(active()?.textContent || ''); n++) await press('ArrowUp');
+      results.tabMenuCloseItem = active()?.textContent === 'Close⌘W' && items().filter((i) => /^Close (Others|Tabs to the Left|Tabs to the Right|All)$/.test(i.textContent)).every((i) => i.classList.contains('disabled'));
       await press('Enter');
       await sleep(300);
       const add = document.getElementById('tab-add');

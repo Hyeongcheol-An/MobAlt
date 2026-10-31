@@ -10,6 +10,7 @@ export class Tab {
     this.autoTitle = true;
     this.color = null;
     this.icon = null;
+    this.pinned = false; // sits at the left of the strip in a fixed order, no ✕, left alone by Close Others / Left / Right / All
     this.root = null;
     this.activePane = null;
     this.zoomed = null; // the pane filling the tab (⇧⌘⏎) while its siblings stay alive but hidden; null = the split layout
@@ -142,7 +143,8 @@ export class Workspace {
         h('span', { class: 'dot ' + (t.activePane ? t.activePane.status : '') }),
         t.icon ? h('span', { class: 'tabico' }, t.icon) : null,
         h('span', { class: 'title' }, t.title),
-        t.zoomed ? h('span', { class: 'zoomico', title: 'A pane is zoomed' }, icon('zoom')) : null),
+        t.zoomed ? h('span', { class: 'zoomico', title: 'A pane is zoomed' }, icon('zoom')) : null,
+        t.pinned ? h('span', { class: 'pinico', title: 'Pinned' }, icon('pin')) : null),
       key: t === this.active ? '✓' : '',
       action: () => this.activate(t),
     }));
@@ -208,10 +210,11 @@ export class Workspace {
       h('span', { class: 'tabico', hidden: !tab.icon }, tab.icon || ''),
       h('span', { class: 'title' }, tab.title),
       h('span', { class: 'zoomico', hidden: !tab.zoomed, title: 'A pane is zoomed (⇧⌘⏎ restores the layout)' }, icon('zoom')),
+      h('span', { class: 'pinico', hidden: !tab.pinned, title: 'Pinned (⇧⌘P unpins)' }, icon('pin')),
       h('button', { class: 'close', title: 'Close (⌘W)', 'aria-label': 'Close tab', tabindex: -1, onclick: (e) => { e.stopPropagation(); this.app.closeTab(tab); } }, icon('x'))
     );
     el.addEventListener('mousedown', (e) => {
-      if (e.button === 1) { e.preventDefault(); this.app.closeTab(tab); }
+      if (e.button === 1) { e.preventDefault(); if (!tab.pinned) this.app.closeTab(tab); } // a pinned tab has no accidental close: ⌘W, the menu or ⌫ on the focused tab
     });
     // Activate on click, not mousedown: a tab being dragged onto another tab's pane must not become
     // the visible tab mid-drag (that made tab → pane moves impossible with the mouse).
@@ -242,31 +245,92 @@ export class Workspace {
       e.preventDefault();
       const rect = el.getBoundingClientRect();
       const before = e.clientX < rect.left + rect.width / 2;
-      this.tabs.splice(this.tabs.indexOf(src), 1);
-      const idx = this.tabs.indexOf(tab) + (before ? 0 : 1);
-      this.tabs.splice(idx, 0, src);
-      if (before) el.before(src.tabEl);
-      else el.after(src.tabEl);
-      this.app.saveWorkspaceSoon?.();
+      let idx = this.tabs.indexOf(tab) + (before ? 0 : 1);
+      if (this.tabs.indexOf(src) < idx) idx--; // the hole src leaves behind
+      this.moveTab(src, idx);
     });
     return el;
+  }
+
+  /** Number of pinned tabs; they are always the prefix of `tabs` (moveTab keeps it so). */
+  pinnedCount() {
+    return this.tabs.filter((t) => t.pinned).length;
+  }
+
+  /**
+   * Put `tab` at index `idx` of the strip (drag reorder, pinning), clamped to its group: a pinned tab never goes
+   * past an unpinned one and an unpinned tab never before a pinned one. Returns the index it landed on.
+   */
+  moveTab(tab, idx) {
+    const cur = this.tabs.indexOf(tab);
+    if (cur < 0) return -1;
+    this.tabs.splice(cur, 1);
+    const pinned = this.pinnedCount(); // without `tab`
+    idx = tab.pinned ? Math.min(idx, pinned) : Math.max(idx, pinned);
+    idx = Math.max(0, Math.min(idx, this.tabs.length));
+    this.tabs.splice(idx, 0, tab);
+    const next = this.tabs[idx + 1];
+    if (next && next.tabEl) next.tabEl.before(tab.tabEl);
+    else this.tabsEl.append(tab.tabEl);
+    this.app.saveWorkspaceSoon?.();
+    return idx;
+  }
+
+  /**
+   * Pin a tab (it joins the end of the pinned block at the left) or unpin it (it becomes the first unpinned tab, right
+   * after the block), so the strip always reads pinned tabs first. Returns true when the state changed.
+   */
+  setPinned(tab, on) {
+    on = !!on;
+    if (tab.pinned === on) return false;
+    tab.pinned = on;
+    this.moveTab(tab, this.tabs.filter((t) => t !== tab && t.pinned).length);
+    this.updateTab(tab);
+    return true;
+  }
+
+  /** Restored tabs come in saved order; a workspace edited by hand may interleave them: pinned tabs go first (stable). */
+  sortPinnedFirst() {
+    const order = [...this.tabs.filter((t) => t.pinned), ...this.tabs.filter((t) => !t.pinned)];
+    if (order.every((t, i) => t === this.tabs[i])) return;
+    this.tabs = order;
+    for (const t of order) this.tabsEl.append(t.tabEl); // append moves an existing child: the DOM follows the array
+  }
+
+  /**
+   * The tabs a bulk close acts on: 'others' (every other tab), 'left' / 'right' (the tabs on that side of `tab`) or
+   * 'all'. Pinned tabs are never among them — unpin one (or ⌘W it) to close it.
+   */
+  closeTargets(tab, which) {
+    const i = this.tabs.indexOf(tab);
+    const list = which === 'left' ? this.tabs.slice(0, i)
+      : which === 'right' ? this.tabs.slice(i + 1)
+      : which === 'others' ? this.tabs.filter((t) => t !== tab)
+      : [...this.tabs];
+    return list.filter((t) => !t.pinned);
   }
 
   tabMenu(tab, x, y) {
     // opened from the focused tab (⇧F10): closing keeps the keyboard in the strip instead of dropping it on <body>
     const fromStrip = document.activeElement === tab.tabEl, i = this.tabs.indexOf(tab);
     const closing = (fn) => async () => { await fn(); if (fromStrip) this._refocusStrip(tab, i); };
+    // the bulk closes name their targets up front: an item with nothing to close is disabled (pinned tabs never count)
+    const bulk = (which) => this.closeTargets(tab, which);
+    const closeItem = (label, which) => ({ label, action: closing(() => this.app.closeTabs(bulk(which))), disabled: !bulk(which).length });
     contextMenu(x, y, [
       { label: 'Rename Tab…', action: () => this.renameTab(tab) },
       { label: 'Duplicate', key: '⇧⌘T', action: () => this.app.action('duplicate') },
       { label: 'Tab Color', action: () => this.pickColor(tab) },
+      { label: tab.pinned ? 'Unpin Tab' : 'Pin Tab', key: '⇧⌘P', action: () => this.app.togglePin(tab) },
       '-',
       { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right') },
       { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down') },
       '-',
       { label: 'Close', key: '⌘W', action: closing(() => this.app.closeTab(tab)) },
-      { label: 'Close Others', action: closing(() => this.tabs.filter((t) => t !== tab).forEach((t) => this.app.closeTab(t))) },
-      { label: 'Close All', action: closing(() => [...this.tabs].forEach((t) => this.app.closeTab(t))) },
+      closeItem('Close Others', 'others'),
+      closeItem('Close Tabs to the Left', 'left'),
+      closeItem('Close Tabs to the Right', 'right'),
+      closeItem('Close All', 'all'),
     ]);
   }
 
@@ -340,7 +404,10 @@ export class Workspace {
   updateTab(tab) {
     if (!tab.tabEl) return;
     tab.tabEl.querySelector('.title').textContent = tab.title;
-    tab.tabEl.title = tab.title;
+    tab.tabEl.title = tab.pinned ? `${tab.title} (pinned)` : tab.title;
+    tab.tabEl.classList.toggle('pinned', !!tab.pinned);
+    const pin = tab.tabEl.querySelector('.pinico');
+    if (pin) pin.hidden = !tab.pinned;
     const pane = tab.activePane;
     const dot = tab.tabEl.querySelector('.dot');
     dot.className = 'dot ' + (pane ? pane.status : '');

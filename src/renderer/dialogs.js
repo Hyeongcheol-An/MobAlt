@@ -712,6 +712,7 @@ export function shortcutsDialog(app) {
     ['sessions', 'Sessions & tabs', [
       ['New session', '⌘N'], ['New local terminal', '⌘T'], ['Quick connect', '⇧⌘N'], ['Duplicate session', '⇧⌘T'], ['Reconnect', '⌘R'], ['Close tab', '⌘W'],
       ['Next / previous tab', '⌃Tab / ⌃⇧Tab'], ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'],
+      ['Pin / unpin tab', '⇧⌘P'], ['Close others / to the left / to the right', 'tab menu (⇧F10)'],
     ]],
     ['panes', 'Panes & terminal', [
       ['Split right / down', '⌘D / ⇧⌘D'], ['Grid 2 / 4 / 6 / 8 panes', '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], ['Unsplit', '⌥⌘1'], ['Close pane', '⇧⌘W'], ['Next pane', '⌘]'], ['Zoom pane (fill the tab) / restore', '⇧⌘⏎'],

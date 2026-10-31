@@ -53,6 +53,7 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | MobaXterm.ini 가져오기 | ✅ | Bookmarks 섹션 best-effort 파싱, `~/.ssh/config` 가져오기 |
 | 세션 내보내기 / 가져오기 | ✅ | 모든 세션과 폴더를 JSON 파일로(비밀번호·키 암호는 절대 포함하지 않음). Session 메뉴 또는 트리 우클릭 메뉴. 가져올 때 같은 id는 교체하고 나머지는 추가 |
 | 분할 페인 최대화 | ✅ Zoom | ⇧⌘⏎(또는 페인 머리글의 ⤢)로 포커스된 페인이 탭을 가득 채우고 다시 되돌림. 탭마다 기억하며 재시작 후에도 유지 |
+| 탭 고정, 왼쪽 / 오른쪽 탭 닫기 | ✅ | ⇧⌘P로 탭을 왼쪽에 고정(짧은 제목, ✕ 없음, 재시작 후 유지). Close Others / Tabs to the Left / Tabs to the Right / All은 고정 탭을 건너뛰고 살아 있는 연결을 모두 세어 한 번만 물음 |
 | 색상 테마 / 다크 모드 | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark, Light가 터미널만이 아니라 창 전체(툴바·사이드바·탭·대화상자)에 적용. 세션별로 터미널 테마만 덮어쓰기 가능 |
 | Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩, 동반 SSH 연결로 SFTP |
 | FTP / FTPS | ✅ | 명시적 TLS FTPS, 익명 FTP. Sftp 패널에서 탐색·전송·편집 |

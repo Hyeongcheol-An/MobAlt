@@ -117,6 +117,8 @@ const ICONS = {
   // pane zoom: corners pointing out (fill the tab) / corners pointing in (restore the split layout)
   zoom: 'M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3',
   unzoom: 'M8 3v3a2 2 0 0 1-2 2H3M21 8h-3a2 2 0 0 1-2-2V3M3 16h3a2 2 0 0 1 2 2v3M16 21v-3a2 2 0 0 1 2-2h3',
+  // pushpin: a pinned tab (head, shaft and the point)
+  pin: 'M9 3h6M10 3v6l-3 3v1h10v-1l-3-3V3M12 13v8',
 };
 /** An inline SVG icon element (class "i"); unknown names render an empty 16px box rather than throwing. */
 export function icon(name) {

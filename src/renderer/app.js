@@ -87,6 +87,7 @@ class App {
         autoTitle: t.autoTitle,
         color: t.color || null,
         icon: t.icon || null,
+        ...(t.pinned ? { pinned: true } : {}),
         active: Math.max(0, t.panes().indexOf(t.activePane)),
         ...(t.zoomed && t.panes().includes(t.zoomed) ? { zoomed: t.panes().indexOf(t.zoomed) } : {}), // the pane filling the tab (⇧⌘⏎)
         root: ser(t.root),
@@ -137,6 +138,7 @@ class App {
       if (td.title) tab.title = td.title; // newTab's focus may have named the tab after panes[0]'s session: the saved name stands (for good when it was typed)
       tab.color = td.color || null;
       tab.icon = td.icon || null;
+      tab.pinned = td.pinned === true;
       tab.root = root;
       for (const p of panes) p.tab = tab;
       tab.activePane = panes[Math.min(td.active || 0, panes.length - 1)];
@@ -150,6 +152,7 @@ class App {
       any = true;
     }
     if (!any) return false;
+    this.workspace.sortPinnedFirst(); // pinned tabs are the prefix of the strip, whatever order the file had
     const at = this.workspace.tabs[saved.activeTab];
     if (at) this.workspace.activate(at);
     const ap = this.activePane();
@@ -504,22 +507,64 @@ class App {
     this.updateMultiexec();
   }
 
+  /** The panes of `tabs` whose connection would drop (a local shell is not a connection). */
+  liveIn(tabs) {
+    return tabs.flatMap((t) => t.panes()).filter((p) => p.status === 'connected' && p.kind !== 'local');
+  }
+
   async closeTab(tab) {
-    const panes = tab.panes();
-    const live = panes.filter((p) => p.status === 'connected' && p.kind !== 'local');
+    const live = this.liveIn([tab]);
     if (live.length && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Close tab "${tab.title}" with ${plural(live.length, 'live connection')}?`, { okLabel: 'Close', danger: true }))) return;
+      if (!(await confirmDialog(`Close tab "${tab.title}" with ${plural(live.length, 'live connection')}?`, { okLabel: 'Close', danger: true }))) return false;
     }
-    for (const p of panes) {
+    this._disposeTab(tab);
+    this._afterClose();
+    return true;
+  }
+
+  /**
+   * Close several tabs at once (Close Others / to the Left / to the Right / All): the live connections of every tab in
+   * the list are counted and one question covers them all — "Close 3 tabs with 2 live connections?" — then the tabs
+   * go without further prompts. Tabs no longer in the strip are skipped; a single tab gets closeTab's wording.
+   */
+  async closeTabs(list) {
+    const tabs = (list || []).filter((t, i, a) => this.workspace.tabs.includes(t) && a.indexOf(t) === i);
+    if (!tabs.length) return false;
+    if (tabs.length === 1) return this.closeTab(tabs[0]);
+    const live = this.liveIn(tabs);
+    if (live.length && this.settings.confirmClose) {
+      if (!(await confirmDialog(`Close ${plural(tabs.length, 'tab')} with ${plural(live.length, 'live connection')}?`, { okLabel: 'Close tabs', danger: true }))) return false;
+    }
+    const active = this.workspace.active;
+    for (const t of tabs) if (t !== active) this._disposeTab(t); // the active tab last: no neighbour is activated only to be closed
+    if (tabs.includes(active)) this._disposeTab(active);
+    this._afterClose();
+    return true;
+  }
+
+  /** Tear a tab down without asking: every pane's backend ends and the tab leaves the strip. */
+  _disposeTab(tab) {
+    for (const p of tab.panes()) {
       const connId = p.termId;
       p.dispose();
       this.sftpPanel.dropConnection(connId);
     }
     this.workspace.removeTab(tab);
+  }
+
+  _afterClose() {
     const ap = this.activePane();
     if (ap) this.focusPane(ap, true);
     else this.updateStatus(null);
     this.updateMultiexec();
+  }
+
+  /** Pin a tab to the left of the strip, or unpin it (tab menu, ⇧⌘P on the active tab). */
+  togglePin(tab) {
+    if (!tab) return;
+    const on = !tab.pinned;
+    this.workspace.setPinned(tab, on);
+    toast(on ? `Pinned "${tab.title}" — it stays at the left and Close Others / Left / Right leave it alone` : `Unpinned "${tab.title}"`, 'info', on ? 3500 : 1800);
   }
 
   /** Split the active pane and open an empty pane next to it (drop a session onto it to connect). */
@@ -962,6 +1007,11 @@ class App {
       case 'rename-tab': return ap && ap.tab && this.workspace.renameTab(ap.tab);
       case 'close': return ap ? (ap.tab.panes().length > 1 ? this.closePane(ap) : this.closeTab(ap.tab)) : null;
       case 'close-pane': return ap && this.closePane(ap);
+      case 'close-others': case 'close-left': case 'close-right': case 'close-all': {
+        const tab = this.workspace.active;
+        return tab ? this.closeTabs(this.workspace.closeTargets(tab, name.slice('close-'.length))) : null;
+      }
+      case 'pin-tab': return this.togglePin(this.workspace.active);
       case 'split': return this.splitActive(arg || 'right', pane);
       case 'split-menu': return this.splitMenu($('#btn-split'));
       case 'layout': return this.applyLayout(arg);

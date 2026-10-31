@@ -119,7 +119,16 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 ![Split grid](images/split-grid.png)
 
 - **Tabs**: every session opens a tab. Drag tabs to reorder them, double-click to rename, middle-click
-  to close. Local tabs are titled after their current folder.
+  to close. Local tabs are titled after their current folder. The tab's context menu (right-click, or
+  ⇧F10 on the focused tab) renames, duplicates, colours, splits and closes: *Close Others*, *Close Tabs
+  to the Left*, *Close Tabs to the Right* and *Close All* close several tabs at once and ask one question
+  that counts every live connection among them ("Close 3 tabs with 2 live connections?").
+- **Pinned tabs** (*Pin Tab* in the menu, ⇧⌘P): a pinned tab moves to the left of the strip, in the order
+  the tabs were pinned, and shrinks to its status dot, icon and a short title with a small pin where
+  the ✕ was. The bulk closes above and a middle click leave pinned tabs alone (⌘W, the menu's *Close*
+  and ⌫ on the focused tab still close one), and a pinned tab cannot be dragged past an unpinned one.
+  Pins are part of the workspace, so they come back after a restart. *Unpin Tab* puts the tab right
+  after the pinned block.
 - **Splits and grids**: `Split ▾` (⌘D right, ⇧⌘D down) adds an empty pane; the grid entries make
   1×2 … 2×4 layouts (⌥⌘2/4/6/8). Drop a session from the tree onto an empty pane to connect there,
   onto a pane's edge to split in that direction, or onto its centre to replace it. Drag a tab onto
@@ -229,6 +238,8 @@ and "Check now").
 |---|---|
 | New session / local terminal / quick connect | ⌘N / ⌘T / ⇧⌘N |
 | Duplicate / reconnect / close tab / close pane | ⇧⌘T / ⌘R / ⌘W / ⇧⌘W |
+| Pin / unpin the active tab | ⇧⌘P |
+| Close other tabs / tabs to the left / tabs to the right | Session menu, or the tab's context menu |
 | Split right / down, unsplit | ⌘D / ⇧⌘D, ⌥⌘1 |
 | Grid 2 / 4 / 6 / 8 panes | ⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8 |
 | Next pane, next / previous tab, tab 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
