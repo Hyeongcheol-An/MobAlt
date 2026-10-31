@@ -9,6 +9,7 @@
 // palette or enabled state changes and on dispose. Nothing in here may throw into the data path: a scan that fails
 // is logged once and switches the pane's highlighting off.
 import { ensureContrast, mix, isLightTheme, contrast } from './theme.js';
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 /** Matches kept per logical line (after overlap resolution). */
 export const MAX_MATCHES_PER_LINE = 50;

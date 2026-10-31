@@ -2,6 +2,7 @@
 // Census of the live network connections, for the quit confirmation: SSH shells, Mosh clients and the
 // SFTP companions of Mosh panes live in the terminal registry, FTP control connections in the FtpManager.
 
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 const LABEL = { ssh: 'SSH', mosh: 'Mosh', sftp: 'SFTP', ftp: 'FTP' };
 
 /** @returns {{ssh:number, mosh:number, sftp:number, ftp:number, total:number}} */

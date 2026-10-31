@@ -3,6 +3,7 @@
 // program, not only the terminal area. Pure colour maths, no DOM: app.js puts the tokens on <html>, main.js gets
 // the window background, test/unit/theme.test.js asserts the contrast guarantees for every theme.
 
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 export const THEMES = {
   'moba-dark': { background: '#1e1e1e', foreground: '#ececec', cursor: '#b4b4c0', cursorAccent: '#1e1e1e', selectionBackground: 'rgba(78,161,255,.35)',
     black: '#000000', red: '#cd3131', green: '#0dbc79', yellow: '#e5e510', blue: '#2472c8', magenta: '#bc3fbc', cyan: '#11a8cd', white: '#e5e5e5',

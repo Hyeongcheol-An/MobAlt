@@ -11,6 +11,7 @@ APP_DIR="${MOBALT_APP_DIR:-$(cd "$(dirname "$0")/../.." && pwd)}"
 mkdir -p "$OUT/userdata" "$OUT/shots"
 cd "$APP_DIR"
 env -u ELECTRON_RUN_AS_NODE \
+  MOBALT_LANG="${MOBALT_LANG:-en}" \
   MOBALT_USER_DATA="$OUT/userdata" \
   MOBALT_TEST_SCRIPT="$SCRIPT" \
   MOBALT_SHOT_DIR="$OUT/shots" \

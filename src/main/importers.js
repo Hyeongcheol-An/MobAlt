@@ -4,6 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 function expandHome(p) {
   if (p.startsWith('~/')) return path.join(os.homedir(), p.slice(2));

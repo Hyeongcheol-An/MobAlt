@@ -3,6 +3,7 @@
 // UDP broadcast. parseMac and magicPacket are pure (test/unit/wol.test.js); wake() does the sending.
 const dgram = require('dgram');
 const net = require('net');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 /**
  * A MAC address in any of the usual spellings — `aa:bb:cc:dd:ee:ff`, `AA-BB-CC-DD-EE-FF`, Cisco's `aabb.ccdd.eeff` or

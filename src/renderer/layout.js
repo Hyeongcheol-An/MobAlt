@@ -1,5 +1,6 @@
 // Tabs and split-pane layout. Each tab owns a tree: {type:'pane', pane} | {type:'split', dir, children:[a,b], ratio}
 import { h, contextMenu, promptDialog, icon } from './ui.js';
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 let tabSeq = 0;
 

@@ -5,6 +5,7 @@
 // Pure functions over ssh2's own tables (lib/protocol/constants.js), so a unit test needs no connection.
 const crypto = require('crypto');
 const C = require('ssh2/lib/protocol/constants');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const CATEGORIES = ['kex', 'serverHostKey', 'cipher', 'hmac'];
 const LABELS = { kex: 'key exchange', serverHostKey: 'host key', cipher: 'cipher', hmac: 'MAC' };

@@ -4,6 +4,7 @@ import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
 import { TermHighlighter, DEFAULT_RULES, highlightPalette } from './highlight.js';
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 /** The marker the main process puts in front of its status lines (terminals.js STATUS_DIM / STATUS_FAIL): painted in _paint, where the pane's palette is known. */
 const STATUS_RE = /\x1b\]7704;(dim|fail)\x07/g;

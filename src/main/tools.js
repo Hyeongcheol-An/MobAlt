@@ -6,6 +6,7 @@ const net = require('net');
 const dns = require('dns');
 const os = require('os');
 const crypto = require('crypto');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const running = new Map();
 

@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const SSH_KEYGEN = '/usr/bin/ssh-keygen';
 const SSH_ADD = '/usr/bin/ssh-add';

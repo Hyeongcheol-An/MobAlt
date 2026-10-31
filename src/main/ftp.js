@@ -10,6 +10,7 @@ const { EventEmitter } = require('events');
 const { Readable, Writable } = require('stream');
 const { spawn } = require('child_process');
 const { Client } = require('basic-ftp');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const FILE = 1, DIR = 2, LINK = 3; // basic-ftp FileType
 

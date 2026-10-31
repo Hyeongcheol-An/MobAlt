@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const EventEmitter = require('events');
 const { spawn } = require('child_process');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const S_IFMT = 0o170000, S_IFDIR = 0o040000, S_IFLNK = 0o120000;
 

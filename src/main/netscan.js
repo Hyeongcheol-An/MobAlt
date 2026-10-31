@@ -5,6 +5,7 @@
 const net = require('net');
 const dns = require('dns');
 const { pingOnce, tcpConnect, runQueue } = require('./tools');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const MAX_HOSTS = 65536; // a /16
 const MAX_PORTS = 256;

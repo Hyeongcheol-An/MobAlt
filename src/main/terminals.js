@@ -8,6 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { StringDecoder } = require('string_decoder');
 const { ensureZdotdir } = require('./zdotdir');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 /**
  * Streaming filter that turns terminal output into plain text for session logs: drops CSI, OSC (incl.

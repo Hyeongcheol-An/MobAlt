@@ -1,5 +1,6 @@
 // SFTP browser panel (left sidebar "Sftp" tab) bound to the active SSH pane's connection.
 import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead, repointOpeners, plural } from './ui.js';
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 

@@ -5,6 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { userDataFile } = require('./store');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const FILES = {
   '.zshenv': `# MobAlt shell integration (generated)

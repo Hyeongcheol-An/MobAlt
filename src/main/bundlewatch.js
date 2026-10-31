@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 // Outside Electron (unit tests) require('electron') yields the binary path string, or throws when the
 // Electron binary is not installed; the pure helpers below need neither (same pattern as store.js).
 let electron = null;
