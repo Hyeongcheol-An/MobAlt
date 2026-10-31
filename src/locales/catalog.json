@@ -112,6 +112,21 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "(session / Settings)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "(session name)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "(Settings)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "[exit {code}]": {
       "refs": [
         "src/main/tools.js"
@@ -559,6 +574,11 @@
         "src/main/keygen.js"
       ]
     },
+    "⌘= / ⌘- step from here, ⌘0 comes back to it": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "⌘⏎ or ⇧⏎ / ⌫": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -838,6 +858,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Apply to this pane": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Ask every time": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -867,6 +892,17 @@
     "Background": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Background label": {
+      "refs": [
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Background Label": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "bad port {port}": {
@@ -915,6 +951,11 @@
       ]
     },
     "Bind port is required (0-65535)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Blank fields follow the session, then Settings. Font family, cursor, scrollback and read-only stay with this pane; theme, font size, keyword highlighting, monitoring and the background label can also be saved to the session.": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -1069,6 +1110,12 @@
     "cd terminal to this folder": {
       "refs": [
         "src/renderer/index.html"
+      ]
+    },
+    "Centre": {
+      "refs": [
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
       ]
     },
     "Check for updates at startup": {
@@ -1533,6 +1580,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Cursor blink": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Custom colour": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1582,6 +1634,11 @@
     "dd writes raw data over a disk device": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "Decrease": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Default (by session type)": {
@@ -2281,6 +2338,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Font Size": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "fork bomb: exhausts the machine": {
       "refs": [
         "src/renderer/pasteguard.js"
@@ -2400,6 +2462,11 @@
     "Grid Layout": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Hide": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Hide Hidden Files": {
@@ -2634,6 +2701,16 @@
         "src/main/ssh.js"
       ]
     },
+    "Increase": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Input": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Inside \"{folder}\"": {
       "refs": [
         "src/renderer/sidebar.js"
@@ -2844,9 +2921,34 @@
         "src/renderer/index.html"
       ]
     },
+    "Label position": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Label text": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Language": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Large, dim text behind the terminal so you can tell the server at a glance; empty = the session name. A pane can change its own (right-click → Background Label)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Large, dim text behind the terminal; empty = the session's label, else its name (or the pane title)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Large, dim text behind this pane's terminal; empty = the session's label, else its name (or the pane title)": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Last sample {n} s ago": {
@@ -3215,6 +3317,11 @@
       ]
     },
     "Monitoring": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Monitoring bar": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -4051,6 +4158,31 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "Pane Settings — {title}": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Pane settings applied": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Pane settings need a terminal pane": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Pane settings saved to session \"{name}\"": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Pane Settings…": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Panels": {
       "refs": [
         "src/renderer/index.html"
@@ -4377,6 +4509,22 @@
         "src/renderer/app.js"
       ]
     },
+    "read-only": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Read-Only": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Read-only: keystrokes and pastes to this pane are dropped": {
+      "refs": [
+        "src/renderer/dialogs.js",
+        "src/renderer/terminal.js"
+      ]
+    },
     "Receive files with Zmodem into…": {
       "refs": [
         "src/main/zmodem.js"
@@ -4539,6 +4687,16 @@
         "src/renderer/panels.js"
       ]
     },
+    "Rename pane": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Rename Pane…": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Rename tab": {
       "refs": [
         "src/renderer/layout.js"
@@ -4580,6 +4738,11 @@
     "Rescan ports": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Reset": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Reset to defaults": {
@@ -4744,6 +4907,11 @@
       ]
     },
     "Save private key as": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Save to session": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -4992,6 +5160,11 @@
         "src/main/main.js"
       ]
     },
+    "Set Text…": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Settings": {
       "refs": [
         "src/renderer/dialogs.js",
@@ -5073,6 +5246,16 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Show": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Show a background label": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Show hidden": {
       "refs": [
         "src/renderer/index.html"
@@ -5107,6 +5290,11 @@
     "Show sidebar (⌘B)": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "Shown in the pane head and used for the tab title; leave empty to go back to the automatic title": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Shown on the session, its tab and pane": {
@@ -5661,6 +5849,16 @@
         "src/main/updater.js"
       ]
     },
+    "This pane is read-only": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "This pane's terminal colours; the window keeps the global theme": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "timed out after {s} s": {
       "refs": [
         "src/main/ssh.js"
@@ -5714,6 +5912,16 @@
     "Tools Panel": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Top right": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Top Right": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Traceroute": {
