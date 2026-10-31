@@ -28,20 +28,20 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 분류 | ✅ | 🟡 | ❌ | ➖ | 행 수 |
 |---|---|---|---|---|---|
 | 1. 세션 종류 | 7 | 6 | 4 | 4 | 21 |
-| 2. SSH 세부 기능 | 15 | 10 | 10 | 2 | 37 |
+| 2. SSH 세부 기능 | 16 | 10 | 9 | 2 | 37 |
 | 3. 터미널 | 7 | 13 | 10 | 1 | 31 |
 | 4. X 서버와 내장 Unix 도구 | 2 | 1 | 1 | 17 | 21 |
-| 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 4 | 2 | 10 | 19 | 35 |
+| 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 5 | 2 | 9 | 19 | 35 |
 | 6. 작업대 기능 | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional 전용 항목과 Home 에디션 제한 | 0 | 0 | 0 | 13 | 13 |
-| **1–7절 합계(기능당 한 번)** | **42** | **41** | **41** | **59** | **183** |
+| **1–7절 합계(기능당 한 번)** | **44** | **41** | **39** | **59** | **183** |
 | 8. 최근 추가 기능(24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
 | 9. 파워 유저가 기대는 UX | 5 | 11 | 3 | 1 | 20 |
-| **전체 표 합계** | **49** | **68** | **53** | **63** | **233** |
+| **전체 표 합계** | **51** | **68** | **51** | **63** | **233** |
 
 8절과 9절은 원본 목록의 구성을 그대로 따른 것이라 1–7절에 이미 나온 기능을 다시 세므로, "전체 표 합계"에는
 같은 기능이 두 번 들어갑니다. 인용할 때는 1–7절 합계를 쓰세요. 다르게 읽으면, macOS에서 의미가 있는 기능
-124개(1–7절에서 ➖ 제외) 가운데 MobAlt는 42개를 그대로, 41개를 더 좁거나 다른 형태로 갖고 있고, 41개는
+124개(1–7절에서 ➖ 제외) 가운데 MobAlt는 44개를 그대로, 41개를 더 좁거나 다른 형태로 갖고 있고, 39개는
 없습니다.
 
 ## 1. 세션 종류
@@ -105,7 +105,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 자격 증명 관리자(공유 자격 증명) | ❌ | 비밀번호는 세션마다 따로 |
 | 마스터 비밀번호 | 🟡 | 마스터 비밀번호 없음. 비밀 정보는 Electron `safeStorage`(macOS Keychain, 로그인으로 잠금 해제)로 암호화. JSON 내보내기에는 절대 들어가지 않음 |
 | Windows Hello | ➖ | Windows 전용. MobAlt의 비밀 정보는 로그인 Keychain이 지킴 |
-| MobaKeyGen | ❌ | 키 생성 UI 없음. Local 터미널에서 `ssh-keygen` |
+| MobaKeyGen | ✅ | Session → Generate SSH Key…(Tools 패널, 편집기의 Generate… 버튼): `ssh-keygen`으로 Ed25519 / RSA 4096 / ECDSA, 강도 안내가 있는 패스프레이즈, 공개 키 + 지문, ssh-agent 등록, `ssh-copy-id`처럼 서버에 설치 |
 | Known hosts | ✅ | `~/.ssh/known_hosts`와 앱 자체 목록. 첫 접속에 지문(SHA256, MD5) 표시, 바뀐 키는 경고하고 조용히 받아들이지 않음 |
 | 세션 로그 | ✅ | 세션별 "Log session output to file" 또는 Terminal → Start/Stop Session Log. 원본 또는 일반 텍스트(Settings → Logging). 시작/종료 시각만 기록, 줄별 타임스탬프 없음 |
 | IPv6 | ✅ | 호스트 칸에 IPv6 주소, Quick connect에는 `[addr]:port` |
@@ -203,7 +203,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | MobaTextEditor | 🟡 | 원격 파일용 내장 일반 텍스트 편집기(⌘S로 저장) 또는 자동 업로드되는 외부 편집기. 구문 강조와 검색은 없음 |
 | MobaDiff / MobaTextDiff | ❌ | FileMerge(`opendiff`), `diff`, 쓰는 편집기 |
 | MobaFoldersDiff | ❌ | `diff -r`, FileMerge |
-| MobaKeyGen | ❌ | Local 터미널에서 `ssh-keygen`(2절 참고) |
+| MobaKeyGen | ✅ | Generate SSH Key… 대화상자(2절 참고) |
 | MobaPictureViewer | ➖ | "Show in Finder" 뒤 훑어보기 / 미리보기 |
 | MobaMonitor | ➖ | 원본 목록에서 이 이름의 MobaXterm 도구를 찾지 못함. 가장 가까운 기능은 원격 모니터링 바(2절, ❌) |
 | 하드웨어 / 프로세스 목록 | ➖ | 시스템 정보, 활성 상태 보기, `ps` |
@@ -360,7 +360,6 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | Tools 패널의 Wake-on-LAN과 서브넷 / 네트워크 스캐너 | Tools를 완성함. WoL은 UDP 매직 패킷, 스캐너는 포트 스캔 워커를 재사용 | S + M |
 | 터미널 키워드 구문 강조 | 색이 없는 서버에서도 읽기 좋은 로그. xterm.js decorations API | M |
 | 탭 고정, 왼쪽/오른쪽 닫기, 창으로 분리 | 탭 색상은 이미 있음. 분리는 터미널 레지스트리를 공유하는 두 번째 BrowserWindow가 필요 | M |
-| SSH 키 생성 UI(`ssh-keygen` 래퍼) | 가장 흔한 "SSH 첫걸음" 작업. MobaKeyGen 공백도 메움 | S |
 | 전문가 SSH 알고리즘 / KEX / 암호 / MAC 설정 | 레거시 토글 하나로는 너무 거칠다. ssh2의 `algorithms` 옵션이 명시적 목록을 받음(ML-KEM은 ssh2를 기다려야 함) | S |
 
 **P2**

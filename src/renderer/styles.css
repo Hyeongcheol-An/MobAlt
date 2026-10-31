@@ -608,3 +608,24 @@ input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: defaul
 /* Text selection in fields and selectable text follows the theme, not the OS highlight colour. */
 ::selection { background: var(--selection); color: var(--selection-fg); }
 input::selection, textarea::selection { background: var(--selection); color: var(--selection-fg); }
+
+/* ---- keygen / algorithms ---- */
+/* Inline field errors (the key generator's passphrase / path): the second grid column, in the danger text colour,
+   under the field they belong to. */
+.form-grid .form-error { grid-column: 2; color: var(--danger-fg); font-size: 11.5px; line-height: 1.35; margin-top: -2px; }
+/* Key generator: the passphrase hint carries its level; the result shows the public key beside its Copy button and the
+   steps (agent / install) with a tick or a cross in the theme's ok / danger colours. */
+.keygen-strength[data-level="weak"] { color: var(--warn-fg); }
+.keygen-strength[data-level="fair"] { color: var(--fg-dim); }
+.keygen-strength[data-level="strong"] { color: var(--ok-fg); }
+.keygen-status { color: var(--fg-dim); font-size: 12px; margin-top: 10px; min-height: 1.2em; }
+.keygen-status:empty { display: none; }
+.keygen-ok { margin: 0 0 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.keygen-ok .mono { font-family: var(--font-mono); font-size: 11.5px; }
+.keygen-pubrow { align-items: flex-start; }
+.form-grid textarea.keygen-pub { min-height: 56px; font-size: 11px; overflow-wrap: anywhere; resize: vertical; flex: 1; min-width: 0; }
+.form-grid .keygen-fp { margin: 0; }
+.keygen-steps { display: flex; flex-direction: column; gap: 4px; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.keygen-step::before { content: "✓ "; color: var(--ok); }
+.keygen-step.err { color: var(--danger-fg); }
+.keygen-step.err::before { content: "✗ "; color: var(--danger); }

@@ -103,6 +103,14 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   패스프레이즈가 있는 키는 한 번 묻고, "Save in session"을 켜면 저장합니다.
 - **호스트 키**: 첫 접속 때 지문(SHA256·MD5)을 보여 줍니다. 수락하면 저장되고, 키가 바뀌면 크게
   경고하며 조용히 받아들이지 않습니다.
+- **SSH 키 생성**: Session → Generate SSH Key…(Tools 패널에도 있고, 세션 편집기의 개인 키 칸 옆
+  *Generate…* 버튼으로도 엽니다)이 macOS의 `ssh-keygen`을 대신 실행합니다. Ed25519(기본), RSA 4096,
+  ECDSA 중 고르고, 주석과 선택적 패스프레이즈(강도 안내 포함), 저장 위치(기본 `~/.ssh/id_<종류>`,
+  이미 있으면 번호가 붙음. `~/.ssh`가 없으면 비공개 권한으로 만들고 파일은 0600 / 0644)를 정합니다.
+  생성 뒤 공개 키를 Copy 버튼과 함께, 지문도 보여 줍니다. "Add to ssh-agent"는
+  `ssh-add --apple-use-keychain`을, "Install on a server…"는 저장된 세션에 평소 인증 방식으로 접속해
+  `~/.ssh/authorized_keys`에 공개 키를 `ssh-copy-id`처럼 덧붙입니다(두 번 넣지 않음). 편집기에서 열었다면
+  *Use in this session*이 키 칸을 채웁니다.
 - **점프 호스트**: Advanced SSH → Jump host에서 다른 저장 세션을 bastion으로 지정합니다(ProxyJump).
 - **실패했을 때**: 터미널에 원인이 출력됩니다. 예: `authentication failed — server accepts:
   publickey; tried: ~/.ssh/id_ed25519`, 또는 포트에 응답이 없다는 안내. [문제 해결](#문제-해결) 참고.

@@ -109,6 +109,14 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   restrict it. Keys with a passphrase prompt once; tick "Save in session" to keep it.
 - **Host keys**: the first connection shows the fingerprint (SHA256 and MD5). Accepting stores the
   key; a changed key is flagged loudly and never accepted silently.
+- **SSH keys**: Session → Generate SSH Key… (also the Tools panel, and *Generate…* next to the
+  private-key field in the session editor) runs macOS's `ssh-keygen` for you: Ed25519 (default),
+  RSA 4096 or ECDSA, a comment, an optional passphrase with a strength hint, and the file (default
+  `~/.ssh/id_<type>`, numbered if that name is taken; `~/.ssh` is created private when missing,
+  the files end up 0600 / 0644). It shows the public key with a Copy button and the fingerprint.
+  "Add to ssh-agent" runs `ssh-add --apple-use-keychain`; "Install on a server…" connects to a saved
+  session with its usual authentication and appends the public key to its `~/.ssh/authorized_keys`
+  like `ssh-copy-id` (never twice). From the editor, *Use in this session* fills the key field.
 - **Jump hosts**: Advanced SSH → Jump host picks another saved session as the bastion (ProxyJump).
 - **When it fails**: the terminal prints what happened, for example
   `authentication failed — server accepts: publickey; tried: ~/.ssh/id_ed25519`, or a hint that

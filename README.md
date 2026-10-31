@@ -36,6 +36,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | SSH (password / key / agent) | ✅ | Automatic order key → agent → password, keyboard-interactive (2FA), passphrase prompts, `~/.ssh/config` and ProxyJump |
 | Saved passwords (master password) | ✅ | Encrypted with Electron `safeStorage` (macOS Keychain) |
 | Host key checking | ✅ | `~/.ssh/known_hosts` plus the app's own list; changed keys are flagged |
+| MobaKeyGen (SSH key generator) | ✅ Generate SSH Key… | Ed25519 / RSA 4096 / ECDSA through `ssh-keygen`, passphrase, public key + fingerprint, add to ssh-agent, install on a server like `ssh-copy-id`; *Generate…* in the session editor fills the key field |
 | SFTP browser on connect | ✅ Sftp panel | Upload/download (recursive, progress, cancel), mkdir, rename, chmod, delete, hidden files |
 | Follow terminal folder | ✅ | OSC 7 shell hook for bash/zsh, per session |
 | Remote file editing | ✅ | Built-in editor (⌘S saves back) or your external editor with auto-upload |

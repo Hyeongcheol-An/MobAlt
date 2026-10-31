@@ -29,21 +29,21 @@ last column says which parts are missing.
 | Category | ✅ | 🟡 | ❌ | ➖ | Rows |
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
-| 2. SSH specifics | 15 | 10 | 10 | 2 | 37 |
+| 2. SSH specifics | 16 | 10 | 9 | 2 | 37 |
 | 3. Terminal | 7 | 13 | 10 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
-| 5. Network and admin tools, embedded servers, Moba* utilities | 4 | 2 | 10 | 19 | 35 |
+| 5. Network and admin tools, embedded servers, Moba* utilities | 5 | 2 | 9 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **42** | **41** | **41** | **59** | **183** |
+| **Sections 1–7 (each feature once)** | **44** | **41** | **39** | **59** | **183** |
 | 8. Recent additions (24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
 | 9. UX details power users rely on | 5 | 11 | 3 | 1 | 20 |
-| **All tables** | **49** | **68** | **53** | **63** | **233** |
+| **All tables** | **51** | **68** | **51** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
+MobAlt has 44 in full, 41 in a narrower or different form and lacks 39.
 
 ## 1. Session types
 
@@ -106,7 +106,7 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 | Credentials manager (shared credentials) | ❌ | passwords are per session |
 | Master password | 🟡 | no master password: secrets are encrypted with Electron `safeStorage` (macOS Keychain, unlocked by your login); JSON export never contains them |
 | Windows Hello | ➖ | Windows-only; the login Keychain protects MobAlt's secrets |
-| MobaKeyGen | ❌ | no key generator UI; `ssh-keygen` in a Local terminal |
+| MobaKeyGen | ✅ | Session → Generate SSH Key… (Tools panel, editor's Generate… button): Ed25519 / RSA 4096 / ECDSA via `ssh-keygen`, passphrase with strength hint, public key + fingerprint, add to ssh-agent, install on a server like `ssh-copy-id` |
 | Known hosts | ✅ | `~/.ssh/known_hosts` plus the app's own list; first-connection fingerprint (SHA256 and MD5); a changed key is flagged and never accepted silently |
 | Session logging | ✅ | "Log session output to file" per session or Terminal → Start/Stop Session Log; raw or plain text (Settings → Logging); start/stop stamps, no per-line timestamps |
 | IPv6 | ✅ | IPv6 addresses in the host field and `[addr]:port` in Quick connect |
@@ -204,7 +204,7 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 | MobaTextEditor | 🟡 | built-in plain-text editor for remote files (⌘S saves back) or your external editor with auto-upload; no syntax highlighting or search |
 | MobaDiff / MobaTextDiff | ❌ | FileMerge (`opendiff`), `diff`, your editor |
 | MobaFoldersDiff | ❌ | `diff -r`, FileMerge |
-| MobaKeyGen | ❌ | `ssh-keygen` in a Local terminal (see §2) |
+| MobaKeyGen | ✅ | Generate SSH Key… dialog (see §2) |
 | MobaPictureViewer | ➖ | Quick Look / Preview after "Show in Finder" |
 | MobaMonitor | ➖ | the inventory found no MobaXterm tool by this name; the nearest feature is the remote monitoring bar (§2, ❌) |
 | List hardware / processes | ➖ | System Information, Activity Monitor, `ps` |
@@ -361,7 +361,6 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 | Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
 | Keyword syntax highlighting in the terminal | readable logs on colour-less servers; xterm.js decorations API | M |
 | Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
-| SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
 | Expert SSH algorithm / KEX / cipher / MAC settings | one legacy toggle is too coarse; ssh2's `algorithms` option takes explicit lists (ML-KEM waits on ssh2) | S |
 
 **P2**

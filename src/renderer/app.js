@@ -1,21 +1,18 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, plural } from './ui.js';
+import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, plural, ipcMessage } from './ui.js';
 import { TermPane, THEMES, searchDecorations } from './terminal.js';
 import { chromePalette, cssVars } from './theme.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
-import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog } from './dialogs.js';
+import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, keygenDialog } from './dialogs.js';
 
 /** Long paths keep their tail (the leaf folder is what matters in a status bar). */
 const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
 
 /** Pane kind for a session type (rdp/vnc never get a pane). */
 const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh');
-
-/** The message of an error thrown by a main-process handler, without Electron's "Error invoking remote method" wrapper. */
-const ipcMessage = (e) => String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
 
 class App {
   constructor() {
@@ -1049,6 +1046,7 @@ class App {
         return;
       }
       case 'shortcuts': return shortcutsDialog(this);
+      case 'keygen': return keygenDialog(this); // Session → Generate SSH Key…, the Tools panel button
       default:
         console.warn('unknown action', name);
     }

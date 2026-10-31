@@ -8,6 +8,7 @@ const path = require('path');
 const { StringDecoder } = require('string_decoder');
 const knownhosts = require('./knownhosts');
 const x11 = require('./x11');
+const keygen = require('./keygen');
 
 const { execFile } = require('child_process');
 
@@ -546,6 +547,54 @@ class SshManager {
     }
     if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
     return msg;
+  }
+
+  /**
+   * Put a public key on a server the way ssh-copy-id does: connect to `cfg` with its usual authentication (prompts
+   * included), then append `publicKey` (one authorized_keys line) to `remoteFile` (default ~/.ssh/authorized_keys),
+   * creating the folder 0700 and the file 0600 when missing; a line already there is left alone. Resolves
+   * { ok: true, added: bool, remoteFile, host } or { ok: false, error }. The connection is closed right after.
+   */
+  async installPublicKey(cfg, publicKey, remoteFile = '~/.ssh/authorized_keys') {
+    const line = String(publicKey || '').trim().split('\n')[0];
+    const cols = line.split(/\s+/);
+    if (cols.length < 2 || !/^[A-Za-z0-9+/=]+$/.test(cols[1])) return { ok: false, error: 'Not a public key line (expected "ssh-ed25519 AAAA… comment")' };
+    let cmd;
+    try {
+      cmd = keygen.installCommand(remoteFile, cols[1]);
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+    const where = `${cfg.username || os.userInfo().username}@${cfg.host}:${cfg.port || 22}`;
+    const ctx = { log: '', out: (t) => { ctx.log = (ctx.log + t).slice(-4000); } };
+    let client = null, jump = null;
+    try {
+      ({ client, jump } = await this.connectClient({ ...cfg }, ctx));
+    } catch (e) {
+      return { ok: false, error: `Could not connect to ${where}: ${this._explainError(e, ctx, cfg)}` };
+    }
+    try {
+      const r = await new Promise((resolve, reject) => {
+        client.exec(cmd, (err, stream) => {
+          if (err) return reject(err);
+          let out = '', errOut = '';
+          stream.on('data', (d) => (out += d));
+          stream.stderr.on('data', (d) => (errOut += d));
+          stream.on('close', (code) => resolve({ code, out, errOut }));
+          stream.on('error', reject);
+          stream.end(line + '\n');
+        });
+      });
+      if (/MOBALT_KEY_ADDED/.test(r.out)) return { ok: true, added: true, remoteFile, host: where };
+      if (/MOBALT_KEY_PRESENT/.test(r.out)) return { ok: true, added: false, remoteFile, host: where };
+      const why = (r.errOut.trim() || r.out.trim()).split('\n').pop() || `exit status ${r.code}`;
+      return { ok: false, error: `Could not write ${remoteFile} on ${where}: ${why}` };
+    } catch (e) {
+      return { ok: false, error: `Installing the key on ${where} failed: ${e.message}` };
+    } finally {
+      try { client.end(); } catch {}
+      if (jump) try { jump.end(); } catch {}
+    }
   }
 
   /**
