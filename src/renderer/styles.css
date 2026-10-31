@@ -699,3 +699,21 @@ input::selection, textarea::selection { background: var(--selection); color: var
 .keygen-step::before { content: "✓ "; color: var(--ok); }
 .keygen-step.err { color: var(--danger-fg); }
 .keygen-step.err::before { content: "✗ "; color: var(--danger); }
+/* ---- tab pin / detach ---- */
+/* A pinned tab (tab menu → Pin Tab, ⇧⌘P) sits at the left of the strip in a fixed order and shrinks to its status
+   dot, icon and a short title. In place of ✕ it shows a small pin: ⌘W, the menu's Close and ⌫ on the focused tab
+   still close it, a middle click and the bulk closes (Close Others / to the Left / to the Right / All) leave it
+   alone. A pinned tab cannot be dragged past an unpinned one (layout.js moveTab); the first unpinned tab carries a
+   thin inset line that marks the end of the pinned block. */
+.tab.pinned { min-width: 0; max-width: 118px; padding: 0 8px 0 10px; }
+.tab.pinned .title { flex: 0 1 auto; max-width: 64px; }
+.tab.pinned .close { display: none; }
+.tab .pinico { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; color: var(--fg-faint); }
+.tab .pinico[hidden] { display: none; }
+.tab .pinico svg.i, .tab-menu-item .pinico svg.i { width: 11px; height: 11px; }
+.tab.active .pinico { color: var(--term-fg); opacity: .6; }
+.tab.pinned + .tab:not(.pinned) { box-shadow: inset 2px 0 0 var(--bg-4); }
+.tab-menu-item .pinico { flex: none; display: inline-flex; margin-left: 4px; color: var(--fg-faint); }
+/* A detached window (tab menu → Detach to New Window, ⌥⌘N) is the same page with body.detached: it starts with the
+   sidebar collapsed (⌘B shows it there too) and its brand carries a small marker, so two MobAlt windows tell apart. */
+body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }

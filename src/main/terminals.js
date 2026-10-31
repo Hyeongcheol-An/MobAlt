@@ -116,11 +116,54 @@ class PlainTextFilter {
   }
 }
 
+/** Output kept per terminal for a window that attaches to it later (a detached tab): the last 256 KB. */
+const RING_BYTES = 256 * 1024;
+/** How long a finished terminal's output stays replayable (a tab in transit between windows when its backend ended). */
+const RING_GRACE_MS = 30000;
+
 class TerminalRegistry extends EventEmitter {
   constructor() {
     super();
     this.map = new Map();
     this.logs = new Map();
+    this.rings = new Map(); // id → { parts: string[], size } — the output of the last RING_BYTES, replayed on attach
+    this.ringLimit = RING_BYTES;
+  }
+
+  /** Keep the tail of a terminal's output: whole chunks, trimmed to the limit (the first kept chunk cut at a line start). */
+  _ring(id, chunk) {
+    let r = this.rings.get(id);
+    if (!r) {
+      r = { parts: [], size: 0, timer: null };
+      this.rings.set(id, r);
+    }
+    r.parts.push(chunk);
+    r.size += chunk.length;
+    while (r.size > this.ringLimit && r.parts.length > 1) r.size -= r.parts.shift().length;
+    if (r.size > this.ringLimit) { // one chunk bigger than the whole ring
+      const p = r.parts[0];
+      r.parts[0] = p.slice(p.length - this.ringLimit);
+      r.size = this.ringLimit;
+    }
+    if (r.parts.length && r.size > this.ringLimit * 0.95) { // start on a line, not inside an escape sequence, when the first chunk was cut
+      const p = r.parts[0], nl = p.indexOf('\n');
+      if (nl > 0 && nl < p.length - 1) { r.parts[0] = p.slice(nl + 1); r.size -= nl + 1; }
+    }
+  }
+
+  /** Everything a window needs to draw a terminal it is taking over: the buffered output ('' when nothing is known). */
+  replay(id) {
+    const r = this.rings.get(id);
+    return r ? r.parts.join('') : '';
+  }
+
+  /** The ring of a terminal that ended stays for RING_GRACE_MS (a tab in transit still gets its last screen), then goes. */
+  _dropRingLater(id) {
+    const r = this.rings.get(id);
+    if (!r) return;
+    clearTimeout(r.timer);
+    r.timer = setTimeout(() => { if (this.rings.get(id) === r) this.rings.delete(id); }, RING_GRACE_MS);
+    if (r.timer.unref) r.timer.unref();
   }
 
   newId() {
@@ -148,6 +191,7 @@ class TerminalRegistry extends EventEmitter {
       const text = log.filter ? log.filter.push(data) : data;
       if (text) log.ws.write(text);
     }
+    this._ring(id, data);
     this.emit('data', id, data);
   }
 
@@ -155,6 +199,7 @@ class TerminalRegistry extends EventEmitter {
   exit(id, code, reason, detail) {
     this._endLog(id, `\n--- session ended ${new Date().toISOString()} ---\n`);
     this.map.delete(id);
+    this._dropRingLater(id);
     this.emit('exit', id, code, reason, detail);
   }
 

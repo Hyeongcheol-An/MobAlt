@@ -31,7 +31,7 @@
     app.sessionTree.filterEl.value = 'ws-sshd';
     app.sessionTree.render();
     const ico = document.querySelector(`.tree-row[data-session="${s1.id}"] .ico`);
-    results.sidebarIcon = ico?.textContent === '🚀' && !!ico?.style.color;
+    results.sidebarIcon = ico?.textContent === '🚀' && ico.classList.contains('emoji'); // an emoji keeps its own colours; a colour without an icon is a swatch (--session-color)
     app.sessionTree.filterEl.value = '';
     app.sessionTree.render();
 

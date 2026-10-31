@@ -57,6 +57,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | MobaXterm.ini import | ✅ | Best-effort import of the Bookmarks section; `~/.ssh/config` import too |
 | Sessions export / import | ✅ | JSON file of every session and folder, never a password or passphrase (Session menu or the tree's context menu); importing merges by id and adds the rest |
 | Maximise a split pane | ✅ Zoom | ⇧⌘⏎ (or ⤢ in the pane head) fills the tab with the focused pane and brings the layout back; each tab keeps its zoom, also across a restart |
+| Pinned tabs, close tabs left / right, detach to a window | ✅ | ⇧⌘P pins a tab at the left (short title, no ✕, kept across restarts); Close Others / Tabs to the Left / Tabs to the Right / All skip pinned tabs and ask once, counting every live connection; ⌥⌘N moves a tab into its own window with its terminals alive, closing that window brings them back, and the workspace reopens such windows |
 | Colour themes / dark mode | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark and Light colour the whole window (toolbar, sidebar, tabs, dialogs), not only the terminals; a session can override its own terminal theme |
 | Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
 | FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |

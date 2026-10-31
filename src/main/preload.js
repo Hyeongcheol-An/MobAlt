@@ -40,7 +40,11 @@ if (process.env.MOBALT_TEST_SCRIPT) {
 const EVENT_CHANNELS = [
   'term:data', 'term:exit', 'ssh:status', 'sftp:transfer', 'sftp:edit-synced', 'tunnels:changed',
   'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'tools:scan', 'app:notice', 'app:bundle-updated',
+  'detach:adopt', 'window:closing', 'settings:changed', 'sessions:changed', // several windows (detached tabs)
 ];
+// A detached window is the same page with ?detached=<key>; main hands it the tabs for that key once (detach.payload).
+let detachedKey = null;
+try { detachedKey = new URLSearchParams(location.search).get('detached'); } catch {}
 const on = (channel, fn) => {
   if (!EVENT_CHANNELS.includes(channel)) throw new Error('Unknown channel ' + channel);
   const wrapped = (_e, ...args) => fn(...args);
@@ -77,6 +81,21 @@ contextBridge.exposeInMainWorld('api', {
     bootChrome: () => bootChrome,
     testChrome: () => invoke('test:chrome'),
     testFirstFrames: () => firstFrames.slice(),
+    // the key of a detached window (null in the main window)
+    detachedKey: () => detachedKey,
+    // test mode: every window ({ id, main, detached, title, bounds }), run code in one of them, close one
+    testWindows: () => invoke('test:windows'),
+    testEval: (id, code) => invoke('test:eval', id, code),
+    testCloseWindow: (id) => invoke('test:window-close', id),
+  },
+  // a tab in a window of its own: open one for `payload` (the tabs, see app.js detachTab), fetch the payload of this
+  // window, take over a live terminal (its buffered output comes back), hand the tabs back when the window closes
+  detach: {
+    open: (payload) => invoke('detach:open', payload),
+    payload: (key) => invoke('detach:payload', key),
+    attach: (id) => invoke('term:attach', id),
+    returned: (payload) => send('detach:return', payload),
+    closeDone: () => send('detach:close-done'),
   },
   term: {
     spawnLocal: (opts) => invoke('term:spawn-local', opts),

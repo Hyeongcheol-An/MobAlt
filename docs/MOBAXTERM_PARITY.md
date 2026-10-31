@@ -30,20 +30,20 @@ last column says which parts are missing.
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
 | 2. SSH specifics | 17 | 9 | 9 | 2 | 37 |
-| 3. Terminal | 7 | 13 | 10 | 1 | 31 |
+| 3. Terminal | 9 | 13 | 8 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
-| 5. Network and admin tools, embedded servers, Moba* utilities | 5 | 2 | 9 | 19 | 35 |
+| 5. Network and admin tools, embedded servers, Moba* utilities | 7 | 2 | 7 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **45** | **40** | **39** | **59** | **183** |
-| 8. Recent additions (24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
-| 9. UX details power users rely on | 5 | 11 | 3 | 1 | 20 |
-| **All tables** | **52** | **67** | **51** | **63** | **233** |
+| **Sections 1–7 (each feature once)** | **49** | **40** | **35** | **59** | **183** |
+| 8. Recent additions (24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
+| 9. UX details power users rely on | 7 | 10 | 2 | 1 | 20 |
+| **All tables** | **60** | **66** | **44** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 45 in full, 40 in a narrower or different form and lacks 39.
+MobAlt has 49 in full, 40 in a narrower or different form and lacks 35.
 
 ## 1. Session types
 
@@ -120,7 +120,7 @@ MobAlt has 45 in full, 40 in a narrower or different form and lacks 39.
 | Tabbed terminal | ✅ | tabs: drag to reorder, double-click rename, middle-click close, ⌃Tab / ⌃⇧Tab, ⌃⌘1-9, tab list menu; no hard limit |
 | Split modes (1 / 2 / 4) | ✅ | Split ▾: right (⌘D), down (⇧⌘D), grids 1×2 … 2×4 = 8 panes (⌥⌘2/4/6/8), unsplit ⌥⌘1, drop sessions on pane edges |
 | MultiExec | 🟡 | ⇧⌘M broadcasts to every visible pane of the active tab; no per-pane Exclude or synchronised scrolling |
-| Detach / reattach / fullscreen / stay on top | ❌ | macOS full screen through the window's green button only; no detach to a window, no always-on-top |
+| Detach / reattach / fullscreen / stay on top | 🟡 | Detach to New Window (tab menu, ⌥⌘N) moves a tab into a window of its own with its terminals alive, closing that window reattaches it, and the workspace reopens such windows; macOS full screen through the window's green button; no always-on-top |
 | Macros (keyboard) | 🟡 | Macros panel (⌘4): ● Rec records keystrokes, text macros with `\n` / `\x1b[A` escapes, play into the active or all terminals; no wait-for, folders, nesting or in-terminal picker |
 | Graphical macros (mouse + keyboard) | ❌ | not implemented |
 | Colour schemes | 🟡 | 6 built-in themes (Settings → Terminal → Theme) and a per-session override; no custom or imported themes |
@@ -137,7 +137,7 @@ MobAlt has 45 in full, 40 in a narrower or different form and lacks 39.
 | Unicode / charset / IME | 🟡 | UTF-8 only, Unicode 11 width tables, in-terminal IME composition (xterm.js); no other charsets |
 | Expert terminal settings | 🟡 | cursor style/blink, scrollback, Option-as-Meta, copy-on-select, right-click paste; no alt-screen, local echo, answerback or CR/LF knobs (Serial has local echo and Enter-sends) |
 | Terminal types (xterm, linux, OpenVMS2) | ❌ | `xterm-256color` only |
-| Tab colours / icons / pin / close left-right | 🟡 | per-session colour and emoji icon on row, tab and pane head; Close Others, middle-click close, Duplicate; no pin, close-left/right or close-inactive |
+| Tab colours / icons / pin / close left-right | ✅ | per-session colour and emoji icon on row, tab and pane head; Pin Tab (⇧⌘P) keeps a tab at the left with a short title and no ✕; Close Others / Tabs to the Left / Tabs to the Right / All skip pinned tabs and ask once, counting every live connection; middle-click close, Duplicate; no Close Inactive |
 | Activity tracking (blue dot, red title) | 🟡 | status dot on the tab (connecting / connected / disconnected) and a green dot in the tree; no output-activity marker |
 | Bell (sound / flash) | ❌ | no bell sound or flash |
 | Backspace ^H / ^? | ❌ | not configurable (xterm.js sends ^?) |
@@ -292,11 +292,11 @@ MobAlt has 45 in full, 40 in a narrower or different form and lacks 39.
 | 25.2 — RDP redirection options, tunnel reconnect, 64 icons, follow-path and monitoring on by default, export password | 🟡 | icons ✅; RDP options live in Windows App; no tunnel reconnect; following is opt-in |
 | 25.1 — SSH proxy via netcat/socat, user certificate + host CA, PuTTY import of proxy/certs/Teleport, CyberArk | ❌ | none |
 | 25.0 — PuTTY engine + Unicode 16, dark-mode dialogs, CVE-2025-0714 | 🟡 | Unicode 11 width tables; dialogs follow the chosen theme (dark or light) |
-| 24.4 — SFTP multi-block transfers, close tabs left/right, rename-tab shortcut, Pro X11 lockdown, PNG logos | 🟡 | concurrent SFTP reads/writes; Rename Tab (double-click / menu); Close Others only |
+| 24.4 — SFTP multi-block transfers, close tabs left/right, rename-tab shortcut, Pro X11 lockdown, PNG logos | 🟡 | concurrent SFTP reads/writes; Close Tabs to the Left / Right in the tab menu; Rename Tab (double-click / menu, no shortcut); no X11 lockdown or logo options |
 | 24.3 — graphical macros, macro folders, encrypted macros, VNC IPv6, 64-bit default, close inactive tabs | ❌ | none (macros are stored in `settings.json`) |
 | 24.2 — Expert RDP settings, fullscreen across monitors, MultiExec sync-scroll, `X11MCAuth` | ❌ | RDP is Windows App's; no synchronised scrolling |
 | 24.0 — Expert terminal settings, host-key prompt in the SFTP browser | 🟡 | a subset of terminal settings; the host key is checked for every connection |
-| 23.x — Edge browser engine, editable shared sessions, NTRU Prime + AES-GCM, Telnet keepalive, tab pinning, Terrapin fixes | 🟡 | strict KEX (Terrapin) through ssh2; AES-GCM in ssh2's defaults; no browser, shared sessions, telnet keepalive or pinning |
+| 23.x — Edge browser engine, editable shared sessions, NTRU Prime + AES-GCM, Telnet keepalive, tab pinning, Terrapin fixes | 🟡 | strict KEX (Terrapin) through ssh2; AES-GCM in ssh2's defaults; tab pinning (⇧⌘P); no browser, shared sessions or telnet keepalive |
 
 ## 9. UX details power users rely on
 
@@ -313,7 +313,7 @@ MobAlt has 45 in full, 40 in a narrower or different form and lacks 39.
 | Macros as first-class objects (WaitFor, nesting, folders, encryption) | 🟡 | recorded and text macros, play to one or all terminals; none of the extras |
 | Jump hosts as a dropdown | ✅ | Advanced SSH → Jump host dropdown of saved sessions (or manual), chained through the jump session's own jump host; Sftp and X11 routed through; SSH sessions only |
 | Credentials vs passwords (named credentials, master password, Hello) | 🟡 | per-session passwords in the Keychain; no named credentials |
-| Tabs carry state (colour, icon, dots, pin, close-left/right, detach) | 🟡 | colour, icon, status dot, green tree dot; no pin, close-left/right, detach or activity marker |
+| Tabs carry state (colour, icon, dots, pin, close-left/right, detach) | ✅ | colour, icon, status dot, green tree dot, Pin Tab (⇧⌘P), Close Tabs to the Left / Right, Detach to New Window (⌥⌘N); no output-activity marker (see Activity tracking) |
 | Home tab + Quick connect (raw `ssh user@host`) | 🟡 | Quick connect with raw `user@host` and scheme prefixes; no home tab, restore is automatic |
 | Guake-style popup console, hide to tray | ❌ | no popup console; ⌘H hides the app |
 | Local terminal is a real Unix shell | ✅ | natively, with your own dotfiles |
@@ -358,7 +358,8 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 | Zmodem (rz/sz) transfers in the terminal | the classic way to move files through serial consoles and jump hosts where SFTP is unavailable | M |
 | Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
 | Keyword syntax highlighting in the terminal | readable logs on colour-less servers; xterm.js decorations API | M |
-| Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
+| SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
+| Expert SSH algorithm / KEX / cipher / MAC settings | one legacy toggle is too coarse; ssh2's `algorithms` option takes explicit lists (ML-KEM waits on ssh2) | S |
 
 **P2**
 

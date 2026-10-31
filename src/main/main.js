@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, Menu, dialog, shell, clipboard, nativeTheme } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, shell, clipboard, nativeTheme, webContents } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -31,7 +31,13 @@ app.setName('MobAlt');
 if (process.env.MOBALT_USER_DATA) app.setPath('userData', process.env.MOBALT_USER_DATA); // test isolation
 const store = new Store();
 const registry = new TerminalRegistry();
-let win = null;
+let win = null; // the main window: the sidebar, the test hooks and the fallback for everything addressed to "the window"
+// A tab can be detached into a window of its own (app.js detachTab): every window runs the same renderer, the
+// backends stay here. A terminal's output goes to the window that spawned it or attached to it last.
+const owners = new Map(); // terminal id → webContents id
+const detachPayloads = new Map(); // key → the tabs a new detached window shows (its renderer fetches them once)
+let wsMain = null; // the main window's part of the workspace file ({ v, activeTab, tabs })…
+const wsParts = new Map(); // …and one { tabs, activeTab, bounds } per detached window, by window id (restored as windows)
 let quitting = false; // a quit is under way (confirmed, test hook, update install or relaunch): no more questions, tear down
 let bundleWatch = null; // notices a different MobAlt.app written over the running one (brew upgrade / dragged DMG)
 let relaunchRequested = false; // test mode: app:relaunch records the request instead of restarting the test run
@@ -82,14 +88,37 @@ function relaunch() {
   return true;
 }
 
+// ---------- windows ----------
+/** Every open window (the main one and the detached ones). */
+function allWindows() {
+  return BrowserWindow.getAllWindows().filter((w) => !w.isDestroyed());
+}
+/** An event for every window: status changes, transfers and tunnels are keyed by connection id, a renderer ignores ids it does not show. */
+function broadcast(channel, ...args) {
+  for (const w of allWindows()) w.webContents.send(channel, ...args);
+}
+/** The window the user is in (a menu accelerator, a prompt), else the main window. */
+function focusedWindow() {
+  const f = BrowserWindow.getFocusedWindow();
+  return f && !f.isDestroyed() ? f : win && !win.isDestroyed() ? win : null;
+}
+/** The window a terminal's output goes to: the one that spawned or attached it, else the main window (null while none is up). */
+function ownerOf(id) {
+  const wcId = owners.get(id);
+  const wc = wcId !== undefined ? webContents.fromId(wcId) : null;
+  if (wc && !wc.isDestroyed()) return wc;
+  return win && !win.isDestroyed() ? win.webContents : null;
+}
+
 // ---------- renderer prompts (host key / password / keyboard-interactive) ----------
 const pendingPrompts = new Map();
 function prompt(kind, payload) {
   return new Promise((resolve) => {
-    if (!win || win.isDestroyed()) return resolve(null);
+    const target = focusedWindow(); // the window the user is working in; the prompt names the host either way
+    if (!target) return resolve(null);
     const reqId = crypto.randomBytes(6).toString('hex');
     pendingPrompts.set(reqId, resolve);
-    win.webContents.send('prompt:request', { reqId, kind, payload });
+    target.webContents.send('prompt:request', { reqId, kind, payload });
   });
 }
 ipcMain.on('prompt:reply', (_e, { reqId, result }) => {
@@ -108,7 +137,7 @@ const prompter = {
   hostKey: (info) => prompt('hostkey', info),
   password: (info) => prompt('password', { ...info, session: publicSession(info.session) }),
   keyboardInteractive: (info) => prompt('kbdint', { ...info, session: publicSession(info.session) }),
-  status: (id, state, msg) => win && !win.isDestroyed() && win.webContents.send('ssh:status', { id, state, msg }),
+  status: (id, state, msg) => broadcast('ssh:status', { id, state, msg }),
 };
 
 const ssh = new SshManager(registry, store, prompter);
@@ -117,7 +146,7 @@ const ftp = new FtpManager(store, prompter);
 let updater = null;
 const tunnels = new TunnelManager(ssh, store);
 
-// ---------- terminal output: coalesce chunks per terminal before IPC ----------
+// ---------- terminal output: coalesce chunks per terminal before IPC, each to the window showing that terminal ----------
 const outBuf = new Map();
 let flushTimer = null;
 registry.on('data', (id, data) => {
@@ -125,40 +154,72 @@ registry.on('data', (id, data) => {
   if (!flushTimer) {
     flushTimer = setTimeout(() => {
       flushTimer = null;
-      if (!win || win.isDestroyed()) return outBuf.clear();
-      for (const [tid, text] of outBuf) win.webContents.send('term:data', tid, text);
+      for (const [tid, text] of outBuf) {
+        const wc = ownerOf(tid);
+        if (wc) wc.send('term:data', tid, text);
+      }
       outBuf.clear();
     }, 4);
   }
 });
 registry.on('exit', (id, code, reason, detail) => {
-  const flush = () => {
-    const text = outBuf.get(id);
-    if (text && win && !win.isDestroyed()) {
-      win.webContents.send('term:data', id, text);
-      outBuf.delete(id);
-    }
-  };
-  flush();
+  const wc = ownerOf(id), text = outBuf.get(id);
+  if (text && wc) wc.send('term:data', id, text);
+  outBuf.delete(id);
   tunnels.stopForConnection(id);
   sftp.stopEdits(id);
-  if (win && !win.isDestroyed()) win.webContents.send('term:exit', id, { code, reason, detail });
+  if (wc) wc.send('term:exit', id, { code, reason, detail });
+  owners.delete(id);
 });
-sftp.on('transfer', (t) => win && !win.isDestroyed() && win.webContents.send('sftp:transfer', t));
-sftp.on('edit-synced', (e) => win && !win.isDestroyed() && win.webContents.send('sftp:edit-synced', e));
-ftp.on('transfer', (t) => win && !win.isDestroyed() && win.webContents.send('sftp:transfer', t));
-ftp.on('edit-synced', (e) => win && !win.isDestroyed() && win.webContents.send('sftp:edit-synced', e));
-tunnels.on('changed', (list) => win && !win.isDestroyed() && win.webContents.send('tunnels:changed', list));
+// transfers and synced edits belong to the window showing their connection (every window's panel would list them otherwise)
+const toOwner = (channel) => (x) => {
+  const wc = x && x.connId ? ownerOf(x.connId) : null;
+  if (wc) wc.send(channel, x);
+  else broadcast(channel, x);
+};
+sftp.on('transfer', toOwner('sftp:transfer'));
+sftp.on('edit-synced', toOwner('sftp:edit-synced'));
+ftp.on('transfer', toOwner('sftp:transfer'));
+ftp.on('edit-synced', toOwner('sftp:edit-synced'));
+tunnels.on('changed', (list) => broadcast('tunnels:changed', list));
+
+// ---------- workspace file: the main window's tabs plus one entry per detached window ----------
+function writeWorkspace() {
+  const base = wsMain || store.getWorkspace() || { v: 1, activeTab: 0, tabs: [] };
+  const windows = [...wsParts.values()].filter((p) => Array.isArray(p.tabs) && p.tabs.length);
+  store.saveWorkspace({ v: base.v || 1, activeTab: base.activeTab || 0, tabs: base.tabs || [], windows });
+}
+
+/** A detached window goes once its renderer handed its tabs back (detach:close-done), or when it never answers. */
+function finishClose(w) {
+  if (!w || w.isDestroyed() || w === win) return;
+  clearTimeout(w._closeTimer);
+  w._closeReady = true;
+  w.close();
+}
 
 // ---------- window ----------
 /** The chrome palette the renderer last applied (store.validChrome), remembered in the settings, so a new window, the native theme and the first paint start in it. */
 const chromeOf = (settings) => validChrome(settings && settings.chrome) || { background: '#1e1f22', scheme: 'dark' };
 
-function createWindow() {
+/**
+ * The main window, or (`detached` = payload key) a window for tabs moved out of another one: the same page with
+ * `?detached=<key>`, started the size of the window it came from and offset like a new document window, or at the
+ * bounds the workspace file saved for it. Closing the main window quits the app (its detached windows go with it;
+ * their tabs are in the workspace file). Closing a detached window hands its tabs back to the main window: the
+ * renderer releases its terminals (never ends them), the main window adopts them, and the window goes once the
+ * renderer says so (detach:close-done) — or after 8 s should it never answer.
+ */
+function createWindow({ detached = null, bounds = null, from = null } = {}) {
   const settings = store.getSettings();
-  const bounds = settings.windowBounds || { width: 1400, height: 880 };
-  win = new BrowserWindow({
-    ...bounds,
+  const isMain = !detached;
+  let b = isMain ? settings.windowBounds || { width: 1400, height: 880 } : bounds;
+  if (!isMain && !b) {
+    const src = from && !from.isDestroyed() ? from.getBounds() : win && !win.isDestroyed() ? win.getBounds() : { x: 80, y: 80, width: 1200, height: 760 };
+    b = { x: (src.x || 0) + 40, y: (src.y || 0) + 40, width: src.width, height: src.height };
+  }
+  const w = new BrowserWindow({
+    ...b,
     minWidth: 900,
     minHeight: 560,
     title: 'MobAlt',
@@ -174,34 +235,55 @@ function createWindow() {
       spellcheck: false,
     },
   });
-  win.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
-  win.once('ready-to-show', () => win.show());
-  const saveBounds = () => {
-    if (!win || win.isDestroyed() || win.isFullScreen()) return;
-    store.setSettings({ windowBounds: win.getBounds() });
-  };
-  win.on('resize', debounce(saveBounds, 500));
-  win.on('move', debounce(saveBounds, 500));
-  win.on('close', (e) => {
+  if (isMain) win = w;
+  else w._detachKey = detached;
+  w.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), detached ? { query: { detached } } : undefined);
+  w.once('ready-to-show', () => w.show());
+  if (isMain) {
+    const saveBounds = () => {
+      if (!win || win.isDestroyed() || win.isFullScreen()) return;
+      store.setSettings({ windowBounds: win.getBounds() });
+    };
+    w.on('resize', debounce(saveBounds, 500));
+    w.on('move', debounce(saveBounds, 500));
+  }
+  w.on('close', (e) => {
     if (quitting) return;
-    if (!confirmQuit()) {
-      e.preventDefault();
+    if (isMain) {
+      if (!confirmQuit()) {
+        e.preventDefault();
+        return;
+      }
+      quitting = true; // the main window going quits the app: no second question (window-all-closed, or app.quit with detached windows open)
+      if (allWindows().length > 1) setImmediate(() => app.quit());
       return;
     }
-    quitting = true; // closing the only window quits the app (window-all-closed): no second question
+    if (w._closeReady) return;
+    e.preventDefault();
+    if (w._closing) return;
+    w._closing = true;
+    w.webContents.send('window:closing');
+    w._closeTimer = setTimeout(() => finishClose(w), 8000);
   });
-  win.on('closed', () => (win = null));
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  w.on('closed', () => {
+    if (isMain) win = null;
+    else if (!quitting) { // the tabs went back to the main window (or the window was closed by force): no longer a window of the workspace
+      wsParts.delete(w.id);
+      try { writeWorkspace(); } catch {}
+    }
+  });
+  w.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
-  win.webContents.on('did-finish-load', () => runTestHooks());
+  if (isMain) w.webContents.on('did-finish-load', () => runTestHooks());
   if (process.env.MOBALT_SCREENSHOT || process.env.MOBALT_TEST_SCRIPT) {
-    win.webContents.on('console-message', (e) => {
+    w.webContents.on('console-message', (e) => {
       const d = e.level !== undefined ? e : { level: e, message: arguments[2] };
-      console.log(`[renderer:${d.level}] ${d.message}${d.sourceId ? ` (${d.sourceId}:${d.lineNumber})` : ''}`);
+      console.log(`[renderer${isMain ? '' : ':w' + w.id}:${d.level}] ${d.message}${d.sourceId ? ` (${d.sourceId}:${d.lineNumber})` : ''}`);
     });
   }
+  return w;
 }
 
 function debounce(fn, ms) {
@@ -241,7 +323,8 @@ function runTestHooks() {
 
 // ---------- menu ----------
 function sendAction(action, arg) {
-  if (win && !win.isDestroyed()) win.webContents.send('menu:action', { action, arg });
+  const w = focusedWindow(); // a menu accelerator acts in the window the user is in (a detached window too)
+  if (w) w.webContents.send('menu:action', { action, arg });
 }
 function buildMenu() {
   const template = [
@@ -271,7 +354,12 @@ function buildMenu() {
         { label: 'Disconnect', click: () => sendAction('disconnect') },
         { type: 'separator' },
         { label: 'Rename Tab…', click: () => sendAction('rename-tab') },
+        { label: 'Pin / Unpin Tab', accelerator: 'Cmd+Shift+P', click: () => sendAction('pin-tab') },
+        { label: 'Detach Tab to New Window', accelerator: 'Cmd+Alt+N', click: () => sendAction('detach-tab') },
         { label: 'Close Tab', accelerator: 'Cmd+W', click: () => sendAction('close') },
+        { label: 'Close Other Tabs', click: () => sendAction('close-others') },
+        { label: 'Close Tabs to the Left', click: () => sendAction('close-left') },
+        { label: 'Close Tabs to the Right', click: () => sendAction('close-right') },
         { type: 'separator' },
         { label: 'Import from ~/.ssh/config', click: () => sendAction('import-sshconfig') },
         { label: 'Import from MobaXterm.ini…', click: () => sendAction('import-moba') },
@@ -370,6 +458,9 @@ async function mergeSecrets(incoming) {
 }
 
 function registerIpc() {
+  const wof = (e) => (e && BrowserWindow.fromWebContents(e.sender)) || win; // the window a call came from: parent of its dialogs, target of its tool output
+  const own = (e, r) => { if (r && r.id) owners.set(r.id, e.sender.id); return r; }; // a new backend belongs to the window that asked for it
+  const peers = (e, channel, ...args) => { for (const w of allWindows()) if (w.webContents.id !== e.sender.id) w.webContents.send(channel, ...args); }; // the other windows
   ipcMain.handle('app:info', () => ({
     version: pkg.version,
     platform: process.platform,
@@ -505,27 +596,56 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     return wolListener ? wolListener.packets.slice() : [];
   });
-  ipcMain.handle('app:screenshot', async (_e, name) => {
+  // Test-only: the open windows, code run inside one of them (its resolved value comes back) and closing one — the
+  // test script lives in the main window; a detached window is driven through these.
+  ipcMain.handle('test:windows', () => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    return allWindows().map((w) => ({ id: w.id, main: w === win, detached: !!w._detachKey, title: w.getTitle(), bounds: w.getBounds() }));
+  });
+  ipcMain.handle('test:eval', (_e, id, code) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const w = BrowserWindow.fromId(id);
+    if (!w || w.isDestroyed()) throw new Error(`no window ${id}`);
+    return w.webContents.executeJavaScript(String(code));
+  });
+  ipcMain.handle('test:window-close', (_e, id) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const w = BrowserWindow.fromId(id);
+    if (!w || w.isDestroyed()) return false;
+    w.close();
+    return true;
+  });
+  ipcMain.handle('app:screenshot', async (e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
-    const img = await win.webContents.capturePage();
+    const img = await wof(e).webContents.capturePage(); // the calling window (a detached window's script shoots itself)
     const file = path.join(dir, `${name}.png`);
     fs.writeFileSync(file, img.toPNG());
     console.log('screenshot', file);
     return file;
   });
 
-  ipcMain.handle('term:spawn-local', (_e, opts) => spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) }));
-  ipcMain.handle('term:spawn-telnet', (_e, opts) => spawnTelnet(registry, { ...opts, ...sizeOf(opts) }));
-  ipcMain.handle('term:spawn-serial', (_e, opts) => spawnSerial(registry, opts));
+  ipcMain.handle('term:spawn-local', (e, opts) => own(e, spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) })));
+  ipcMain.handle('term:spawn-telnet', (e, opts) => own(e, spawnTelnet(registry, { ...opts, ...sizeOf(opts) })));
+  ipcMain.handle('term:spawn-serial', (e, opts) => own(e, spawnSerial(registry, opts)));
   // Mosh bootstraps over an external ssh: the host key goes through the app's own prompt first and the
   // bootstrap then runs strictly against the app's known_hosts file (never ~/.ssh/known_hosts).
-  ipcMain.handle('term:spawn-mosh', async (_e, opts) => {
+  ipcMain.handle('term:spawn-mosh', async (e, opts) => {
     const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms });
     if (!v.ok) throw new Error(v.error || 'host key not accepted');
-    return spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() });
+    return own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
   });
-  ipcMain.handle('ftp:connect', async (_e, cfg) => ftp.connect(await mergeSecrets(cfg)));
+  ipcMain.handle('ftp:connect', async (e, cfg) => own(e, await ftp.connect(await mergeSecrets(cfg))));
+  // A window takes over a live terminal (a detached tab, or one coming back): from now on its output goes there; the
+  // ring buffer (last 256 KB) redraws what the previous window showed. What is still queued for the old owner is in
+  // the ring already, so it is dropped here rather than sent twice. ok: false when the backend has ended meanwhile
+  // (the replay, if any, still shows its last screen).
+  ipcMain.handle('term:attach', (e, id) => {
+    outBuf.delete(id);
+    owners.set(id, e.sender.id);
+    const h = registry.get(id);
+    return { ok: !!h || ftp.has(id), kind: h ? h.kind : ftp.has(id) ? 'ftp' : null, replay: registry.replay(id) };
+  });
   ipcMain.handle('ftp:disconnect', (_e, id) => ftp.disconnect(id));
   // Settings → Updates "Check now": the outcome goes on the dialog's own status line, so this check is quiet (no
   // up-to-date / error / on-disk sheet; only a new release's "Download?" offer). Help → Check for Updates… keeps the sheets.
@@ -543,9 +663,9 @@ function registerIpc() {
   });
   ipcMain.handle('term:log-stop', (_e, id) => registry.stopLog(id));
 
-  ipcMain.handle('ssh:connect', async (_e, cfg, size) => ssh.openShell(await mergeSecrets(cfg), sizeOf(size)));
+  ipcMain.handle('ssh:connect', async (e, cfg, size) => own(e, await ssh.openShell(await mergeSecrets(cfg), sizeOf(size))));
   // shell-less connection for the Sftp panel of a Mosh pane (same prompts; ssh:status events carry its state)
-  ipcMain.handle('ssh:connect-sftp', async (_e, cfg) => ssh.openSftpOnly(await mergeSecrets(cfg)));
+  ipcMain.handle('ssh:connect-sftp', async (e, cfg) => own(e, await ssh.openSftpOnly(await mergeSecrets(cfg))));
   ipcMain.handle('ssh:disconnect', (_e, id) => ssh.disconnect(id));
   ipcMain.handle('ssh:exec', (_e, id, cmd) => ssh.exec(id, cmd));
   // Advanced SSH → Algorithms: ssh2's defaults, every name it supports, the legacy preset's additions.
@@ -580,26 +700,26 @@ function registerIpc() {
   ipcMain.handle('sftp:chmod', (_e, id, p, mode) => files(id).chmod(id, p, mode));
   ipcMain.handle('sftp:read', (_e, id, p) => files(id).readFile(id, p));
   ipcMain.handle('sftp:write', (_e, id, p, c) => files(id).writeFile(id, p, c));
-  ipcMain.handle('sftp:download', async (_e, id, remote, local, isDir) => {
+  ipcMain.handle('sftp:download', async (e, id, remote, local, isDir) => {
     if (!local) {
       const s = store.getSettings();
       const base = s.downloadDir || app.getPath('downloads');
       const name = path.posix.basename(remote);
       if (isDir) {
-        const r = await dialogs.showOpenDialog(win, { title: `Download folder "${name}" into…`, defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
+        const r = await dialogs.showOpenDialog(wof(e), { title: `Download folder "${name}" into…`, defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
         if (r.canceled || !r.filePaths[0]) return null;
         local = path.join(r.filePaths[0], name);
       } else {
-        const r = await dialogs.showSaveDialog(win, { title: 'Download to…', defaultPath: path.join(base, name) });
+        const r = await dialogs.showSaveDialog(wof(e), { title: 'Download to…', defaultPath: path.join(base, name) });
         if (r.canceled || !r.filePath) return null;
         local = r.filePath;
       }
     }
     return files(id).download(id, remote, local);
   });
-  ipcMain.handle('sftp:upload', async (_e, id, locals, remoteDir) => {
+  ipcMain.handle('sftp:upload', async (e, id, locals, remoteDir) => {
     if (!locals || !locals.length) {
-      const r = await dialogs.showOpenDialog(win, { title: `Upload to ${remoteDir}`, properties: ['openFile', 'openDirectory', 'multiSelections'] });
+      const r = await dialogs.showOpenDialog(wof(e), { title: `Upload to ${remoteDir}`, properties: ['openFile', 'openDirectory', 'multiSelections'] });
       if (r.canceled) return [];
       locals = r.filePaths;
     }
@@ -617,14 +737,16 @@ function registerIpc() {
     const d = await store.getSessions();
     return { folders: d.folders, sessions: d.sessions.map(publicSession) };
   });
-  ipcMain.handle('sessions:save', async (_e, s) => publicSession(await store.upsertSession(await mergeSecrets(s))));
-  ipcMain.handle('sessions:save-all', async (_e, { sessions, folders }) => {
+  // every change to the session tree is announced to the other windows (sessions:changed): they reload the list
+  ipcMain.handle('sessions:save', async (e, s) => { const r = publicSession(await store.upsertSession(await mergeSecrets(s))); peers(e, 'sessions:changed'); return r; });
+  ipcMain.handle('sessions:save-all', async (e, { sessions, folders }) => {
     const merged = await Promise.all(sessions.map((s) => mergeSecrets(s)));
     const d = await store.saveSessions({ sessions: merged, folders });
+    peers(e, 'sessions:changed');
     return { folders: d.folders, sessions: d.sessions.map(publicSession) };
   });
-  ipcMain.handle('sessions:delete', (_e, id) => store.deleteSession(id));
-  ipcMain.handle('sessions:import-sshconfig', async () => {
+  ipcMain.handle('sessions:delete', async (e, id) => { const r = await store.deleteSession(id); peers(e, 'sessions:changed'); return r; });
+  ipcMain.handle('sessions:import-sshconfig', async (e) => {
     const found = importers.parseSshConfig();
     const d = store.loadSessions();
     const existing = new Set(d.sessions.map((s) => `${s.folder}|${s.name}`));
@@ -634,13 +756,14 @@ function registerIpc() {
       await store.upsertSession(s);
       n++;
     }
+    if (n) peers(e, 'sessions:changed');
     return { imported: n, found: found.length };
   });
   // Both importers answer { imported, updated, skipped, errors, file } (errors: one line per skipped entry, or the
   // single reason when the file could not be used at all — then imported and skipped are 0; file: the chosen file's
   // name, for "No sessions found in …") for one summary toast.
-  ipcMain.handle('sessions:import-moba', async () => {
-    const r = await dialogs.showOpenDialog(win, { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
+  ipcMain.handle('sessions:import-moba', async (e) => {
+    const r = await dialogs.showOpenDialog(wof(e), { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
     const file = path.basename(r.filePaths[0]);
     let parsed;
@@ -667,12 +790,13 @@ function registerIpc() {
       await store.upsertSession({ ...old, ...facts });
       updated++;
     }
+    if (imported || updated) peers(e, 'sessions:changed');
     return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`), file };
   });
   // The chosen path on success, null when cancelled, { error } when the file could not be written (a read-only or
   // vanished folder): the renderer shows the reason instead of an unhandled rejection in the console.
-  ipcMain.handle('sessions:export', async () => {
-    const r = await dialogs.showSaveDialog(win, { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
+  ipcMain.handle('sessions:export', async (e) => {
+    const r = await dialogs.showSaveDialog(wof(e), { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
     if (r.canceled || !r.filePath) return null;
     const d = await store.getSessions();
     try {
@@ -682,8 +806,8 @@ function registerIpc() {
     }
     return r.filePath;
   });
-  ipcMain.handle('sessions:import-json', async () => {
-    const r = await dialogs.showOpenDialog(win, { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
+  ipcMain.handle('sessions:import-json', async (e) => {
+    const r = await dialogs.showOpenDialog(wof(e), { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
     const file = path.basename(r.filePaths[0]);
     let parsed;
@@ -707,20 +831,62 @@ function registerIpc() {
       const d = await store.getSessions();
       await store.saveSessions({ sessions: d.sessions, folders: [...new Set([...d.folders, ...parsed.folders])] });
     }
+    if (imported || updated || parsed.folders.length) peers(e, 'sessions:changed');
     return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`), file };
   });
 
   ipcMain.handle('settings:get', () => store.getSettings());
-  ipcMain.handle('settings:set', (_e, patch) => store.setSettings(patch));
+  // the other windows follow a settings change at once (theme, fonts, terminal options): settings:changed carries the result
+  ipcMain.handle('settings:set', (e, patch) => { const s = store.setSettings(patch); peers(e, 'settings:changed', s); return s; });
 
+  // The workspace file is written here from two kinds of parts: the main window's tabs (v, activeTab, tabs) and one
+  // entry per detached window under `windows` (tabs, activeTab, bounds), each sent by its own renderer; the renderer
+  // of a detached window only ever sees its own tabs.
   ipcMain.handle('workspace:get', () => store.getWorkspace());
-  ipcMain.on('workspace:save', (_e, data) => {
-    try { store.saveWorkspace(data); } catch {}
+  ipcMain.on('workspace:save', (e, data) => {
+    if (!data || !Array.isArray(data.tabs)) return;
+    const w = BrowserWindow.fromWebContents(e.sender);
+    if (w && w !== win) wsParts.set(w.id, { tabs: data.tabs, activeTab: data.activeTab || 0, bounds: w.isDestroyed() ? undefined : w.getBounds() });
+    else wsMain = { v: data.v || 1, activeTab: data.activeTab || 0, tabs: data.tabs };
+    try { writeWorkspace(); } catch {}
   });
 
-  ipcMain.handle('dialog:open', (_e, opts) => dialogs.showOpenDialog(win, opts));
-  ipcMain.handle('dialog:save', (_e, opts) => dialogs.showSaveDialog(win, opts));
-  ipcMain.handle('dialog:message', (_e, opts) => dialogs.showMessageBox(win, opts));
+  // ---------- detached windows (app.js detachTab / adoptTabs) ----------
+  // Open a window for `payload` ({ tabs, activeTab, bounds?, restore? }: the serialised tabs, each pane with the id
+  // of its live terminal unless `restore`); the payload is handed to that window's renderer once (detach:payload).
+  // The window's part of the workspace file is seeded right away: a quit before the new window saves keeps the tabs.
+  ipcMain.handle('detach:open', (e, payload) => {
+    const key = crypto.randomBytes(6).toString('hex');
+    const p = payload && typeof payload === 'object' ? payload : { tabs: [] };
+    detachPayloads.set(key, p);
+    const w = createWindow({ detached: key, bounds: p.bounds || null, from: wof(e) });
+    wsParts.set(w.id, { tabs: Array.isArray(p.tabs) ? p.tabs : [], activeTab: p.activeTab || 0, bounds: w.getBounds() });
+    try { writeWorkspace(); } catch {}
+    return w.id;
+  });
+  ipcMain.handle('detach:payload', (_e, key) => {
+    const p = detachPayloads.get(key) || null;
+    detachPayloads.delete(key);
+    return p;
+  });
+  // A closing detached window hands its tabs back: the main window adopts them (the terminals keep running, their
+  // owner switches on term:attach) and the window goes once the renderer confirms (detach:close-done).
+  ipcMain.on('detach:return', (e, payload) => {
+    const w = wof(e);
+    if (w && w !== win) {
+      wsParts.delete(w.id);
+      try { writeWorkspace(); } catch {}
+    }
+    if (win && !win.isDestroyed() && payload && Array.isArray(payload.tabs) && payload.tabs.length) {
+      win.webContents.send('detach:adopt', payload);
+      win.focus();
+    }
+  });
+  ipcMain.on('detach:close-done', (e) => finishClose(wof(e)));
+
+  ipcMain.handle('dialog:open', (e, opts) => dialogs.showOpenDialog(wof(e), opts));
+  ipcMain.handle('dialog:save', (e, opts) => dialogs.showSaveDialog(wof(e), opts));
+  ipcMain.handle('dialog:message', (e, opts) => dialogs.showMessageBox(wof(e), opts));
   ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url));
   ipcMain.handle('shell:show-item', (_e, p) => shell.showItemInFolder(p));
   ipcMain.handle('shell:open-path', (_e, p) => shell.openPath(p));
@@ -748,8 +914,8 @@ function registerIpc() {
     return shell.openExternal(`vnc://${user}${cfg.host}:${cfg.port || 5900}`);
   });
 
-  ipcMain.handle('tools:ping', (_e, host, count) => tools.ping(win, host, count));
-  ipcMain.handle('tools:traceroute', (_e, host) => tools.traceroute(win, host));
+  ipcMain.handle('tools:ping', (e, host, count) => tools.ping(wof(e), host, count));
+  ipcMain.handle('tools:traceroute', (e, host) => tools.traceroute(wof(e), host));
   ipcMain.handle('tools:portscan', (_e, host, from, to) => tools.portScan(host, from, to));
   ipcMain.handle('tools:lookup', (_e, host) => tools.lookup(host));
   ipcMain.handle('tools:netinfo', () => tools.netinfo());
