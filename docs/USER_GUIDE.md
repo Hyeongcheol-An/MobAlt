@@ -137,6 +137,16 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 - **Clipboard**: selecting copies (Settings → Terminal → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
   on a local terminal it pastes the paths.
+- **Paste guard**: a paste with more than one line (or over 1000 characters) asks first — *Paste N
+  lines into …?* shows the text in an editable preview; ⌘⏎ pastes, Esc cancels. Every paste is also
+  checked for what the clipboard does not show: zero-width and bidi characters, control characters, a
+  trailing newline (the last line would run at once), a carriage return inside a line, `curl … | sh`,
+  writes to `~/.zshrc` and friends or `~/.ssh/authorized_keys`, `rm -rf /`-style commands and Latin
+  words with Cyrillic or Greek look-alike letters. Findings are listed and marked in the preview;
+  *Paste cleaned* strips the hidden characters and the trailing newline, *Paste as is* sends the text
+  unchanged. Both checks are Settings → Terminal → Paste guard toggles (on by default); they cover ⌘V,
+  right-click and text dropped on a pane, not macros. With MultiExec on, one confirmation covers every
+  visible terminal.
 - **Keys**: Shift+Enter and Option+Enter send ESC+CR (a newline in TUI apps such as Claude Code);
   Option acts as Meta by default.
 - **Logging**: Terminal → Start/Stop Session Log, or the session option, writes the raw output to
@@ -237,6 +247,7 @@ and "Check now").
 | Sidebar, Sessions / SFTP / Tools / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, tunnels, settings | ⇧⌘M, ⇧⌘U, ⌘, |
 | Newline in TUI apps | ⇧Enter or ⌥Enter |
+| Paste guard dialog (multi-line or suspicious paste): paste / cancel | ⌘⏎ / Esc |
 | Focused tab: move / activate / close, context menu | ← → / ⏎ / ⌫, ⇧F10 or the Menu key |
 | Focused session row: move / fold / open / open in split / delete | ↑ ↓ / ← → / ⏎ / ⌘⏎ or ⇧⏎ / ⌫ |
 | Focused session row or folder: context menu (folders: Move to Folder…) | ⇧F10 or the Menu key |

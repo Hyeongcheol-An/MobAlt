@@ -210,7 +210,7 @@ export class TermPane {
         return;
       }
       const text = e.dataTransfer.getData('text/plain');
-      if (text) this.term.paste(text);
+      if (text) this.pasteText(text); // dropped text is a paste: the guard sees it first
     });
   }
 
@@ -220,6 +220,15 @@ export class TermPane {
     this.term.open(this.termEl);
     if (this.kind !== 'empty') this._loadWebgl(); // placeholder panes do not need a GPU context
     this.termEl.addEventListener('contextmenu', (e) => this._contextMenu(e));
+    // ⌘V, Edit → Paste and the native context menu all land as a `paste` event on xterm's textarea (or its element);
+    // taking it in the capture phase on the pane keeps xterm's own listeners from sending the clipboard straight to
+    // the shell, so the paste guard (app.js guardPaste) sees every paste before the terminal does.
+    this.termEl.addEventListener('paste', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+      if (text) this.pasteText(text);
+    }, true);
     this.ro = new ResizeObserver(() => this.fit());
     this.ro.observe(this.termEl);
     this.fit();
@@ -667,9 +676,26 @@ export class TermPane {
     this.el.style.setProperty('--term-fg', theme.foreground || '#ececec');
   }
 
+  /** Right-click / pane menu paste: the clipboard text, through the guard. */
   async paste() {
     const t = await window.api.clipboard.read();
-    if (t) this.term.paste(t);
+    if (t) this.pasteText(t);
+  }
+
+  /**
+   * Every path that hands text from outside the terminal to it (⌘V and Edit → Paste, right-click and the pane menu,
+   * text dropped on the pane) ends here: the paste guard may ask first (multi-line, long or suspicious text; Settings →
+   * Terminal → Paste guard) and may hand back an edited or cleaned text. What it returns goes through xterm's own
+   * paste — line endings normalised, bracketed paste when the application asked for it — and from there through
+   * onData like typed input, so MultiExec broadcasts a paste exactly as it broadcasts keystrokes. Macros and the
+   * quoted paths of a file drop are not pastes and do not come here.
+   */
+  async pasteText(text) {
+    if (!text || this.dead || this.kind === 'empty' || this.kind === 'ftp') return false;
+    const final = await this.app.guardPaste(this, text);
+    if (!final || this.disposed) return false;
+    this.term.paste(final);
+    return true;
   }
 
   copy() {

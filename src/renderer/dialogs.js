@@ -2,6 +2,7 @@
 import { h, showModal, toast, confirmDialog, TYPE_LABEL, icon } from './ui.js';
 import { THEMES } from './terminal.js';
 import { mix, contrast } from './theme.js';
+import { analysePaste, KIND_LABEL, DANGER_KINDS, PASTE_CONFIRM_CHARS } from './pasteguard.js';
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -580,6 +581,9 @@ export function settingsDialog(app) {
   const rightClickPaste = check('Right-click pastes (⇧-right-click for menu)', s.rightClickPaste);
   const copyOnSelect = check('Copy on select', s.copyOnSelect);
   const optMeta = check('Option key acts as Meta/Alt', s.macOptionIsMeta !== false);
+  // the two paste-guard toggles (terminal.js pasteText); their long explanation lives in the user guide
+  const pasteConfirm = check('Confirm multi-line pastes', s.pasteConfirmMultiline !== false, { title: `A paste with more than one line, or over ${PASTE_CONFIRM_CHARS} characters, asks first and can be edited` });
+  const pasteWarn = check('Warn about suspicious pastes', s.pasteWarnSuspicious !== false, { title: 'Invisible or control characters, a trailing newline, curl | sh, writes to shell profiles, rm -rf / and look-alike letters are listed, with a "Paste cleaned" option' });
   const localShell = text(s.localShell, { placeholder: '(login shell)' });
   const shellInt = check('zsh/bash integration (folder following)', s.localShellIntegration !== false);
   const editor = text(s.editorCommand, { placeholder: 'e.g. code --wait {file}   (blank = TextEdit)' });
@@ -614,10 +618,11 @@ export function settingsDialog(app) {
     )],
     ['terminal', 'Terminal', h('div', { class: 'form-grid' },
       ...field('Font family', fontFamily), ...field('Font size', fontSize), ...field('Line height', lineHeight),
-      ...field('Cursor', cursorStyle), h('label', {}), h('div', { class: 'checks' }, cursorBlink.el),
+      ...field('Cursor', h('div', { class: 'inline' }, cursorStyle, cursorBlink.el)), // the blink toggle shares the row: Terminal is the tallest section and must fit the 560px window
       ...field('Scrollback lines', scrollback),
       ...field('Theme', h('div', { class: 'inline theme-field' }, theme, themePreview), 'Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme'),
-      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
+      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el),
+      h('label', {}, 'Paste guard'), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el)
     )],
     ['logging', 'Logging', h('div', { class: 'form-grid' },
       ...field('Log folder', logDir, 'Terminal → Start Session Log, or a session\'s Logging option, writes here'),
@@ -640,6 +645,7 @@ export function settingsDialog(app) {
         fontFamily: fontFamily.value.trim() || s.fontFamily, fontSize: clamp(parseInt(fontSize.value, 10), 8, 40, 13), lineHeight: clamp(parseFloat(lineHeight.value), 0.8, 2, 1),
         cursorStyle: cursorStyle.value, cursorBlink: cursorBlink.cb.checked, scrollback: clamp(parseInt(scrollback.value, 10), 100, 1000000, 10000), theme: theme.value,
         rightClickPaste: rightClickPaste.cb.checked, copyOnSelect: copyOnSelect.cb.checked, macOptionIsMeta: optMeta.cb.checked,
+        pasteConfirmMultiline: pasteConfirm.cb.checked, pasteWarnSuspicious: pasteWarn.cb.checked,
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
         confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(), logPlainText: logPlain.cb.checked,
         keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked,
@@ -704,6 +710,82 @@ export function kbdIntDialog(p) {
   return m.promise;
 }
 
+/**
+ * The paste guard's preview: the text with every finding's characters wrapped in a <mark>, drawn in a <pre> behind
+ * a transparent textarea that has the same box and font (styles.css .pg-preview), so the marks sit under the editable
+ * text. Zero-width characters and line breaks get a thin bar (padding without advance) so that they show at all.
+ */
+function paintPasteMarks(pre, value, findings) {
+  const ranges = [];
+  for (const f of findings) for (const [index, length] of f.ranges) ranges.push({ index, length, kind: f.kind });
+  ranges.sort((a, b) => a.index - b.index);
+  const nodes = [];
+  let at = 0;
+  for (const r of ranges) {
+    if (r.index < at) continue; // inside the previous mark (a look-alike word that also holds an invisible character)
+    if (r.index > at) nodes.push(document.createTextNode(value.slice(at, r.index)));
+    const bar = r.kind === 'invisible' || r.kind === 'control' || r.kind === 'trailing-newline' || r.kind === 'cr';
+    nodes.push(h('mark', { class: 'pg-mark' + (DANGER_KINDS.has(r.kind) ? ' danger' : '') + (bar ? ' pg-bar' : '') }, value.slice(r.index, r.index + r.length)));
+    at = r.index + r.length;
+  }
+  if (at < value.length) nodes.push(document.createTextNode(value.slice(at)));
+  if (value.endsWith('\n')) nodes.push(document.createTextNode('\n')); // a textarea shows an empty last line after a final newline; a <pre> hangs it
+  pre.replaceChildren(...nodes);
+}
+
+/**
+ * The paste guard (app.js guardPaste): "Paste N lines into <where>?" with what src/renderer/pasteguard.js found, an
+ * editable preview with the offending characters marked, and Paste (as is) / Paste cleaned / Cancel. ⌘⏎ pastes, Esc
+ * cancels; the textarea has the focus. `warn` false hides the findings (the "Warn about suspicious pastes" toggle is
+ * off: only the multi-line confirmation is wanted). Resolves with the text to send, or null.
+ */
+export function pasteGuardDialog({ text, analysis, where, warn = true }) {
+  const lf = (t) => t.replace(/\r\n|\r/g, '\n'); // a textarea's value is LF-normalised whatever was put in it
+  const findingsOf = (a) => (warn ? a.findings : []);
+  const ta = h('textarea', { class: 'pg-text', spellcheck: false, autocapitalize: 'off', autocomplete: 'off', wrap: 'soft', 'aria-label': 'Text to paste (editable)' });
+  ta.value = text;
+  const backdrop = h('pre', { class: 'pg-backdrop', 'aria-hidden': 'true' });
+  const list = h('ul', { class: 'pg-findings', hidden: true });
+  const note = h('div', { class: 'pg-note' });
+  const edited = () => ta.value !== lf(text);
+  const value = () => (edited() ? ta.value : text); // untouched: the original goes out, CR / CRLF intact
+  const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  let pasteBtn = null, cleanBtn = null;
+  const render = () => {
+    const current = edited() ? analysePaste(ta.value) : analysis;
+    const fs = findingsOf(current);
+    const danger = fs.some((f) => DANGER_KINDS.has(f.kind));
+    list.hidden = !fs.length;
+    list.className = 'pg-findings' + (danger ? ' danger' : '');
+    list.replaceChildren(...fs.map((f) => h('li', {}, h('span', { class: 'pg-kind' }, KIND_LABEL[f.kind] || f.kind), h('span', { class: 'pg-msg' }, f.message, current.multiline ? h('span', { class: 'pg-where' }, ` (line ${f.line})`) : null))));
+    const cleanable = warn && current.cleanable;
+    note.textContent = `${plural(current.lines, 'line')} · ${plural(current.chars, 'character')} · ⌘⏎ pastes, Esc cancels` + (cleanable ? ' · Paste cleaned removes the hidden characters and the trailing newline' : '');
+    paintPasteMarks(backdrop, ta.value, findingsOf(analysePaste(ta.value))); // offsets of the textarea's own (LF) text
+    if (cleanBtn) cleanBtn.hidden = !cleanable;
+    if (pasteBtn) pasteBtn.textContent = fs.length ? 'Paste as is' : 'Paste';
+  };
+  const m = showModal({
+    title: `Paste ${plural(analysis.lines, 'line')} into ${where}?`,
+    width: 'wide',
+    closeOnBackdrop: false,
+    body: h('div', { class: 'pg' }, note, list, h('div', { class: 'pg-preview' }, backdrop, ta)),
+    buttons: [
+      { label: 'Cancel', value: null },
+      { label: 'Paste cleaned', action: (api) => api.close(analysePaste(value()).cleaned) },
+      { label: 'Paste', primary: true, action: (api) => api.close(value()) },
+    ],
+  });
+  [, cleanBtn, pasteBtn] = [...m.el.querySelectorAll('.modal-foot button')];
+  render();
+  ta.addEventListener('input', render);
+  ta.addEventListener('scroll', () => { backdrop.scrollTop = ta.scrollTop; backdrop.scrollLeft = ta.scrollLeft; });
+  m.el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.metaKey && !e.isComposing) { e.preventDefault(); e.stopPropagation(); m.close(value()); }
+  });
+  setTimeout(() => { ta.focus(); ta.setSelectionRange(0, 0); ta.scrollTop = 0; }, 20);
+  return m.promise;
+}
+
 export function shortcutsDialog(app) {
   const rightClick = app.settings.rightClickPaste !== false;
   // One section tab per area, each two columns of label + key chip (a chip that does not fit beside its label drops
@@ -729,6 +811,7 @@ export function shortcutsDialog(app) {
     ['dialogs', 'Dialogs', [
       ['Settings', '⌘,'], ['Tunnels', '⇧⌘U'], ['Icon & colour picks: move / choose', '← → ↑ ↓ / ⏎ or Space'],
       ['Dialog: confirm / close', '⏎ / Esc'], ['Dialog: next / previous control', 'Tab / ⇧Tab'], ['Dialog tabs: previous / next, first / last section', '← → / Home End'],
+      ['Paste guard (multi-line or suspicious paste): paste / cancel', '⌘⏎ / Esc'],
     ]],
   ];
   const tabs = modalTabs(sections.map(([k, label, rows]) => [k, label, h('div', {}, h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))))]));

@@ -87,6 +87,8 @@ const DEFAULT_SETTINGS = {
   rightClickPaste: true,
   copyOnSelect: true,
   macOptionIsMeta: true, // Option key acts as Meta/Alt (xterm macOptionIsMeta); what Settings shows before the first Save
+  pasteConfirmMultiline: true, // Settings → Terminal → Paste guard: ask before a multi-line or very long paste reaches a terminal
+  pasteWarnSuspicious: true, // … and show what a paste hides (invisible characters, curl | sh, profile writes…) with "Paste cleaned"
   bell: 'none',
   localShell: '',
   localShellArgs: ['-l'],

@@ -6,7 +6,8 @@ import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
-import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog } from './dialogs.js';
+import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog } from './dialogs.js';
+import { analysePaste, pasteGuardMode } from './pasteguard.js';
 
 /** Long paths keep their tail (the leaf folder is what matters in a status bar). */
 const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
@@ -804,6 +805,28 @@ class App {
     const targets = this.multiexecTargets();
     for (const p of targets) p.write(data);
     if (from && !targets.includes(from)) from.write(data); // input into a terminal that is not on screen still reaches its own shell (once)
+  }
+
+  // ---------- paste guard ----------
+  /**
+   * Every paste into a terminal (terminal.js pasteText: ⌘V / Edit → Paste, right-click and the pane menu, text
+   * dropped on a pane) comes through here before xterm sees it. With Settings → Terminal → Paste guard on (both
+   * toggles are, by default) a multi-line or very long paste asks first, and a suspicious one shows what it hides and
+   * offers a cleaned copy (src/renderer/pasteguard.js). Resolves with the text to paste — as given, edited in the
+   * dialog or cleaned — or null when the user cancelled. With MultiExec on, the one dialog names the broadcast set;
+   * the paste then goes out through onData like keystrokes, once per visible terminal.
+   */
+  async guardPaste(pane, text) {
+    const analysis = analysePaste(text);
+    const mode = pasteGuardMode(analysis, this.settings);
+    if (!mode.ask) return text;
+    let where = pane.title;
+    if (this.multiexec) {
+      const targets = this.multiexecTargets();
+      const n = targets.length + (targets.includes(pane) ? 0 : 1); // broadcast() also writes to a pane that is not on screen
+      if (n > 1) where = `${n} terminals (MultiExec)`;
+    }
+    return pasteGuardDialog({ text, analysis, where, warn: mode.warn });
   }
 
   /** Wording for an empty broadcast set: no tab at all, or a tab whose panes are empty cards, FTP cards or dead shells. */

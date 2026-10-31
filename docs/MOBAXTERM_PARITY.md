@@ -30,20 +30,20 @@ last column says which parts are missing.
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
 | 2. SSH specifics | 15 | 10 | 10 | 2 | 37 |
-| 3. Terminal | 7 | 13 | 10 | 1 | 31 |
+| 3. Terminal | 8 | 13 | 9 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
 | 5. Network and admin tools, embedded servers, Moba* utilities | 4 | 2 | 10 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **42** | **41** | **41** | **59** | **183** |
-| 8. Recent additions (24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
-| 9. UX details power users rely on | 5 | 11 | 3 | 1 | 20 |
-| **All tables** | **49** | **68** | **53** | **63** | **233** |
+| **Sections 1–7 (each feature once)** | **43** | **41** | **40** | **59** | **183** |
+| 8. Recent additions (24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
+| 9. UX details power users rely on | 6 | 11 | 2 | 1 | 20 |
+| **All tables** | **52** | **68** | **50** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
+MobAlt has 43 in full, 41 in a narrower or different form and lacks 40.
 
 ## 1. Session types
 
@@ -129,8 +129,8 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 | Search in terminal | ✅ | ⌘F incremental search with case and regex toggles and a match counter |
 | Logging / save / print | 🟡 | session log to a folder; no "Save terminal text" or print (Select All + copy instead) |
 | Scrollback | ✅ | Settings → Terminal → Scrollback lines (100 – 1,000,000; default 10,000); ⌘K clears |
-| Paste behaviour (right-click, multi-line preview, delay) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V; bracketed paste honoured; no multi-line preview, no per-line delay |
-| Malicious-paste guard | ❌ | not implemented |
+| Paste behaviour (right-click, multi-line preview, delay) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V; bracketed paste honoured; a multi-line or long paste asks first with an editable preview (Settings → Terminal → Paste guard); no per-line delay |
+| Malicious-paste guard | ✅ | every paste is checked for zero-width / bidi / control characters, a trailing newline, a lone CR, `curl \| sh`, writes to shell profiles and `authorized_keys`, `rm -rf /`-style commands and look-alike letters; findings are listed and marked in the preview, "Paste cleaned" strips the hidden characters (Settings → Terminal → "Warn about suspicious pastes") |
 | Copy on select | ✅ | Settings → Terminal → Copy on select (on by default) |
 | Selection modes (word, rectangular) | ✅ | double-click word, triple-click line, ⌥-drag rectangular (xterm.js column selection); word delimiters not configurable |
 | Ctrl+click URLs / paths | 🟡 | URLs are underlined and open in the browser on click; file and folder paths are not linked |
@@ -277,8 +277,8 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 | 26.4 — smart-card SSH auth (CAPI) + manager, smart card in MobAgent | ➖ | PKCS#11 via the macOS `ssh-agent` |
 | 26.4 — SSH → SFTP with same parameters, browser beside the tree, column widths, overwrite confirmation | 🟡 | Sftp panel is attached to each session and asks before overwriting; no side-by-side docking or column memory |
 | 26.4 — "linux" terminal type, compression off by default, Quick connect folder auto-expand | 🟡 | compression off by default; terminal type fixed; the filter shows matches |
-| 26.3 — paste confirmation polish | ❌ | no paste confirmation |
-| 26.2 — malicious-paste warning | ❌ | not implemented |
+| 26.3 — paste confirmation polish | ✅ | a multi-line or long paste asks first: "Paste N lines into …?" with an editable preview, ⌘⏎ / Esc |
+| 26.2 — malicious-paste warning | ✅ | paste guard findings (hidden characters, pipe-to-shell, profile writes, destructive commands, homoglyphs) with "Paste cleaned" |
 | 26.2 — duplicate tunnel, Alt+Space macro menu, collapse all folders, Wine compatibility | 🟡 | Collapse All in the tree menu; no duplicate tunnel or in-terminal macro menu |
 | 26.1 — open-session dots in the tree (click to jump) | 🟡 | green dot, no jump |
 | 26.1 — per-session icons in Customizer, >64 icons, MobaTextDiff swap, SK-SSH-Agent without MobAgent | 🟡 | any emoji as a session icon; FIDO keys through the macOS agent; no diff tool |
@@ -308,7 +308,7 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 | Everything auto-saves (incl. Quick connect sessions) | 🟡 | sessions and settings save on Save, the workspace every 20 s; Quick connect sessions are not saved |
 | Right-click paste as a global toggle | ✅ | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", on by default |
 | Copy-on-select, Alt-drag rectangle, tunable delimiters | ✅ | Copy on select (toggle), ⌥-drag column selection; delimiters not tunable |
-| Multi-line paste guard with preview and malware checks | ❌ | not implemented |
+| Multi-line paste guard with preview and malware checks | ✅ | "Paste N lines into …?" with an editable preview and the suspicious-content findings; both toggles in Settings → Terminal → Paste guard |
 | MultiExec and split views (Exclude, sync scroll) | 🟡 | splits and grids up to 8 panes; MultiExec without Exclude or synchronised scrolling |
 | Macros as first-class objects (WaitFor, nesting, folders, encryption) | 🟡 | recorded and text macros, play to one or all terminals; none of the extras |
 | Jump hosts as a dropdown | ✅ | Advanced SSH → Jump host dropdown of saved sessions (or manual), chained through the jump session's own jump host; Sftp and X11 routed through; SSH sessions only |
@@ -355,7 +355,6 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 
 | Item | Why | Size |
 |---|---|---|
-| Multi-line paste guard with editable preview and malicious-paste checks (homographs, pipe-to-shell, profile redirects, zero-width spaces) | the single most-cited MobaXterm safety net; xterm.js exposes the paste path already | M |
 | Zmodem (rz/sz) transfers in the terminal | the classic way to move files through serial consoles and jump hosts where SFTP is unavailable | M |
 | Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
 | Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
