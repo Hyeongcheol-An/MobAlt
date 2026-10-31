@@ -21,6 +21,13 @@ window: a session tree, tabbed and split terminals, an SFTP browser that opens w
 connection, port forwarding, MultiExec, X11 forwarding, macros, network tools and serial consoles.
 It is a native-feeling Electron app built on xterm.js, ssh2 and node-pty.
 
+## Demo
+
+![MobAlt demo: sessions, SFTP, split terminals, MultiExec, zoom, themes](docs/images/demo.gif)
+
+A 35-second tour: the session tree, a remote shell, the file browser, a split tab with MultiExec typing into both
+panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerates it).
+
 ## Features
 
 | MobaXterm | MobAlt | Notes |

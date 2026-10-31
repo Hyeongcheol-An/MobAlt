@@ -20,6 +20,13 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 터미널, SSH 접속과 함께 열리는 SFTP 브라우저, 포트 포워딩, MultiExec, X11 포워딩, 매크로, 네트워크
 도구, 시리얼 콘솔을 한 창에 담았습니다. xterm.js, ssh2, node-pty 기반의 Electron 앱입니다.
 
+## 데모
+
+![MobAlt 데모: 세션, SFTP, 분할 터미널, MultiExec, 확대, 테마](docs/images/demo.gif)
+
+35초 둘러보기: 세션 트리, 원격 셸, 파일 브라우저, MultiExec로 두 페인에 동시에 입력하는 분할 탭, 페인 확대, 테마
+전환입니다(가상의 호스트이며 `npm run demo`로 다시 만들 수 있습니다).
+
 ## 기능
 
 | MobaXterm | MobAlt | 비고 |
