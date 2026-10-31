@@ -21,8 +21,10 @@ try {
  *              {bundleOnDisk?: (version) => void}      that version is already installed: show the relaunch banner
  *              {afterCheck?: () => void}               a check has concluded (the bundle watch looks at the disk again)
  *              {relaunch?: () => void}                 restart into the bundle on disk
- * check(manual) resolves with { status: 'available' | 'up-to-date' | 'on-disk' | 'error' | 'source', version?, message }
- * once the updater has spoken, so the Settings → Updates line can show the outcome.
+ * check(manual, { quiet }) resolves with { status: 'available' | 'up-to-date' | 'on-disk' | 'error' | 'source', version?, message }
+ * once the updater has spoken, so the Settings → Updates line can show the outcome. A quiet manual check is one
+ * whose caller reports that outcome itself (that line): no up-to-date / error / on-disk sheet, only the
+ * "Download?" offer for a new release. Help → Check for Updates… is a loud manual check: every outcome is a sheet.
  */
 function setupUpdater(store, getWin, hooks = {}) {
   const win = () => {
@@ -31,9 +33,9 @@ function setupUpdater(store, getWin, hooks = {}) {
   };
   if (!autoUpdater || !app.isPackaged) {
     return {
-      check: async (manual) => {
+      check: async (manual, { quiet = false } = {}) => {
         const message = 'Updates are only checked in packaged builds';
-        if (manual) {
+        if (manual && !quiet) {
           await dialog.showMessageBox(win(), {
             type: 'info', message,
             detail: `This is MobAlt ${app.getVersion()} running from source.`,
@@ -44,13 +46,15 @@ function setupUpdater(store, getWin, hooks = {}) {
     };
   }
 
-  const state = { manual: false, pending: null, done: null };
+  const state = { manual: false, quiet: false, pending: null, done: null };
+  const loud = () => state.manual && !state.quiet; // this check's outcome is reported in a sheet (read before finish() resets it)
   // One check at a time; whoever asked gets the outcome once, then the bundle watch looks at the disk again.
   const finish = (result) => {
     const done = state.done;
     state.done = null;
     state.pending = null;
     state.manual = false;
+    state.quiet = false;
     if (done) done(result);
     try { hooks.afterCheck && hooks.afterCheck(); } catch {}
   };
@@ -62,7 +66,7 @@ function setupUpdater(store, getWin, hooks = {}) {
   autoUpdater.logger = null;
 
   autoUpdater.on('update-available', async (info) => {
-    const manual = state.manual;
+    const manual = loud();
     // The bundle on disk already is this release (or newer): a brew upgrade or a dragged DMG replaced the app
     // while it was running. Nothing to download; the banner (and a manual check's dialog) say to relaunch.
     const disk = await onDisk();
@@ -93,7 +97,7 @@ function setupUpdater(store, getWin, hooks = {}) {
     }
   });
   autoUpdater.on('update-not-available', () => {
-    const manual = state.manual;
+    const manual = loud();
     finish({ status: 'up-to-date', version: app.getVersion(), message: `MobAlt ${app.getVersion()} is up to date` });
     if (manual) dialog.showMessageBox(win(), { type: 'info', message: 'MobAlt is up to date', detail: `Version ${app.getVersion()}` });
   });
@@ -110,14 +114,15 @@ function setupUpdater(store, getWin, hooks = {}) {
     }
   });
   autoUpdater.on('error', (e) => {
-    const manual = state.manual;
+    const manual = loud();
     finish({ status: 'error', message: `Update check failed: ${e.message}` });
     if (manual) dialog.showMessageBox(win(), { type: 'error', message: 'Update check failed', detail: e.message });
   });
 
-  const check = (manual) => {
-    if (state.pending) return state.pending; // a check is under way: share its outcome
+  const check = (manual, { quiet = false } = {}) => {
+    if (state.pending) return state.pending; // a check is under way: share its outcome (and its loudness)
     state.manual = !!manual;
+    state.quiet = !!quiet;
     state.pending = new Promise((resolve) => { state.done = resolve; });
     autoUpdater.checkForUpdates().catch((e) => finish({ status: 'error', message: `Update check failed: ${e.message}` }));
     return state.pending;

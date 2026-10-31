@@ -34,3 +34,9 @@ test('quitQuestion names the kinds that are open', () => {
   assert.equal(quitQuestion({ ssh: 1, mosh: 0, sftp: 0, ftp: 0, total: 1 }), '1 connection is still open (1 SSH). Quit anyway?');
   assert.equal(quitQuestion({ ssh: 1, mosh: 1, sftp: 1, ftp: 2, total: 5 }), '5 connections are still open (1 SSH, 1 Mosh, 1 SFTP, 2 FTP). Quit anyway?');
 });
+
+test('quitQuestion ends with the verb the user chose: Quit by default, Relaunch for the update banner', () => {
+  const live = { ssh: 2, mosh: 0, sftp: 0, ftp: 0, total: 2 };
+  assert.equal(quitQuestion(live, 'Relaunch'), '2 connections are still open (2 SSH). Relaunch anyway?');
+  assert.equal(quitQuestion(live), quitQuestion(live, 'Quit'));
+});

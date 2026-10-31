@@ -26,7 +26,7 @@ contextBridge.exposeInMainWorld('api', {
     testDrag: (from, to) => invoke('test:drag', { from, to }),
     testResize: (w, h) => invoke('test:resize', w, h),
     testKey: (keyCode) => invoke('test:key', keyCode),
-    testQuitCheck: () => invoke('test:quit-check'),
+    testQuitCheck: (verb) => invoke('test:quit-check', verb),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testNotice: (text) => invoke('test:notice', text),
     checkUpdates: () => invoke('app:check-updates'),

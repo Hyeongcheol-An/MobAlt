@@ -30,21 +30,22 @@ let relaunchRequested = false; // test mode: app:relaunch records the request in
 
 /**
  * Ask before the app goes away with live connections (SSH / Mosh / SFTP companions / FTP). Shared by the
- * window's close button and ⌘Q (app.quit → before-quit). Returns true when quitting may proceed. No
- * dialog when the setting is off, during a confirmed quit, or in the headless test runs (their scripts
- * must quit unattended).
+ * window's close button, ⌘Q (app.quit → before-quit) and the relaunch banner. `verb` names what the user
+ * chose ("Quit", "Relaunch"): it is the question's last word and the confirming button. Returns true when
+ * quitting may proceed. No dialog when the setting is off, during a confirmed quit, or in the headless test
+ * runs (their scripts must quit unattended).
  */
-function confirmQuit() {
+function confirmQuit(verb = 'Quit') {
   if (quitting) return true;
   if (process.env.MOBALT_TEST_SCRIPT || process.env.MOBALT_SCREENSHOT) return true;
   const live = liveConnections(registry, ftp);
   if (!live.total || !store.getSettings().confirmClose) return true;
   const r = dialog.showMessageBoxSync(win && !win.isDestroyed() ? win : undefined, {
     type: 'question',
-    buttons: ['Quit', 'Cancel'],
+    buttons: [verb, 'Cancel'],
     defaultId: 1,
     cancelId: 1,
-    message: quitQuestion(live),
+    message: quitQuestion(live, verb),
   });
   return r === 0;
 }
@@ -59,7 +60,7 @@ function confirmQuit() {
  * restart is under way (in test mode: recorded, not performed).
  */
 function relaunch() {
-  if (!confirmQuit()) return false;
+  if (!confirmQuit('Relaunch')) return false;
   if (process.env.MOBALT_TEST_SCRIPT) {
     relaunchRequested = true;
     return true;
@@ -421,13 +422,14 @@ function registerIpc() {
       await send('Input.setInterceptDrags', { enabled: false }).catch(() => {});
     }
   });
-  // Test-only: what the quit confirmation would do right now, without showing the native dialog, and whether
-  // app:relaunch was asked for (test mode records it instead of restarting).
-  ipcMain.handle('test:quit-check', () => {
+  // Test-only: what the quit confirmation would do right now, without showing the native dialog (`verb` as in
+  // confirmQuit: "Quit" by default, "Relaunch" for the banner's path), and whether app:relaunch was asked for
+  // (test mode records it instead of restarting).
+  ipcMain.handle('test:quit-check', (_e, verb) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const live = liveConnections(registry, ftp);
     const wouldAsk = !quitting && live.total > 0 && !!store.getSettings().confirmClose;
-    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live) : null, relaunchRequested };
+    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live, verb || 'Quit') : null, relaunchRequested };
   });
   // Test-only: pretend that MobAlt `version` is now on disk — the same renderer event the bundle watch sends
   // (no de-duplication here, so the renderer's own "Later" logic is what gets exercised).
@@ -464,7 +466,9 @@ function registerIpc() {
   });
   ipcMain.handle('ftp:connect', async (_e, cfg) => ftp.connect(await mergeSecrets(cfg)));
   ipcMain.handle('ftp:disconnect', (_e, id) => ftp.disconnect(id));
-  ipcMain.handle('app:check-updates', () => updater && updater.check(true));
+  // Settings → Updates "Check now": the outcome goes on the dialog's own status line, so this check is quiet (no
+  // up-to-date / error / on-disk sheet; only a new release's "Download?" offer). Help → Check for Updates… keeps the sheets.
+  ipcMain.handle('app:check-updates', () => updater && updater.check(true, { quiet: true }));
   ipcMain.handle('serial:list', () => listSerialPorts());
   ipcMain.on('term:write', (_e, id, data) => registry.write(id, data));
   ipcMain.on('term:resize', (_e, id, cols, rows) => registry.resize(id, cols, rows));
