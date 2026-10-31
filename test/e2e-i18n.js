@@ -63,7 +63,7 @@
         fits[b.textContent.trim()] = body.scrollHeight <= body.clientHeight + 1 && r.bottom <= window.innerHeight && r.right <= window.innerWidth;
         if (height === null) height = Math.round(r.height); else if (Math.round(r.height) !== height) sameHeight = false;
       }
-      check(`${code}.settingsTabsTranslated`, tabs.length === 5 && tabs[0].textContent.trim() !== 'General', tabs.map((b) => b.textContent.trim()));
+      check(`${code}.settingsTabsTranslated`, tabs.length === 5 && tabs.map((b) => b.textContent.trim()).join('|') !== 'General|Terminal|Features|Logging|Updates', tabs.map((b) => b.textContent.trim())); // a tab name may equal the English (es "General"): the set must differ
       check(`${code}.settingsFit900x560`, Object.values(fits).every(Boolean) && sameHeight, { fits, sameHeight });
       tabs[0]?.click(); await sleep(100);
       await shot(`i18n-${code}-settings`);
