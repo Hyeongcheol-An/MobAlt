@@ -1,6 +1,6 @@
 # MobAlt Benutzerhandbuch
 
-This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md)
+Dieses Handbuch auf: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
 
 MobAlt ist eine Arbeitsumgebung im Stil von MobaXterm für macOS: links ein Sitzungsbaum, in der Mitte
 Terminals in Tabs und geteilten Ansichten, in den Seitenpanels ein SFTP-Browser, Netzwerkwerkzeuge und Makros.
@@ -34,7 +34,7 @@ ohne Ihre Bestätigung wird nichts heruntergeladen oder installiert. Siehe [Aktu
 Drei Wege führen zu einem neuen Release; alle enden mit dem neuen Bundle unter `/Applications/MobAlt.app`:
 
 - **Integrierte Aktualisierung**: MobAlt prüft beim Start die GitHub-Releases (abschaltbar unter „Einstellungen“ →
-  „Updates“); „Help“ → „Nach Updates suchen…“ oder „Jetzt suchen“ unter „Einstellungen“ → „Updates“ startet die Prüfung
+  „Updates“); „Hilfe“ → „Nach Updates suchen…“ oder „Jetzt suchen“ unter „Einstellungen“ → „Updates“ startet die Prüfung
   von Hand. Eine neuere Version wird in einem Dialog angeboten, nur auf Ihren Wunsch heruntergeladen und beim Beenden
   installiert — oder sofort mit „Jetzt neu starten“.
 - **Homebrew**: `brew upgrade --cask mobalt` ersetzt das Programm im Ordner „Programme“.
@@ -50,7 +50,7 @@ Hat sich das Programm bereits aktualisiert, installiert Homebrew einfach die vor
 Aktualisieren, während MobAlt läuft, ist kein Problem — auch aus einem Terminal von MobAlt selbst. Das laufende
 Programm führt die alte Version weiter aus dem Speicher aus, bemerkt das neue Bundle auf der Festplatte (innerhalb
 einer Minute oder sobald das Fenster wieder den Fokus erhält) und zeigt über den Tabs ein Banner: *MobAlt 0.11.0 ist
-auf der Festplatte installiert — Sie verwenden 0.10.1. Zum Verwenden neu starten.* **Neu starten** fragt zuerst nach
+auf der Festplatte installiert — Sie verwenden 0.10.1. Zum Verwenden neu starten.* **Neustart** fragt zuerst nach
 offenen SSH-/FTP-Verbindungen (wie ⌘Q), sichert den Arbeitsbereich und startet die neue Version; Ihre Tabs kehren über
 die Wiederherstellung des Arbeitsbereichs zurück. **Später** blendet das Banner aus, bis eine weitere Version erscheint.
 Liegt das neue Bundle schon auf der Festplatte, wenn die Aktualisierung läuft, wird nichts erneut heruntergeladen: Die
@@ -70,9 +70,9 @@ diesem Ordner).
 |---|---|
 | SSH | Terminal über SSH mit SFTP-Browser, Tunneln, X11- und Agent-Weiterleitung |
 | Mosh | Roaming-Terminal über den `mosh`-Client (per SSH gestartet) |
-| Local | Ihre macOS-Login-Shell (zsh/bash) mit Ordnerverfolgung |
+| Lokal | Ihre macOS-Login-Shell (zsh/bash) mit Ordnerverfolgung |
 | Telnet | Klassisches Telnet mit NAWS/TTYPE-Aushandlung |
-| Serial | USB-Seriell-Konsole (Baudrate, Datenformat, Flusskontrolle, lokales Echo) |
+| Seriell | USB-Seriell-Konsole (Baudrate, Datenformat, Flusskontrolle, lokales Echo) |
 | FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „Sftp“ |
 | RDP / VNC | Übergibt an Windows App oder die macOS-Bildschirmfreigabe |
 
@@ -255,7 +255,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 ![Panel „Sftp“](images/sftp-panel.png)
 
 Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim Verbinden automatisch
-(„Einstellungen“ → „Allgemein“ → „Bei SSH-Verbindung zu „Sftp“ wechseln“).
+(„Einstellungen“ → „Allgemein“ → „Bei SSH-Verbindung zu ‚Sftp‘ wechseln“).
 
 - Navigieren Sie per Doppelklick auf Ordner, durch Eintippen eines Pfads (`~` funktioniert) oder mit ⬆ / 🏠 / ⟳.
   „Terminal folgen“ hält das Panel im aktuellen Ordner der Shell (erfordert die Sitzungsoption, die einen kleinen
@@ -294,7 +294,7 @@ diese Sitzung verbindet, und Sie erfahren es, wenn einer sich nicht binden läss
   zu `mosh-server` fest, wenn er nicht im entfernten PATH liegt.
 - **Mosh + SFTP**: mosh transportiert keinen SFTP-Kanal, deshalb durchsucht das Panel „Sftp“ einen Mosh-Host über eine
   separate SSH-Verbindung ohne Shell zum selben Host (gleicher Schlüssel, Agent und Abfragen). Sie öffnet sich
-  automatisch, wenn „SFTP-Browser automatisch öffnen“ für die Sitzung aktiv ist (und „Bei SSH-Verbindung zu „Sftp“
+  automatisch, wenn „SFTP-Browser automatisch öffnen“ für die Sitzung aktiv ist (und „Bei SSH-Verbindung zu ‚Sftp‘
   wechseln“ unter „Einstellungen“ → „Allgemein“), sonst über die Taste „SFTP für diesen Host öffnen (über SSH)“ im Panel
   oder „SFTP-Browser öffnen“ im Menü des Bereichs; sie wird zusammen mit dem Bereich getrennt.
 - **Seriell**: Der Editor listet USB-Seriell-Geräte; stellen Sie Baudrate, Daten-/Stoppbits, Parität, Flusskontrolle,
@@ -341,17 +341,18 @@ als reiner Text) und **Updates** (die Prüfung beim Start und „Jetzt suchen“
 
 ### Sprache der Benutzeroberfläche
 
-Menüs, Symbolleiste, Panels, Dialoge und Meldungen von MobAlt gibt es in zehn Sprachen: English, 한국어, 简体中文,
-日本語, Tiếng Việt, हिन्दी, Deutsch, Français, Español und Português. Standardmäßig (**Systemstandard**) folgt die
+Menüs, Symbolleiste, Panels, Dialoge und Meldungen von MobAlt gibt es in elf Sprachen: English, 한국어, 简体中文,
+日本語, Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português und العربية (bei Arabisch wird das Fenster
+gespiegelt: Seitenleiste rechts, Text rechtsbündig; Terminals bleiben linksläufig). Standardmäßig (**Systemstandard**) folgt die
 Oberfläche der Sprachliste von macOS (Systemeinstellungen → Allgemein → Sprache & Region): Die erste Sprache dieser
 Liste, die MobAlt mitbringt, gewinnt, Englisch, wenn keine passt. „Einstellungen“ → „Allgemein“ → **Sprache** wählt
 eine Sprache ausdrücklich; die Änderung gilt sofort in jedem Fenster — nichts startet neu, Verbindungen bleiben
 bestehen — und wird gemerkt. Terminalausgaben werden nie übersetzt: Was ein entfernter Host ausgibt, erscheint
-unverändert. Das Benutzerhandbuch gibt es in denselben zehn Sprachen (`docs/USER_GUIDE.<language>.md`); „Help“ →
+unverändert. Das Benutzerhandbuch gibt es in denselben elf Sprachen (`docs/USER_GUIDE.<language>.md`); „Hilfe“ →
 **Benutzerhandbuch** öffnet das für die aktuelle Sprache.
 
 Um MobAlt einmalig in einer Sprache zu starten, ohne die Einstellung zu ändern (Bildschirmfotos, ein Test), setzen Sie
-beim Start `MOBALT_LANG=<code>` in der Umgebung (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
+beim Start `MOBALT_LANG=<code>` in der Umgebung (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
 
 ## Tastaturkurzbefehle
 
@@ -382,7 +383,7 @@ beim Start `MOBALT_LANG=<code>` in der Umgebung (`en`, `ko`, `zh-CN`, `ja`, `vi`
 | Symbol- und Farbauswahl im Sitzungseditor: bewegen / wählen | ← → ↑ ↓ / ⏎ oder Leertaste |
 | Panel-Tasten der Seitenleiste / ⌘1-4 | ⏎ bringt die Tastatur ins Panel; beim Wechsel merkt sich jedes Panel die Position |
 
-„Help“ → „Tastaturkurzbefehle“ zeigt dieselbe Liste in der App. Mit Tab erreichen Sie die Symbolleiste, die
+„Hilfe“ → „Tastaturkurzbefehle“ zeigt dieselbe Liste in der App. Mit Tab erreichen Sie die Symbolleiste, die
 Panel-Leiste, den Sitzungsbaum, die Makroliste, die SFTP-Liste und die Tableiste (jede Liste ist ein Tab-Stopp; die
 Pfeiltasten bewegen sich darin); Dialoge halten Tab in sich und geben den Fokus beim Schließen an den Tab, die Zeile
 oder die Taste zurück, die sie geöffnet hat; Kontextmenüs reagieren auf ↑ ↓ / ⏎ / Esc. Esc im Sitzungsfilter oder im
