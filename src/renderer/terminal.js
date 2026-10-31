@@ -17,6 +17,15 @@ const SearchAddon = window.SearchAddon.SearchAddon;
 const WebglAddon = window.WebglAddon.WebglAddon;
 const Unicode11Addon = window.Unicode11Addon.Unicode11Addon;
 
+/**
+ * WebGL budget. Chromium keeps at most 16 live WebGL contexts per renderer process and silently loses the oldest when a
+ * 17th is created (the pane painted white for 3 s, then fell back to DOM rendering for good). So a pane holds a GPU
+ * context only while it is on screen — a pane of the active tab that is not hidden behind a zoomed sibling — and at
+ * most this many panes of a window do at once (a 2 × 4 grid is 8); the rest draw with xterm's DOM renderer, which
+ * keeps the buffer and takes over invisibly. layout.js calls syncWebgl() on every visibility change.
+ */
+export const WEBGL_BUDGET = 12;
+
 export { THEMES, searchDecorations }; // the palettes live in theme.js; app.js and dialogs.js keep importing them from here
 
 let seq = 0;
@@ -53,6 +62,9 @@ export class TermPane {
     this.monitorFailed = false; // "monitor unavailable": no polling until the next connection or a manual toggle
     this.monitorErrors = 0;
     this.monitorSample = null; // the last sample shown (tests read it)
+    this.webgl = null; // the WebGL addon while this pane is on screen (syncWebgl), null while the DOM renderer draws
+    this.webglLost = false; // the GPU took the context away: no new one until the pane is hidden and shown again
+    this.webglLosses = 0; // context-loss events so far (tests assert 0 under the budget)
 
     const s = app.settings;
     const theme = this.themeFor(s);
@@ -234,7 +246,10 @@ export class TermPane {
     if (this.mounted) return;
     this.mounted = true;
     this.term.open(this.termEl);
-    if (this.kind !== 'empty') this._loadWebgl(); // placeholder panes do not need a GPU context
+    // A lost context is handled here, before the addon's own listener: that one would preventDefault() and wait 3 s for
+    // a restore that never comes (the pane white meanwhile). Capture phase, because the event does not bubble and the
+    // canvas is the addon's. Disposing the addon drops its listener, so the wait is never started.
+    this.termEl.addEventListener('webglcontextlost', () => this._onWebglLost(), true);
     this.termEl.addEventListener('contextmenu', (e) => this._contextMenu(e));
     // ⌘V, Edit → Paste and the native context menu all land as a `paste` event on xterm's textarea (or its element);
     // taking it in the capture phase on the pane keeps xterm's own listeners from sending the clipboard straight to
@@ -248,6 +263,7 @@ export class TermPane {
     this.ro = new ResizeObserver(() => this.fit());
     this.ro.observe(this.termEl);
     this.fit();
+    this.syncWebgl(); // a GPU context only when this pane is on screen (and the budget allows)
   }
 
   fit() {
@@ -262,21 +278,83 @@ export class TermPane {
     this.term.focus();
   }
 
-  /** GPU renderer; a browser keeps only ~16 WebGL contexts, so each pane frees its own on dispose. */
+  // ---------- WebGL budget (see WEBGL_BUDGET) ----------
+  /** On screen: mounted, a terminal (not a placeholder or FTP card), in the window's active tab and not behind a zoomed sibling. */
+  visibleInTab() {
+    if (this.disposed || !this.mounted || this.kind === 'empty' || this.kind === 'ftp' || !this.tab || !this.el.isConnected) return false;
+    const ws = this.app.workspace;
+    return !!ws && ws.active === this.tab && (!this.tab.zoomed || this.tab.zoomed === this);
+  }
+
+  /** Live GPU contexts in this window. */
+  static webglCount(app) {
+    return app.workspace ? app.workspace.allPanes().filter((p) => p.webgl).length : 0;
+  }
+
+  /**
+   * Match the renderer to the pane's visibility: a pane that just came on screen takes a GPU context (budget allowing,
+   * and unless its last one was lost while it was on screen — the retry waits for the next activation), a pane that
+   * went off screen gives its own back so the panes shown next can have one. Called by layout.js on tab activation,
+   * zoom, re-layout and mount; idempotent. Returns true while the pane draws with WebGL.
+   *
+   * The context is taken a few frames after the pane came on screen, not at once: xterm pauses a hidden terminal's
+   * rendering (an IntersectionObserver) and resumes it only after the first paint, so a renderer swapped in right
+   * away would show an empty canvas for a frame or two. Meanwhile the DOM rows drawn when the pane went off screen
+   * are shown; then, between two paints, the WebGL renderer takes over and draws before the next one — no blank.
+   */
+  syncWebgl() {
+    if (this.visibleInTab()) {
+      if (!this.webgl && !this.webglLost) this._scheduleWebgl();
+    } else {
+      this.webglLost = false; // shown again later = a new try
+      if (this.webgl) this._dropWebgl();
+    }
+    return !!this.webgl;
+  }
+
+  /** Two animation frames (xterm's observer has resumed the terminal by then) and a task: the swap lands between paints. */
+  _scheduleWebgl() {
+    if (this._webglPending) return;
+    this._webglPending = true;
+    requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+      this._webglPending = false;
+      if (this.visibleInTab() && !this.webgl && !this.webglLost) this._loadWebgl();
+    }, 0)));
+  }
+
+  /** GPU renderer, within the budget; false when the DOM renderer stays (no budget, no WebGL, not mounted). */
   _loadWebgl() {
-    if (this.webgl || !this.mounted) return;
+    if (this.webgl || !this.mounted || this.disposed || this.kind === 'empty' || this.kind === 'ftp') return !!this.webgl;
+    if (TermPane.webglCount(this.app) >= WEBGL_BUDGET) return false;
     try {
       const webgl = new WebglAddon();
-      webgl.onContextLoss(() => {
-        webgl.dispose();
-        this.webgl = null;
-        this.applyTheme(); // the DOM renderer that takes over must paint with this pane's palette, not a stale one
-      });
+      webgl.onContextLoss(() => this._onWebglLost()); // the addon's own 3 s path, should the capture listener ever miss the event
       this.term.loadAddon(webgl);
       this.webgl = webgl;
     } catch (e) {
       console.warn('WebGL renderer unavailable, using DOM renderer', e);
     }
+    return !!this.webgl;
+  }
+
+  /** Back to the DOM renderer at once: it has the buffer and repaints in this pane's palette (no blank frame). */
+  _dropWebgl() {
+    const webgl = this.webgl;
+    if (!webgl) return;
+    this.webgl = null;
+    try { webgl.dispose(); } catch (e) { console.warn('WebGL addon dispose failed', e); }
+    if (this.disposed) return;
+    this.applyTheme(); // the DOM renderer that takes over must paint with this pane's palette, not a stale one
+    try { this.term.refresh(0, this.term.rows - 1); } catch {}
+  }
+
+  /** The GPU took this pane's context (16 contexts in the process, a GPU reset): DOM renderer now, WebGL again on the next activation. */
+  _onWebglLost() {
+    if (!this.webgl) return;
+    this.webglLosses++;
+    this.webglLost = true;
+    console.warn(`WebGL context lost on pane ${this.id}: DOM renderer until the pane is shown again`);
+    this._dropWebgl();
   }
 
   updateTitle() {
@@ -373,7 +451,7 @@ export class TermPane {
     this.title = 'Local';
     this.hidePlaceholder();
     this.updateTitle();
-    this._loadWebgl();
+    this.syncWebgl(); // a terminal now: a GPU context when it is on screen
     await this.start();
     this.focus();
   }
@@ -1009,8 +1087,9 @@ export class TermPane {
       this.app.sftpPanel.dropConnection(id);
       this.termId = null;
     }
-    try { this.webgl && this.webgl.dispose(); } catch {}
+    const webgl = this.webgl; // its GPU context goes back to the budget
     this.webgl = null;
+    try { webgl && webgl.dispose(); } catch {}
     try { this.highlighter.dispose(); } catch {}
     try {
       this.term.dispose();
