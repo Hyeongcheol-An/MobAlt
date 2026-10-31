@@ -1,3 +1,24 @@
+## [0.12.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.11.0...v0.12.0) (2026-10-31)
+
+### Features
+
+* **layout:** zoom a pane to fill its tab ([228ae9a](https://github.com/Hyeongcheol-An/MobAlt/commit/228ae9adce47caa85973d6df62f3af8438198b17))
+* **theme:** apply the selected theme to the whole app ([0cf57bb](https://github.com/Hyeongcheol-An/MobAlt/commit/0cf57bbc3445cd26012fe4ac7b10b72a6801fc93))
+* **ui:** settings in tabs that fit the minimum window; compact shortcuts dialog ([8303d7c](https://github.com/Hyeongcheol-An/MobAlt/commit/8303d7ca61a74e8e87105672b192615a17941d32))
+
+### Bug Fixes
+
+* **a11y:** keep the pane zoom button's name constant, aria-pressed carries the state ([acbd3a7](https://github.com/Hyeongcheol-An/MobAlt/commit/acbd3a754442ce062890a233354cf8236025811d))
+* **a11y:** name every form control, focus cues on find/tools boxes, editor tab roles, live toasts ([d6d6742](https://github.com/Hyeongcheol-An/MobAlt/commit/d6d6742bed8f981a4d4673f75b5824e7051e01f2)), closes [#find-input](https://github.com/Hyeongcheol-An/MobAlt/issues/find-input) [#tool-host](https://github.com/Hyeongcheol-An/MobAlt/issues/tool-host) [#sftp-path](https://github.com/Hyeongcheol-An/MobAlt/issues/sftp-path) [#qc-input](https://github.com/Hyeongcheol-An/MobAlt/issues/qc-input) [#session-filter](https://github.com/Hyeongcheol-An/MobAlt/issues/session-filter) [#toast-root](https://github.com/Hyeongcheol-An/MobAlt/issues/toast-root) [#multiexec-banner](https://github.com/Hyeongcheol-An/MobAlt/issues/multiexec-banner)
+* **sessions:** readable export errors, BOM/UTF-16 JSON, honest import counts, MobaXterm validation ([bfeef18](https://github.com/Hyeongcheol-An/MobAlt/commit/bfeef1839ce5055243143d300378cd36116cd845)), closes [#130](https://github.com/Hyeongcheol-An/MobAlt/issues/130)
+* **sessions:** validate imported JSON, strip exporter flags, dedup MobaXterm re-imports ([8ff8a02](https://github.com/Hyeongcheol-An/MobAlt/commit/8ff8a0202c6bbd29fc4cbe34ec94fca108edb9aa))
+* **settings:** give macOptionIsMeta a stored default ([ce085e0](https://github.com/Hyeongcheol-An/MobAlt/commit/ce085e095beac31d611763602e5949a1f213ba65))
+* **settings:** hold the dialog at the height of its tallest section ([1ccc550](https://github.com/Hyeongcheol-An/MobAlt/commit/1ccc550f6b8ad0d13c576dc8cff792f3b5625676))
+* **theme:** contrast and consistency fixes from the theme and keyboard QA ([ed2b0f1](https://github.com/Hyeongcheol-An/MobAlt/commit/ed2b0f13d6d05db3b735262d9e1772572b8ed32e))
+* **theme:** paint the first frame in the saved theme ([7f9bb60](https://github.com/Hyeongcheol-An/MobAlt/commit/7f9bb60ec486b4ecceddebf9b39e011e6c2473cb))
+* **tools:** drop a stopped tool's late output when another tool starts ([9d4104f](https://github.com/Hyeongcheol-An/MobAlt/commit/9d4104f33de5113f2fb376d797dad7a8c7138f30))
+* **ui:** real plurals in toasts and a quit label that names every connection kind ([2290ff3](https://github.com/Hyeongcheol-An/MobAlt/commit/2290ff331fd1e6e51b4b5120591ed02678394237))
+
 ## [0.11.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.10.1...v0.11.0) (2026-10-31)
 
 ### Features
