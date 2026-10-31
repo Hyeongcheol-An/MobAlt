@@ -147,7 +147,7 @@ export class TermPane {
       )),
       // the remote monitoring strip: a status region that is never announced (it changes every few seconds)
       (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': t('Remote monitoring'), hidden: true })),
-      (this.termEl = h('div', { class: 'pane-term' }))
+      (this.termEl = h('div', { class: 'pane-term', dir: 'ltr' })) // terminal content is an LTR island in a right-to-left interface
     );
     if (this.session?.color) this.el.style.setProperty('--pane-color', this.session.color);
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the palette from the first paint
