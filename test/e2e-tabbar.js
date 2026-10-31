@@ -86,6 +86,26 @@
     list.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
     list.click();
     results.tabMenuToggles = openAgain && !document.querySelector('#ctx-root .ctx.tab-list');
+    // 40 tabs: the menu is capped at 60vh and scrolls, stays inside the window with its first entry reachable (it used
+    // to be placed with the uncapped height: top −236 px, 8 entries out of reach) and opens on the active tab's entry
+    while (app.workspace.tabs.length < 40) await app.newLocalTab();
+    await sleep(800);
+    list.click();
+    await sleep(250);
+    const menu40 = document.querySelector('#ctx-root .ctx.tab-list');
+    const items40 = [...(menu40?.querySelectorAll('.ctx-item') || [])];
+    const mr = menu40.getBoundingClientRect();
+    const inMenu = (el) => { const r = el.getBoundingClientRect(); return r.top >= mr.top - 1 && r.bottom <= mr.bottom + 1; };
+    results.tabMenu40Inside = items40.length === 40 && mr.top >= 0 && mr.bottom <= window.innerHeight && mr.height <= window.innerHeight * 0.6 + 1;
+    results.tabMenu40Scrolls = menu40.scrollHeight > menu40.clientHeight + 1;
+    results.tabMenu40ActiveShown = inMenu(items40[39]) && document.activeElement === items40[39];
+    await shot('62b-all-tabs-menu-40');
+    menu40.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    await sleep(100);
+    results.tabMenu40HomeReachesFirst = document.activeElement === items40[0] && inMenu(items40[0]) && items40[0].getBoundingClientRect().top >= 0;
+    items40[0].click();
+    await sleep(400);
+    results.tabMenu40Activates = app.workspace.active === app.workspace.tabs[0] && !document.querySelector('#ctx-root .ctx');
     // back to 2 tabs: arrows and fades disappear, the strip is where it was (no layout shift)
     for (const t of app.workspace.tabs.slice(2)) await app.closeTab(t);
     await sleep(600);

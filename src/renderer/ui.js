@@ -167,7 +167,7 @@ export function contextMenu(x, y, items) {
   ctxOpener = document.activeElement;
   const r = menu.getBoundingClientRect();
   menu.style.left = Math.min(x, window.innerWidth - r.width - 6) + 'px';
-  menu.style.top = Math.min(y, window.innerHeight - r.height - 6) + 'px';
+  menu.style.top = Math.max(6, Math.min(y, window.innerHeight - r.height - 6)) + 'px'; // a menu taller than the window keeps its first items reachable
   // keyboard: ↑/↓ cycle through enabled items, Home/End, Enter/Space activate, Esc (global) / Tab close
   const enabled = () => [...menu.querySelectorAll('.ctx-item:not(.disabled)')];
   menu.addEventListener('keydown', (e) => {
@@ -256,7 +256,8 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
     },
   };
   modal.append(
-    h('div', { class: 'modal-title' }, title, h('button', { class: 'close', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => api.close(null) }, icon('x'))),
+    // the title text is its own box so a very long session name is clipped with an ellipsis (full text in the tooltip)
+    h('div', { class: 'modal-title' }, h('span', { class: 'modal-title-text', title: typeof title === 'string' ? title : null }, title), h('button', { class: 'close', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => api.close(null) }, icon('x'))),
     h('div', { class: 'modal-body' }, body)
   );
   if (buttons.length) {

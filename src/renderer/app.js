@@ -1,6 +1,6 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
 import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons } from './ui.js';
-import { TermPane, THEMES } from './terminal.js';
+import { TermPane, THEMES, searchDecorations } from './terminal.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
@@ -129,11 +129,15 @@ class App {
       if (!panes.length) continue;
       const tab = this.workspace.newTab(panes[0], td.title || panes[0].title);
       tab.autoTitle = td.autoTitle !== false;
+      if (td.title) tab.title = td.title; // newTab's focus may have named the tab after panes[0]'s session: the saved name stands (for good when it was typed)
       tab.color = td.color || null;
       tab.icon = td.icon || null;
       tab.root = root;
       for (const p of panes) p.tab = tab;
       tab.activePane = panes[Math.min(td.active || 0, panes.length - 1)];
+      // a session tab is named after its session again (its current name and icon), whichever pane was focused at the
+      // save; a shell-only tab keeps the saved folder title until its shell reports one
+      if (tab.autoTitle && this.tabTitlePane(tab)?.session) this.deriveTabTitle(tab);
       this.workspace.render(tab);
       this.workspace.updateTab(tab);
       for (const p of panes) starts.push(p.start().catch(() => {}));
@@ -158,7 +162,10 @@ class App {
     window.api.on('term:exit', (id, info) => {
       const p = this.panesByTerm.get(id);
       this.sftpPanel.dropConnection(id);
-      if (p) p.onExit(info);
+      if (!p) return;
+      const lost = info && info.reason === 'lost' && p.termId === id; // the server or the network ended it (never a Disconnect, ⌘W or `exit`)
+      p.onExit(info);
+      if (lost) toast(p.lostMessage(info.detail), 'warn', 6000); // the pane may be in another tab, or its terminal full-screen
     });
     window.api.on('ssh:status', ({ id, state, msg }) => {
       const p = this.panesByTerm.get(id);
@@ -271,7 +278,9 @@ class App {
     });
     // find bar
     const fb = $('#find-bar'), fi = $('#find-input');
-    const opts = () => ({ caseSensitive: $('#find-case').checked, regex: $('#find-regex').checked, decorations: { matchBackground: '#515c6a', activeMatchBackground: '#e6b422', activeMatchBorder: '#e6b422', matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#e6b422' } });
+    // highlight colours follow the active terminal's palette (a light theme needs a pale tint under its dark text)
+    this.findDecorations = () => searchDecorations(this.activePane()?.themeFor?.() || THEMES[this.settings.theme] || THEMES['moba-dark']);
+    const opts = () => ({ caseSensitive: $('#find-case').checked, regex: $('#find-regex').checked, decorations: this.findDecorations() });
     // an unfinished regex (e.g. "h[ae") throws inside the search addon: show it as an invalid pattern instead
     const safeFind = (fn) => {
       try { fn(); fb.classList.remove('bad-pattern'); return true; }
@@ -411,6 +420,7 @@ class App {
     pane.el.classList.add('focused');
     if (pane.tab) {
       pane.tab.activePane = pane;
+      if (this.tabTitlePane(pane.tab)?.session) this.syncTabTitle(pane.tab); // a session tab keeps its session's name and icon whichever pane is used
       if (!viaTab && this.workspace.active !== pane.tab) this.workspace.activate(pane.tab);
     }
     pane.focus();
@@ -664,12 +674,33 @@ class App {
     this.saveWorkspaceSoon();
   }
 
+  /**
+   * The pane an auto-titled tab is named after: its first session pane (a tab opened for a session keeps that
+   * session's name and icon, like its colour, while a helper shell or another session is split into it), else the
+   * active pane (a shell-only tab shows the folder of the shell being used).
+   */
+  tabTitlePane(tab) {
+    return tab.panes().find((p) => p.session) || tab.activePane || null;
+  }
+
+  /** Set an auto-titled tab's title and icon from the pane it is named after; true when either changed. */
+  deriveTabTitle(tab) {
+    if (!tab.autoTitle) return false;
+    const owner = this.tabTitlePane(tab);
+    if (!owner) return false;
+    const title = owner.session ? owner.session.name : owner.title, icon = owner.session?.icon || null;
+    if (tab.title === title && tab.icon === icon) return false;
+    tab.title = title;
+    tab.icon = icon;
+    return true;
+  }
+
+  syncTabTitle(tab) {
+    if (tab && this.deriveTabTitle(tab)) this.workspace.updateTab(tab);
+  }
+
   onPaneTitle(pane) {
-    if (pane.tab && pane.tab.autoTitle && pane.tab.activePane === pane) {
-      pane.tab.title = pane.session ? pane.session.name : pane.title;
-      pane.tab.icon = pane.session?.icon || null;
-      this.workspace.updateTab(pane.tab);
-    }
+    if (pane.tab && pane.tab.autoTitle && this.tabTitlePane(pane.tab) === pane) this.syncTabTitle(pane.tab);
   }
 
   onPaneStatus(pane, msg) {
@@ -767,7 +798,7 @@ class App {
   onBundleUpdated({ version, current }) {
     if (!version || version === this.updateDismissed) return;
     this.updateOnDisk = version;
-    $('#update-banner-text').replaceChildren('MobAlt ', h('b', {}, version), ' is installed on disk — you are running ', h('b', {}, current || this.info.version), '. Relaunch to use it.');
+    $('#update-banner-text').replaceChildren('MobAlt ', h('b', {}, version), ' is installed on disk — you are running ', h('b', {}, current || this.info.version), '. ', h('span', { class: 'keep' }, 'Relaunch to use it.'));
     this.showUpdateBanner(true);
   }
 
@@ -835,6 +866,7 @@ class App {
     this.settings = await window.api.settings.set(patch);
     this._applyThemeVar();
     if (!quiet) this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
+    if (!quiet && this._findResearch) this._findResearch(); // open find highlights take the new theme's colours
   }
 
   /** The active tab and the content area take the terminal theme's background. */

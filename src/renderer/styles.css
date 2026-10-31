@@ -508,3 +508,15 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .shortcuts div { flex-wrap: wrap; row-gap: 2px; padding: 2px 0; }
 .shortcuts div > span:first-child { flex: 1 1 auto; min-width: 0; }
 .shortcuts .kbd { white-space: normal; flex: 0 1 auto; margin-left: auto; max-width: 100%; text-align: right; line-height: 1.5; }
+/* ---- qa3 journeys ---- */
+/* Dialog title: a very long session name is clipped with an ellipsis inside the dialog (the full name is its tooltip);
+   the ✕ keeps its place at the right. */
+.modal-title { min-width: 0; }
+.modal-title .modal-title-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* FTP card over a light terminal: the dim grey and the red were tuned for dark backgrounds (2.0:1 / 3.7:1 on white).
+   Mix the terminal's own foreground in instead, so the dead / failed card clears 4.5:1 on every theme. */
+.pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: color-mix(in srgb, var(--term-fg) 75%, var(--term-bg)); }
+.pane .pane-placeholder.ftp-info.failed .big, .pane .pane-placeholder.ftp-info.disconnected .big { opacity: 1; color: color-mix(in srgb, var(--term-fg) 80%, var(--term-bg)); }
+.pane .pane-placeholder.ftp-info .ftp-err { color: color-mix(in srgb, var(--red) 70%, var(--term-fg)); }
+/* Update banner at the 900 px minimum width: the call to action never ends up as a one-word line. */
+#update-banner .keep { white-space: nowrap; }

@@ -147,7 +147,16 @@ export class Workspace {
     const r = anchor.getBoundingClientRect();
     const menu = contextMenu(r.left, r.bottom + 4, items);
     menu.classList.add('tab-list');
+    // .tab-list caps the height at 60vh (scrolling): place the menu again with that size, not the full list's that
+    // contextMenu measured (40 tabs put the box above the window and its first entries out of reach)
+    menu.style.top = Math.max(6, Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 6)) + 'px';
     menu.style.left = Math.max(6, Math.min(r.right - menu.offsetWidth, window.innerWidth - menu.offsetWidth - 6)) + 'px'; // right-aligned under the button
+    // the active tab's entry is in view and holds the keyboard cursor (↑/↓ start from it; Home still reaches the first tab)
+    const current = menu.querySelectorAll('.ctx-item')[this.tabs.indexOf(this.active)];
+    if (current) {
+      current.scrollIntoView({ block: 'nearest' });
+      current.focus({ preventScroll: true });
+    }
     this._tabListMenu = menu;
     return menu;
   }
@@ -295,6 +304,7 @@ export class Workspace {
     if (name === null) return;
     tab.autoTitle = !name.trim();
     tab.title = name.trim() || (tab.activePane ? tab.activePane.title : 'Terminal');
+    if (tab.autoTitle) this.app.deriveTabTitle?.(tab); // back to automatic: the session's name and icon again
     this.updateTab(tab);
   }
 
@@ -433,6 +443,7 @@ export class Workspace {
         this.app.onPaneTitle(first); // an auto-titled tab follows the pane it shows now, not the one that left (closed or moved to another tab)
       }
     }
+    this.app.syncTabTitle?.(tab); // the pane the tab was named after may be the one that went
     return false;
   }
 

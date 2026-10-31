@@ -151,10 +151,11 @@ class TerminalRegistry extends EventEmitter {
     this.emit('data', id, data);
   }
 
-  exit(id, code, reason) {
+  /** reason: 'exit' | 'closed' | 'failed' | 'cancelled' | 'lost' (SSH: dropped by the server/network; detail = the error seen, if any). */
+  exit(id, code, reason, detail) {
     this._endLog(id, `\n--- session ended ${new Date().toISOString()} ---\n`);
     this.map.delete(id);
-    this.emit('exit', id, code, reason);
+    this.emit('exit', id, code, reason, detail);
   }
 
   write(id, data) {
