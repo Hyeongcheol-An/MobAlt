@@ -359,17 +359,21 @@ function runTestHooks() {
 // Settings → General → Language, resolved against the macOS language list ('system'). The main process keeps its own
 // copy of the dictionary for the menu, the quit question and every message it composes (src/main/i18n.js); each
 // window fetched the same one at boot (app:boot-i18n) and refetches on a change (i18n:dict).
-function systemLocale() {
+// MOBALT_LANG=<code> (tests, screenshots) stands in for the Mac's language list — so 'system' means that language —
+// and, at startup, for the saved setting too; a language chosen in Settings while running still applies.
+function preferredLanguages() {
+  if (i18n.byCode(process.env.MOBALT_LANG)) return [process.env.MOBALT_LANG];
   let preferred = [];
   try { preferred = app.getPreferredSystemLanguages(); } catch {}
   if (!preferred.length) { try { preferred = [app.getLocale()]; } catch {} }
-  return i18n.resolveLocale('system', preferred);
+  return preferred;
 }
-function applyLanguage(settings = store.getSettings()) {
-  let preferred = [];
-  try { preferred = app.getPreferredSystemLanguages(); } catch {}
-  if (!preferred.length) { try { preferred = [app.getLocale()]; } catch {} }
-  const code = i18n.resolveLocale(settings.language, preferred);
+function systemLocale() {
+  return i18n.resolveLocale('system', preferredLanguages());
+}
+function applyLanguage(settings = store.getSettings(), { startup = false } = {}) {
+  const setting = startup && i18n.byCode(process.env.MOBALT_LANG) ? 'system' : settings.language;
+  const code = i18n.resolveLocale(setting, preferredLanguages());
   if (code === i18n.locale() && Menu.getApplicationMenu()) return code;
   i18n.setLocale(code);
   if (Menu.getApplicationMenu()) buildMenu(); // labels are read when the template is built
@@ -1131,7 +1135,7 @@ app.whenReady().then(() => {
     if (fs.existsSync(devIcon)) app.dock.setIcon(devIcon);
   }
   registerIpc();
-  applyLanguage(); // before the menu and the window: both are built in the saved language
+  applyLanguage(undefined, { startup: true }); // before the menu and the window: both are built in the saved language
   buildMenu();
   createWindow();
   bundleWatch = startBundleWatch({ getWin: () => win });

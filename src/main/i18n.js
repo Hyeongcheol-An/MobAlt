@@ -41,11 +41,10 @@ const byCode = (code) => LANGUAGES.find((l) => l.code.toLowerCase() === String(c
  * The language to show. `setting` is Settings → Language: a code from LANGUAGES, or 'system' (the default) to follow
  * the macOS language list (`preferred`, app.getPreferredSystemLanguages(): 'ko-KR', 'zh-Hans-CN', 'pt-BR', …). The
  * first preferred language that matches a shipped one wins, by full tag, then by language subtag (zh-Hant-TW → zh-CN,
- * pt-PT → pt); nothing matching → English. MOBALT_LANG in the environment overrides the setting (tests, screenshots).
+ * pt-PT → pt); nothing matching → English. Pure: main.js feeds MOBALT_LANG (tests, screenshots) in as the preferred
+ * list, so 'system' means that language and an explicit choice in Settings still wins at run time.
  */
 function resolveLocale(setting, preferred = []) {
-  const forced = byCode(process.env.MOBALT_LANG);
-  if (forced) return forced.code;
   const wanted = byCode(setting);
   if (wanted) return wanted.code;
   for (const tag of Array.isArray(preferred) ? preferred : []) {
