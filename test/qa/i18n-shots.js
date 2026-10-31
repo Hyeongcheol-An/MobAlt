@@ -12,7 +12,7 @@
   const shot = (n) => window.api.app.screenshot(`${lang}-${n}`);
   const overflows = [];
   const latin = new Set();
-  const nonLatin = /^(ko|ja|zh|hi)/.test(lang);
+  const nonLatin = /^(ko|ja|zh|hi|ar)/.test(lang);
   const KEEP = /^(MobAlt|MobaXterm|SSH|SFTP|FTP|FTPS|Mosh|Telnet|RDP|VNC|X11|XQuartz|Zmodem|rz|sz|Wake-on-LAN|MultiExec|Finder|Homebrew|GitHub|JSON|CIDR|MAC|UDP|TCP|DNS|rDNS|URL|IP|CPU|RTT|Ping|Aa|OK|ms|s|Go|Rec|zsh|bash|\d+|[^A-Za-z]+)$/;
   const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
   const check = (view) => {

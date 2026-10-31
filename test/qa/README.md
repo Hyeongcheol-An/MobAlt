@@ -11,7 +11,7 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
 - `<out-dir>/userdata` is a fresh user-data folder (sessions/settings start empty), so your real
   sessions are never touched or shown.
 - The interface runs in English (`MOBALT_LANG=en`, whatever the Mac's language is) unless the command sets
-  `MOBALT_LANG=<code>` (ko, zh-CN, ja, vi, hi, de, fr, es, pt); a script can also switch at run time with
+  `MOBALT_LANG=<code>` (ko, zh-CN, ja, vi, hi, de, fr, es, pt, ar); a script can also switch at run time with
   `app.saveSettings({ language: 'ko' })` and read the native menu as shown with `window.api.app.testMenuLabels()`.
 - The script runs inside the renderer after the UI is ready. It must end with
   `window.api.app.quit()`; otherwise the app quits after `auto-quit-ms` (default 60 s) and writes

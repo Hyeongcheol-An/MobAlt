@@ -1,6 +1,6 @@
 # MobAlt User Guide
 
-This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md)
+This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
 
 MobAlt is a MobaXterm-style workbench for macOS: a session tree on the left, tabbed and split
 terminals in the middle, and an SFTP browser, network tools and macros in side panels.
@@ -320,16 +320,17 @@ and "Check now").
 
 ### Interface language
 
-MobAlt's menus, toolbar, panels, dialogs and messages come in ten languages: English, 한국어, 简体中文, 日本語,
-Tiếng Việt, हिन्दी, Deutsch, Français, Español and Português. By default (**System default**) the interface follows
+MobAlt's menus, toolbar, panels, dialogs and messages come in eleven languages: English, 한국어, 简体中文, 日本語,
+Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português and العربية (Arabic mirrors the window: sidebar on the right,
+text right-aligned; terminals stay left-to-right). By default (**System default**) the interface follows
 the language list of macOS (System Settings → General → Language & Region): the first language in that list that
 MobAlt ships wins, English when none does. Settings → General → **Language** picks one explicitly; the change
 applies at once in every window — nothing restarts, connections stay up — and is remembered. Terminal output is never
-translated: what a remote host prints is shown as it is. The user guide exists in the same ten languages
+translated: what a remote host prints is shown as it is. The user guide exists in the same eleven languages
 (`docs/USER_GUIDE.<language>.md`); Help → **User Guide** opens the one for the current language.
 
 To run MobAlt in a language once without changing the setting (screenshots, a test), start it with `MOBALT_LANG=<code>`
-in the environment (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
+in the environment (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
 
 ## Keyboard shortcuts
 
