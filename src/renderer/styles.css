@@ -608,3 +608,8 @@ input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: defaul
 /* Text selection in fields and selectable text follows the theme, not the OS highlight colour. */
 ::selection { background: var(--selection); color: var(--selection-fg); }
 input::selection, textarea::selection { background: var(--selection); color: var(--selection-fg); }
+
+/* ---- zmodem ---- */
+/* A transfer that came from a terminal (rz / sz) carries a small "zmodem" chip in the files panel's transfer list, so
+   it is told apart from the panel's own SFTP / FTP transfers; the theme tokens keep it readable on every palette. */
+.xfer .xfer-proto { flex: 0 0 auto; font-size: 9px; line-height: 14px; padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .03em; }

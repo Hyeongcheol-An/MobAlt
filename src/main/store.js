@@ -91,6 +91,7 @@ const DEFAULT_SETTINGS = {
   localShell: '',
   localShellArgs: ['-l'],
   localShellIntegration: true,
+  zmodem: true, // rz / sz transfers inside the terminal (SSH, local, telnet, serial panes)
   editorCommand: '',
   confirmClose: true,
   sidebarWidth: 280,

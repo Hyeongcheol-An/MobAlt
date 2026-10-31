@@ -134,6 +134,13 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   receive it, so split the tab (or use a grid) to put the servers you want to drive side by side.
   The banner shows how many visible terminals listen and follows the tab you switch to.
 - **Find** (⌘F): incremental search with case and regex toggles and a match counter.
+- **Zmodem (rz/sz)**: move files through the terminal itself, the classic way over a serial console or a jump host
+  where SFTP is unavailable. Run `sz file …` on the remote to download to the Mac, or `rz` to upload from it; MobAlt
+  spots the transfer in the stream, pauses the terminal and shows it in the Files panel's transfer list (with Cancel)
+  and the status-bar counter. Downloads go to the Download folder (Settings → General), or a folder you pick when none
+  is set; uploads open a file chooser. Works in SSH, local, telnet and serial panes — not Mosh (its stream is the mosh
+  client's, not a raw byte stream). Turn it off with Settings → Terminal → *Zmodem transfers (rz/sz)* (on by default);
+  with it off the `rz`/`sz` bytes just appear as garbage as they did before. Ctrl-C in the pane cancels a transfer.
 - **Clipboard**: selecting copies (Settings → Terminal → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
   on a local terminal it pastes the paths.
