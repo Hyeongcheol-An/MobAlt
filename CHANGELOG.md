@@ -1,3 +1,9 @@
+## [0.13.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.13.0...v0.13.1) (2026-10-31)
+
+### Bug Fixes
+
+* **ssh:** stop probing every DH group at startup — the app froze for ~35 s before its window appeared ([ca173d5](https://github.com/Hyeongcheol-An/MobAlt/commit/ca173d5a587ff02ead12b4524d56204e6d7bbaf7))
+
 ## [0.13.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.12.0...v0.13.0) (2026-10-31)
 
 ### Features
