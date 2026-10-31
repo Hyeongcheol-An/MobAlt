@@ -2,11 +2,16 @@
 // local shell prints with the theme-derived colours, in Moba Dark and Light; disabling removes them; a session's own
 // override; a rule added through the settings table applies live; an invalid regex is skipped with a toast; ⌘K
 // disposes; 2000-line bursts stay within the budget with a bounded decoration count; find highlights and the mouse
-// selection still work on top. No SSH server needed.
+// selection still work on top; the alternate screen (less, vim) shows none of the decorations and gets them back; a row
+// rewritten in place takes its new keyword; escape literals are not sizes; the rules dialog shows a pattern from its
+// start. No SSH server needed.
 //   test/qa/run.sh test/e2e-highlight.js <out-dir> 150000
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  const shot = (n) => window.api.app.screenshot(n);
+  // the window is raised before anything that needs it painted: screenshots, the DOM decoration counts and the mouse
+  // drag (an occluded window is not repainted, and other Electron instances may be running on the machine)
+  const raise = async () => { await window.api.app.testKey('F19'); await sleep(150); };
+  const shot = async (n) => { await raise(); return window.api.app.screenshot(n); };
   const log = (...a) => console.log('[e2e-highlight]', ...a);
   const app = window.app;
   const results = {};
@@ -140,6 +145,9 @@
       await sleep(300);
       const rules = [...document.querySelectorAll('.modal')].pop();
       results.rulesDialogOpened = document.querySelectorAll('.modal').length === 2 && rules.querySelectorAll('.hl-rules tbody tr').length === 6;
+      const firstPat = rules.querySelector('tbody input[type=text]');
+      results.rulesPatternReadsFromStart = document.activeElement === firstPat && firstPat.selectionStart === 0 && firstPat.scrollLeft === 0 && firstPat.value.length > 40;
+      log('first pattern focused', document.activeElement === firstPat, 'caret', firstPat.selectionStart, 'scrollLeft', firstPat.scrollLeft);
       await shot('03-rules-dialog');
       [...rules.querySelectorAll('button')].find((b) => b.textContent.includes('Add rule')).click();
       await sleep(100);
@@ -165,7 +173,7 @@
       // an invalid regex cannot be saved from the table: a toast, the dialog stays, the pattern keeps the focus
       app.action('settings');
       await sleep(300);
-      document.querySelectorAll('.modal .mtabs button')[1].click();
+      [...document.querySelectorAll('.modal .mtabs button')].find((b) => b.textContent === 'Features').click(); // the highlighting row lives on the Features tab
       await sleep(80);
       [...document.querySelectorAll('.modal .mpage.active button')].find((b) => b.textContent === 'Rules…').click();
       await sleep(250);
@@ -208,6 +216,57 @@
     await sleep(300);
     results.afterClearWorks = matchesOf(pane, 'after clear').includes('red:ERROR');
 
+    // --- the units rule leaves escape literals, hash fragments and single-digit single-letter units alone
+    await run(pane, "printf 'esc [2B and hash 3bf2a1 7b, 5M id, 15M real\\n'", '15M real');
+    await sleep(300);
+    results.unitsNotInLiterals = JSON.stringify(matchesOf(pane, 'hash 3bf2a1')) === JSON.stringify(['accent-dim:15M']);
+    log('units on the literal line', JSON.stringify(matchesOf(pane, 'hash 3bf2a1')));
+
+    // --- a row rewritten in place (cursor up, as progress output does) that gains a keyword is highlighted; one that loses it is not
+    const b64cmd = (script) => `sh -c "$(echo ${btoa(unescape(encodeURIComponent(script)))} | base64 -d)"`;
+    pane.term.input(b64cmd("printf 'step one: downloading\\nstep two: downloading\\n'; sleep 0.8; printf '\\033[2A\\rstep one: ERROR failed      \\033[2B\\n'") + '\r');
+    await waitFor(() => text(pane).includes('step one: ERROR'), 10000, 'rewritten row');
+    await sleep(600);
+    results.rewrittenRowGainsHighlight = JSON.stringify(matchesOf(pane, 'step one: ERROR')) === JSON.stringify(['red:ERROR', 'red:failed']);
+    pane.term.input(b64cmd("printf 'job A: failed\\njob B: waiting\\n'; sleep 0.8; printf '\\033[2A\\rjob A: done   \\033[2B\\n'") + '\r');
+    await waitFor(() => text(pane).includes('job A: done'), 10000, 'rewritten row 2');
+    await sleep(600);
+    results.rewrittenRowLosesHighlight = JSON.stringify(matchesOf(pane, 'job A: done')) === JSON.stringify(['green:done']);
+    log('rewritten rows', JSON.stringify(liveRows(pane).filter((r) => /^(step one|job A)/.test(r.text)).map((r) => [r.text.trim(), r.matches.map((m) => m.text)])));
+    await shot('07-rewritten-rows');
+
+    // --- the alternate screen (less, vim) gets none of the normal buffer's decorations, and they are back afterwards;
+    //     also with a background rule, whose tint blocks were the most visible leak
+    const lf = await window.api.app.testFs('mkdtemp', 'e2e-hl-less-');
+    await window.api.app.testFs('writeText', lf + '/plain.txt', Array.from({ length: 80 }, (_, i) => `row ${String(i).padStart(2, '0')} plain text without any keyword in it at all, columns 0..60`).join('\n') + '\n');
+    const altCheck = async (tag, cmd, quit) => {
+      app.action('clear');
+      await sleep(250);
+      await run(pane, "printf 'ERROR at 10.0.0.1 took 512MB done\\nWARNING second line failed\\n'", 'second line failed');
+      await sleep(400);
+      const before = pane.highlighter.count;
+      pane.term.input(cmd + '\r');
+      await waitFor(() => pane.term.buffer.active.type === 'alternate', 8000, tag + ' alternate screen');
+      await sleep(700);
+      const inAlt = { count: pane.highlighter.count, rows: liveRows(pane).length, els: decoEls(pane).length };
+      await shot(`08-${tag}-alt-screen`);
+      pane.term.input(quit);
+      await waitFor(() => pane.term.buffer.active.type === 'normal', 8000, tag + ' back to normal');
+      await sleep(500);
+      const after = { count: pane.highlighter.count, error: matchesOf(pane, 'took 512MB'), warn: matchesOf(pane, 'second line failed') };
+      log(tag, 'before', before, 'in the alternate screen', JSON.stringify(inAlt), 'after', JSON.stringify(after));
+      return before > 0 && inAlt.count === 0 && inAlt.rows === 0 && inAlt.els === 0 && after.count === before && after.error.length > 0 && after.warn.length > 0;
+    };
+    results.altScreenLess = await altCheck('less', `less ${lf}/plain.txt`, 'q');
+    results.altScreenVim = await altCheck('vim', 'vim -N -u NONE -i NONE', ':q!\r');
+    await app.saveSettings({ highlightRules: [{ pattern: 'WARNING', color: '', bg: 'yellow' }, { pattern: 'ERROR', color: 'red', bg: 'red', bold: true }, { pattern: 'failed', color: 'red' }] });
+    await sleep(300);
+    results.altScreenBgRule = await altCheck('less-bg', `less ${lf}/plain.txt`, 'q');
+    await shot('09-after-less-bg-rule');
+    await app.saveSettings({ highlightRules: null });
+    await sleep(300);
+    await window.api.app.testFs('rm', lf);
+
     // --- performance: 2000 plain lines, then 2000 lines with three matches each; the scan stays within 2 ms / 100 rows,
     //     the decoration count is bounded, nothing leaks
     const st0 = { ...pane.highlighter.stats };
@@ -248,6 +307,7 @@
     await sleep(200);
     await run(pane, 'seq 1 20 | sed "s/$/ ERROR at 10.0.0.1 took 512MB/"', '\n20 ERROR', 20000);
     await sleep(400);
+    await raise();
     app.action('find');
     const fi = document.getElementById('find-input');
     fi.value = 'ERROR';
@@ -272,6 +332,7 @@
       let y = -1;
       for (let i = buf.viewportY; i < buf.viewportY + pane.term.rows; i++) if (/^7 ERROR at/.test(buf.getLine(i)?.translateToString(true) || '')) { y = i - buf.viewportY; break; }
       const py = screen.top + (y + 0.5) * ch;
+      await raise();
       await window.api.app.testDrag({ x: screen.left + 0.3 * cw, y: py }, { x: screen.left + 24.7 * cw, y: py });
       await sleep(300);
       const sel = pane.term.getSelection();
@@ -310,7 +371,11 @@
     console.error('[e2e-highlight] FAIL', e.message, e.stack);
     await shot('99-highlight-fail').catch(() => {});
   }
-  const failed = Object.entries(results).filter(([k, v]) => v === false).map(([k]) => k);
+  // every check must have run: a thrown error (results.error) is a failure, and so is a check that never got recorded
+  const REQUIRED = ['sampleMatched', 'customRuleLive', 'invalidRegexRefused', 'restoreDefaults', 'defaultsStoredAsNull', 'rulesPatternReadsFromStart', 'unitsNotInLiterals',
+    'rewrittenRowGainsHighlight', 'rewrittenRowLosesHighlight', 'altScreenLess', 'altScreenVim', 'altScreenBgRule', 'perfWithinBudget', 'findWithHighlights', 'wrappedLine', 'disposed'];
+  results.allChecksRan = REQUIRED.every((k) => k in results);
+  const failed = Object.entries(results).filter(([k, v]) => v === false || (k === 'error' && v)).map(([k]) => k);
   log('RESULTS ' + JSON.stringify(results));
   log(failed.length ? 'FAILED ' + failed.join(', ') : 'ALL PASSED');
   log('DONE');

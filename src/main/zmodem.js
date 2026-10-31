@@ -9,31 +9,55 @@
 // folder picker for sz, an Open dialog for the files rz asks for (both through dialogs.js, so test scripts can
 // answer them) — and the detection is confirmed: from then on the Sentry routes every byte to the Session and
 // xterm sees none of the binary stream; only one status line per transfer is written to it (and so to a session
-// log). When the session ends (ZFIN / OO, a cancel or a failure) the Sentry hands the remainder of the stream back
-// to the terminal, so the shell prompt appears as usual. Keystrokes typed into the pane during a transfer are
-// dropped — MultiExec included — except Ctrl-C, which cancels it; Cancel in the transfers list and a dropped
-// connection send ZMODEM's abort sequence (five CANs). Progress goes out as 'transfer' events in the shape of the
-// SFTP transfers, so the files panel's transfer list, its Cancel button and the status bar count cover them too.
+// log). When the session ends normally (ZFIN / OO) the Sentry hands the remainder of the stream back to the
+// terminal, so the shell prompt appears as usual. Keystrokes typed into the pane during a transfer are dropped —
+// MultiExec included — except Ctrl-C, which cancels it; Cancel in the transfers list and a dropped connection send
+// lrzsz's cancel string (eight CANs, ten backspaces).
+//
+// A cancel is not the end of the stream: the sender still has up to a window's worth of frames in flight (a megabyte
+// over SSH), and lrzsz answers the cancel with its own CAN string and a message. zmodem.js's Sentry would hand all of
+// that to the terminal the moment the session ends — thousands of parse errors and a shell stuck inside an unfinished
+// escape sequence. So after any abort (cancel, Ctrl-C, stall, failure, peer abort) the status line is written at
+// once and the guard DRAINS: every byte is swallowed until the stream has been quiet for DRAIN_IDLE_MS, then the
+// text-looking tail of what arrived — the prompt, lrzsz's message — is handed back and the binary rest is dropped.
+// The peer's own CAN string marks where that tail may start (lrzsz flushes a few buffered frame bytes after it, so
+// it does not end the drain by itself); the cancel string is sent once more if the stream is still flowing after a
+// second. An ST closes any string sequence a stray byte may have opened before the status line. A peer that dies mid-frame
+// (sz killed) is noticed after SILENCE_MS of nothing arriving while unparsed bytes wait — the prompt its shell
+// printed — instead of the 30 s stall; those bytes are handed back the same way. Progress goes out as 'transfer'
+// events in the shape of the SFTP transfers, so the files panel's transfer list, its Cancel button and the status
+// bar count cover them too.
 const EventEmitter = require('events');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { StringDecoder } = require('string_decoder');
+const { STATUS_DIM, STATUS_FAIL } = require('./terminals');
 
 let Zmodem = null;
 const zm = () => Zmodem || (Zmodem = require('zmodem.js')); // loaded on first use (unit tests of the pure parts need no library)
 const DBG = !!process.env.MOBALT_ZMODEM_DEBUG;
 const dbg = (...a) => DBG && console.log('[zmodem]', ...a);
 
-const GREY = '\x1b[90m';
-const RED = '\x1b[31m';
+const GREY = STATUS_DIM; // status lines: painted by the renderer from the pane's palette (terminals.js STATUS_*)
+const RED = STATUS_FAIL;
 const RESET = '\x1b[0m';
+const ST = '\x1b\\'; // string terminator: closes an OSC / DCS a stray byte may have opened, so the status line is seen
 const CHUNK = 64 * 1024; // file bytes handed to zmodem.js per step (it cuts them into 8 KiB subpackets)
-const STALL_MS = 30000; // a session that makes no progress for this long is aborted
+const STALL_MS = 30000; // a session that makes no progress at all for this long is aborted
+const SILENCE_MS = 2000; // unparsed bytes waiting and nothing more arriving for this long: the peer died mid-frame
+const SILENCE_SERIAL_MS = 6000; // a serial line pauses for longer than a socket does
+const DRAIN_IDLE_MS = 600; // after an abort: the stream is taken as over once it has been quiet for this long
+const DRAIN_MAX_MS = 15000; // …and never swallowed for longer than this
+const DRAIN_TAIL = 4096; // bytes of the drained stream kept, to find the peer's cancel string and the text after it
 const HOLD_MAX = 4096; // bytes of terminal output held back while a detection waits for its answer
 const ZM_START = Buffer.from([0x2a, 0x2a, 0x18, 0x42]); // "**" ZDLE "B": the hex header that starts every session
 const CAN = 0x18;
+const BS = 0x08;
+/** lrzsz's own cancel string (zm.c canit): eight CANs — five are the protocol's, three are insurance for a peer whose readline ate one — and ten backspaces to erase them from a command line. */
+const CANISTR = Buffer.from([CAN, CAN, CAN, CAN, CAN, CAN, CAN, CAN, BS, BS, BS, BS, BS, BS, BS, BS, BS, BS]);
+const ABORT_SEQ = Buffer.from([CAN, CAN, CAN, CAN, CAN]);
 
 /** Settings → Features → Transfers → "Zmodem transfers (rz/sz)"; on unless switched off. */
 function zmodemEnabled(settings) {
@@ -114,6 +138,27 @@ function leadingText(held) {
   return lead;
 }
 
+/**
+ * The text at the end of a byte sequence that the terminal should still see once a transfer has been torn down: the
+ * longest tail that reads as text (printable ASCII, TAB / LF / CR / BEL / BS / ESC, whole UTF-8 characters), without
+ * the backspaces lrzsz's cancel string ends with. Everything before it is the binary remainder of the stream.
+ */
+function trailingText(bytes, max = DRAIN_TAIL) {
+  const b = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes || []);
+  let i = b.length;
+  while (i > 0 && b.length - i < max) {
+    const c = b[i - 1];
+    if ((c >= 0x20 && c <= 0x7e) || c === 0x09 || c === 0x0a || c === 0x0d || c === 0x07 || c === 0x08 || c === 0x1b) { i--; continue; }
+    let k = i - 1, n = 0; // a UTF-8 character: its continuation bytes, then a lead byte that announces that many
+    while (k >= 0 && n < 3 && (b[k] & 0xc0) === 0x80) { k--; n++; }
+    const lead = k >= 0 ? b[k] : 0;
+    if (n >= 1 && ((n === 1 && (lead & 0xe0) === 0xc0) || (n === 2 && (lead & 0xf0) === 0xe0) || (n === 3 && (lead & 0xf8) === 0xf0))) { i = k; continue; }
+    break;
+  }
+  while (i < b.length && b[i] === BS) i++;
+  return b.subarray(i);
+}
+
 /** The reason shown for a session that failed: zmodem.js throws strings as well as its own Error class. */
 function explainError(e) {
   const type = e && e.type;
@@ -143,6 +188,10 @@ class ZmodemManager extends EventEmitter {
     this.downloadsDir = downloadsDir;
     this.guards = new Map(); // terminal id → guard (sentry + the state of its detection / session / transfer)
     this.transfers = new Map();
+    this.silenceMs = SILENCE_MS; // the timings, on the instance so tests can shorten them
+    this.silenceSerialMs = SILENCE_SERIAL_MS;
+    this.drainIdleMs = DRAIN_IDLE_MS;
+    this.drainMaxMs = DRAIN_MAX_MS;
     registry.on('register', (id, h) => this.attach(id, h));
     registry.on('exit', (id) => this.detach(id));
   }
@@ -150,7 +199,7 @@ class ZmodemManager extends EventEmitter {
   /** Put a Sentry in front of a terminal's byte stream; handles without writeRaw (Mosh, SFTP-only) are left alone. */
   attach(id, handle) {
     if (!handle || typeof handle.writeRaw !== 'function' || this.guards.has(id)) return null;
-    const g = { id, handle, sentry: null, detection: null, held: null, retracted: false, asking: false, role: null, session: null, transfer: null, timer: null, lastWrite: null, abortPromise: null, abortReject: null, lastError: null };
+    const g = { id, handle, sentry: null, detection: null, held: null, retracted: false, asking: false, role: null, session: null, transfer: null, timer: null, silence: null, drain: null, lastWrite: null, abortPromise: null, abortReject: null, lastError: null };
     g.sentry = this._newSentry(g);
     handle.rawSink = (buf) => this._feed(g, buf);
     handle.inputGate = (data) => this._gate(g, data);
@@ -173,6 +222,8 @@ class ZmodemManager extends EventEmitter {
     g.detection = null;
     g.held = null;
     if (g.timer) clearTimeout(g.timer);
+    if (g.silence) clearTimeout(g.silence);
+    if (g.drain) this._endDrain(g, Buffer.alloc(0));
   }
 
   /** True while a transfer runs on the terminal (its keystrokes are dropped then). */
@@ -208,6 +259,7 @@ class ZmodemManager extends EventEmitter {
 
   /** Raw bytes from the backend. */
   _feed(g, buf) {
+    if (g.drain) return this._drainFeed(g, buf); // an aborted session's remainder: swallowed (see _startDrain)
     if (!g.session && !g.detection && !zmodemEnabled(this.store.getSettings())) return this._out(g, buf); // off: the bytes reach xterm as they are
     if (DBG && (g.session || g.detection)) dbg('feed', buf.length, 'session?', !!g.session, JSON.stringify(Buffer.from(buf).toString('latin1').slice(0, 24)));
     try {
@@ -216,14 +268,105 @@ class ZmodemManager extends EventEmitter {
       this._fail(g, e);
     }
     if (g.retracted) this._retract(g);
-    if (g.session) this._touch(g);
+    if (g.session) {
+      this._touch(g);
+      this._watchSilence(g);
+    }
   }
 
   /** Decode for xterm with the terminal's own UTF-8 decoder (shared with the bypass path, so split characters survive). */
   _out(g, bytes) {
     const h = g.handle;
     const text = (h.decoder || (h.decoder = new StringDecoder('utf8'))).write(Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes));
-    if (text) this.registry.data(g.id, text);
+    if (text) this.registry.data(g.id, text, g.session || g.drain ? { nolog: true } : undefined); // mid-session output is never part of a session log
+  }
+
+  // ---------------- the aftermath of an abort ----------------
+  /**
+   * Bytes the session could not parse yet and then nothing arriving for silenceMs: the peer died mid-frame (sz killed,
+   * a dropped pipe), and what waits unparsed is what its shell printed since — the prompt. zmodem.js would sit on it
+   * until the stall timer; this aborts in seconds and hands those bytes back (see _abort).
+   */
+  _watchSilence(g) {
+    const s = g.session;
+    if (g.silence) { clearTimeout(g.silence); g.silence = null; }
+    const pending = s && Array.isArray(s._input_buffer) ? s._input_buffer.length : 0;
+    if (!pending) return;
+    g.silence = setTimeout(() => {
+      g.silence = null;
+      if (g.session !== s || s.has_ended()) return;
+      dbg('silence with', s._input_buffer.length, 'unparsed bytes: the peer stopped');
+      g.lastError = 'the remote side stopped';
+      this._abort(g);
+    }, g.handle && g.handle.kind === 'serial' ? this.silenceSerialMs : this.silenceMs);
+    if (g.silence.unref) g.silence.unref();
+  }
+
+  /**
+   * Swallow the stream after an abort until it has been quiet for drainIdleMs, then hand back the text-looking tail
+   * (the prompt, lrzsz's message). `seed`: bytes already in hand — what the session had not parsed (the peer's message
+   * after its own CAN string, the prompt of a dead sz, or the binary rest of a frame). Never ends synchronously: the
+   * status line of the ended transfer is already on the terminal, and what comes back lands after it.
+   */
+  _startDrain(g, seed) {
+    if (g.drain) this._endDrain(g, Buffer.alloc(0));
+    if (!this.guards.has(g.id)) return; // detached: no terminal to hand anything back to
+    const d = { tail: Buffer.from(seed || []), since: Date.now(), bytes: 0, resent: false, peerCancel: false, idle: null, max: null };
+    g.drain = d;
+    d.max = setTimeout(() => this._endDrain(g), this.drainMaxMs);
+    if (d.max.unref) d.max.unref();
+    this._armDrainIdle(g);
+    this._drainCheck(g);
+  }
+
+  _armDrainIdle(g) {
+    const d = g.drain;
+    if (d.idle) clearTimeout(d.idle);
+    d.idle = setTimeout(() => this._endDrain(g), this.drainIdleMs);
+    if (d.idle.unref) d.idle.unref();
+  }
+
+  _drainFeed(g, buf) {
+    const d = g.drain;
+    const b = Buffer.isBuffer(buf) ? buf : Buffer.from(buf);
+    d.bytes += b.length;
+    d.tail = Buffer.concat([d.tail, b]);
+    if (d.tail.length > DRAIN_TAIL * 2) d.tail = d.tail.subarray(d.tail.length - DRAIN_TAIL);
+    this._drainCheck(g);
+    this._armDrainIdle(g);
+    if (!d.resent && !d.peerCancel && Date.now() - d.since > 1000) { // still streaming a second later: the peer missed the first cancel
+      d.resent = true;
+      this._send(g, CANISTR);
+    }
+  }
+
+  /**
+   * The peer's own cancel string: nothing before it can be text, so the tail starts after it (and after the backspaces
+   * that follow it). It does not end the drain — lrzsz still flushes a few buffered frame bytes after it on exit —
+   * the quiet period does, and trailingText() skips those bytes.
+   */
+  _drainCheck(g) {
+    const d = g.drain;
+    const at = d.tail.lastIndexOf(ABORT_SEQ);
+    if (at < 0) return;
+    let e = at + ABORT_SEQ.length;
+    while (e < d.tail.length && (d.tail[e] === CAN || d.tail[e] === BS)) e++;
+    d.tail = d.tail.subarray(e);
+    d.peerCancel = true;
+  }
+
+  /** Stop swallowing; `text` (else the text-looking tail of what was swallowed) goes back through a fresh sentry, so a transfer that starts right away is still caught. */
+  _endDrain(g, text) {
+    const d = g.drain;
+    if (!d) return;
+    if (d.idle) clearTimeout(d.idle);
+    if (d.max) clearTimeout(d.max);
+    g.drain = null;
+    g.lastError = null; // a reason set after the session ended (the peer's abort thrown after its event) must not outlive it
+    const out = text !== undefined ? text : trailingText(d.tail);
+    dbg('drain over after', Date.now() - d.since, 'ms:', d.bytes, 'bytes swallowed,', out.length, 'handed back', d.peerCancel ? '(the peer cancelled too)' : '');
+    g.sentry = this._newSentry(g);
+    if (out.length && this.guards.has(g.id)) this._feed(g, out);
   }
 
   _toTerminal(g, octets) {
@@ -362,7 +505,7 @@ class ZmodemManager extends EventEmitter {
       try { offer.skip(); } catch {}
       return;
     }
-    const t = this._newTransfer(g, 'download', name, name, local, d.size || 0);
+    const t = this._newTransfer(g, 'download', path.basename(local), name, local, d.size || 0); // listed under its local name (unique in the folder), the offered one in `remote`
     t._ws = ws;
     t._partial = local;
     ws.on('error', (e) => {
@@ -460,6 +603,7 @@ class ZmodemManager extends EventEmitter {
     if (g.session !== session) return;
     g.session = null;
     g.role = null;
+    const aborted = g.aborting || (typeof session.aborted === 'function' && session.aborted() === true); // ours, or the peer's CAN string
     if (g.abortReject) {
       if (g.aborting) g.abortReject(new Error(g.lastError || 'cancelled')); // interrupt the send loop's awaits
       else g.abortResolve(); // normal end: let the protocol promise the loop is awaiting win, then _finish runs
@@ -470,38 +614,56 @@ class ZmodemManager extends EventEmitter {
       clearTimeout(g.timer);
       g.timer = null;
     }
+    if (g.silence) {
+      clearTimeout(g.silence);
+      g.silence = null;
+    }
     const t = g.transfer;
     g.transfer = null;
-    setImmediate(() => this._settle(g, t)); // a peer abort throws its reason right after this event
+    this._settle(g, t, aborted, session);
   }
 
-  _settle(g, t) {
+  /**
+   * A transfer still running when its session ended failed or was cancelled: its status line goes out now, before
+   * anything else can reach the terminal, and after an abort the rest of the stream is drained (see _startDrain).
+   */
+  _settle(g, t, aborted, session) {
     if (t && t.status === 'running' && !t._complete) {
-      const why = t.cancelled ? null : g.lastError || 'the remote side ended the session';
+      // a peer abort throws its reason only after this event: it is known from the session itself
+      const why = t.cancelled ? null : g.lastError || (aborted && !g.aborting ? 'cancelled by the remote side' : 'the remote side ended the session');
       this._finish(t, t.cancelled ? 'cancelled' : 'error', why);
+      if (this.guards.has(g.id)) this.registry.data(g.id, ST); // whatever a stray byte opened is closed before the status line
       this._line(g, t.cancelled ? GREY : RED, `Zmodem ${t.kind} of ${t.name} ${t.cancelled ? 'cancelled' : 'failed: ' + why}`);
     }
     g.lastError = null;
+    if (aborted) this._startDrain(g, session && Array.isArray(session._input_buffer) ? session._input_buffer : []);
   }
 
   /** zmodem.js threw (from consume() or a protocol promise): the session, if still there, is aborted with that reason. */
   _fail(g, e) {
     if (!g.lastError) g.lastError = explainError(e);
     if (g.session) this._abort(g);
-    else if (!g.detection) g.sentry = this._newSentry(g); // a sentry that threw outside a session starts over clean
+    else if (!g.detection && !g.drain) g.sentry = this._newSentry(g); // a sentry that threw outside a session starts over clean
   }
 
+  /**
+   * End the session now (cancel, Ctrl-C, stall, silence, a failure, a peer abort, the connection closing) and drain
+   * the rest of the stream. The peer gets lrzsz's cancel string unless it ended the session itself.
+   */
   _abort(g) {
     g.aborting = true;
     const s = g.session;
     if (s && !s.has_ended()) {
-      try { s.abort(); } catch {} // sends CAN×5 + BS×5 and fires session_end
+      try { s._sender = () => {}; } catch {} // abort() would send CAN×5 BS×5; the full lrzsz string goes out instead (its readline may eat a CAN before zgethdr counts five)
+      try { s.abort(); } catch {} // fires session_end: the status line, then the drain
+      this._send(g, CANISTR);
     }
     if (g.session) this._sessionEnd(g, g.session); // abort() did not get to fire it
   }
 
   /** Keystrokes while a session runs never reach the stream (MultiExec included); Ctrl-C cancels the transfer. */
   _gate(g, data) {
+    if (g.drain) return !String(data).includes('\x03'); // the stream is still being swallowed: typing would be lost in it; Ctrl-C goes through (it ends a stuck sz)
     if (!g.session) return false;
     if (String(data).includes('\x03')) {
       if (g.transfer) g.transfer.cancelled = true;
@@ -585,4 +747,4 @@ class ZmodemManager extends EventEmitter {
   }
 }
 
-module.exports = { ZmodemManager, zmodemEnabled, safeFileName, uniquePath, offerBatch, leadingText, explainError, fmtBytes, expandHome, STALL_MS, CAN };
+module.exports = { ZmodemManager, zmodemEnabled, safeFileName, uniquePath, offerBatch, leadingText, trailingText, explainError, fmtBytes, expandHome, STALL_MS, SILENCE_MS, DRAIN_IDLE_MS, DRAIN_MAX_MS, CAN, CANISTR };

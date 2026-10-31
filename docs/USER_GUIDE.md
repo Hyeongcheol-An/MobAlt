@@ -192,16 +192,19 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   spots the transfer in the stream, pauses the terminal and shows it in the Sftp panel's transfer list (with Cancel)
   and the status-bar counter. Downloads go to the Download folder (Settings → General), or a folder you pick when none
   is set; uploads open a file chooser. Works in SSH, local, telnet and serial panes — not Mosh (its stream is the mosh
-  client's, not a raw byte stream). Turn it off with Settings → Features → Transfers → *Zmodem transfers (rz/sz)* (on by
-  default);
-  with it off the `rz`/`sz` bytes just appear as garbage as they did before. Ctrl-C in the pane cancels a transfer.
+  client's, not a raw byte stream). Turn it off with Settings → Features → Transfers → *Zmodem transfers (rz/sz)* (on by default);
+  with it off the `rz`/`sz` bytes just appear as garbage as they did before. Ctrl-C in the pane or Cancel in the list
+  ends a transfer: the remote `sz`/`rz` is told to stop, what it still had in flight is swallowed rather than drawn,
+  and the prompt is back within a second; a remote `sz` that dies is noticed within a few seconds. A second download
+  of the same name lands as `name (1).ext` and is listed under that name.
 - **Clipboard**: selecting copies (Settings → Terminal → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
   on a local terminal it pastes the paths.
 - **Paste guard**: a paste with more than one line (or over 1000 characters) asks first — *Paste N
   lines into …?* shows the text in an editable preview; ⌘⏎ pastes, Esc cancels. Every paste is also
-  checked for what the clipboard does not show: zero-width and bidi characters, control characters, a
-  trailing newline (the last line would run at once), a carriage return inside a line, `curl … | sh`,
+  checked for what the clipboard does not show: zero-width and bidi characters, no-break spaces (a space
+  to the eye, part of the word to the shell), control characters, a trailing newline (the last line would
+  run at once), a carriage return inside a line, `curl … | sh`,
   writes to `~/.zshrc` and friends or `~/.ssh/authorized_keys`, `rm -rf /`-style commands and Latin
   words with Cyrillic or Greek look-alike letters. Findings are listed and marked in the preview;
   *Paste cleaned* strips the hidden characters and the trailing newline, *Paste as is* sends the text

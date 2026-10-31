@@ -46,6 +46,13 @@
     const m1 = mark();
     type(a, m1);
     await waitFor(() => count(a, m1) >= 1, 8000, 'marker 1');
+    // a TUI app leaves terminal queries (vim: OSC 11, DECRQM 12) in the output: the replay must not answer them into the shell
+    a.term.input('vim -N -u NONE -i NONE\r');
+    await waitFor(() => a.term.buffer.active.type === 'alternate', 8000, 'vim');
+    await sleep(500);
+    a.term.input(':q!\r');
+    await waitFor(() => a.term.buffer.active.type === 'normal', 5000, 'vim quit');
+    await sleep(400);
     tab1.title = 'DETACH-ME';
     tab1.autoTitle = false;
     app.workspace.updateTab(tab1);
@@ -73,6 +80,10 @@
     results.attachedSameTerminal = true;
     await waitFor(async () => (await evCount(dw.id, m1)) >= 1, 5000, 'replayed marker in the new window');
     results.replayShowsMarker = true;
+    await sleep(600);
+    const replayed = await evText(dw.id);
+    results.replayNoQueryAnswers = !/execute:|rgb:|\$y|\[\?12;/.test(replayed);
+    log('detached tail', JSON.stringify(replayed.trimEnd().split('\n').slice(-3)));
     results.detachedTitle = await ev(dw.id, `window.app.workspace.active.title === 'DETACH-ME' && document.title.startsWith('DETACH-ME')`);
     results.detachedChrome = await ev(dw.id, `document.body.classList.contains('detached') && document.getElementById('sidebar').classList.contains('collapsed') && window.app.detached === true`);
     results.detachedOnlyThatTab = (await ev(dw.id, `window.app.workspace.tabs.length`)) === 1;
@@ -117,6 +128,7 @@
     results.windowGone = true;
     results.tabBackSameTerminal = !!bp && bp.termId === termId && !bp.dead && app.workspace.active === back && app.panesByTerm.get(termId) === bp;
     results.replayOnReturn = count(bp, m1) >= 1 && count(bp, m2) >= 1;
+    results.returnNoQueryAnswers = !/execute:|rgb:|\$y|\[\?12;/.test(text(bp));
     const m3 = mark();
     type(bp, m3);
     await waitFor(() => count(bp, m3) >= 1, 8000, 'marker 3 after the return');
