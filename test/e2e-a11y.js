@@ -247,6 +247,36 @@
     rowOf('web-01').focus();
     app.sessionTree.render();
     results.treeRenderKeepsFocus = active() === rowOf('web-01') && rowOf('web-01').tabIndex === 0;
+    // type-ahead: letters typed on a row jump to the next row whose name starts with them (folders and sessions alike)
+    {
+      for (const name of ['alpha', 'beta', 'bravo']) await app.saveSession({ name, type: 'local', cwd: '/tmp' });
+      app.sessionTree.render();
+      await sleep(100);
+      results.treeTypeAheadOrder = labels() === 'Production|web-01|alpha|beta|bravo|Project shell|Zeta shell';
+      rowOf('Production').focus();
+      await press('b');
+      results.treeTypeAheadLetter = active() === rowOf('beta') && app.sessionTree.selected === rowOf('beta').dataset.session && rowOf('beta').tabIndex === 0;
+      await press('r'); // "br" refines the match: beta → bravo
+      results.treeTypeAheadPrefix = active() === rowOf('bravo') && focusVisible(rowOf('bravo'));
+      await shot('75-tree-type-ahead');
+      await sleep(750); // the typed prefix expires
+      await press('b'); // from bravo: wraps round to beta
+      results.treeTypeAheadWraps = active() === rowOf('beta');
+      await press('b'); // the same letter again cycles: beta → bravo
+      results.treeTypeAheadCycles = active() === rowOf('bravo');
+      await sleep(750);
+      await press('P'); // case-insensitive
+      results.treeTypeAheadCase = active() === rowOf('Project shell');
+      await sleep(750);
+      await press('a', { metaKey: true }); // a modifier makes it a shortcut, never type-ahead
+      results.treeTypeAheadIgnoresModifiers = active() === rowOf('Project shell');
+      const filter = document.getElementById('session-filter');
+      filter.focus();
+      key(filter, 'b'); // typing in the filter box filters, it never jumps
+      results.treeTypeAheadNotInFilter = active() === filter;
+      await sleep(750);
+      rowOf('web-01').focus(); // the dialog checks below start with the keyboard on this row
+    }
 
     // ---------- dialog focus trap ----------
     app.action('shortcuts'); // opened while the keyboard is on the web-01 row: closing hands focus back there
@@ -646,30 +676,107 @@
       if (ready) {
         app.showPanel('sftp');
         const list = $('#sftp-list');
-        list.focus();
+        // a folder with known names (the sshd runs as the real user, so its home is whatever it is)
+        const connId = app.activePane().termId, base = '/tmp/mobalt-a11y';
+        await window.api.sftp.remove(connId, base, true).catch(() => {});
+        await window.api.sftp.mkdir(connId, base);
+        await window.api.sftp.mkdir(connId, base + '/docs');
+        for (const f of ['alpha.txt', 'beta.txt', 'eagle.txt', 'echo.txt', 'gamma.txt']) await window.api.sftp.write(connId, `${base}/${f}`, f + '\n');
+        await app.sftpPanel.navigate(base);
+        const dir = app.sftpPanel.state().path; // as the server resolves it (/private/tmp/… on macOS)
+        const frows = () => app.sftpPanel.rows();
+        const frow = (name) => frows().find((r) => r.dataset.name === name);
+        const stops = () => [...list.querySelectorAll('.sftp-row[data-name]')].filter((r) => r.tabIndex === 0);
+        results.sftpOrder = frows().map((r) => r.dataset.name).join('|') === 'docs|alpha.txt|beta.txt|eagle.txt|echo.txt|gamma.txt';
+        // rows are options with one Tab stop (roving tabindex): the cursor row, the first entry until a row is chosen
+        results.sftpRoles = list.getAttribute('role') === 'listbox' && list.getAttribute('aria-multiselectable') === 'true' && list.tabIndex === -1
+          && frows().every((r) => r.getAttribute('role') === 'option' && r.hasAttribute('aria-selected')) && stops().length === 1 && stops()[0] === frows()[0];
+        frows()[0].focus(); // what the Tab key lands on, no click needed
+        await press('ArrowDown');
+        results.sftpArrowDownFocusesRow = active() === frow('alpha.txt') && frow('alpha.txt').classList.contains('selected') && frow('alpha.txt').getAttribute('aria-selected') === 'true'
+          && stops().length === 1 && stops()[0] === frow('alpha.txt');
+        await press('ArrowDown');
+        results.sftpRowFocusRing = active() === frow('beta.txt') && focusVisible(frow('beta.txt')) && getComputedStyle(frow('beta.txt')).outlineStyle === 'solid' && getComputedStyle(frow('beta.txt')).outlineOffset === '-2px';
+        await shot('74-sftp-row-focus');
+        await press('End');
+        results.sftpEnd = active() === frow('gamma.txt');
+        await press('Home');
+        results.sftpHome = active() === frow('docs') && stops().length === 1 && stops()[0] === frow('docs');
+        await press('PageDown');
+        results.sftpPageDown = active() === frow('gamma.txt'); // six rows: one page reaches the end
+        await press('PageUp');
+        results.sftpPageUp = active() === frow('docs');
+        await press('ArrowDown', { shiftKey: true });
+        await press('ArrowDown', { shiftKey: true });
+        results.sftpShiftRange = active() === frow('beta.txt') && app.sftpPanel.selectedEntries().length === 3;
+        // type-ahead: "e" jumps to the next name starting with e, "e" again cycles, "ec" refines, the prefix expires
+        await press('e');
+        results.sftpTypeAhead = active() === frow('eagle.txt') && app.sftpPanel.selectedEntries().length === 1 && frow('eagle.txt').classList.contains('selected');
+        await press('e');
+        results.sftpTypeAheadCycles = active() === frow('echo.txt');
+        await sleep(750);
+        await press('e');
+        results.sftpTypeAheadWraps = active() === frow('eagle.txt');
+        await press('c');
+        results.sftpTypeAheadPrefix = active() === frow('echo.txt') && focusVisible(frow('echo.txt'));
+        await shot('76-sftp-type-ahead');
+        await sleep(750);
+        // Enter opens the focused folder; ⌫ comes back up with the cursor on the folder just left
+        await press('Home');
+        await press('Enter');
+        await waitFor(() => app.sftpPanel.state().path === dir + '/docs', 5000, 'enter docs');
+        await sleep(100);
+        results.sftpEnterOpensFolder = list.contains(active()); // an empty folder: the list itself keeps the focus
+        await press('Backspace');
+        await waitFor(() => app.sftpPanel.state().path === dir, 5000, 'back up');
+        await sleep(100);
+        results.sftpUpKeepsCursor = active() === frow('docs') && stops()[0] === frow('docs');
+        // a re-render (refresh, sort) keeps the keyboard on the cursor row
+        await press('ArrowDown');
+        await app.sftpPanel.cmd('refresh');
+        await sleep(100);
+        results.sftpRefreshKeepsFocus = active() === frow('alpha.txt');
+        list.querySelector('.sftp-head .size').click();
         await sleep(50);
-        results.sftpListFocusRing = focusVisible(list) && getComputedStyle(list).outlineStyle === 'solid' && getComputedStyle(list).outlineOffset === '-2px';
-        await press('ArrowDown');
-        await press('ArrowDown');
-        const sel = list.querySelector('.sftp-row.selected');
-        results.sftpArrowSelects = !!sel && getComputedStyle(sel).boxShadow !== 'none';
-        await shot('74-sftp-list-focus');
+        results.sftpSortKeepsFocus = active() === frow('alpha.txt') && stops()[0] === frow('alpha.txt');
+        list.querySelector('.sftp-head .name').click();
+        await sleep(50);
+        // a click makes the row the Tab stop
+        frow('gamma.txt').click();
+        await sleep(50);
+        results.sftpClickRoves = active() === frow('gamma.txt') && stops().length === 1 && stops()[0] === frow('gamma.txt');
+        // ⇧F10 / Menu key: the focused row's menu, Esc back to the row; from the list itself the background menu
         await press('F10', { shiftKey: true });
         results.sftpShiftF10RowMenu = !!ctx() && ctx().textContent.includes('Rename') && active() === items()[0];
         await press('Escape');
-        results.sftpMenuEscBackToList = !ctx() && active() === list;
+        results.sftpMenuEscBackToRow = !ctx() && active() === frow('gamma.txt');
         app.sftpPanel.clearSelection();
-        await press('ContextMenu'); // nothing selected: the background menu
+        list.focus();
+        await press('ContextMenu'); // nothing selected, no row focused: the background menu
         results.sftpMenuKeyBackground = !!ctx() && !ctx().textContent.includes('Rename') && ctx().textContent.includes('Upload Files Here');
         await press('Escape');
-        await press('ArrowDown');
+        await press('ArrowDown'); // from the list itself: the first row
+        results.sftpArrowFromList = active() === frow('docs') && frow('docs').classList.contains('selected');
         await press('F10', { shiftKey: true });
-        items().find((i) => i.textContent.startsWith('Rename')).click(); // a dialog from the menu hands focus back to the list
+        items().find((i) => i.textContent.startsWith('Rename')).click(); // a dialog from the menu hands focus back to the row
         await sleep(250);
         results.sftpRenameOpens = !!modal() && /Rename/.test(modal().textContent);
         await press('Escape');
         await sleep(200);
-        results.sftpRenameEscBackToList = !modal() && active() === list;
+        results.sftpRenameEscBackToRow = !modal() && active() === frow('docs');
+        // ⌘A selects everything shown and keeps the keyboard on the cursor row
+        await press('a', { metaKey: true });
+        await sleep(50);
+        results.sftpCmdA = app.sftpPanel.selectedEntries().length === 6 && active() === frow('docs') && frows().every((r) => r.getAttribute('aria-selected') === 'true');
+        // Delete asks first; Cancel keeps the keyboard on the row
+        await press('End');
+        await press('Delete');
+        await sleep(250);
+        results.sftpDeleteAsks = !!modal() && /Delete "gamma.txt"/.test(modal().textContent);
+        await press('Escape');
+        await sleep(200);
+        results.sftpDeleteCancelBackToRow = !modal() && active() === frow('gamma.txt');
+        await window.api.sftp.remove(connId, base, true).catch(() => {});
         app.showPanel('sessions');
         await app.closeTab(app.activePane().tab);
         await sleep(300);

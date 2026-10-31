@@ -1,5 +1,5 @@
 // Sessions tree (left panel): folders, filter, drag to folder, context menus.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead } from './ui.js';
 
 const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
 
@@ -39,6 +39,7 @@ export class SessionTree {
     this.el.setAttribute('role', 'tree');
     this.el.setAttribute('aria-label', 'Saved sessions');
     this.el.addEventListener('keydown', (e) => this.onKey(e));
+    this._typeAhead = typeAhead(); // letters typed on a row jump to the next row whose name starts with them
     this.el.addEventListener('focusin', (e) => {
       const r = e.target.closest('.tree-row');
       if (r) this._rove(r);
@@ -234,9 +235,10 @@ export class SessionTree {
    * Keys on a focused row: ↑/↓ move over folders and sessions alike, → expands a folder / enters it,
    * ← collapses / goes to the parent folder, Enter opens a session (⌘/⌃/⇧Enter: in a split right) or
    * toggles a folder, Space toggles a folder, ⌫/Delete deletes (with the usual confirmation), ⇧F10 menu.
+   * Letters (no modifier) are Finder-style type-ahead over the visible rows' names.
    */
   onKey(e) {
-    if (e.altKey) return;
+    if (e.altKey || e.target.matches('input, textarea, select')) return;
     const rows = this.visibleRows();
     const row = e.target.closest('.tree-row');
     const i = rows.indexOf(row);
@@ -282,7 +284,11 @@ export class SessionTree {
         else { this.select(s.id); this.sessionMenu(r.left + 24, r.bottom, s); }
         break;
       }
-      default: return;
+      default: {
+        const j = this._typeAhead(e, rows.map((r) => r.querySelector('.label')?.textContent || ''), i);
+        if (j < 0) return;
+        this.focusRow(rows[j]);
+      }
     }
     e.preventDefault();
   }
