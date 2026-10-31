@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { parseSshConfig, parseMobaXtermIni, parseMobaXtermIniDetailed, parseSessionsJson } = require('../../src/main/importers');
+const { decodeText, parseSshConfig, parseMobaXtermIni, parseMobaXtermIniDetailed, parseSessionsJson } = require('../../src/main/importers');
 
 function tmpdir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'mobalt-test-'));
@@ -147,5 +147,107 @@ test('parseSessionsJson: normalises the usable entries and skips the rest with a
     { entry: 'entry 7', reason: 'no name' },
     { entry: 'entry 8', reason: 'not an object' },
     { entry: 'entry 9', reason: 'not an object' },
+  ]);
+});
+
+test('decodeText: BOMs, UTF-16 LE without a BOM (a short file too), plain UTF-8', () => {
+  assert.equal(decodeText(Buffer.from('﻿{"sessions": []}', 'utf8')), '{"sessions": []}');
+  assert.equal(decodeText(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('[Bookmarks]', 'utf16le')])), '[Bookmarks]');
+  assert.equal(decodeText(Buffer.from('[Bookmarks]\r\nSubRep=', 'utf16le')), '[Bookmarks]\r\nSubRep=', 'no BOM: every other byte is NUL');
+  assert.equal(decodeText(Buffer.from('{"sessions": []}', 'utf8')), '{"sessions": []}');
+  assert.equal(decodeText(Buffer.from('', 'utf8')), '');
+});
+
+const B = (name, type, body) => `${name}=#${type}#0%${body}#MobaFont#0# #-1`;
+
+test('parseMobaXtermIniDetailed: a port must be 1–65535 when given; host and user are trimmed', () => {
+  const file = path.join(tmpdir(), 'MobaXterm.ini');
+  fs.writeFileSync(file, ['[Bookmarks]', 'SubRep=Ports', 'ImgNum=42',
+    B('port-high', 109, 'ph.example.internal%70000%u%%-1%-1'),
+    B('port-zero', 109, 'pz.example.internal%0%u%%'),
+    B('port-text', 109, 'pt.example.internal%abc%u%%'),
+    B('port-spaces', 109, ' ps.example.internal % 2222 % u %%-1%-1'),
+    B('port-empty', 109, 'pe.example.internal%%u%%'),
+    B('telnet-port-empty', 98, 'tpe.example.internal%%%%'),
+  ].join('\r\n'));
+  const d = parseMobaXtermIniDetailed(file);
+  assert.deepEqual(d.sessions.map((s) => [s.name, s.host, s.port, s.username]), [
+    ['port-spaces', 'ps.example.internal', 2222, 'u'],
+    ['port-empty', 'pe.example.internal', 22, 'u'],
+    ['telnet-port-empty', 'tpe.example.internal', 23, ''],
+  ]);
+  assert.deepEqual(d.skipped, [
+    { entry: '"port-high"', reason: 'bad port 70000' },
+    { entry: '"port-zero"', reason: 'bad port 0' },
+    { entry: '"port-text"', reason: 'bad port abc' },
+  ]);
+});
+
+test('parseMobaXtermIniDetailed: known other kinds are named in the reason; a Shell bookmark is a Local session', () => {
+  const file = path.join(tmpdir(), 'MobaXterm.ini');
+  fs.writeFileSync(file, ['[Bookmarks]', 'SubRep=Types', 'ImgNum=42',
+    B('ftp-130', 130, 'ftp.example.internal%21%ftpuser%0%0%'),
+    B('sftp-140', 140, 'sftp.example.internal%22%sftpuser%%'),
+    B('serial-107', 107, 'COM3%115200%0%0%0%%'),
+    B('mosh-151', 151, 'mosh.example.internal%22%u%%'),
+    B('unknown-999', 999, 'x%1'),
+    B('local-100', 100, '%%%'),
+    B('local-100', 100, '%%%'),
+  ].join('\r\n'));
+  const d = parseMobaXtermIniDetailed(file);
+  assert.deepEqual(d.sessions.map((s) => [s.name, s.type, s.folder, 'host' in s, 'port' in s]), [['local-100', 'local', 'MobaXterm/Types', false, false]]);
+  assert.deepEqual(d.skipped.map((x) => `${x.entry}: ${x.reason}`), [
+    '"ftp-130": FTP bookmark (#130) not supported',
+    '"sftp-140": SFTP bookmark (#140) not supported',
+    '"serial-107": Serial bookmark (#107) not supported',
+    '"mosh-151": Mosh bookmark (#151) not supported',
+    '"unknown-999": unsupported session type #999',
+    '"local-100": duplicate of an earlier bookmark',
+  ]);
+});
+
+test('parseMobaXtermIniDetailed: a bookmark repeated in one file (same folder, name and host) is imported once — the first one', () => {
+  const file = path.join(tmpdir(), 'MobaXterm.ini');
+  fs.writeFileSync(file, ['[Bookmarks]', 'SubRep=Dup', 'ImgNum=42',
+    B('same-name', 109, 'same.example.internal%22%u%%'),
+    B('same-name', 109, 'same.example.internal%22%v%%'),
+    B('same-name', 109, 'other.example.internal%22%u%%'),
+    '[Bookmarks_1]', 'SubRep=Dup', 'ImgNum=42',
+    B('same-name', 109, 'same.example.internal%2222%w%%'),
+    '[Bookmarks_2]', 'SubRep=Other', 'ImgNum=42',
+    B('same-name', 109, 'same.example.internal%22%u%%'),
+  ].join('\r\n'));
+  const d = parseMobaXtermIniDetailed(file);
+  assert.deepEqual(d.sessions.map((s) => [s.folder, s.host, s.port, s.username]), [
+    ['MobaXterm/Dup', 'same.example.internal', 22, 'u'],
+    ['MobaXterm/Dup', 'other.example.internal', 22, 'u'],
+    ['MobaXterm/Other', 'same.example.internal', 22, 'u'],
+  ]);
+  assert.deepEqual(d.skipped, [
+    { entry: '"same-name"', reason: 'duplicate of an earlier bookmark' },
+    { entry: '"same-name"', reason: 'duplicate of an earlier bookmark' },
+  ]);
+});
+
+test('parseSessionsJson: a BOM is tolerated, the type is trimmed and lower-cased, a repeated id is a duplicate', () => {
+  const r = parseSessionsJson('﻿' + JSON.stringify({ sessions: [
+    { name: 'upper-type', type: 'SSH', host: 'h' },
+    { name: 'spaced-type', type: ' ssh', host: 'h' },
+    { name: 'null-type', type: null, host: 'h' },
+    { name: 'blank-type', type: '   ', host: 'h' },
+    { name: 'bad-type', type: 'GOPHER', host: 'h' },
+    { name: 'numeric-type', type: 7, host: 'h' },
+    { id: 'dup-id-1', name: 'dup-first', host: 'first' },
+    { id: 'dup-id-1', name: 'dup-second', host: 'second' },
+    { id: 'dup-id-1', name: 'dup-bad-port', port: 'x' },
+  ] }));
+  assert.equal(r.error, undefined);
+  assert.deepEqual(r.sessions.map((s) => [s.name, s.type]), [['upper-type', 'ssh'], ['spaced-type', 'ssh'], ['null-type', 'ssh'], ['blank-type', 'ssh'], ['dup-first', 'ssh']]);
+  assert.equal(r.sessions.find((s) => s.name === 'dup-first').host, 'first', 'the first entry with the id is the one kept');
+  assert.deepEqual(r.skipped, [
+    { entry: '"bad-type"', reason: 'unknown type "GOPHER"' },
+    { entry: '"numeric-type"', reason: 'unknown type 7' },
+    { entry: '"dup-second"', reason: 'duplicate id' },
+    { entry: '"dup-bad-port"', reason: 'bad port "x"' },
   ]);
 });

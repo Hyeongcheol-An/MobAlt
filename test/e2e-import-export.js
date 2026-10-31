@@ -21,7 +21,7 @@
   };
   const toasts = [];
   new MutationObserver((muts) => {
-    for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) toasts.push({ text: n.textContent, error: n.classList.contains('error') });
+    for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) toasts.push({ text: n.textContent, error: n.classList.contains('error'), warn: n.classList.contains('warn') });
   }).observe(document.getElementById('toast-root'), { childList: true });
   const toastsSince = (n) => toasts.slice(n);
   const errorToasts = () => toasts.filter((t) => t.error).map((t) => t.text);
@@ -111,6 +111,20 @@
       && exported.sessions.find((s) => s.name === 'app-01').hasPassword === true && exported.sessions.find((s) => s.name === 'bastion').hasPassphrase === true;
     app.showPanel('sessions');
     await shot('70-export-toast');
+    // QA4-01: a target the app cannot write (a system folder, a folder that is gone) ends in a readable error toast
+    // instead of an unhandled rejection in the console
+    n = toasts.length;
+    await answer({ canceled: false, filePath: '/System/qa4-export.json' });
+    await app.action('export-json');
+    const tEperm = toastsSince(n);
+    results.exportUnwritableToast = tEperm.length === 1 && tEperm[0].error && /^Export failed: Could not write \/System\/qa4-export\.json: E[A-Z]+: [a-z ]+$/.test(tEperm[0].text)
+      && !(await exists('/System/qa4-export.json')) && (await pendingAnswers()) === 0;
+    n = toasts.length;
+    await answer({ canceled: false, filePath: scratch + '/gone/qa4-export.json' });
+    await app.action('export-json');
+    const tEnoent = toastsSince(n);
+    results.exportMissingFolderToast = tEnoent.length === 1 && tEnoent[0].error && tEnoent[0].text === `Export failed: Could not write ${scratch}/gone/qa4-export.json: ENOENT: no such file or directory`;
+    if (!results.exportUnwritableToast || !results.exportMissingFolderToast) log('export error toasts:', JSON.stringify([tEperm, tEnoent]));
 
     // --- 4. import into a fresh store: cancel first, then the file
     results.freshStore = await fresh();
@@ -135,9 +149,12 @@
     await sleep(150);
     await shot('71-imported-tree');
     // --- 5. merge semantics: same ids overwrite (no duplicates, the file wins), unknown ids are added, local extras survive
+    n = toasts.length;
     await answer({ canceled: false, filePaths: [exportFile] });
     await app.action('import-json');
     results.reimportNoDuplicates = sess().length === before.count;
+    // QA4-03: the second import of the same file changes nothing, and the toast counts it that way
+    results.reimportCountsUpdated = toastsSince(n).some((t) => t.text === `Imported 0 sessions, updated ${before.count} already in the tree` && !t.error);
     const renamed = await app.saveSession({ ...byName('legacy-switch'), name: 'renamed-locally' });
     const extra = await app.saveSession({ name: 'local-extra', type: 'ssh', host: 'extra.example.internal', username: 'u' });
     await answer({ canceled: false, filePaths: [exportFile] });
@@ -198,6 +215,47 @@
     results.badEntriesSummaryToast = t3.length === 1 && !t3[0].error && t3[0].text === 'Imported 1 session, skipped 3: "bad-port": bad port "abc"; "bad-type": unknown type "gopher"; entry 4: not an object';
     results.badEntriesSkipped = byName('hand-02')?.port === 2323 && byName('hand-02')?.type === 'telnet' && !byName('bad-port') && !byName('bad-type') && sess().length === countBefore + 1;
     if (!results.malformedFileErrorToast || !results.badEntriesSummaryToast) log('import toasts:', JSON.stringify([t1, t2, t3]));
+    // QA4-03: two entries sharing an id in one file — the second is skipped as a duplicate, not silently written over the first
+    const dupIds = scratch + '/dup-ids.json';
+    await sftp.write(connId, dupIds, JSON.stringify({ sessions: [{ id: 'dup-id-1', name: 'dup-first', type: 'ssh', host: 'first.example.internal' }, { id: 'dup-id-1', name: 'dup-second', type: 'ssh', host: 'second.example.internal' }] }));
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [dupIds] });
+    await app.action('import-json');
+    results.dupIdInFileSkipped = toastsSince(n).some((t) => t.text === 'Imported 1 session, skipped 1: "dup-second": duplicate id' && !t.error) && byName('dup-first')?.host === 'first.example.internal' && !byName('dup-second');
+    // QA4-02: a UTF-8 file with a BOM and a UTF-16 LE file (Windows editors) import like the .ini importer reads them
+    const bomJson = scratch + '/bom.json', utf16Json = scratch + '/utf16.json';
+    await sftp.write(connId, bomJson, '\uFEFF' + JSON.stringify({ sessions: [{ name: 'bom-session', type: 'ssh', host: 'bom.example.internal' }] }));
+    const u16 = JSON.stringify({ sessions: [{ name: 'utf16-session', type: 'ssh', host: 'u16.example.internal' }] });
+    const u16bytes = new Uint8Array(2 + u16.length * 2);
+    u16bytes[0] = 0xff; u16bytes[1] = 0xfe; // BOM, then UTF-16 LE code units
+    for (let i = 0; i < u16.length; i++) { u16bytes[2 + 2 * i] = u16.charCodeAt(i) & 0xff; u16bytes[3 + 2 * i] = u16.charCodeAt(i) >> 8; }
+    await sftp.write(connId, utf16Json, u16bytes);
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [bomJson] });
+    await app.action('import-json');
+    const onScreen = (txt) => [...document.querySelectorAll('#toast-root .toast')].some((t) => t.textContent === txt && !t.classList.contains('error')); // an identical toast still showing is reused, not added
+    results.bomJsonImports = onScreen('Imported 1 session') && !toastsSince(n).some((t) => t.error) && byName('bom-session')?.host === 'bom.example.internal';
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [utf16Json] });
+    await app.action('import-json');
+    results.utf16JsonImports = !toastsSince(n).some((t) => t.error) && byName('utf16-session')?.host === 'u16.example.internal'; // its toast coalesces with the one above
+    // QA4-10: a hand-typed type in another case or with spaces around it is normalised; an unknown one is still refused
+    const typeCase = scratch + '/type-case.json';
+    await sftp.write(connId, typeCase, JSON.stringify({ sessions: [{ name: 'upper-type', type: 'SSH', host: 'up.example.internal' }, { name: 'spaced-type', type: ' ssh', host: 'sp.example.internal' }, { name: 'null-type', type: null, host: 'nt.example.internal' }, { name: 'bad-type-2', type: 'GOPHER', host: 'g.example.internal' }] }));
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [typeCase] });
+    await app.action('import-json');
+    results.typeCaseNormalised = toastsSince(n).some((t) => t.text === 'Imported 3 sessions, skipped 1: "bad-type-2": unknown type "GOPHER"' && !t.error)
+      && ['upper-type', 'spaced-type', 'null-type'].every((x) => byName(x)?.type === 'ssh') && !byName('bad-type-2');
+    // QA4-06: a sessions file with nothing in it is a warning, not a green "Imported 0 sessions"
+    const emptySessions = scratch + '/empty-sessions.json';
+    await sftp.write(connId, emptySessions, JSON.stringify({ sessions: [], folders: [] }));
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [emptySessions] });
+    await app.action('import-json');
+    const tEmpty = toastsSince(n);
+    results.emptySessionsFileWarns = tEmpty.length === 1 && tEmpty[0].warn && !tEmpty[0].error && tEmpty[0].text === 'No sessions found in empty-sessions.json';
+    if (!results.dupIdInFileSkipped || !results.typeCaseNormalised || !results.emptySessionsFileWarns) log('json toasts:', JSON.stringify(toasts.slice(-6)));
 
     // --- 6. MobaXterm.ini: cancel, then the synthetic fixture (its two unusable bookmarks are counted as skipped on every
     //        import); a second import refreshes what is already there instead of duplicating it
@@ -257,6 +315,38 @@
     await app.action('import-moba');
     results.mobaThirdImportNoop = sess().length === 8 && toastsSince(n).some((t) => t.text === 'Imported 0 sessions from MobaXterm.ini, updated 7 already in the tree' + MOBA_SKIPPED);
     info.mobaImportSemantics = 'bookmark matched by folder|name|host → refreshed in place (facts from the .ini; id, secrets, icon kept); otherwise added';
+    // QA4-06: an .ini without bookmarks warns instead of celebrating "Imported 0 sessions"
+    const noBookmarks = scratch + '/no-bookmarks.ini';
+    await sftp.write(connId, noBookmarks, '[Misc]\r\nDebugMode=0\r\n[Passwords]\r\nssh22:deploy@web=xxxx\r\n');
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [noBookmarks] });
+    await app.action('import-moba');
+    const tNoBm = toastsSince(n);
+    results.mobaNoBookmarksWarns = tNoBm.length === 1 && tNoBm[0].warn && !tNoBm[0].error && tNoBm[0].text === 'No sessions found in no-bookmarks.ini' && sess().length === 8;
+    // QA4-04: ports are validated (1–65535) and host / user trimmed; QA4-05: another kind of bookmark is named in the
+    // skip reason and a Shell bookmark becomes a Local session; QA4-07: a bookmark repeated in the file counts once
+    // (imported, not "updated") and the first one wins
+    const B = (name, type, body) => `${name}=#${type}#0%${body}#MobaFont#0# #-1`;
+    const qaIni = scratch + '/qa4.ini';
+    await sftp.write(connId, qaIni, ['[Bookmarks]', 'SubRep=QA', 'ImgNum=42',
+      B('port-high', 109, 'ph.example.internal%70000%u%%-1%-1'),
+      B('port-spaces', 109, ' ps.example.internal % 2222 % u %%-1%-1'),
+      B('port-text', 109, 'pt.example.internal%abc%u%%'),
+      B('port-empty', 109, 'pe.example.internal%%u%%'),
+      B('ftp-130', 130, 'ftp.example.internal%21%ftpuser%0%0%'),
+      B('local-100', 100, '%%%'),
+      B('same-name', 109, 'same.example.internal%22%u%%'),
+      B('same-name', 109, 'same.example.internal%22%v%%'),
+    ].join('\r\n'));
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [qaIni] });
+    await app.action('import-moba');
+    const t5 = toastsSince(n);
+    results.mobaQa4Toast = t5.length === 1 && !t5[0].error && t5[0].text === 'Imported 4 sessions from MobaXterm.ini, skipped 4: "port-high": bad port 70000; "port-text": bad port abc; "ftp-130": FTP bookmark (#130) not supported; …';
+    results.mobaPortsAndTrim = byName('port-spaces')?.host === 'ps.example.internal' && byName('port-spaces')?.port === 2222 && byName('port-spaces')?.username === 'u' && byName('port-empty')?.port === 22 && !byName('port-high') && !byName('port-text');
+    results.mobaShellIsLocal = byName('local-100')?.type === 'local' && !byName('local-100')?.host && byName('local-100')?.folder === 'MobaXterm/QA';
+    results.mobaDupInFileOnce = sess().filter((s) => s.name === 'same-name').length === 1 && byName('same-name')?.username === 'u' && sess().length === 12;
+    if (!results.mobaQa4Toast) log('moba qa4 toasts:', JSON.stringify(t5));
 
     // --- 7. the private-key picker in the session editor
     app.action('new-session');
@@ -347,7 +437,7 @@
 
     // --- 10. the queue is empty, and nothing errored along the way
     results.noAnswersLeft = (await pendingAnswers()) === 0;
-    const unexpected = errorToasts().filter((x) => !x.startsWith('Not a MobAlt sessions file: '));
+    const unexpected = errorToasts().filter((x) => !x.startsWith('Not a MobAlt sessions file: ') && !x.startsWith('Export failed: '));
     results.noUnexpectedErrorToasts = unexpected.length === 0;
     if (unexpected.length) log('error toasts:', JSON.stringify(unexpected));
   } catch (e) {

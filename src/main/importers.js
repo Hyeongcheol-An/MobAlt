@@ -93,12 +93,21 @@ function parseSshConfig(file = path.join(os.homedir(), '.ssh', 'config'), seen =
   return sessions;
 }
 
-function decodeIni(buf) {
+/**
+ * Decode a text file a Windows tool or a hand editor may have saved in any of the usual encodings: UTF-16 LE with
+ * its BOM, UTF-8 with or without a BOM, UTF-16 LE without a BOM (every other byte NUL — judged in proportion to the
+ * file, so a short file is recognised too), then EUC-KR and Latin-1 as fallbacks. Used for MobaXterm.ini and for
+ * sessions JSON, which JSON.parse would otherwise refuse over an invisible BOM.
+ */
+function decodeText(buf) {
   if (buf[0] === 0xff && buf[1] === 0xfe) return buf.slice(2).toString('utf16le');
   if (buf[0] === 0xef && buf[1] === 0xbb && buf[2] === 0xbf) return buf.slice(3).toString('utf8');
-  let zeros = 0;
-  for (let i = 1; i < Math.min(buf.length, 4000); i += 2) if (buf[i] === 0) zeros++;
-  if (zeros > 500) return buf.toString('utf16le');
+  let zeros = 0, sampled = 0;
+  for (let i = 1; i < Math.min(buf.length, 4000); i += 2) {
+    sampled++;
+    if (buf[i] === 0) zeros++;
+  }
+  if (sampled >= 2 && zeros > sampled / 4) return buf.toString('utf16le');
   try {
     return new TextDecoder('utf-8', { fatal: true }).decode(buf);
   } catch {
@@ -110,18 +119,29 @@ function decodeIni(buf) {
   }
 }
 
-const MOBA_TYPES = { 109: 'ssh', 98: 'telnet', 91: 'rdp', 128: 'vnc', 100: 'local', 143: 'ssh' };
+// The first number of a bookmark value (#109#0%host%port%user…) tells the kind of session: these are imported …
+const MOBA_TYPES = { 109: 'ssh', 143: 'ssh', 98: 'telnet', 91: 'rdp', 128: 'vnc', 100: 'local' };
+// … and these are named in the skip reason instead of showing up as a bare number (best effort — the numbers are
+// those MobaXterm.ini files are known to carry; anything else is reported by its number).
+const MOBA_TYPE_NAMES = { 107: 'Serial', 130: 'FTP', 140: 'SFTP', 151: 'Mosh' };
+const MOBA_DEFAULT_PORT = { ssh: 22, telnet: 23, rdp: 3389, vnc: 5900 };
 
 /** Parse MobaXterm.ini bookmark sections. Best effort (format is undocumented). */
 function parseMobaXtermIni(file) {
   return parseMobaXtermIniDetailed(file).sessions;
 }
 
-/** parseMobaXtermIni plus the bookmarks it could not use, as { entry, reason }: { sessions, skipped }. */
+/**
+ * parseMobaXtermIni plus the bookmarks it could not use, as { entry, reason }: { sessions, skipped }. Host, port and
+ * user are trimmed; a port must be 1–65535 when given (else the bookmark is skipped, like the JSON importer does); a
+ * Shell bookmark becomes a Local session (it has no host); a later bookmark with the same folder, name and host as
+ * an earlier one in the file is skipped as its duplicate, so the first one is what gets imported.
+ */
 function parseMobaXtermIniDetailed(file) {
-  const text = decodeIni(fs.readFileSync(file));
+  const text = decodeText(fs.readFileSync(file));
   const sessions = [];
   const skipped = [];
+  const seen = new Set(); // folder|name|host of what this file already gave — the same key the re-import matching uses
   let section = null;
   let folder = '';
   for (const raw of text.split(/\r?\n/)) {
@@ -145,34 +165,48 @@ function parseMobaXtermIniDetailed(file) {
     if (key === 'ImgNum') continue;
     const m = /^#(\d+)#(\d+)%(.*)$/.exec(val);
     if (!m) continue;
+    const entry = `"${key}"`;
+    const skip = (reason) => skipped.push({ entry, reason });
     const type = MOBA_TYPES[m[1]];
     if (!type) {
-      skipped.push({ entry: `"${key}"`, reason: `unsupported session type #${m[1]}` });
+      skip(MOBA_TYPE_NAMES[m[1]] ? `${MOBA_TYPE_NAMES[m[1]]} bookmark (#${m[1]}) not supported` : `unsupported session type #${m[1]}`);
       continue;
     }
     const body = m[3].split('#')[0];
-    const f = body.split('%');
-    const s = {
-      id: crypto.randomUUID(),
-      name: key,
-      folder: folder ? 'MobaXterm/' + folder : 'MobaXterm',
-      type,
+    const f = body.split('%').map((x) => x.trim());
+    const s = { id: crypto.randomUUID(), name: key, folder: folder ? 'MobaXterm/' + folder : 'MobaXterm', type };
+    if (type === 'local') {
+      // a Shell bookmark: a terminal on this machine, no host to check or port to keep
+      if (seen.has(`${s.folder}|${s.name}|`)) { skip('duplicate of an earlier bookmark'); continue; }
+      seen.add(`${s.folder}|${s.name}|`);
+      sessions.push(s);
+      continue;
+    }
+    let port = MOBA_DEFAULT_PORT[type];
+    if (f[1]) {
+      port = /^\d+$/.test(f[1]) ? parseInt(f[1], 10) : NaN;
+      if (!Number.isInteger(port) || port < 1 || port > 65535) { skip(`bad port ${f[1]}`); continue; }
+    }
+    Object.assign(s, {
       host: f[0] || '',
-      port: parseInt(f[1], 10) || (type === 'ssh' ? 22 : type === 'telnet' ? 23 : type === 'rdp' ? 3389 : 5900),
+      port,
       username: (f[2] || '').replace(/^<default>$/i, ''),
       authMethod: 'auto',
       privateKeyPath: '',
       x11: type === 'ssh' && f[4] === '-1',
       compression: type === 'ssh' && f[5] === '-1',
       sftpAuto: true,
-    };
+    });
     const keyField = f.find((x) => /\.(ppk|pem|key)$|id_(rsa|ed25519|ecdsa)/i.test(x));
     if (keyField) {
       s.privateKeyPath = keyField.replace(/\\/g, '/');
       s.notes = 'Imported key path from Windows; convert .ppk with puttygen and fix the path.';
     }
-    if (s.host) sessions.push(s);
-    else skipped.push({ entry: `"${key}"`, reason: 'no host' });
+    if (!s.host) { skip('no host'); continue; }
+    const dupKey = `${s.folder}|${s.name}|${s.host}`;
+    if (seen.has(dupKey)) { skip('duplicate of an earlier bookmark'); continue; }
+    seen.add(dupKey);
+    sessions.push(s);
   }
   return { sessions, skipped };
 }
@@ -181,16 +215,17 @@ const SESSION_TYPES = ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp',
 
 /**
  * Validate the text of a MobAlt sessions export, or a hand-written file of the same shape. Returns
- * { sessions, folders, skipped }: the usable sessions normalised (trimmed string name, a known type with 'ssh'
- * when absent, an integer port when one is given, a string id — fresh when missing — and a string folder) and
- * the rejected entries as { entry, reason }; or { error } when the file is not a sessions file at all (not
- * JSON, no top-level object, no "sessions" array). Secrets and the exporter's hasPassword/… flags are passed
- * through untouched: what to do with them is the store's business.
+ * { sessions, folders, skipped }: the usable sessions normalised (trimmed string name, a known type — trimmed and
+ * lower-cased, 'ssh' when absent — an integer port when one is given, a string id — fresh when missing — and a
+ * string folder) and the rejected entries as { entry, reason }; a second entry with an id the file already used
+ * is rejected as a duplicate, so one file never overwrites its own rows. Or { error } when the file is not a
+ * sessions file at all (not JSON, no top-level object, no "sessions" array). Secrets and the exporter's
+ * hasPassword/… flags are passed through untouched: what to do with them is the store's business.
  */
 function parseSessionsJson(text) {
   let data;
   try {
-    data = JSON.parse(text);
+    data = JSON.parse(String(text).replace(/^\uFEFF/, '')); // a BOM that slipped past the decoder (text handed in directly)
   } catch (e) {
     return { error: `not JSON (${e.message})` };
   }
@@ -198,13 +233,15 @@ function parseSessionsJson(text) {
   if (!Array.isArray(data.sessions)) return { error: 'no "sessions" array' };
   const sessions = [];
   const skipped = [];
+  const seenIds = new Set();
   data.sessions.forEach((s, i) => {
     const named = !!(s && typeof s === 'object' && typeof s.name === 'string' && s.name.trim());
     const entry = named ? `"${s.name.trim()}"` : `entry ${i + 1}`;
     const skip = (reason) => skipped.push({ entry, reason });
     if (!s || typeof s !== 'object' || Array.isArray(s)) return skip('not an object');
     if (!named) return skip('no name');
-    const type = s.type === undefined || s.type === null || s.type === '' ? 'ssh' : s.type;
+    const given = typeof s.type === 'string' ? s.type.trim().toLowerCase() : s.type; // "SSH", " ssh" → ssh
+    const type = given === undefined || given === null || given === '' ? 'ssh' : given;
     if (!SESSION_TYPES.includes(type)) return skip(`unknown type ${JSON.stringify(s.type)}`);
     const out = { ...s, name: s.name.trim(), type, id: typeof s.id === 'string' && s.id ? s.id : crypto.randomUUID(), folder: typeof s.folder === 'string' ? s.folder : '' };
     if (s.port === undefined || s.port === null || s.port === '') delete out.port;
@@ -213,10 +250,12 @@ function parseSessionsJson(text) {
       if (!Number.isInteger(port) || port < 1 || port > 65535) return skip(`bad port ${JSON.stringify(s.port)}`);
       out.port = port;
     }
+    if (seenIds.has(out.id)) return skip('duplicate id');
+    seenIds.add(out.id);
     sessions.push(out);
   });
   const folders = Array.isArray(data.folders) ? data.folders.filter((f) => typeof f === 'string' && f.trim()) : [];
   return { sessions, folders, skipped };
 }
 
-module.exports = { parseSshConfig, parseMobaXtermIni, parseMobaXtermIniDetailed, parseSessionsJson, SESSION_TYPES };
+module.exports = { decodeText, parseSshConfig, parseMobaXtermIni, parseMobaXtermIniDetailed, parseSessionsJson, SESSION_TYPES };

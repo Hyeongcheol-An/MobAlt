@@ -865,16 +865,17 @@ class App {
 
   // ---------- sessions / settings persistence ----------
   /**
-   * One toast for an importer's { imported, updated?, skipped, errors }: a file that could not be used at all
-   * (nothing imported or skipped, one reason) is an error — "<refused>: <reason>"; anything else is a summary —
-   * "Imported 5 sessions from MobaXterm.ini, updated 2 already in the tree, skipped 1: …" — shown as a warning
-   * when entries were skipped, with up to three of their reasons.
+   * One toast for an importer's { imported, updated?, skipped, errors, file? }: a file that could not be used at all
+   * (nothing imported or skipped, one reason) is an error — "<refused>: <reason>"; a file with nothing in it is a
+   * warning — "No sessions found in <file>"; anything else is a summary — "Imported 5 sessions from MobaXterm.ini,
+   * updated 2 already in the tree, skipped 1: …" — shown as a warning when entries were skipped, with up to three
+   * of their reasons.
    */
   importToast(r, { from = '', refused = 'Import failed' } = {}) {
     const errors = r.errors || [];
     if (!r.imported && !r.updated && !r.skipped && errors.length) return toast(`${refused}: ${errors[0]}`, 'error', 8000);
-    const count = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
-    let msg = `Imported ${count(r.imported, 'session')}${from ? ` from ${from}` : ''}`;
+    if (!r.imported && !r.updated && !r.skipped) return toast(`No sessions found${r.file || from ? ` in ${r.file || from}` : ''}`, 'warn');
+    let msg = `Imported ${plural(r.imported, 'session')}${from ? ` from ${from}` : ''}`;
     if (r.updated) msg += `, updated ${r.updated} already in the tree`;
     if (r.skipped) msg += `, skipped ${r.skipped}: ${errors.slice(0, 3).join('; ')}${errors.length > 3 ? '; …' : ''}`;
     return toast(msg, r.skipped ? 'warn' : 'success', r.skipped ? 8000 : undefined);
@@ -1035,8 +1036,15 @@ class App {
         return;
       }
       case 'export-json': {
-        const f = await window.api.sessions.exportJson();
-        if (f) toast(`Exported to ${f}`, 'success');
+        let f;
+        try {
+          f = await window.api.sessions.exportJson(); // the path, null when cancelled, { error } when the file could not be written
+        } catch (e) {
+          return toast(`Export failed: ${ipcMessage(e)}`, 'error', 8000);
+        }
+        if (!f) return;
+        if (f.error) return toast(`Export failed: ${f.error}`, 'error', 8000);
+        toast(`Exported to ${f}`, 'success');
         return;
       }
       case 'shortcuts': return shortcutsDialog(this);
