@@ -107,7 +107,7 @@ test('catalog: the strings the Language setting itself uses are there', () => {
 });
 
 // ---------- the dictionaries ----------
-const placeholders = (s) => [...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+const placeholders = (s) => [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort();
 const words = (s) => String(s).split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length;
 
 for (const lang of i18n.LANGUAGES) {

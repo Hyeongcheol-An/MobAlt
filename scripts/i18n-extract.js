@@ -127,10 +127,13 @@ function extractHtml(file, src) {
 function extract(root = ROOT) {
   const strings = new Map();
   const errors = [];
+  // refs name the files only: with line numbers every edit anywhere would change the catalog (and every merge
+  // would conflict on it); the sources are one grep away
   const add = (key, ref, plural) => {
     if (!strings.has(key)) strings.set(key, { refs: [] });
     const e = strings.get(key);
-    e.refs.push(ref);
+    const file = String(ref).replace(/:\d+$/, '');
+    if (!e.refs.includes(file)) e.refs.push(file);
     if (plural) {
       if (e.plural && e.plural !== plural) errors.push(`${ref}: "${key}" has two plural forms ("${e.plural}", "${plural}")`);
       e.plural = plural;
