@@ -456,7 +456,14 @@ export class TermPane {
     this.term.write(data);
   }
 
-  onExit({ id, code, reason }) {
+  /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'). */
+  lostMessage(detail) {
+    const s = this.session || {};
+    const where = s.name || `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
+    return detail ? `Connection to ${where} was lost: ${detail}` : `Connection to ${where} was closed by the server`;
+  }
+
+  onExit({ id, code, reason, detail }) {
     if (id && this.termId && id !== this.termId) return; // stale exit of a backend we already replaced
     const wasConnecting = this.status === 'connecting';
     this.app.unregisterPane(this);
@@ -471,24 +478,26 @@ export class TermPane {
       msg = `mosh exited${code ? ' with code ' + code : ''}`;
       this.term.write('\r\n\x1b[31mMosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?\x1b[0m\r\n');
     }
-    this.setStatus(failed ? 'failed' : 'disconnected', msg);
+    const lost = reason === 'lost'; // not a Disconnect, ⌘W or `exit`: say so in the terminal (app.js toasts it too)
+    this.setStatus(failed ? 'failed' : 'disconnected', lost ? 'connection lost' : msg);
     if (this.kind === 'local' && code === 0 && !wasConnecting) {
       this.app.closePane(this, true);
       return;
     }
-    this.markDead();
+    this.markDead(lost ? this.lostMessage(detail) + '.' : null);
   }
 
-  markDead() {
+  /** The pane is over: a dim line (what = why, default "Session ended.") and the Reconnect / Close overlay. */
+  markDead(what) {
     this.dead = true;
-    this.term.write(`\r\n\x1b[2m── Session ended. Press Enter to reconnect, ⌘W to close. ──\x1b[0m\r\n`);
-    this.showOverlay();
+    this.term.write(`\r\n\x1b[2m── ${what || 'Session ended.'} Press Enter to reconnect, ⌘W to close. ──\x1b[0m\r\n`);
+    this.showOverlay(what ? 'Connection lost.' : null);
   }
 
-  showOverlay() {
+  showOverlay(label) {
     this.hideOverlay();
     this.overlay = h('div', { class: 'pane-overlay' },
-      h('span', {}, this.kind === 'local' ? 'Shell exited.' : 'Session ended.'),
+      h('span', {}, label || (this.kind === 'local' ? 'Shell exited.' : 'Session ended.')),
       h('button', { onclick: () => this.reconnect() }, '↻ Reconnect'),
       h('button', { onclick: () => this.app.closePane(this) }, 'Close')
     );

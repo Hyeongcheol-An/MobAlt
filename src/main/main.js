@@ -122,7 +122,7 @@ registry.on('data', (id, data) => {
     }, 4);
   }
 });
-registry.on('exit', (id, code, reason) => {
+registry.on('exit', (id, code, reason, detail) => {
   const flush = () => {
     const text = outBuf.get(id);
     if (text && win && !win.isDestroyed()) {
@@ -133,7 +133,7 @@ registry.on('exit', (id, code, reason) => {
   flush();
   tunnels.stopForConnection(id);
   sftp.stopEdits(id);
-  if (win && !win.isDestroyed()) win.webContents.send('term:exit', id, { code, reason });
+  if (win && !win.isDestroyed()) win.webContents.send('term:exit', id, { code, reason, detail });
 });
 sftp.on('transfer', (t) => win && !win.isDestroyed() && win.webContents.send('sftp:transfer', t));
 sftp.on('edit-synced', (e) => win && !win.isDestroyed() && win.webContents.send('sftp:edit-synced', e));

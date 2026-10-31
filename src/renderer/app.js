@@ -162,7 +162,10 @@ class App {
     window.api.on('term:exit', (id, info) => {
       const p = this.panesByTerm.get(id);
       this.sftpPanel.dropConnection(id);
-      if (p) p.onExit(info);
+      if (!p) return;
+      const lost = info && info.reason === 'lost' && p.termId === id; // the server or the network ended it (never a Disconnect, ⌘W or `exit`)
+      p.onExit(info);
+      if (lost) toast(p.lostMessage(info.detail), 'warn', 6000); // the pane may be in another tab, or its terminal full-screen
     });
     window.api.on('ssh:status', ({ id, state, msg }) => {
       const p = this.panesByTerm.get(id);

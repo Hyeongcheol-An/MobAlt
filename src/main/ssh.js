@@ -413,7 +413,9 @@ class SshManager {
   openShell(cfg, { cols = 80, rows = 24 } = {}) {
     const id = this.registry.newId();
     const registry = this.registry;
-    const info = { id, cfg, client: null, jump: null, stream: null, sftp: null, x11: null, cols, rows, closed: false, remoteForwards: new Map() };
+    // closing: we asked the connection to end (Disconnect, ⌘W, quit); shellExited: the remote shell ended (exit, logout).
+    // A close with neither is the server or the network dropping the session, which the renderer announces.
+    const info = { id, cfg, client: null, jump: null, stream: null, sftp: null, x11: null, cols, rows, closed: false, closing: false, shellExited: false, lastError: null, remoteForwards: new Map() };
     this.conns.set(id, info);
     let pending = '';
     registry.register(id, {
@@ -429,13 +431,17 @@ class SshManager {
 
     const ctx = {
       out: (t) => this._out(id, t),
-      onError: (e) => this._out(id, `\r\n${RED}SSH error: ${e.message}${RESET}\r\n`),
+      onError: (e) => {
+        info.lastError = e.message; // e.g. "Keepalive timeout": the reason a lost connection is reported with
+        this._out(id, `\r\n${RED}SSH error: ${e.message}${RESET}\r\n`);
+      },
       onClose: () => {
         if (info.closed) return;
         info.closed = true;
         this.conns.delete(id);
+        const lost = !info.closing && !info.shellExited;
         this.prompter.status(id, 'disconnected');
-        registry.exit(id, 0, 'closed');
+        registry.exit(id, 0, lost ? 'lost' : 'closed', lost ? info.lastError || undefined : undefined);
       },
     };
 
@@ -482,6 +488,7 @@ class SshManager {
         client.shell(shellOpts, (err, stream) => {
           if (err) {
             this._out(id, `${RED}Failed to open shell: ${err.message}${RESET}\r\n`);
+            info.closing = true; // our own end, not a drop
             client.end();
             return;
           }
@@ -490,6 +497,7 @@ class SshManager {
           const decErr = new StringDecoder('utf8');
           stream.on('data', (d) => registry.data(id, dec.write(d)));
           stream.stderr.on('data', (d) => registry.data(id, decErr.write(d)));
+          stream.on('exit', () => { info.shellExited = true; }); // exit status from the server: the shell ended on its own
           stream.on('close', () => client.end());
           this.prompter.status(id, 'connected');
           if (pending) {
@@ -597,6 +605,7 @@ class SshManager {
   disconnect(id) {
     const info = this.conns.get(id);
     if (!info) return;
+    info.closing = true;
     try {
       if (info.stream) info.stream.end();
     } catch {}

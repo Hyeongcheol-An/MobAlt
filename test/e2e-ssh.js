@@ -162,6 +162,48 @@
     await shot('09-folder-grid');
     await shot('07-local-split');
     results.tabs = app.workspace.tabs.map((t) => `${t.title}[${t.panes().length}]`);
+
+    // 9. a connection the server drops (this connection's sshd child killed from a local shell) is announced: a toast,
+    //    a dim line in the terminal, "connection lost" in the status bar — while `exit` and Disconnect stay quiet
+    {
+      const textOf = (p) => [...Array(p.term.buffer.active.length)].map((_, i) => p.term.buffer.active.getLine(i)?.translateToString(true)).join('\n');
+      const seenToasts = [];
+      new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seenToasts.push(n.textContent); }).observe(document.getElementById('toast-root'), { childList: true });
+      const lostToast = 'Connection to enc-key was closed by the server';
+      const sp = await app.openSession(app.sessions.sessions.find((x) => x.id === s2.id)); // saved passphrase: no prompt
+      await waitFor(() => sp.status === 'connected', 15000, 'drop-test session connected');
+      await sleep(1500);
+      sp.write('\x15');
+      sp.write('echo SSHD_CHILD=$PPID\r');
+      const childPid = await waitFor(() => (/SSHD_CHILD=(\d+)/.exec(textOf(sp)) || [])[1], 8000, 'sshd child pid');
+      const local = await app.newLocalTab();
+      await waitFor(() => /[$%#>] ?$/.test(textOf(local).trimEnd()), 8000, 'local prompt');
+      local.term.input(`kill ${childPid} && echo KILLED_OK\r`);
+      app.focusPane(sp); // the status bar shows the pane the drop lands on
+      await waitFor(() => /KILLED_OK/.test(textOf(local)), 8000, 'kill ran');
+      await waitFor(() => sp.dead, 15000, 'ssh pane noticed the drop');
+      await sleep(300);
+      results.dropToast = seenToasts.includes(lostToast);
+      results.dropLine = /── Connection to enc-key was closed by the server\. Press Enter to reconnect/.test(textOf(sp));
+      results.dropStatus = sp.status === 'disconnected' && /Connection lost\./.test(sp.overlay?.textContent || '') && /disconnected \(connection lost\)/.test(document.getElementById('st-session').textContent);
+      await shot('10-connection-lost');
+      log('after the drop: toasts', JSON.stringify(seenToasts), '| status bar', document.getElementById('st-session').textContent);
+      // `exit` in the shell and Session → Disconnect end the session without the warning
+      const toastsBefore = seenToasts.length;
+      await sp.reconnect();
+      await waitFor(() => sp.status === 'connected', 15000, 'reconnected after the drop');
+      await sleep(1200);
+      sp.write('exit\r');
+      await waitFor(() => sp.dead, 10000, 'exit ended the session');
+      await sp.reconnect();
+      await waitFor(() => sp.status === 'connected', 15000, 'reconnected after exit');
+      await sleep(800);
+      await sp.disconnect();
+      await waitFor(() => sp.dead, 10000, 'disconnect ended the session');
+      await sleep(300);
+      results.quietEndsNoToast = seenToasts.length === toastsBefore && (textOf(sp).match(/closed by the server/g) || []).length === 1 && (textOf(sp).match(/── Session ended\./g) || []).length === 2;
+      await app.closeTab(local.tab);
+    }
     log('RESULTS ' + JSON.stringify(results));
     log('DONE');
   } catch (e) {
