@@ -45,11 +45,14 @@ It is a native-feeling Electron app built on xterm.js, ssh2 and node-pty.
 | Session logging | ✅ | Per session or from the tab menu |
 | RDP / VNC | ⚠️ hands off | RDP writes a `.rdp` file for Windows App; VNC opens macOS Screen Sharing |
 | MobaXterm.ini import | ✅ | Best-effort import of the Bookmarks section; `~/.ssh/config` import too |
+| Sessions export / import | ✅ | JSON file of every session and folder, never a password or passphrase (Session menu or the tree's context menu); importing merges by id and adds the rest |
+| Maximise a split pane | ✅ Zoom | ⇧⌘⏎ (or ⤢ in the pane head) fills the tab with the focused pane and brings the layout back; each tab keeps its zoom, also across a restart |
+| Colour themes / dark mode | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark and Light colour the whole window (toolbar, sidebar, tabs, dialogs), not only the terminals; a session can override its own terminal theme |
 | Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
 | FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |
 
-Workspace restore brings back your tabs, splits and sessions (local shells keep their folder) on
-the next launch and reconnects SSH automatically. MobAlt checks GitHub Releases for updates at
+Workspace restore brings back your tabs, splits and sessions (local shells keep their folder, a
+zoomed pane stays zoomed) on the next launch and reconnects SSH automatically. MobAlt checks GitHub Releases for updates at
 startup (Settings → Updates, or Help → Check for Updates…) and installs them only when you agree.
 
 <table>
@@ -106,7 +109,8 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
 - **Splits**: `Split ▾` creates an empty pane on the right/bottom or a grid (up to 2 columns × 4 rows).
   Drop a session from the sidebar onto an empty pane to connect there; drop on a pane edge to split in
   that direction; drop in the centre to replace. Drag a tab onto a pane to move that terminal.
-  A folder's context menu can open all of its sessions in a grid.
+  A folder's context menu can open all of its sessions in a grid. ⇧⌘⏎ zooms the focused pane to
+  fill the tab and back.
 - **Icons & colours**: pick an emoji and a colour in the session editor; they show in the sidebar, tab
   and pane header.
 - **Startup commands** (MobaXterm's *Execute command*): lines in the session editor's Terminal tab are

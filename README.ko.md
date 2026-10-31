@@ -44,10 +44,13 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | 세션 로그 | ✅ | 세션 설정 또는 탭 메뉴 |
 | RDP / VNC | ⚠️ 외부 앱 | RDP는 `.rdp` 파일을 만들어 Windows App으로, VNC는 macOS 화면 공유로 |
 | MobaXterm.ini 가져오기 | ✅ | Bookmarks 섹션 best-effort 파싱, `~/.ssh/config` 가져오기 |
+| 세션 내보내기 / 가져오기 | ✅ | 모든 세션과 폴더를 JSON 파일로(비밀번호·키 암호는 절대 포함하지 않음). Session 메뉴 또는 트리 우클릭 메뉴. 가져올 때 같은 id는 교체하고 나머지는 추가 |
+| 분할 페인 최대화 | ✅ Zoom | ⇧⌘⏎(또는 페인 머리글의 ⤢)로 포커스된 페인이 탭을 가득 채우고 다시 되돌림. 탭마다 기억하며 재시작 후에도 유지 |
+| 색상 테마 / 다크 모드 | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark, Light가 터미널만이 아니라 창 전체(툴바·사이드바·탭·대화상자)에 적용. 세션별로 터미널 테마만 덮어쓰기 가능 |
 | Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩, 동반 SSH 연결로 SFTP |
 | FTP / FTPS | ✅ | 명시적 TLS FTPS, 익명 FTP. Sftp 패널에서 탐색·전송·편집 |
 
-작업대 복원 기능이 탭·분할·세션(로컬 셸은 폴더까지)을 다음 실행 때 되살리고 SSH는 자동 재접속합니다. 시작 시
+작업대 복원 기능이 탭·분할·세션(로컬 셸은 폴더까지, 확대한 페인은 확대 상태까지)을 다음 실행 때 되살리고 SSH는 자동 재접속합니다. 시작 시
 GitHub Releases에서 새 버전을 확인하며(Settings → Updates, Help → Check for Updates…) 동의할 때만 설치합니다.
 
 <table>
@@ -104,6 +107,7 @@ brew install --cask mobalt
 - **분할**: `Split ▾`로 오른쪽/아래 빈 페인 또는 격자(최대 2열×4줄)를 만듭니다. 사이드바의 세션을 빈 페인에
   놓으면 그 자리에 접속, 페인 가장자리에 놓으면 그 방향으로 분할, 가운데에 놓으면 교체. 탭을 페인에 끌면
   그 터미널이 이동합니다. 폴더 우클릭 메뉴로 폴더 전체를 격자로 열 수 있습니다.
+  ⇧⌘⏎는 포커스된 페인을 탭 전체로 확대했다가 되돌립니다.
 - **아이콘·색상**: 세션 편집기에서 이모지와 색을 고르면 사이드바·탭·페인 머리글에 표시됩니다.
 - **시작 명령**(MobaXterm의 *Execute command*): 세션 편집기 Terminal 탭의 Startup commands는 터미널이 준비되면
   모든 세션 종류에서 자동 입력됩니다. 예: 로컬 세션의 Start folder를 프로젝트 폴더로, 시작 명령을
