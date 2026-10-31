@@ -212,8 +212,7 @@ class App {
       // a dialog that opened (and maybe already closed) during the action placed focus itself (back on this button)
       if (!viaKeyboard || anyModalOpen() || modalsShown() !== shown || document.activeElement !== b) return;
       // keyboard flow: an action that opened no dialog/menu hands focus to the panel it showed, else to the terminal
-      const panelInput = b.dataset.action === 'sidebar' && $(`#panel-${b.dataset.arg} input`);
-      if (panelInput) panelInput.focus();
+      if (b.dataset.action === 'sidebar') this.focusPanel(b.dataset.arg);
       else this.activePane()?.focus();
     });
     // toolbar clicks must not steal keyboard focus from the terminal
@@ -240,7 +239,10 @@ class App {
       const s = id && this.sessions.sessions.find((x) => x.id === id);
       if (s) { e.preventDefault(); this.openSession(s); }
     });
-    for (const b of $$('.strip-btn[data-panel]')) b.addEventListener('click', () => this.showPanel(b.dataset.panel));
+    for (const b of $$('.strip-btn[data-panel]')) b.addEventListener('click', (e) => {
+      this.showPanel(b.dataset.panel);
+      if (e.detail === 0) this.focusPanel(b.dataset.panel); // Enter / Space on the focused strip button: into the panel
+    });
     $('#quick-connect').addEventListener('submit', (e) => {
       e.preventDefault();
       const v = $('#qc-input').value.trim();
@@ -315,6 +317,9 @@ class App {
   }
 
   showPanel(name) {
+    // the keyboard is inside the panel being hidden (⌘1-4, a strip button): remember where, so that coming back
+    // restores it, and move it into the shown panel instead of dropping it on <body>
+    const from = this._panelFocusLeaving(name);
     for (const b of $$('.strip-btn[data-panel]')) b.classList.toggle('active', b.dataset.panel === name);
     for (const p of $$('.panel')) p.classList.toggle('active', p.id === 'panel-' + name);
     $('#sidebar').classList.remove('collapsed');
@@ -323,11 +328,44 @@ class App {
     this.workspace.allPanes().forEach((p) => p.fit());
 
     this._syncSidebarToggle();
+    if (from) this.focusPanel(name);
+  }
+
+  /** Remember the focused control of a sidebar panel that is about to be hidden (not `name`); returns that panel's name. */
+  _panelFocusLeaving(name) {
+    const a = document.activeElement, panel = a && a.closest('#sidebar .panel');
+    if (!panel || panel.id === 'panel-' + name) return null;
+    const from = panel.id.slice('panel-'.length);
+    (this._panelFocus ||= {})[from] = a;
+    return from;
+  }
+
+  /**
+   * Keyboard into a sidebar panel: back on the control it left (while that is still shown), else the panel's Tab
+   * stop — the tree's / list's cursor row, the tools host box, the macros ● Rec button —, else the terminal.
+   */
+  focusPanel(name) {
+    const ok = (el) => !!el && el.isConnected && !el.hidden && !el.disabled && el.offsetParent !== null;
+    const stop = {
+      sessions: () => this.sessionTree.el.querySelector('.tree-row[tabindex="0"]') || this.sessionTree.el.querySelector('.tree-empty .link-btn') || $('#session-filter'),
+      sftp: () => this.sftpPanel.cursorRow() || $('#sftp-list'),
+      tools: () => $('#tool-host'),
+      macros: () => this.macrosPanel.list.querySelector('.tree-row[tabindex="0"]') || $('#macro-record'),
+    }[name];
+    const back = this._panelFocus && this._panelFocus[name];
+    const el = ok(back) ? back : stop && stop();
+    if (ok(el)) el.focus();
+    else this.activePane()?.focus();
   }
 
   toggleSidebar() {
     const sb = $('#sidebar');
+    const a = document.activeElement, inside = a && a.closest('#sidebar .panel');
     sb.classList.toggle('collapsed');
+    if (inside && sb.classList.contains('collapsed')) { // the keyboard never stays on a hidden control
+      (this._panelFocus ||= {})[inside.id.slice('panel-'.length)] = a;
+      this.activePane()?.focus();
+    }
     this.saveSettings({ sidebarVisible: !sb.classList.contains('collapsed') }, true);
     this._syncSidebarToggle();
     this.workspace.allPanes().forEach((p) => p.fit());
@@ -787,7 +825,9 @@ class App {
     if (!r) return;
     const connect = r._connect;
     delete r._connect;
+    const inTree = this.sessionTree.el.contains(document.activeElement); // the dialog handed the focus back to a row
     const saved = await this.saveSession(r);
+    this.sessionTree.reveal(saved, inTree); // the saved session is the selection (and the cursor, from the keyboard)
     if (connect) this.openSession(saved);
   }
 

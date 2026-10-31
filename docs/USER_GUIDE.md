@@ -202,17 +202,22 @@ workspace restore and the update check. "Open config folder" shows where everyth
 | Sidebar, Sessions / SFTP / Tools / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, tunnels, settings | ⇧⌘M, ⇧⌘U, ⌘, |
 | Newline in TUI apps | ⇧Enter or ⌥Enter |
-| Focused tab: move / activate / close, context menu | ← → / ⏎ / ⌫, ⇧F10 |
-| Focused session row: move / fold / open / open in split / delete | ↑ ↓ / ← → / ⏎ / ⌘⏎ / ⌫ |
-| Focused macro: move / play / delete, context menu | ↑ ↓ / ⏎ / ⌫, ⇧F10 |
-| SFTP list: move / open / parent folder / delete, context menu | ↑ ↓ Home End PgUp PgDn / ⏎ / ⌫ / Del, ⇧F10 |
-| Session tree and SFTP list: jump to a name | type its first letters (the same letter again: next match) |
+| Focused tab: move / activate / close, context menu | ← → / ⏎ / ⌫, ⇧F10 or the Menu key |
+| Focused session row: move / fold / open / open in split / delete | ↑ ↓ / ← → / ⏎ / ⌘⏎ or ⇧⏎ / ⌫ |
+| Focused session row or folder: context menu (folders: Move to Folder…) | ⇧F10 or the Menu key |
+| Focused macro: move / play / delete, context menu | ↑ ↓ / ⏎ / ⌫, ⇧F10 or the Menu key |
+| SFTP list: move / open / parent folder / delete, context menu | ↑ ↓ Home End PgUp PgDn / ⏎ / ⌫ / Del, ⇧F10 or the Menu key |
+| SFTP list: extend the selection / toggle the focused row / select all | ⇧↑ ⇧↓ ⇧Home ⇧End / Space / ⌘A |
+| SFTP list: sort by a column | Tab to the Name / Size / Modified header, ⏎ or Space |
+| Session tree and SFTP list: jump to a name | type its first letters, spaces included (the same letter again: next match) |
 | Icon and colour picks in the session editor: move / choose | ← → ↑ ↓ / ⏎ or Space |
+| Side strip panel buttons / ⌘1-4 | ⏎ moves the keyboard into the panel; switching panels remembers where it was |
 
 Help → Keyboard Shortcuts shows the same list inside the app. Tab reaches the toolbar, the side
 strip, the session tree, the macros list, the SFTP list and the tab strip (each list is one Tab
 stop; the arrows move inside it); dialogs keep Tab inside them and hand focus back to the tab,
-row or button that opened them when they close; context menus take ↑ ↓ / ⏎ / Esc.
+row or button that opened them when they close; context menus take ↑ ↓ / ⏎ / Esc. Esc in the
+session filter or the quick-connect box clears it and returns to the terminal.
 
 
 ## Data and privacy

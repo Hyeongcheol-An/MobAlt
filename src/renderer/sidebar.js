@@ -1,5 +1,5 @@
 // Sessions tree (left panel): folders, filter, drag to folder, context menus.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead, repointOpeners } from './ui.js';
 
 const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
 
@@ -17,12 +17,16 @@ export class SessionTree {
     this.filterEl.addEventListener('input', () => this.render());
     this.filterEl.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        const first = this.el.querySelector('.tree-row[data-session]');
+        // opens the first match of a typed filter — never a session the user cannot see (empty box, collapsed folder)
+        if (!this.filterEl.value.trim()) return;
+        const first = this.visibleRows().find((r) => r.dataset.session);
         if (first) this.app.openSession(this.sessionById(first.dataset.session));
       }
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape') { // like the quick-connect box: Esc clears and leaves (to the terminal)
         this.filterEl.value = '';
         this.render();
+        this.filterEl.blur();
+        this.app.activePane()?.focus();
       }
       if (e.key === 'ArrowDown') {
         this.focusRow(this.visibleRows()[0]);
@@ -156,6 +160,34 @@ export class SessionTree {
       const again = rows.find((r) => (focused.session ? r.dataset.session === focused.session : r.dataset.folder === focused.folder)) || rows[Math.min(focused.index, rows.length - 1)];
       if (again) { again.focus({ preventScroll: true }); this._rove(again); }
     }
+    // a dialog opened from a row that was just replaced (a connection came up while a confirm was open…) hands the
+    // focus back to the same session's / folder's new row when it closes
+    repointOpeners((o) => (o.classList?.contains('tree-row') && (o._session || o._folder) ? this.rowFor(o._session, o._folder) : null));
+  }
+
+  /** Expand the folders on `path` (a row moved or created inside is shown); true when something was collapsed. */
+  expandTo(path) {
+    let changed = false, acc = '';
+    for (const part of (path || '').split('/').filter(Boolean)) {
+      acc = acc ? acc + '/' + part : part;
+      if (this.collapsed.delete(acc)) changed = true;
+    }
+    if (changed) this.saveCollapsed();
+    return changed;
+  }
+
+  /**
+   * A session just saved (⌘N, Edit…, "New Session Here…"): its row becomes the selection and the tree's Tab stop;
+   * with `focus` (the keyboard was in the tree) also the cursor. A collapsed folder it went into is opened.
+   */
+  reveal(s, focus = false) {
+    if (!s || !s.id) return;
+    if (this.expandTo(s.folder)) this.render();
+    this.select(s.id);
+    const row = this.rowFor(s);
+    if (!row) return;
+    if (focus) this.focusRow(row);
+    else this._rove(row);
   }
 
   /** Rows the keyboard can reach: every row not inside a collapsed folder, in display order. */
@@ -252,6 +284,12 @@ export class SessionTree {
     const f = row._folder, s = row._session;
     const wrap = f ? row.parentElement : null; // .tree-folder
     const parentFolderRow = () => (f ? wrap.parentElement : row.parentElement).closest('.tree-folder')?.firstElementChild || null;
+    const names = () => rows.map((r) => r.querySelector('.label')?.textContent || '');
+    if (e.key === ' ' && this._typeAhead.active()) { // "project w…": the space belongs to the prefix being typed
+      const j = this._typeAhead(e, names(), i);
+      if (j >= 0) this.focusRow(rows[j]);
+      return e.preventDefault();
+    }
     switch (e.key) {
       case 'ArrowDown': this.focusRow(rows[i + 1]); break;
       case 'ArrowUp': i === 0 ? this.filterEl.focus() : this.focusRow(rows[i - 1]); break; // ↑ from the first row: back to the filter (↓ from it comes here)
@@ -285,7 +323,7 @@ export class SessionTree {
         break;
       }
       default: {
-        const j = this._typeAhead(e, rows.map((r) => r.querySelector('.label')?.textContent || ''), i);
+        const j = this._typeAhead(e, names(), i);
         if (j < 0) return;
         this.focusRow(rows[j]);
       }
@@ -329,6 +367,7 @@ export class SessionTree {
     if (this.collapsed.delete(srcPath)) this.collapsed.add(target);
     this.saveCollapsed();
     await this.app.saveAllSessions({ sessions, folders });
+    return target;
   }
 
   async moveToFolder(id, folder) {
@@ -368,6 +407,7 @@ export class SessionTree {
       { label: 'New Session Here…', action: () => this.app.editSession({ folder: f.path, type: 'ssh' }) },
       { label: 'New Subfolder…', action: () => this.newFolder(f.path) },
       { label: 'Rename Folder…', action: () => this.renameFolder(f) },
+      { label: 'Move to Folder…', action: () => this.moveDialog(null, f) },
       { label: 'Open All in Grid (2 columns)', action: () => this.app.openSessionsInGrid(this.collectSessions(f)) },
       { label: 'Connect All Sessions (tabs)', action: () => this.connectAll(f) },
       '-',
@@ -450,17 +490,26 @@ export class SessionTree {
     for (const s of this.collectSessions(f)) this.app.openSession(s);
   }
 
-  async moveDialog(s) {
-    const folders = this.collectFolders().sort();
-    const sel = h('select', {}, h('option', { value: '' }, '(root)'), folders.map((p) => h('option', { value: p, selected: p === (s.folder || '') }, p)));
+  /** "Move to Folder…" for a session `s` or (keyboard alternative to dragging) a folder `f`, which cannot go into itself or a descendant. */
+  async moveDialog(s, f = null) {
+    const inside = (p) => !!f && (p === f.path || p.startsWith(f.path + '/'));
+    const folders = this.collectFolders().sort().filter((p) => !inside(p));
+    const current = s ? s.folder || '' : f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '';
+    const sel = h('select', {}, h('option', { value: '' }, '(root)'), folders.map((p) => h('option', { value: p, selected: p === current }, p)));
     const { showModal } = await import('./ui.js');
     const m = showModal({
       title: 'Move to folder',
       width: 'narrow',
-      body: h('div', { class: 'form-grid' }, h('label', {}, 'Folder'), sel),
+      body: h('div', { class: 'form-grid' }, h('label', {}, s ? 'Folder' : `Move "${f.name}" into`), sel),
       buttons: [{ label: 'Cancel', value: null }, { label: 'Move', primary: true, action: (api) => api.close(sel.value) }],
     });
     const r = await m.promise;
-    if (r !== null) await this.moveToFolder(s.id, r);
+    if (r === null) return;
+    const focus = this.el.contains(document.activeElement); // the dialog handed the focus back to the row
+    this.expandTo(r); // show where it went
+    if (s) return this.moveToFolder(s.id, r); // render() keeps the focus on the session's row
+    const target = await this.moveFolder(f.path, r);
+    const row = target && this.rowFor(null, { path: target }); // the folder's row has a new path: find it again
+    if (row && focus) this.focusRow(row);
   }
 }

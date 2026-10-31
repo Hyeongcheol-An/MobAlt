@@ -602,9 +602,12 @@ export function shortcutsDialog(app) {
     ['MultiExec', '⇧⌘M'], ['Tunnels', '⇧⌘U'], ['Settings', '⌘,'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', app.settings.rightClickPaste !== false ? 'Right-click' : '⌘V'], ['Terminal menu', app.settings.rightClickPaste !== false ? '⇧Right-click' : 'Right-click'],
     ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'],
     ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'], ['Focused session row: move / fold / open', '↑ ↓ / ← → / ⏎'],
-    ['Focused session row: open in split / delete', '⌘⏎ / ⌫'], ['Context menu for focused tab or row', '⇧F10'],
-    ['Focused macro: play / delete', '⏎ / ⌫'], ['SFTP list: move / open / parent / delete', '↑ ↓ Home End PgUp PgDn / ⏎ / ⌫ / Del'],
-    ['Session tree, SFTP list: jump to a name', 'type its first letters'], ['Icon & colour picks: move / choose', '← → / ⏎'],
+    ['Focused session row: open in split / delete', '⌘⏎ or ⇧⏎ / ⌫'], ['Context menu: focused tab, row, macro, SFTP entry', '⇧F10 / Menu key'],
+    ['Focused macro: play / delete, context menu', '⏎ / ⌫, ⇧F10'], ['SFTP list: context menu / delete / parent folder', '⇧F10 or Menu / Del or ⌘⌫ / ⌫'],
+    ['SFTP list: move / open', '↑ ↓ Home End PgUp PgDn / ⏎'], ['SFTP list: extend selection / toggle row / select all', '⇧↑ ⇧↓ ⇧Home ⇧End / Space / ⌘A'],
+    ['SFTP list: sort by a column', 'Tab to a header, ⏎ or Space'], ['Session tree, SFTP list: jump to a name', 'type its first letters'],
+    ['Icon & colour picks: move / choose', '← → ↑ ↓ / ⏎ or Space'],
   ];
-  showModal({ title: 'Keyboard shortcuts', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
+  // wide: two columns of label + key chip; a chip that does not fit beside its label drops to its own line (styles.css .shortcuts)
+  showModal({ title: 'Keyboard shortcuts', width: 'wide', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
 }
