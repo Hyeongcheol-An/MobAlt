@@ -1,10 +1,427 @@
 {
   "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
   "strings": {
+    "\"{word}\" mixes {script} letter {letters} into a Latin word: it is not the name it looks like": {
+      "refs": [
+        "src/renderer/pasteguard.js:201"
+      ]
+    },
+    "\"{word}\" mixes {script} letters {letters} into a Latin word: it is not the name it looks like": {
+      "refs": [
+        "src/renderer/pasteguard.js:200"
+      ]
+    },
+    "{what} (with sudo)": {
+      "refs": [
+        "src/renderer/pasteguard.js:193"
+      ]
+    },
+    "{what}: {why}": {
+      "plural": "{what} ×{n}: {why}",
+      "refs": [
+        "src/renderer/pasteguard.js:155"
+      ]
+    },
+    "{where} — browse, transfer and edit files in the Sftp panel.": {
+      "refs": [
+        "src/renderer/terminal.js:504"
+      ]
+    },
+    "↻ Reconnect": {
+      "refs": [
+        "src/renderer/terminal.js:708"
+      ]
+    },
+    ">_ Local terminal": {
+      "refs": [
+        "src/renderer/terminal.js:483"
+      ]
+    },
+    "── {what} Press Enter to reconnect, ⌘W to close. ──": {
+      "refs": [
+        "src/renderer/terminal.js:698"
+      ]
+    },
+    "a bidi control: the text can read in another order than it runs (Trojan Source)": {
+      "refs": [
+        "src/renderer/pasteguard.js:160"
+      ]
+    },
+    "a carriage return inside a line: the terminal presses Enter there, so what runs is not what you see": {
+      "plural": "a carriage return inside a line ×{n}: the terminal presses Enter there, so what runs is not what you see",
+      "refs": [
+        "src/renderer/pasteguard.js:177"
+      ]
+    },
+    "a key or escape sequence, not text; the terminal would act on it": {
+      "refs": [
+        "src/renderer/pasteguard.js:168"
+      ]
+    },
+    "Accent": {
+      "refs": [
+        "src/renderer/highlight.js:51"
+      ]
+    },
+    "Accent (dim)": {
+      "refs": [
+        "src/renderer/highlight.js:51"
+      ]
+    },
+    "Blue": {
+      "refs": [
+        "src/renderer/highlight.js:50"
+      ]
+    },
+    "byte order mark": {
+      "refs": [
+        "src/renderer/pasteguard.js:55"
+      ]
+    },
+    "Carriage return": {
+      "refs": [
+        "src/renderer/pasteguard.js:23"
+      ]
+    },
+    "chmod on /: breaks the system": {
+      "refs": [
+        "src/renderer/pasteguard.js:84"
+      ]
+    },
+    "Clear": {
+      "refs": [
+        "src/renderer/terminal.js:1196"
+      ]
+    },
+    "Close": {
+      "refs": [
+        "src/renderer/terminal.js:486",
+        "src/renderer/terminal.js:709"
+      ]
+    },
+    "Close pane": {
+      "refs": [
+        "src/renderer/terminal.js:146",
+        "src/renderer/terminal.js:146",
+        "src/renderer/terminal.js:429"
+      ]
+    },
+    "Close Pane": {
+      "refs": [
+        "src/renderer/terminal.js:1208"
+      ]
+    },
+    "Connecting to {where}…": {
+      "refs": [
+        "src/renderer/terminal.js:505"
+      ]
+    },
+    "connection failed": {
+      "refs": [
+        "src/renderer/terminal.js:800"
+      ]
+    },
+    "connection lost": {
+      "refs": [
+        "src/renderer/terminal.js:687"
+      ]
+    },
+    "Connection lost.": {
+      "refs": [
+        "src/renderer/terminal.js:707"
+      ]
+    },
+    "Connection to {where} failed.": {
+      "refs": [
+        "src/renderer/terminal.js:506"
+      ]
+    },
+    "Connection to {where} was closed by the server": {
+      "refs": [
+        "src/renderer/terminal.js:668"
+      ]
+    },
+    "Connection to {where} was closed by the server.": {
+      "refs": [
+        "src/renderer/terminal.js:667"
+      ]
+    },
+    "Connection to {where} was lost: {detail}": {
+      "refs": [
+        "src/renderer/terminal.js:668"
+      ]
+    },
+    "Connection to {where} was lost: {detail}.": {
+      "refs": [
+        "src/renderer/terminal.js:667"
+      ]
+    },
+    "Control character": {
+      "refs": [
+        "src/renderer/pasteguard.js:21"
+      ]
+    },
+    "Copy": {
+      "refs": [
+        "src/renderer/terminal.js:1191"
+      ]
+    },
+    "CPU {pct}% (busy time between the last two polls)": {
+      "refs": [
+        "src/renderer/terminal.js:1001"
+      ]
+    },
+    "CPU {pct}% (sum of the processes over the cores)": {
+      "refs": [
+        "src/renderer/terminal.js:1000"
+      ]
+    },
+    "CPU {value}": {
+      "refs": [
+        "src/renderer/terminal.js:1013"
+      ]
+    },
+    "CPU: measured between two polls": {
+      "refs": [
+        "src/renderer/terminal.js:999"
+      ]
+    },
+    "Cyan": {
+      "refs": [
+        "src/renderer/highlight.js:50"
+      ]
+    },
+    "Cyrillic": {
+      "refs": [
+        "src/renderer/pasteguard.js:197"
+      ]
+    },
+    "Cyrillic and Greek": {
+      "refs": [
+        "src/renderer/pasteguard.js:197"
+      ]
+    },
+    "dd writes raw data over a disk device": {
+      "refs": [
+        "src/renderer/pasteguard.js:80"
+      ]
+    },
+    "Destructive command": {
+      "refs": [
+        "src/renderer/pasteguard.js:26"
+      ]
+    },
+    "Dim": {
+      "refs": [
+        "src/renderer/highlight.js:51"
+      ]
+    },
+    "Disconnect": {
+      "refs": [
+        "src/renderer/terminal.js:1206"
+      ]
+    },
+    "Disconnect & close": {
+      "refs": [
+        "src/renderer/terminal.js:514"
+      ]
+    },
+    "Disconnected from {where}.": {
+      "refs": [
+        "src/renderer/terminal.js:507"
+      ]
+    },
+    "Disk": {
+      "refs": [
+        "src/renderer/terminal.js:1005"
+      ]
+    },
+    "Disk {value}": {
+      "refs": [
+        "src/renderer/terminal.js:1013"
+      ]
+    },
+    "Drag a session from the Sessions panel here, or:": {
+      "refs": [
+        "src/renderer/terminal.js:481"
+      ]
+    },
+    "Duplicate \"{name}\"": {
+      "refs": [
+        "src/renderer/terminal.js:478"
+      ]
+    },
+    "Empty": {
+      "refs": [
+        "src/renderer/terminal.js:404"
+      ]
+    },
+    "Empty pane": {
+      "refs": [
+        "src/renderer/terminal.js:480"
+      ]
+    },
+    "ends with a newline: the last line runs at once on a prompt without bracketed paste": {
+      "refs": [
+        "src/renderer/pasteguard.js:172"
+      ]
+    },
+    "evaluates a download (eval \"$(curl …)\"): the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js:71"
+      ]
+    },
+    "Failed to start: {why}": {
+      "refs": [
+        "src/renderer/terminal.js:620"
+      ]
+    },
+    "Find…": {
+      "refs": [
+        "src/renderer/terminal.js:1195"
+      ]
+    },
+    "first strong isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js:54"
+      ]
+    },
+    "fork bomb: exhausts the machine": {
+      "refs": [
+        "src/renderer/pasteguard.js:83"
+      ]
+    },
+    "formats a disk": {
+      "refs": [
+        "src/renderer/pasteguard.js:82"
+      ]
+    },
+    "function application": {
+      "refs": [
+        "src/renderer/pasteguard.js:53"
+      ]
+    },
+    "Greek": {
+      "refs": [
+        "src/renderer/pasteguard.js:197"
+      ]
+    },
+    "Green": {
+      "refs": [
+        "src/renderer/highlight.js:50"
+      ]
+    },
+    "Hide remote monitoring bar": {
+      "refs": [
+        "src/renderer/terminal.js:428",
+        "src/renderer/terminal.js:865"
+      ]
+    },
+    "Hide Remote Monitoring Bar": {
+      "refs": [
+        "src/renderer/terminal.js:1203"
+      ]
+    },
+    "host {host}": {
+      "refs": [
+        "src/renderer/terminal.js:1013"
+      ]
+    },
+    "Host: {host}": {
+      "refs": [
+        "src/renderer/terminal.js:1009"
+      ]
+    },
+    "invisible character": {
+      "refs": [
+        "src/renderer/pasteguard.js:57"
+      ]
+    },
+    "Invisible character": {
+      "refs": [
+        "src/renderer/pasteguard.js:20"
+      ]
+    },
+    "invisible plus": {
+      "refs": [
+        "src/renderer/pasteguard.js:53"
+      ]
+    },
+    "invisible separator": {
+      "refs": [
+        "src/renderer/pasteguard.js:53"
+      ]
+    },
+    "invisible times": {
+      "refs": [
+        "src/renderer/pasteguard.js:53"
+      ]
+    },
+    "Keyword highlighting: \"{pattern}\" is not a valid regex ({error}) — rule skipped": {
+      "refs": [
+        "src/renderer/terminal.js:1130"
+      ]
+    },
     "Language": {
       "refs": [
         "src/renderer/dialogs.js:790",
         "src/renderer/dialogs.js:806"
+      ]
+    },
+    "Last sample {n} s ago": {
+      "refs": [
+        "src/renderer/terminal.js:1055"
+      ]
+    },
+    "Last sample {n} s ago; the last poll failed: {error}": {
+      "refs": [
+        "src/renderer/terminal.js:1055"
+      ]
+    },
+    "left-to-right embedding": {
+      "refs": [
+        "src/renderer/pasteguard.js:51"
+      ]
+    },
+    "left-to-right isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js:54"
+      ]
+    },
+    "left-to-right mark": {
+      "refs": [
+        "src/renderer/pasteguard.js:50"
+      ]
+    },
+    "left-to-right override": {
+      "refs": [
+        "src/renderer/pasteguard.js:52"
+      ]
+    },
+    "line separator": {
+      "refs": [
+        "src/renderer/pasteguard.js:50"
+      ]
+    },
+    "load": {
+      "refs": [
+        "src/renderer/terminal.js:1007"
+      ]
+    },
+    "load {value}": {
+      "refs": [
+        "src/renderer/terminal.js:1013"
+      ]
+    },
+    "Load average over 1, 5 and 15 minutes": {
+      "refs": [
+        "src/renderer/terminal.js:1007"
+      ]
+    },
+    "Local": {
+      "refs": [
+        "src/renderer/terminal.js:404",
+        "src/renderer/terminal.js:478"
       ]
     },
     "Local X server: {display}": {
@@ -13,9 +430,134 @@
         "src/renderer/app.js:1198"
       ]
     },
+    "Logging stopped": {
+      "refs": [
+        "src/renderer/terminal.js:1087"
+      ]
+    },
+    "Logging to {file}": {
+      "refs": [
+        "src/renderer/terminal.js:1083"
+      ]
+    },
+    "Look-alike letters": {
+      "refs": [
+        "src/renderer/pasteguard.js:27"
+      ]
+    },
+    "looks like a space but is not one to the shell: it becomes part of the word": {
+      "refs": [
+        "src/renderer/pasteguard.js:161"
+      ]
+    },
+    "Magenta": {
+      "refs": [
+        "src/renderer/highlight.js:50"
+      ]
+    },
+    "Mem": {
+      "refs": [
+        "src/renderer/terminal.js:1004"
+      ]
+    },
+    "Mem {value}": {
+      "refs": [
+        "src/renderer/terminal.js:1013"
+      ]
+    },
+    "Memory in use: {pct}% of {total}": {
+      "refs": [
+        "src/renderer/terminal.js:1004"
+      ]
+    },
+    "Memory: unknown": {
+      "refs": [
+        "src/renderer/terminal.js:1004"
+      ]
+    },
     "Menus, panels and dialogs switch at once; terminal output is not translated": {
       "refs": [
         "src/renderer/dialogs.js:806"
+      ]
+    },
+    "Mongolian vowel separator": {
+      "refs": [
+        "src/renderer/pasteguard.js:55"
+      ]
+    },
+    "monitor unavailable": {
+      "refs": [
+        "src/renderer/terminal.js:41"
+      ]
+    },
+    "monitoring…": {
+      "refs": [
+        "src/renderer/terminal.js:40"
+      ]
+    },
+    "Mosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?": {
+      "refs": [
+        "src/renderer/terminal.js:684"
+      ]
+    },
+    "mosh exited": {
+      "refs": [
+        "src/renderer/terminal.js:683"
+      ]
+    },
+    "mosh exited with code {code}": {
+      "refs": [
+        "src/renderer/terminal.js:683"
+      ]
+    },
+    "Move terminal down": {
+      "refs": [
+        "src/renderer/terminal.js:25"
+      ]
+    },
+    "Move terminal here": {
+      "refs": [
+        "src/renderer/terminal.js:20"
+      ]
+    },
+    "Move terminal here (replace)": {
+      "refs": [
+        "src/renderer/terminal.js:21"
+      ]
+    },
+    "Move terminal left": {
+      "refs": [
+        "src/renderer/terminal.js:22"
+      ]
+    },
+    "Move terminal right": {
+      "refs": [
+        "src/renderer/terminal.js:23"
+      ]
+    },
+    "Move terminal up": {
+      "refs": [
+        "src/renderer/terminal.js:24"
+      ]
+    },
+    "narrow no-break space": {
+      "refs": [
+        "src/renderer/pasteguard.js:55"
+      ]
+    },
+    "Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll": {
+      "refs": [
+        "src/renderer/terminal.js:1006"
+      ]
+    },
+    "No sample yet": {
+      "refs": [
+        "src/renderer/terminal.js:1054"
+      ]
+    },
+    "No sample yet; the last poll failed: {error}": {
+      "refs": [
+        "src/renderer/terminal.js:1054"
       ]
     },
     "No X server found (install XQuartz for X11 forwarding)": {
@@ -24,9 +566,390 @@
         "src/renderer/app.js:1198"
       ]
     },
+    "no-break space": {
+      "refs": [
+        "src/renderer/pasteguard.js:55"
+      ]
+    },
+    "Open file browser": {
+      "refs": [
+        "src/renderer/terminal.js:513",
+        "src/renderer/terminal.js:1204"
+      ]
+    },
+    "Open session down": {
+      "refs": [
+        "src/renderer/terminal.js:34"
+      ]
+    },
+    "Open session here": {
+      "refs": [
+        "src/renderer/terminal.js:29"
+      ]
+    },
+    "Open session here (replace)": {
+      "refs": [
+        "src/renderer/terminal.js:30"
+      ]
+    },
+    "Open session left": {
+      "refs": [
+        "src/renderer/terminal.js:31"
+      ]
+    },
+    "Open session right": {
+      "refs": [
+        "src/renderer/terminal.js:32"
+      ]
+    },
+    "Open session up": {
+      "refs": [
+        "src/renderer/terminal.js:33"
+      ]
+    },
+    "Open SFTP Browser": {
+      "refs": [
+        "src/renderer/terminal.js:1204",
+        "src/renderer/terminal.js:1205"
+      ]
+    },
+    "Open the SFTP browser for this Mosh session first (Sftp panel)": {
+      "refs": [
+        "src/renderer/terminal.js:270"
+      ]
+    },
+    "overwrites a disk device": {
+      "refs": [
+        "src/renderer/pasteguard.js:81"
+      ]
+    },
+    "paragraph separator": {
+      "refs": [
+        "src/renderer/pasteguard.js:50"
+      ]
+    },
+    "Paste": {
+      "refs": [
+        "src/renderer/terminal.js:1192"
+      ]
+    },
+    "Pipe to shell": {
+      "refs": [
+        "src/renderer/pasteguard.js:24"
+      ]
+    },
+    "pipes a download straight into a shell (curl … | sh): the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js:69"
+      ]
+    },
+    "pop directional formatting": {
+      "refs": [
+        "src/renderer/pasteguard.js:51"
+      ]
+    },
+    "pop directional isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js:54"
+      ]
+    },
+    "Profile write": {
+      "refs": [
+        "src/renderer/pasteguard.js:25"
+      ]
+    },
+    "Reconnect": {
+      "refs": [
+        "src/renderer/terminal.js:1206"
+      ]
+    },
+    "Red": {
+      "refs": [
+        "src/renderer/highlight.js:50"
+      ]
+    },
+    "Remote folder unknown": {
+      "refs": [
+        "src/renderer/terminal.js:266"
+      ]
+    },
+    "Remote monitoring": {
+      "refs": [
+        "src/renderer/terminal.js:149",
+        "src/renderer/terminal.js:433"
+      ]
+    },
+    "Remote monitoring bar": {
+      "refs": [
+        "src/renderer/terminal.js:143",
+        "src/renderer/terminal.js:427"
+      ]
+    },
+    "Remote monitoring: {error}": {
+      "refs": [
+        "src/renderer/terminal.js:961"
+      ]
+    },
+    "Restore Panes": {
+      "refs": [
+        "src/renderer/terminal.js:1200"
+      ]
+    },
+    "Restore panes (⇧⌘⏎)": {
+      "refs": [
+        "src/renderer/terminal.js:425",
+        "src/renderer/terminal.js:457"
+      ]
+    },
+    "right-to-left embedding": {
+      "refs": [
+        "src/renderer/pasteguard.js:51"
+      ]
+    },
+    "right-to-left isolate": {
+      "refs": [
+        "src/renderer/pasteguard.js:54"
+      ]
+    },
+    "right-to-left mark": {
+      "refs": [
+        "src/renderer/pasteguard.js:50"
+      ]
+    },
+    "right-to-left override": {
+      "refs": [
+        "src/renderer/pasteguard.js:52"
+      ]
+    },
+    "rm -rf on the root, the home folder or everything in the current folder": {
+      "refs": [
+        "src/renderer/pasteguard.js:79"
+      ]
+    },
+    "Root filesystem (/) in use": {
+      "refs": [
+        "src/renderer/terminal.js:1005"
+      ]
+    },
+    "runs a download through process substitution (sh <(curl …)): the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js:72"
+      ]
+    },
+    "runs a download through sh -c \"$(curl …)\": the script runs without being seen": {
+      "refs": [
+        "src/renderer/pasteguard.js:70"
+      ]
+    },
+    "Select All": {
+      "refs": [
+        "src/renderer/terminal.js:1193"
+      ]
+    },
+    "Session ended.": {
+      "refs": [
+        "src/renderer/terminal.js:698",
+        "src/renderer/terminal.js:707"
+      ]
+    },
+    "SFTP for Mosh session \"{name}\" (via SSH): {error}": {
+      "refs": [
+        "src/renderer/terminal.js:801"
+      ]
+    },
+    "Shell exited.": {
+      "refs": [
+        "src/renderer/terminal.js:707"
+      ]
+    },
+    "Show remote monitoring bar": {
+      "refs": [
+        "src/renderer/terminal.js:143",
+        "src/renderer/terminal.js:428",
+        "src/renderer/terminal.js:865"
+      ]
+    },
+    "Show Remote Monitoring Bar": {
+      "refs": [
+        "src/renderer/terminal.js:1203"
+      ]
+    },
+    "Show sessions": {
+      "refs": [
+        "src/renderer/terminal.js:485"
+      ]
+    },
+    "soft hyphen": {
+      "refs": [
+        "src/renderer/pasteguard.js:55"
+      ]
+    },
+    "Split down": {
+      "refs": [
+        "src/renderer/terminal.js:145",
+        "src/renderer/terminal.js:145",
+        "src/renderer/terminal.js:429"
+      ]
+    },
+    "Split Down": {
+      "refs": [
+        "src/renderer/terminal.js:1199"
+      ]
+    },
+    "Split right": {
+      "refs": [
+        "src/renderer/terminal.js:144",
+        "src/renderer/terminal.js:144",
+        "src/renderer/terminal.js:429"
+      ]
+    },
+    "Split Right": {
+      "refs": [
+        "src/renderer/terminal.js:1198"
+      ]
+    },
+    "stale": {
+      "refs": [
+        "src/renderer/terminal.js:1051"
+      ]
+    },
+    "stale ({n} s)": {
+      "refs": [
+        "src/renderer/terminal.js:1051"
+      ]
+    },
+    "Start Session Log…": {
+      "refs": [
+        "src/renderer/terminal.js:1202"
+      ]
+    },
+    "Stop Session Log": {
+      "refs": [
+        "src/renderer/terminal.js:1202"
+      ]
+    },
     "System default ({name})": {
       "refs": [
         "src/renderer/dialogs.js:790"
+      ]
+    },
+    "tag character": {
+      "refs": [
+        "src/renderer/pasteguard.js:57"
+      ]
+    },
+    "takes no space on screen but is sent to the shell": {
+      "refs": [
+        "src/renderer/pasteguard.js:162"
+      ]
+    },
+    "Text": {
+      "refs": [
+        "src/renderer/highlight.js:51"
+      ]
+    },
+    "The monitoring bar appears once the session is connected": {
+      "refs": [
+        "src/renderer/terminal.js:878"
+      ]
+    },
+    "The monitoring bar appears once the SFTP companion connection is up": {
+      "refs": [
+        "src/renderer/terminal.js:878"
+      ]
+    },
+    "The remote monitoring bar needs an SSH or Mosh session": {
+      "refs": [
+        "src/renderer/terminal.js:871"
+      ]
+    },
+    "The session ended while the tab was moved.": {
+      "refs": [
+        "src/renderer/terminal.js:1266"
+      ]
+    },
+    "Trailing newline": {
+      "refs": [
+        "src/renderer/pasteguard.js:22"
+      ]
+    },
+    "up": {
+      "refs": [
+        "src/renderer/terminal.js:1008"
+      ]
+    },
+    "up {value}": {
+      "refs": [
+        "src/renderer/terminal.js:1013"
+      ]
+    },
+    "Uptime": {
+      "refs": [
+        "src/renderer/terminal.js:1008"
+      ]
+    },
+    "variation selector": {
+      "refs": [
+        "src/renderer/pasteguard.js:57"
+      ]
+    },
+    "word joiner": {
+      "refs": [
+        "src/renderer/pasteguard.js:53"
+      ]
+    },
+    "writes to ~/.{file}: a shell profile runs at every new shell": {
+      "refs": [
+        "src/renderer/pasteguard.js:186"
+      ]
+    },
+    "writes to ~/.{file}: that grants or changes SSH access to this account": {
+      "refs": [
+        "src/renderer/pasteguard.js:186"
+      ]
+    },
+    "Yellow": {
+      "refs": [
+        "src/renderer/highlight.js:50"
+      ]
+    },
+    "zero-width joiner": {
+      "refs": [
+        "src/renderer/pasteguard.js:49"
+      ]
+    },
+    "zero-width non-joiner": {
+      "refs": [
+        "src/renderer/pasteguard.js:49"
+      ]
+    },
+    "zero-width space": {
+      "refs": [
+        "src/renderer/pasteguard.js:49"
+      ]
+    },
+    "Zoom pane": {
+      "refs": [
+        "src/renderer/terminal.js:141",
+        "src/renderer/terminal.js:426"
+      ]
+    },
+    "Zoom Pane": {
+      "refs": [
+        "src/renderer/terminal.js:1200"
+      ]
+    },
+    "Zoom pane (⇧⌘⏎)": {
+      "refs": [
+        "src/renderer/terminal.js:141",
+        "src/renderer/terminal.js:425",
+        "src/renderer/terminal.js:457"
+      ]
+    },
+    "zoomed": {
+      "refs": [
+        "src/renderer/terminal.js:140",
+        "src/renderer/terminal.js:424"
       ]
     }
   }

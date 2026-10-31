@@ -42,11 +42,21 @@ export const DEFAULT_RULES = Object.freeze([
   { pattern: UNITS, regex: true, ci: false, color: 'accent-dim', bg: '', bold: false, underline: false },
 ].map(Object.freeze));
 
-/** Colour keys a rule may use (besides a '#rrggbb'); the label is what the rules table shows. */
-export const COLOR_KEYS = [
-  ['red', 'Red'], ['yellow', 'Yellow'], ['green', 'Green'], ['blue', 'Blue'], ['magenta', 'Magenta'], ['cyan', 'Cyan'],
-  ['accent', 'Accent'], ['accent-dim', 'Accent (dim)'], ['dim', 'Dim'], ['text', 'Text'],
-];
+// Colour keys a rule may use (besides a '#rrggbb'), in the order the rules table lists them, each with its label. The
+// label is what the table shows, so it is translated when it is read, never at module load (that would freeze the
+// language of that moment): colorLabel(key), or the COLOR_KEYS pairs below, built on every element read. The rule
+// objects (settings JSON) keep the key.
+const COLOR_SRC = {
+  red: () => t('Red'), yellow: () => t('Yellow'), green: () => t('Green'), blue: () => t('Blue'), magenta: () => t('Magenta'), cyan: () => t('Cyan'),
+  accent: () => t('Accent'), 'accent-dim': () => t('Accent (dim)'), dim: () => t('Dim'), text: () => t('Text'),
+};
+const isColorKey = (c) => Object.prototype.hasOwnProperty.call(COLOR_SRC, c);
+/** The label of a rule colour key in the current language (an unknown key, a '#rrggbb', comes back as it is). */
+export const colorLabel = (key) => (isColorKey(key) ? COLOR_SRC[key]() : key);
+/** [[key, label], …] for the rules table: an array whose element reads hand back the pair with the label translated at that moment. */
+export const COLOR_KEYS = new Proxy(Object.keys(COLOR_SRC).map((k) => Object.freeze([k, k])), {
+  get: (pairs, p, receiver) => (typeof p === 'string' && /^\d+$/.test(p) && p in pairs ? [pairs[p][0], colorLabel(pairs[p][0])] : Reflect.get(pairs, p, receiver)),
+});
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /** A rule as stored: every field present and typed; an unknown colour falls back to the text colour. */
@@ -54,7 +64,7 @@ export function normalizeRule(r) {
   r = r && typeof r === 'object' ? r : {};
   const colour = (v) => {
     const c = typeof v === 'string' ? v.trim().toLowerCase() : '';
-    return HEX.test(c) || COLOR_KEYS.some(([k]) => k === c) ? c : '';
+    return HEX.test(c) || isColorKey(c) ? c : '';
   };
   return {
     pattern: typeof r.pattern === 'string' ? r.pattern : '',
@@ -230,14 +240,14 @@ export class TermHighlighter {
   configure({ enabled, rules, theme }) {
     if (this.disposed) return [];
     const list = (Array.isArray(rules) && rules.length ? rules : DEFAULT_RULES).map(normalizeRule);
-    const t = theme || {};
-    const key = JSON.stringify([!!enabled, list, t.background, t.foreground, t.red, t.green, t.yellow, t.blue, t.magenta, t.cyan]);
+    const th = theme || {}; // not `t`: that is the translation lookup
+    const key = JSON.stringify([!!enabled, list, th.background, th.foreground, th.red, th.green, th.yellow, th.blue, th.magenta, th.cyan]);
     const { compiled, invalid } = compileRules(list);
     if (key === this._key) return invalid;
     this._key = key;
     this.enabled = !!enabled;
     this.compiled = compiled;
-    this.palette = highlightPalette(t);
+    this.palette = highlightPalette(th);
     this.styles = new Map(compiled.map((c) => [c.rule, ruleStyle(c.rule, this.palette)]));
     this.failed = false;
     this.rescan();

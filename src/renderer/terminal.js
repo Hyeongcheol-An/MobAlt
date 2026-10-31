@@ -4,10 +4,42 @@ import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
 import { TermHighlighter, DEFAULT_RULES, highlightPalette } from './highlight.js';
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { t, tn, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 /** The marker the main process puts in front of its status lines (terminals.js STATUS_DIM / STATUS_FAIL): painted in _paint, where the pane's palette is known. */
 const STATUS_RE = /\x1b\]7704;(dim|fail)\x07/g;
+
+/**
+ * The label of a drop zone while a tab (isTab) or a session is dragged over the pane: 'center' (an empty pane takes
+ * it), 'replace' (a pane in use is replaced), or the edge the pane would be split at. One literal per case: a sentence
+ * is never assembled from pieces.
+ */
+function zoneLabel(isTab, zone) {
+  if (isTab) {
+    switch (zone) {
+      case 'center': return t('Move terminal here');
+      case 'replace': return t('Move terminal here (replace)');
+      case 'left': return t('Move terminal left');
+      case 'right': return t('Move terminal right');
+      case 'up': return t('Move terminal up');
+      default: return t('Move terminal down');
+    }
+  }
+  switch (zone) {
+    case 'center': return t('Open session here');
+    case 'replace': return t('Open session here (replace)');
+    case 'left': return t('Open session left');
+    case 'right': return t('Open session right');
+    case 'up': return t('Open session up');
+    default: return t('Open session down');
+  }
+}
+
+/** The notes the monitoring strip shows instead of a sample, by the key _monitorRender() is called with. */
+const MONITOR_NOTES = {
+  'monitoring…': () => t('monitoring…'),
+  'monitor unavailable': () => t('monitor unavailable'),
+};
 
 /** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
 const startErrorText = (e) => errMsg(e);
@@ -48,7 +80,8 @@ export class TermPane {
     this.cwd = opts.cwd || null;
     this.termId = null;
     this.status = 'idle';
-    this.title = this.session ? this.session.name : this.kind === 'empty' ? 'Empty' : 'Local';
+    this._defaultTitle = this.session ? null : this._kindTitle(); // the kind's own title, re-labelled on a language switch while the title is still it
+    this.title = this.session ? this.session.name : this._defaultTitle;
     this.remoteCwd = null;
     this.logging = false;
     this.tab = null;
@@ -104,30 +137,31 @@ export class TermPane {
         h('span', { class: 'dot' }),
         this.session?.icon ? h('span', { class: 'picon' }, this.session.icon) : null,
         (this.headTitle = h('span', { class: 'title' }, this.title)),
-        (this.zoomBadge = h('span', { class: 'zoom-badge', hidden: true }, 'zoomed')),
-        (this.zoomBtn = h('button', { class: 'zoom', title: 'Zoom pane (⇧⌘⏎)', 'aria-label': 'Zoom pane', 'aria-pressed': 'false', onclick: () => app.action('zoom-pane', undefined, this) }, icon('zoom'))),
+        (this.zoomBadge = h('span', { class: 'zoom-badge', hidden: true }, t('zoomed'))),
+        (this.zoomBtn = h('button', { class: 'zoom', title: t('Zoom pane (⇧⌘⏎)'), 'aria-label': t('Zoom pane'), 'aria-pressed': 'false', onclick: () => app.action('zoom-pane', undefined, this) }, icon('zoom'))),
         // the monitoring bar toggle: an ARIA toggle like ⤢ (a stable name, aria-pressed carries the state); SSH / Mosh panes only
-        (this.monBtn = h('button', { class: 'monitor', title: 'Show remote monitoring bar', 'aria-label': 'Remote monitoring bar', 'aria-pressed': 'false', hidden: !this.monitorAllowed(), onclick: () => app.action('toggle-monitor', undefined, this) }, icon('monitor'))),
-        h('button', { title: 'Split right', 'aria-label': 'Split right', onclick: () => app.action('split', 'right', this) }, icon('split')),
-        h('button', { title: 'Split down', 'aria-label': 'Split down', onclick: () => app.action('split', 'down', this) }, icon('split-down')),
-        h('button', { title: 'Close pane', 'aria-label': 'Close pane', onclick: () => app.closePane(this) }, icon('x'))
+        (this.monBtn = h('button', { class: 'monitor', title: t('Show remote monitoring bar'), 'aria-label': t('Remote monitoring bar'), 'aria-pressed': 'false', hidden: !this.monitorAllowed(), onclick: () => app.action('toggle-monitor', undefined, this) }, icon('monitor'))),
+        (this.splitRightBtn = h('button', { title: t('Split right'), 'aria-label': t('Split right'), onclick: () => app.action('split', 'right', this) }, icon('split'))),
+        (this.splitDownBtn = h('button', { title: t('Split down'), 'aria-label': t('Split down'), onclick: () => app.action('split', 'down', this) }, icon('split-down'))),
+        (this.closeBtn = h('button', { title: t('Close pane'), 'aria-label': t('Close pane'), onclick: () => app.closePane(this) }, icon('x')))
       )),
       // the remote monitoring strip: a status region that is never announced (it changes every few seconds)
-      (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': 'Remote monitoring', hidden: true })),
+      (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': t('Remote monitoring'), hidden: true })),
       (this.termEl = h('div', { class: 'pane-term' }))
     );
     if (this.session?.color) this.el.style.setProperty('--pane-color', this.session.color);
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the palette from the first paint
     this.el.addEventListener('mousedown', () => app.focusPane(this), true);
     this._wireDnD();
+    this._i18nOff = onChange(() => this._relabel()); // a language switch: the labels this pane keeps on screen (dispose() unsubscribes)
 
     this.term.onData((d) => this._onInput(d));
     this.term.onBinary((d) => this._onInput(d));
     this.term.onResize(({ cols, rows }) => {
       if (this.termId) window.api.term.resize(this.termId, cols, rows);
     });
-    this.term.onTitleChange((t) => {
-      this.title = t || this.title;
+    this.term.onTitleChange((title) => {
+      this.title = title || this.title;
       this.updateTitle();
     });
     this.term.onSelectionChange(() => {
@@ -199,8 +233,7 @@ export class TermPane {
         const isTab = e.dataTransfer.types.includes('text/x-mobalt-tab');
         e.dataTransfer.dropEffect = isTab ? 'move' : 'copy';
         const zone = this._dropZone(e);
-        const what = isTab ? 'Move terminal' : 'Open session';
-        this._showZone(zone, zone === 'center' ? (this.kind === 'empty' ? `${what} here` : `${what} here (replace)`) : `${what} ${zone}`);
+        this._showZone(zone, zoneLabel(isTab, zone === 'center' && this.kind !== 'empty' ? 'replace' : zone));
         return;
       }
       if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/plain')) {
@@ -230,11 +263,11 @@ export class TermPane {
         const connId = connIdOf(this);
         if (connId) {
           const dir = this.remoteCwd || (this.kind === 'mosh' && this.app.sftpPanel.states.get(connId)?.path) || (await window.api.sftp.home(connId).catch(() => null));
-          if (!dir) return toast('Remote folder unknown', 'warn');
+          if (!dir) return toast(t('Remote folder unknown'), 'warn');
           await this.app.sftpPanel.uploadTo(connId, paths, dir);
           this.app.sftpPanel.show(connId);
         } else if (this.kind === 'mosh' && this.status === 'connected') {
-          toast('Open the SFTP browser for this Mosh session first (Sftp panel)', 'warn');
+          toast(t('Open the SFTP browser for this Mosh session first (Sftp panel)'), 'warn');
         } else {
           // local terminal: paste the paths (quoted)
           this.write(paths.map((p) => (/[\s'"]/.test(p) ? `'${p.replace(/'/g, `'\\''`)}'` : p)).join(' '));
@@ -366,6 +399,49 @@ export class TermPane {
     this.app.onPaneTitle(this);
   }
 
+  /** The title a pane without a session starts with: the placeholder's "Empty", a shell's "Local" (until the shell or the folder names it). */
+  _kindTitle() {
+    return this.kind === 'empty' ? t('Empty') : t('Local');
+  }
+
+  /** True while the title is still the kind's own (no session, no OSC title, not yet named after the folder): app.js may compare against this instead of the English "Local". */
+  titleIsDefault() {
+    return !!this._defaultTitle && this.title === this._defaultTitle;
+  }
+
+  /**
+   * A language switch (i18n:changed): every label this pane keeps on screen is drawn again in the new language — the
+   * default title, the head's badge and buttons, the monitoring strip (its note or the meter labels of the last
+   * sample), the Reconnect / Close overlay, the empty-pane placeholder and the FTP card. Lines already written into
+   * the terminal stay as they were: a buffer is never rewritten.
+   */
+  _relabel() {
+    if (this.disposed) return;
+    if (this.titleIsDefault()) {
+      this.title = this._defaultTitle = this._kindTitle();
+      this.updateTitle();
+    }
+    this.zoomBadge.textContent = t('zoomed');
+    this.zoomBtn.title = this.zoomed ? t('Restore panes (⇧⌘⏎)') : t('Zoom pane (⇧⌘⏎)');
+    this.zoomBtn.setAttribute('aria-label', t('Zoom pane'));
+    this.monBtn.setAttribute('aria-label', t('Remote monitoring bar'));
+    this.monBtn.title = this.monitorEnabled() ? t('Hide remote monitoring bar') : t('Show remote monitoring bar');
+    for (const [btn, label] of [[this.splitRightBtn, t('Split right')], [this.splitDownBtn, t('Split down')], [this.closeBtn, t('Close pane')]]) {
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+    }
+    this.monitorEl.setAttribute('aria-label', t('Remote monitoring'));
+    if (!this.monitorEl.hidden) {
+      if (this._monitorNote) this._monitorRender(null, this._monitorNote.note, this._monitorNote.detail);
+      else if (this.monitorSample) this._monitorRender(this.monitorSample);
+    }
+    if (this.overlay) this.showOverlay(this._overlayReason);
+    if (this.placeholder) {
+      if (this.kind === 'ftp' && this._ftpInfo) this.showFtpInfo(this._ftpInfo.state, this._ftpInfo.msg);
+      else if (this.kind === 'empty') this.showPlaceholder();
+    }
+  }
+
   /**
    * Head state while this pane fills its tab (layout.js setZoom): badge, pressed ⤢/⤡ button, `.zoomed` on the pane.
    * The button is an ARIA toggle: its accessible name stays "Zoom pane" and aria-pressed carries the state (a changing
@@ -378,7 +454,7 @@ export class TermPane {
     this.el.classList.toggle('zoomed', on);
     this.zoomBadge.hidden = !on;
     this.zoomBtn.replaceChildren(icon(on ? 'unzoom' : 'zoom'));
-    this.zoomBtn.title = on ? 'Restore panes (⇧⌘⏎)' : 'Zoom pane (⇧⌘⏎)';
+    this.zoomBtn.title = on ? t('Restore panes (⇧⌘⏎)') : t('Zoom pane (⇧⌘⏎)');
     this.zoomBtn.setAttribute('aria-pressed', String(on));
   }
 
@@ -399,15 +475,15 @@ export class TermPane {
   showPlaceholder() {
     this.hidePlaceholder();
     const from = this.from;
-    const dupLabel = from && from.kind !== 'empty' ? `Duplicate "${from.session ? from.session.name : 'Local'}"` : null;
+    const dupLabel = from && from.kind !== 'empty' ? t('Duplicate "{name}"', { name: from.session ? from.session.name : t('Local') }) : null;
     this.placeholder = h('div', { class: 'pane-placeholder' },
-      h('div', { class: 'big' }, 'Empty pane'),
-      h('div', { class: 'hint' }, 'Drag a session from the Sessions panel here, or:'),
+      h('div', { class: 'big' }, t('Empty pane')),
+      h('div', { class: 'hint' }, t('Drag a session from the Sessions panel here, or:')),
       h('div', { class: 'btns' },
-        h('button', { class: 'btn small', onclick: () => this.becomeLocal() }, '>_ Local terminal'),
+        h('button', { class: 'btn small', onclick: () => this.becomeLocal() }, t('>_ Local terminal')),
         dupLabel ? h('button', { class: 'btn small', onclick: () => this.app.duplicateInto(this, from) }, dupLabel) : null,
-        h('button', { class: 'btn small', onclick: () => this.app.showPanel('sessions') }, 'Show sessions'),
-        h('button', { class: 'btn small', onclick: () => this.app.closePane(this, true) }, 'Close')
+        h('button', { class: 'btn small', onclick: () => this.app.showPanel('sessions') }, t('Show sessions')),
+        h('button', { class: 'btn small', onclick: () => this.app.closePane(this, true) }, t('Close'))
       )
     );
     this.el.append(this.placeholder);
@@ -421,20 +497,21 @@ export class TermPane {
    */
   showFtpInfo(state = 'connected', msg) {
     this.hidePlaceholder();
+    this._ftpInfo = { state, msg }; // drawn again in the new language on a switch (_relabel)
     const s = this.session || {};
     const where = `${s.username ? s.username + '@' : 'anonymous@'}${s.host}${s.port && s.port !== 21 ? ':' + s.port : ''}`;
     const live = state === 'connected';
-    const hint = live ? `${where} — browse, transfer and edit files in the Sftp panel.`
-      : state === 'connecting' ? `Connecting to ${where}…`
-      : state === 'failed' ? `Connection to ${where} failed.`
-      : `Disconnected from ${where}.`;
+    const hint = live ? t('{where} — browse, transfer and edit files in the Sftp panel.', { where })
+      : state === 'connecting' ? t('Connecting to {where}…', { where })
+      : state === 'failed' ? t('Connection to {where} failed.', { where })
+      : t('Disconnected from {where}.', { where });
     this.placeholder = h('div', { class: `pane-placeholder ftp-info ${state}` },
-      h('div', { class: 'big' }, `FTP${s.ftps ? 'S' : ''} · ${s.name || s.host}`),
+      h('div', { class: 'big' }, `FTP${s.ftps ? 'S' : ''} · ${s.name || s.host}`), // the protocol and the session's name: no words to translate
       h('div', { class: 'hint' }, hint),
       state === 'failed' && msg ? h('div', { class: 'ftp-err' }, msg) : null,
       live ? h('div', { class: 'btns' },
-        h('button', { class: 'btn small', onclick: () => this.app.sftpPanel.show(this.termId) }, 'Open file browser'),
-        h('button', { class: 'btn small', onclick: () => this.app.closePane(this) }, 'Disconnect & close')
+        h('button', { class: 'btn small', onclick: () => this.app.sftpPanel.show(this.termId) }, t('Open file browser')),
+        h('button', { class: 'btn small', onclick: () => this.app.closePane(this) }, t('Disconnect & close'))
       ) : null
     );
     this.el.append(this.placeholder);
@@ -452,7 +529,7 @@ export class TermPane {
     this.kind = 'local';
     this.session = null;
     this.cwd = cwd || (this.from && this.from.kind === 'local' ? this.from.cwd : null);
-    this.title = 'Local';
+    this.title = this._defaultTitle = this._kindTitle();
     this.hidePlaceholder();
     this.updateTitle();
     this.syncWebgl(); // a terminal now: a GPU context when it is on screen
@@ -540,7 +617,7 @@ export class TermPane {
       if (this.session?.logging && this.kind !== 'ftp') this.toggleLog(true);
     } catch (e) {
       const why = startErrorText(e);
-      this.term.write(`\r\n\x1b[31mFailed to start: ${why}\x1b[0m\r\n`);
+      this.term.write(`\r\n\x1b[31m${t('Failed to start: {why}', { why })}\x1b[0m\r\n`);
       if (this.kind === 'ftp') this.showFtpInfo('failed', why); // the card covers the terminal text
       this.setStatus('failed', why);
       this.markDead();
@@ -583,11 +660,12 @@ export class TermPane {
     return data.replace(STATUS_RE, (_, k) => c[k] || '');
   }
 
-  /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'). */
-  lostMessage(detail) {
+  /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'); `sentence`: with its full stop (the dead line). */
+  lostMessage(detail, sentence = false) {
     const s = this.session || {};
     const where = s.name || `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
-    return detail ? `Connection to ${where} was lost: ${detail}` : `Connection to ${where} was closed by the server`;
+    if (sentence) return detail ? t('Connection to {where} was lost: {detail}.', { where, detail }) : t('Connection to {where} was closed by the server.', { where });
+    return detail ? t('Connection to {where} was lost: {detail}', { where, detail }) : t('Connection to {where} was closed by the server', { where });
   }
 
   onExit({ id, code, reason, detail }) {
@@ -602,31 +680,33 @@ export class TermPane {
     // never connected: that is a failure, not a session that ended.
     if (this.kind === 'mosh' && !this._killed && (!this._moshScreen || Date.now() - (this._moshStartedAt || 0) < MOSH_BOOTSTRAP_MS)) {
       failed = true;
-      msg = `mosh exited${code ? ' with code ' + code : ''}`;
-      this.term.write('\r\n\x1b[31mMosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?\x1b[0m\r\n');
+      msg = code ? t('mosh exited with code {code}', { code }) : t('mosh exited');
+      this.term.write(`\r\n\x1b[31m${t('Mosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?')}\x1b[0m\r\n`);
     }
     const lost = reason === 'lost'; // not a Disconnect, ⌘W or `exit`: say so in the terminal (app.js toasts it too)
-    this.setStatus(failed ? 'failed' : 'disconnected', lost ? 'connection lost' : msg);
+    this.setStatus(failed ? 'failed' : 'disconnected', lost ? t('connection lost') : msg);
     if (this.kind === 'local' && code === 0 && !wasConnecting) {
       this.app.closePane(this, true);
       return;
     }
-    this.markDead(lost ? this.lostMessage(detail) + '.' : null);
+    this.markDead(lost ? this.lostMessage(detail, true) : null);
   }
 
-  /** The pane is over: a dim line (what = why, default "Session ended.") and the Reconnect / Close overlay. */
+  /** The pane is over: a dim line (what = why, a sentence; default "Session ended.") and the Reconnect / Close overlay. */
   markDead(what) {
     this.dead = true;
-    this.term.write(`\r\n\x1b[2m── ${what || 'Session ended.'} Press Enter to reconnect, ⌘W to close. ──\x1b[0m\r\n`);
-    this.showOverlay(what ? 'Connection lost.' : null);
+    this.term.write(`\r\n\x1b[2m${t('── {what} Press Enter to reconnect, ⌘W to close. ──', { what: what || t('Session ended.') })}\x1b[0m\r\n`);
+    this.showOverlay(what ? 'lost' : null);
   }
 
-  showOverlay(label) {
+  /** The Reconnect / Close overlay; reason 'lost' says the connection was lost, anything else that the session (or the shell) ended. */
+  showOverlay(reason) {
     this.hideOverlay();
+    this._overlayReason = reason || null; // drawn again in the new language on a switch (_relabel)
     this.overlay = h('div', { class: 'pane-overlay' },
-      h('span', {}, label || (this.kind === 'local' ? 'Shell exited.' : 'Session ended.')),
-      h('button', { onclick: () => this.reconnect() }, '↻ Reconnect'),
-      h('button', { onclick: () => this.app.closePane(this) }, 'Close')
+      h('span', {}, reason === 'lost' ? t('Connection lost.') : this.kind === 'local' ? t('Shell exited.') : t('Session ended.')),
+      h('button', { onclick: () => this.reconnect() }, t('↻ Reconnect')),
+      h('button', { onclick: () => this.app.closePane(this) }, t('Close'))
     );
     this.el.append(this.overlay);
   }
@@ -717,8 +797,8 @@ export class TermPane {
       this.sftpConnId = null;
       if (id) this.app.sftpPanel.dropConnection(id);
       if (state === 'failed') {
-        this.sftpError = msg || 'connection failed';
-        toast(`SFTP for Mosh session "${this.session?.name || this.title}" (via SSH): ${this.sftpError}`, 'error', 6000);
+        this.sftpError = msg || t('connection failed');
+        toast(t('SFTP for Mosh session "{name}" (via SSH): {error}', { name: this.session?.name || this.title, error: this.sftpError }), 'error', 6000);
       }
       if (this.app.activePane() === this) this.app.sftpPanel.setPane(this);
     }
@@ -782,20 +862,20 @@ export class TermPane {
     if (!want) this._monitorStop();
     else if (!this.monitorFailed && !this.monitorOn) this._monitorStart();
     this.monBtn.setAttribute('aria-pressed', String(enabled));
-    this.monBtn.title = enabled ? 'Hide remote monitoring bar' : 'Show remote monitoring bar';
+    this.monBtn.title = enabled ? t('Hide remote monitoring bar') : t('Show remote monitoring bar');
   }
 
   /** The head button, the View menu and the context menu: show / hide the bar of this pane (force: true | false). */
   toggleMonitor(force) {
     if (!this.monitorAllowed()) {
-      toast('The remote monitoring bar needs an SSH or Mosh session', 'info');
+      toast(t('The remote monitoring bar needs an SSH or Mosh session'), 'info');
       return;
     }
     const on = force !== undefined ? !!force : !this.monitorEnabled();
     this.monitorOverride = on;
     this.monitorFailed = false;
     this.syncMonitor();
-    if (on && !this.monitorConnId()) toast(this.kind === 'mosh' ? 'The monitoring bar appears once the SFTP companion connection is up' : 'The monitoring bar appears once the session is connected', 'info');
+    if (on && !this.monitorConnId()) toast(this.kind === 'mosh' ? t('The monitoring bar appears once the SFTP companion connection is up') : t('The monitoring bar appears once the session is connected'), 'info');
   }
 
   _monitorStart() {
@@ -878,7 +958,7 @@ export class TermPane {
         this.monitorFailed = true;
         this.monitorOn = false;
         this._monitorFresh();
-        this._monitorRender(null, 'monitor unavailable', r && r.error ? `Remote monitoring: ${r.error}` : '');
+        this._monitorRender(null, 'monitor unavailable', r && r.error ? t('Remote monitoring: {error}', { error: r.error }) : '');
       } else {
         this._monitorStale(r && r.error); // the last sample stays, dimmed and dated, until a poll succeeds again
         this._monitorSchedule(this.monitorInterval());
@@ -886,16 +966,21 @@ export class TermPane {
     }
   }
 
-  /** Paint a sample (small labelled meters + text), or a note ("monitoring…", "monitor unavailable") with a tooltip. */
+  /**
+   * Paint a sample (small labelled meters + text), or a note with a tooltip: `note` is one of the MONITOR_NOTES keys
+   * ('monitoring…', 'monitor unavailable' — the English text, shown translated). Both are drawn again on a language
+   * switch (_relabel).
+   */
   _monitorRender(sample, note, detail) {
     const el = this.monitorEl;
     el.classList.toggle('unavailable', !sample && note === 'monitor unavailable');
     this.monitorItems = null;
     this.monitorLine = '';
+    this._monitorNote = sample ? null : { note, detail };
     el.title = '';
     delete el.dataset.fit;
     if (!sample) {
-      el.replaceChildren(h('span', { class: 'mon-note', title: detail || undefined }, note || ''));
+      el.replaceChildren(h('span', { class: 'mon-note', title: detail || undefined }, MONITOR_NOTES[note] ? MONITOR_NOTES[note]() : note || ''));
       if (this.monitorStaleEl) el.append(this.monitorStaleEl);
       return;
     }
@@ -911,18 +996,21 @@ export class TermPane {
     const disk = sample.diskPct === null ? '—' : `${Math.round(sample.diskPct)}%`;
     const rx = `↓ ${formatRate(sample.rx)}`, tx = `↑ ${formatRate(sample.tx)}`;
     const load = formatLoad(sample.load), up = formatUptime(sample.uptime);
+    const cpuTitle = sample.cpu === null ? t('CPU: measured between two polls')
+      : sample.os === 'darwin' ? t('CPU {pct}% (sum of the processes over the cores)', { pct: sample.cpu })
+      : t('CPU {pct}% (busy time between the last two polls)', { pct: sample.cpu });
     const items = {
-      cpu: meter('CPU', sample.cpu, cpu, sample.cpu === null ? 'CPU: measured between two polls' : `CPU ${sample.cpu}% (${sample.os === 'darwin' ? 'sum of the processes over the cores' : 'busy time between the last two polls'})`),
-      mem: meter('Mem', memPct, mem, memPct === null ? 'Memory: unknown' : `Memory in use: ${Math.round(memPct)}% of ${formatBytes(sample.memTotal)}`),
-      disk: meter('Disk', sample.diskPct, disk, 'Root filesystem (/) in use'),
-      net: h('span', { class: 'mon-item', title: 'Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll' }, h('span', { class: 'mon-val' }, rx), h('span', { class: 'mon-val' }, tx)),
-      load: h('span', { class: 'mon-item', title: 'Load average over 1, 5 and 15 minutes' }, h('span', { class: 'mon-label' }, 'load'), h('span', { class: 'mon-val' }, load)),
-      up: h('span', { class: 'mon-item', title: 'Uptime' }, h('span', { class: 'mon-label' }, 'up'), h('span', { class: 'mon-val' }, up)),
-      host: h('span', { class: 'mon-host', title: sample.host ? `Host: ${sample.host}` : undefined }, sample.host || ''),
+      cpu: meter('CPU', sample.cpu, cpu, cpuTitle),
+      mem: meter(t('Mem'), memPct, mem, memPct === null ? t('Memory: unknown') : t('Memory in use: {pct}% of {total}', { pct: Math.round(memPct), total: formatBytes(sample.memTotal) })),
+      disk: meter(t('Disk'), sample.diskPct, disk, t('Root filesystem (/) in use')),
+      net: h('span', { class: 'mon-item', title: t('Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll') }, h('span', { class: 'mon-val' }, rx), h('span', { class: 'mon-val' }, tx)),
+      load: h('span', { class: 'mon-item', title: t('Load average over 1, 5 and 15 minutes') }, h('span', { class: 'mon-label' }, t('load')), h('span', { class: 'mon-val' }, load)),
+      up: h('span', { class: 'mon-item', title: t('Uptime') }, h('span', { class: 'mon-label' }, t('up')), h('span', { class: 'mon-val' }, up)),
+      host: h('span', { class: 'mon-host', title: sample.host ? t('Host: {host}', { host: sample.host }) : undefined }, sample.host || ''),
     };
     this.monitorItems = { ...items, bars };
     // the whole strip as one line: the tooltip of a folded strip (see _monitorFit)
-    this.monitorLine = [`CPU ${cpu}`, `Mem ${mem}`, `Disk ${disk}`, `${rx} ${tx}`, `load ${load}`, `up ${up}`, sample.host ? `host ${sample.host}` : ''].filter(Boolean).join(' · ');
+    this.monitorLine = [t('CPU {value}', { value: cpu }), t('Mem {value}', { value: mem }), t('Disk {value}', { value: disk }), `${rx} ${tx}`, t('load {value}', { value: load }), t('up {value}', { value: up }), sample.host ? t('host {host}', { host: sample.host }) : ''].filter(Boolean).join(' · ');
     el.replaceChildren(items.cpu, items.mem, items.disk, items.net, items.load, items.up, items.host);
     if (this.monitorStaleEl) el.insertBefore(this.monitorStaleEl, items.host);
     this._monitorFit();
@@ -960,8 +1048,11 @@ export class TermPane {
     }
     const tick = () => {
       const age = this.monitorSample ? Math.max(0, Math.round((Date.now() - this.monitorSample.at) / 1000)) : null;
-      this.monitorStaleEl.firstChild.textContent = age === null ? 'stale' : `stale (${age} s)`;
-      this.monitorStaleEl.title = (age === null ? 'No sample yet' : `Last sample ${age} s ago`) + (this.monitorStaleError ? `; the last poll failed: ${this.monitorStaleError}` : '');
+      this.monitorStaleEl.firstChild.textContent = age === null ? t('stale') : t('stale ({n} s)', { n: age });
+      const error = this.monitorStaleError;
+      this.monitorStaleEl.title = age === null
+        ? (error ? t('No sample yet; the last poll failed: {error}', { error }) : t('No sample yet'))
+        : (error ? t('Last sample {n} s ago; the last poll failed: {error}', { n: age, error }) : t('Last sample {n} s ago', { n: age }));
     };
     tick();
     if (!this.monitorStaleTimer) this.monitorStaleTimer = setInterval(tick, 1000);
@@ -989,11 +1080,11 @@ export class TermPane {
       const file = await window.api.term.logStart(this.termId, this.title);
       this.logging = true;
       this.logFile = file;
-      toast(`Logging to ${file}`, 'success');
+      toast(t('Logging to {file}', { file }), 'success');
     } else {
       await window.api.term.logStop(this.termId);
       this.logging = false;
-      toast('Logging stopped', 'info');
+      toast(t('Logging stopped'), 'info');
     }
     this.app.onPaneStatus(this);
   }
@@ -1036,7 +1127,7 @@ export class TermPane {
     const enabled = o === 'on' || (o !== 'off' && s.highlightEnabled !== false);
     const invalid = this.highlighter.configure({ enabled, rules: s.highlightRules || DEFAULT_RULES, theme: this.themeFor(s) });
     const key = invalid.map((i) => i.rule.pattern).join('\n');
-    if (key && key !== this._hlInvalid) for (const { rule, error } of invalid) toast(`Keyword highlighting: "${rule.pattern}" is not a valid regex (${error}) — rule skipped`, 'warn', 6000);
+    if (key && key !== this._hlInvalid) for (const { rule, error } of invalid) toast(t('Keyword highlighting: "{pattern}" is not a valid regex ({error}) — rule skipped', { pattern: rule.pattern, error }), 'warn', 6000);
     this._hlInvalid = key;
   }
 
@@ -1063,8 +1154,8 @@ export class TermPane {
 
   /** Right-click / pane menu paste: the clipboard text, through the guard. */
   async paste() {
-    const t = await window.api.clipboard.read();
-    if (t) this.pasteText(t);
+    const text = await window.api.clipboard.read();
+    if (text) this.pasteText(text);
   }
 
   /**
@@ -1097,24 +1188,24 @@ export class TermPane {
       return;
     }
     contextMenu(e.clientX, e.clientY, [
-      { label: 'Copy', key: '⌘C', action: () => this.copy(), disabled: !this.term.hasSelection() },
-      { label: 'Paste', key: '⌘V', action: () => this.paste() },
-      { label: 'Select All', action: () => this.term.selectAll() },
+      { label: t('Copy'), key: '⌘C', action: () => this.copy(), disabled: !this.term.hasSelection() },
+      { label: t('Paste'), key: '⌘V', action: () => this.paste() },
+      { label: t('Select All'), action: () => this.term.selectAll() },
       '-',
-      { label: 'Find…', key: '⌘F', action: () => this.app.action('find') },
-      { label: 'Clear', key: '⌘K', action: () => this.clear() },
+      { label: t('Find…'), key: '⌘F', action: () => this.app.action('find') },
+      { label: t('Clear'), key: '⌘K', action: () => this.clear() },
       '-',
-      { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right', this) },
-      { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down', this) },
-      { label: this.zoomed ? 'Restore Panes' : 'Zoom Pane', key: '⇧⌘⏎', action: () => this.app.action('zoom-pane', undefined, this), disabled: !this.tab || this.tab.panes().length < 2 },
+      { label: t('Split Right'), key: '⌘D', action: () => this.app.action('split', 'right', this) },
+      { label: t('Split Down'), key: '⇧⌘D', action: () => this.app.action('split', 'down', this) },
+      { label: this.zoomed ? t('Restore Panes') : t('Zoom Pane'), key: '⇧⌘⏎', action: () => this.app.action('zoom-pane', undefined, this), disabled: !this.tab || this.tab.panes().length < 2 },
       '-',
-      { label: this.logging ? 'Stop Session Log' : 'Start Session Log…', action: () => this.toggleLog() },
-      this.monitorAllowed() ? { label: this.monitorEnabled() ? 'Hide Remote Monitoring Bar' : 'Show Remote Monitoring Bar', action: () => this.toggleMonitor() } : null,
-      this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? 'Open file browser' : 'Open SFTP Browser', action: () => this.app.sftpPanel.show(this.termId) } : null,
-      this.kind === 'mosh' ? { label: 'Open SFTP Browser', action: () => this.openSftpCompanion(), disabled: this.dead } : null,
-      this.kind !== 'local' ? { label: this.dead ? 'Reconnect' : 'Disconnect', action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
+      { label: this.logging ? t('Stop Session Log') : t('Start Session Log…'), action: () => this.toggleLog() },
+      this.monitorAllowed() ? { label: this.monitorEnabled() ? t('Hide Remote Monitoring Bar') : t('Show Remote Monitoring Bar'), action: () => this.toggleMonitor() } : null,
+      this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? t('Open file browser') : t('Open SFTP Browser'), action: () => this.app.sftpPanel.show(this.termId) } : null,
+      this.kind === 'mosh' ? { label: t('Open SFTP Browser'), action: () => this.openSftpCompanion(), disabled: this.dead } : null,
+      this.kind !== 'local' ? { label: this.dead ? t('Reconnect') : t('Disconnect'), action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
       '-',
-      { label: 'Close Pane', key: '⇧⌘W', action: () => this.app.closePane(this) },
+      { label: t('Close Pane'), key: '⇧⌘W', action: () => this.app.closePane(this) },
     ]);
   }
 
@@ -1172,7 +1263,7 @@ export class TermPane {
     this.updateTitle();
     if (!r.ok) {
       this.setStatus(d.status === 'failed' ? 'failed' : 'disconnected');
-      this.markDead(d.dead ? null : 'The session ended while the tab was moved.');
+      this.markDead(d.dead ? null : t('The session ended while the tab was moved.'));
       return;
     }
     this.termId = d.termId;
@@ -1189,6 +1280,7 @@ export class TermPane {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    if (this._i18nOff) { this._i18nOff(); this._i18nOff = null; } // no re-labelling of a pane that is gone
     this._monitorStop();
     if (this.ro) this.ro.disconnect();
     this.closeSftpCompanion();
