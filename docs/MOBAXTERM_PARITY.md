@@ -29,21 +29,21 @@ last column says which parts are missing.
 | Category | ✅ | 🟡 | ❌ | ➖ | Rows |
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
-| 2. SSH specifics | 17 | 9 | 9 | 2 | 37 |
+| 2. SSH specifics | 18 | 9 | 8 | 2 | 37 |
 | 3. Terminal | 9 | 13 | 8 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
 | 5. Network and admin tools, embedded servers, Moba* utilities | 7 | 2 | 7 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **49** | **40** | **35** | **59** | **183** |
+| **Sections 1–7 (each feature once)** | **50** | **40** | **34** | **59** | **183** |
 | 8. Recent additions (24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
-| 9. UX details power users rely on | 7 | 10 | 2 | 1 | 20 |
-| **All tables** | **60** | **66** | **44** | **63** | **233** |
+| 9. UX details power users rely on | 8 | 10 | 1 | 1 | 20 |
+| **All tables** | **62** | **66** | **42** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 49 in full, 40 in a narrower or different form and lacks 35.
+MobAlt has 50 in full, 40 in a narrower or different form and lacks 34.
 
 ## 1. Session types
 
@@ -94,7 +94,7 @@ MobAlt has 49 in full, 40 in a narrower or different form and lacks 35.
 | Remote environment (full desktop in a windowed X server) | 🟡 | forwarded X11 carries any client; a whole desktop needs XQuartz's own full-screen mode |
 | Execute command / stay connected | ✅ | Startup commands (Session editor → Terminal): typed after login, the shell stays open |
 | Startup macro | 🟡 | Startup commands per session for every type, instead of attaching a recorded macro |
-| Remote monitoring bar (CPU/RAM/net/disk) | ❌ | not implemented |
+| Remote monitoring bar (CPU/RAM/net/disk) | ✅ | a one-line strip under every SSH pane: CPU, memory used / total, root disk, network ↓ / ↑ rates, load average, uptime, host name; one POSIX `sh` snippet over an exec channel of the pane's own connection every 3 s (2–30 s), paused off screen, "monitor unavailable" on hosts without `sh`; on by default, per session (Advanced SSH), per pane (pane head, View menu) or global; Mosh panes use their SFTP companion connection |
 | Graphical SSH-browser (SFTP/SCP) | ✅ | Sftp panel (⌘2) opens on connect: upload/download with progress and cancel, mkdir, rename, chmod, delete, hidden files, double-click edits and saves back; SFTP only, no SCP mode |
 | SSH-browser extras (SUDO, history, paste, diff…) | 🟡 | has overwrite confirmation, preserved mtime on download, sort, Show in Finder, host-key prompt; no SUDO, address history, ⌘V file paste, SCP fallback, diff or column memory |
 | Follow terminal folder | ✅ | "SFTP follows terminal folder" session option (OSC 7 hook for bash/zsh) plus the panel's Follow checkbox; off by default |
@@ -206,7 +206,7 @@ MobAlt has 49 in full, 40 in a narrower or different form and lacks 35.
 | MobaFoldersDiff | ❌ | `diff -r`, FileMerge |
 | MobaKeyGen | ✅ | Generate SSH Key… dialog (see §2) |
 | MobaPictureViewer | ➖ | Quick Look / Preview after "Show in Finder" |
-| MobaMonitor | ➖ | the inventory found no MobaXterm tool by this name; the nearest feature is the remote monitoring bar (§2, ❌) |
+| MobaMonitor | ➖ | the inventory found no MobaXterm tool by this name; the nearest feature is the remote monitoring bar (§2, ✅) |
 | List hardware / processes | ➖ | System Information, Activity Monitor, `ps` |
 | Admin shells (CMD / PowerShell as admin) | ➖ | `sudo` in a Local session |
 | Office extras (ASCII table, calculator, fdupes) | ➖ | Calculator.app, `man ascii`, `brew install fdupes` |
@@ -289,7 +289,7 @@ MobAlt has 49 in full, 40 in a narrower or different form and lacks 35.
 | 25.4 — macro include, ms log timestamps, "chokes on full KEXINIT", Cisco KEX autodetect, floating popup console | ❌ | none of these (old devices: the "Legacy algorithms" preset or the per-session algorithm lists) |
 | 25.3 — MobaTextEditor / MobaDiff overhaul | 🟡 | plain built-in editor or external editor only |
 | 25.2 — ML-KEM post-quantum KEX, PuTTY engine update | ❌ | ssh2 1.17 has no ML-KEM |
-| 25.2 — RDP redirection options, tunnel reconnect, 64 icons, follow-path and monitoring on by default, export password | 🟡 | icons ✅; RDP options live in Windows App; no tunnel reconnect; following is opt-in |
+| 25.2 — RDP redirection options, tunnel reconnect, 64 icons, follow-path and monitoring on by default, export password | 🟡 | icons ✅; monitoring bar ✅ and on by default; RDP options live in Windows App; no tunnel reconnect; following is opt-in |
 | 25.1 — SSH proxy via netcat/socat, user certificate + host CA, PuTTY import of proxy/certs/Teleport, CyberArk | ❌ | none |
 | 25.0 — PuTTY engine + Unicode 16, dark-mode dialogs, CVE-2025-0714 | 🟡 | Unicode 11 width tables; dialogs follow the chosen theme (dark or light) |
 | 24.4 — SFTP multi-block transfers, close tabs left/right, rename-tab shortcut, Pro X11 lockdown, PNG logos | 🟡 | concurrent SFTP reads/writes; Close Tabs to the Left / Right in the tab menu; Rename Tab (double-click / menu, no shortcut); no X11 lockdown or logo options |
@@ -303,7 +303,7 @@ MobAlt has 49 in full, 40 in a narrower or different form and lacks 35.
 | MobaXterm behaviour | MobAlt | How MobAlt does it, or why not |
 |---|---|---|
 | SFTP pane that follows `cd`, edit-and-upload on save | ✅ | "SFTP follows terminal folder" session option + Follow checkbox; double-click edits, ⌘S uploads; following is off by default |
-| Remote monitoring bar | ❌ | not implemented |
+| Remote monitoring bar | ✅ | the strip under every SSH pane (§2), on by default; the pane head's pulse button, View → Remote Monitoring Bar or the context menu toggle it per pane |
 | Sidebar = session tree + macros + file browser, dockable, right placement | 🟡 | side strip with Sessions / Sftp / Tools / Macros (⌘1-4), one panel at a time, left side only, ⌘B hides |
 | Everything auto-saves (incl. Quick connect sessions) | 🟡 | sessions and settings save on Save, the workspace every 20 s; Quick connect sessions are not saved |
 | Right-click paste as a global toggle | ✅ | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", on by default |
@@ -356,7 +356,7 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 | Item | Why | Size |
 |---|---|---|
 | Zmodem (rz/sz) transfers in the terminal | the classic way to move files through serial consoles and jump hosts where SFTP is unavailable | M |
-| Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
+| Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
 | Keyword syntax highlighting in the terminal | readable logs on colour-less servers; xterm.js decorations API | M |
 | SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
 | Expert SSH algorithm / KEX / cipher / MAC settings | one legacy toggle is too coarse; ssh2's `algorithms` option takes explicit lists (ML-KEM waits on ssh2) | S |

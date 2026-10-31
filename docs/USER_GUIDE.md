@@ -165,6 +165,17 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   live panes of the active tab, or only the zoomed pane while one fills the tab. Other tabs never
   receive it, so split the tab (or use a grid) to put the servers you want to drive side by side.
   The banner shows how many visible terminals listen and follows the tab you switch to.
+- **Remote monitoring bar**: every SSH pane shows a one-line strip under its head — CPU, memory used / total,
+  root disk used, network ↓ / ↑ rates, load average, uptime and the host name — refreshed every 3 s (Settings →
+  Terminal → Monitoring, 2–30 s). One small POSIX `sh` snippet runs over the session's own connection, so it
+  needs no second login, works through jump hosts and never prints into the terminal; Linux hosts are read from
+  `/proc`, macOS and BSDs through `sysctl`, `vm_stat` and `netstat`. A host that cannot run it (no `sh`,
+  permission denied) shows a dim *monitor unavailable* and is not asked again until it reconnects. Polling pauses
+  while the pane is not on screen (another tab in front, a zoomed sibling, the window hidden) and resumes when it
+  is back. Switch it off per session (Advanced SSH → *Show remote monitoring bar*), per pane (the pulse button
+  in the pane head, View → Remote Monitoring Bar, or the terminal's context menu) or for every session in
+  Settings. A Mosh pane has no SSH channel of its own: its bar shows through the SFTP companion connection
+  while that is open.
 - **Find** (⌘F): incremental search with case and regex toggles and a match counter.
 - **Clipboard**: selecting copies (Settings → Terminal → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;

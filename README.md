@@ -40,6 +40,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Expert SSH settings (KEX / host key / ciphers / MACs) | ✅ | Per-session algorithm lists in Advanced SSH, validated against ssh2, "Legacy algorithms" as a preset; a mismatch says what both sides offer (no ML-KEM yet: ssh2) |
 | SFTP browser on connect | ✅ Sftp panel | Upload/download (recursive, progress, cancel), mkdir, rename, chmod, delete, hidden files |
 | Follow terminal folder | ✅ | OSC 7 shell hook for bash/zsh, per session |
+| Remote monitoring bar | ✅ | CPU, memory, root disk, network rates, load, uptime and host name under every SSH pane, polled every 3 s (2–30 s) by one `sh` snippet over the session's own connection; per session, per pane (pane head, View menu) or for all in Settings |
 | Remote file editing | ✅ | Built-in editor (⌘S saves back) or your external editor with auto-upload |
 | Drag & drop upload | ✅ | Drop Finder items on the SFTP list or on a terminal |
 | Built-in X server | ✅ via XQuartz | Starts XQuartz on demand and proxies the X11 channel with cookie replacement |

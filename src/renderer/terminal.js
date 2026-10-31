@@ -2,6 +2,7 @@
 import { h, contextMenu, toast, icon } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
+import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
 
 /** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
 const startErrorText = (e) => errMsg(e);
@@ -43,6 +44,14 @@ export class TermPane {
     this.connectedAt = null;
     this.sftpConnId = null; // Mosh: companion SSH connection the Sftp panel browses through
     this.sftpStatus = 'idle'; // idle | connecting | connected | failed | disconnected
+    // remote monitoring bar (SSH: this connection; Mosh: the SFTP companion while it is up)
+    this.monitorOverride = null; // the pane-head / View menu toggle: null follows the session's setting (then Settings), else true | false
+    this.monitorOn = false; // polling: a timer is pending, a poll is in flight or the pane waits off screen
+    this.monitorTimer = null;
+    this.monitorPaused = false; // the pane was not on screen at the last tick; monitorResume() polls again
+    this.monitorFailed = false; // "monitor unavailable": no polling until the next connection or a manual toggle
+    this.monitorErrors = 0;
+    this.monitorSample = null; // the last sample shown (tests read it)
 
     const s = app.settings;
     const theme = this.themeFor(s);
@@ -78,10 +87,14 @@ export class TermPane {
         (this.headTitle = h('span', { class: 'title' }, this.title)),
         (this.zoomBadge = h('span', { class: 'zoom-badge', hidden: true }, 'zoomed')),
         (this.zoomBtn = h('button', { class: 'zoom', title: 'Zoom pane (⇧⌘⏎)', 'aria-label': 'Zoom pane', 'aria-pressed': 'false', onclick: () => app.action('zoom-pane', undefined, this) }, icon('zoom'))),
+        // the monitoring bar toggle: an ARIA toggle like ⤢ (a stable name, aria-pressed carries the state); SSH / Mosh panes only
+        (this.monBtn = h('button', { class: 'monitor', title: 'Show remote monitoring bar', 'aria-label': 'Remote monitoring bar', 'aria-pressed': 'false', hidden: !this.monitorAllowed(), onclick: () => app.action('toggle-monitor', undefined, this) }, icon('monitor'))),
         h('button', { title: 'Split right', 'aria-label': 'Split right', onclick: () => app.action('split', 'right', this) }, icon('split')),
         h('button', { title: 'Split down', 'aria-label': 'Split down', onclick: () => app.action('split', 'down', this) }, icon('split-down')),
         h('button', { title: 'Close pane', 'aria-label': 'Close pane', onclick: () => app.closePane(this) }, icon('x'))
       )),
+      // the remote monitoring strip: a status region that is never announced (it changes every few seconds)
+      (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': 'Remote monitoring', hidden: true })),
       (this.termEl = h('div', { class: 'pane-term' }))
     );
     if (this.session?.color) this.el.style.setProperty('--pane-color', this.session.color);
@@ -239,6 +252,7 @@ export class TermPane {
     try {
       this.fitAddon.fit();
     } catch {}
+    this.monitorResume(); // a pane that just came on screen (tab switch, un-zoom, layout) polls again
   }
 
   focus() {
@@ -291,6 +305,8 @@ export class TermPane {
       this.hideOverlay();
     }
     this.headEl.querySelector('.dot').className = 'dot ' + status;
+    if (status === 'connected') this.monitorFailed = false; // a new connection gets a new try
+    this.syncMonitor(); // the bar polls a connected pane and hides on anything else
     this.app.onPaneStatus(this, msg);
   }
 
@@ -603,6 +619,8 @@ export class TermPane {
       }
       if (this.app.activePane() === this) this.app.sftpPanel.setPane(this);
     }
+    if (state === 'connected') this.monitorFailed = false;
+    this.syncMonitor(); // a Mosh pane's monitoring bar lives on the companion connection
     this.app.onPaneStatus(this);
   }
 
@@ -616,6 +634,163 @@ export class TermPane {
     if (!id) return;
     this.app.sftpPanel.dropConnection(id);
     window.api.ssh.disconnect(id);
+    this.syncMonitor();
+  }
+
+  // ---------- remote monitoring bar ----------
+  /** SSH panes poll their own connection; a Mosh pane has no SSH channel in the app and uses its SFTP companion while that is up. */
+  monitorAllowed() {
+    return this.kind === 'ssh' || this.kind === 'mosh';
+  }
+
+  /** Whether the bar is wanted: the pane's own toggle, else the session's "Show remote monitoring bar", else Settings. */
+  monitorEnabled() {
+    if (!this.monitorAllowed()) return false;
+    if (this.monitorOverride !== null) return this.monitorOverride;
+    if (this.session && typeof this.session.monitor === 'boolean') return this.session.monitor;
+    return this.app.settings.monitorBar !== false;
+  }
+
+  /** The connection polled: the pane's own (SSH) or the Mosh companion's id; null while there is none. */
+  monitorConnId() {
+    if (this.kind === 'mosh') return this.sftpStatus === 'connected' ? this.sftpConnId : null;
+    return this.kind === 'ssh' && this.status === 'connected' && this.termId ? this.termId : null;
+  }
+
+  /** On screen: the window is visible and the pane is laid out (a hidden tab page or a zoomed sibling has no size). */
+  monitorVisible() {
+    return document.visibilityState === 'visible' && this.mounted && this.el.isConnected && this.termEl.clientWidth > 0 && this.termEl.clientHeight > 0;
+  }
+
+  monitorInterval() {
+    const s = Number(this.app.settings.monitorInterval);
+    return (Number.isFinite(s) ? Math.min(30, Math.max(2, s)) : 3) * 1000;
+  }
+
+  /**
+   * Start or stop polling to match the state (connection, companion, toggle, settings) and keep the head button in
+   * step. A pane whose host could not run the snippet keeps its dim "monitor unavailable" line without polling until
+   * it reconnects or is toggled by hand.
+   */
+  syncMonitor() {
+    if (this.disposed) return;
+    const enabled = this.monitorEnabled();
+    const want = enabled && !!this.monitorConnId();
+    if (!want) this._monitorStop();
+    else if (!this.monitorFailed && !this.monitorOn) this._monitorStart();
+    this.monBtn.setAttribute('aria-pressed', String(enabled));
+    this.monBtn.title = enabled ? 'Hide remote monitoring bar' : 'Show remote monitoring bar';
+  }
+
+  /** The head button, the View menu and the context menu: show / hide the bar of this pane (force: true | false). */
+  toggleMonitor(force) {
+    if (!this.monitorAllowed()) {
+      toast('The remote monitoring bar needs an SSH or Mosh session', 'info');
+      return;
+    }
+    const on = force !== undefined ? !!force : !this.monitorEnabled();
+    this.monitorOverride = on;
+    this.monitorFailed = false;
+    this.syncMonitor();
+    if (on && !this.monitorConnId()) toast(this.kind === 'mosh' ? 'The monitoring bar appears once the SFTP companion connection is up' : 'The monitoring bar appears once the session is connected', 'info');
+  }
+
+  _monitorStart() {
+    this.monitorOn = true;
+    this.monitorErrors = 0;
+    this.monitorSample = null;
+    this._monitorRender(null, 'monitoring…');
+    this._monitorShow(true);
+    this._monitorTick();
+  }
+
+  _monitorStop() {
+    this.monitorOn = false;
+    this.monitorPaused = false;
+    if (this.monitorTimer) {
+      clearTimeout(this.monitorTimer);
+      this.monitorTimer = null;
+    }
+    this._monitorShow(false);
+  }
+
+  _monitorShow(on) {
+    if (this.monitorEl.hidden === !on) return;
+    this.monitorEl.hidden = !on;
+    this.fit(); // the strip takes a row from the terminal, like the banners
+  }
+
+  _monitorSchedule(ms) {
+    if (this.monitorTimer) clearTimeout(this.monitorTimer);
+    this.monitorTimer = setTimeout(() => {
+      this.monitorTimer = null;
+      this._monitorTick();
+    }, ms);
+  }
+
+  /** Poll again after a pause off screen (tab switch, un-zoom, the window shown again); a no-op otherwise. */
+  monitorResume() {
+    if (this.monitorOn && this.monitorPaused && !this.monitorTimer && this.monitorVisible()) {
+      this.monitorPaused = false;
+      this._monitorTick();
+    }
+  }
+
+  async _monitorTick() {
+    if (!this.monitorOn || this.disposed || this.monitorTimer) return;
+    if (!this.monitorVisible()) { // nothing is polled off screen; fit() / visibilitychange resume it
+      this.monitorPaused = true;
+      return;
+    }
+    const id = this.monitorConnId();
+    if (!id) return this.syncMonitor();
+    let r;
+    try {
+      r = await window.api.ssh.monitor(id);
+    } catch (e) {
+      r = { error: errMsg(e) };
+    }
+    if (!this.monitorOn || this.disposed || this.monitorConnId() !== id) return; // stopped or reconnected meanwhile
+    if (r && r.sample) {
+      const first = !this.monitorSample;
+      this.monitorErrors = 0;
+      this.monitorSample = r.sample;
+      this._monitorRender(r.sample);
+      // rates need two samples: the second one comes after a second, then every interval
+      this._monitorSchedule(first && (r.sample.cpu === null || r.sample.rx === null) ? 1000 : this.monitorInterval());
+    } else {
+      this.monitorErrors++;
+      if ((r && r.fatal) || this.monitorErrors >= 3) { // no sh, permission denied, a shell that cannot run it: stop asking
+        this.monitorFailed = true;
+        this.monitorOn = false;
+        this._monitorRender(null, 'monitor unavailable', r && r.error ? `Remote monitoring: ${r.error}` : '');
+      } else this._monitorSchedule(this.monitorInterval());
+    }
+  }
+
+  /** Paint a sample (small labelled meters + text), or a note ("monitoring…", "monitor unavailable") with a tooltip. */
+  _monitorRender(sample, note, detail) {
+    const el = this.monitorEl;
+    el.classList.toggle('unavailable', !sample && note === 'monitor unavailable');
+    if (!sample) {
+      el.replaceChildren(h('span', { class: 'mon-note', title: detail || undefined }, note || ''));
+      return;
+    }
+    const meter = (label, pct, text, title) => h('span', { class: 'mon-item', title },
+      h('span', { class: 'mon-label' }, label),
+      h('span', { class: 'mon-bar ' + meterLevel(pct), 'aria-hidden': 'true' }, h('i', { style: { width: `${pct === null ? 0 : Math.round(pct)}%` } })),
+      h('span', { class: 'mon-val' }, text));
+    const memPct = memPercent(sample);
+    el.replaceChildren(
+      meter('CPU', sample.cpu, sample.cpu === null ? '—' : `${Math.round(sample.cpu)}%`, sample.cpu === null ? 'CPU: measured between two polls' : `CPU ${sample.cpu}% (${sample.os === 'darwin' ? 'sum of the processes over the cores' : 'busy time between the last two polls'})`),
+      meter('Mem', memPct, sample.memTotal ? `${formatBytes(sample.memUsed)} / ${formatBytes(sample.memTotal)}` : '—', memPct === null ? 'Memory: unknown' : `Memory in use: ${Math.round(memPct)}% of ${formatBytes(sample.memTotal)}`),
+      meter('Disk', sample.diskPct, sample.diskPct === null ? '—' : `${Math.round(sample.diskPct)}%`, 'Root filesystem (/) in use'),
+      h('span', { class: 'mon-item', title: 'Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll' },
+        h('span', { class: 'mon-val' }, `↓ ${formatRate(sample.rx)}`), h('span', { class: 'mon-val' }, `↑ ${formatRate(sample.tx)}`)),
+      h('span', { class: 'mon-item', title: 'Load average over 1, 5 and 15 minutes' }, h('span', { class: 'mon-label' }, 'load'), h('span', { class: 'mon-val' }, formatLoad(sample.load))),
+      h('span', { class: 'mon-item', title: 'Uptime' }, h('span', { class: 'mon-label' }, 'up'), h('span', { class: 'mon-val' }, formatUptime(sample.uptime))),
+      h('span', { class: 'mon-host', title: sample.host ? `Host: ${sample.host}` : undefined }, sample.host || '')
+    );
   }
 
   async toggleLog(force) {
@@ -654,6 +829,7 @@ export class TermPane {
     this.term.options.scrollback = s.scrollback;
     this.applyTheme(s);
     this.term.options.macOptionIsMeta = s.macOptionIsMeta !== false;
+    this.syncMonitor(); // Settings → Terminal: the bar's default and interval
     this.fit();
   }
 
@@ -724,6 +900,7 @@ export class TermPane {
       { label: this.zoomed ? 'Restore Panes' : 'Zoom Pane', key: '⇧⌘⏎', action: () => this.app.action('zoom-pane', undefined, this), disabled: !this.tab || this.tab.panes().length < 2 },
       '-',
       { label: this.logging ? 'Stop Session Log' : 'Start Session Log…', action: () => this.toggleLog() },
+      this.monitorAllowed() ? { label: this.monitorEnabled() ? 'Hide Remote Monitoring Bar' : 'Show Remote Monitoring Bar', action: () => this.toggleMonitor() } : null,
       this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? 'Open file browser' : 'Open SFTP Browser', action: () => this.app.sftpPanel.show(this.termId) } : null,
       this.kind === 'mosh' ? { label: 'Open SFTP Browser', action: () => this.openSftpCompanion(), disabled: this.dead } : null,
       this.kind !== 'local' ? { label: this.dead ? 'Reconnect' : 'Disconnect', action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
@@ -795,6 +972,7 @@ export class TermPane {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    this._monitorStop();
     if (this.ro) this.ro.disconnect();
     this.closeSftpCompanion();
     if (this.termId) {
