@@ -268,9 +268,9 @@ to SFTP panel when SSH connects").
 
 ![설정](images/settings.png)
 
-설정은 네 개의 탭으로 나뉘고 어느 탭이든 최소 창 크기에서 스크롤 없이 들어갑니다. **General**(종료 확인,
+설정은 다섯 개의 탭으로 나뉘고 어느 탭이든 최소 창 크기에서 스크롤 없이 들어갑니다. **General**(종료 확인,
 SFTP 패널 전환, 작업대 복원, 로컬 셸과 폴더 통합, 외부 편집기, 다운로드 폴더, SSH keep-alive, 저장 위치를
-보여 주는 "Open config folder"), **Terminal**(글꼴, 줄 간격, 커서, 스크롤백, 테마(창 전체의 외관, *테마·외관* 참고), 마우스/키), **Logging**(로그
+보여 주는 "Open config folder"), **Terminal**(글꼴, 줄 간격, 커서, 스크롤백, 테마(창 전체의 외관, *테마·외관* 참고), 마우스/키), **Features**(붙여넣기 보호, 원격 모니터링 바와 갱신 주기, 키워드 강조와 규칙 표), **Logging**(로그
 폴더, 일반 텍스트 세션 로그), **Updates**(시작 시 확인과 "Check now").
 
 ## 단축키

@@ -193,7 +193,7 @@
     await sleep(400);
     const m = document.querySelector('.modal');
     const tabs = [...m.querySelectorAll('.mtabs button')];
-    tabs[1].click();
+    tabs.find((b) => b.textContent === 'Features').click(); // the monitoring row lives on the Features tab
     await sleep(100);
     const page = m.querySelector('.mpage.active');
     const cb = [...page.querySelectorAll('.checks label')].find((l) => l.textContent.includes('Remote monitoring bar on SSH sessions'));

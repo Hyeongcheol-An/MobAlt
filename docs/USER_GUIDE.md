@@ -288,11 +288,12 @@ MobAlt restores your tabs, splits and sessions (tabs detached into their own win
 
 ![Settings](images/settings.png)
 
-Settings has four tabs, each of which fits the smallest window without scrolling: **General**
+Settings has five tabs, each of which fits the smallest window without scrolling: **General**
 (quit confirmation, the SFTP panel switch, workspace restore, the local shell and its folder
 integration, the external editor, the download folder, SSH keep-alive, and "Open config folder",
 which shows where everything is stored), **Terminal** (font, line height, cursor, scrollback, theme — the look of the whole
-window, see *Themes and appearance* — mouse/keys), **Logging** (log folder, plain-text session logs) and **Updates** (the startup check
+window, see *Themes and appearance* — mouse/keys), **Features** (the paste guard, the remote monitoring bar and its refresh
+interval, keyword highlighting and its rule table), **Logging** (log folder, plain-text session logs) and **Updates** (the startup check
 and "Check now").
 
 ## Keyboard shortcuts

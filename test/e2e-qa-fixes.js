@@ -125,7 +125,7 @@
       await sleep(400);
       const m = document.querySelector('.modal'), body = m.querySelector('.modal-body');
       const tabs = [...m.querySelectorAll('.mtabs button')];
-      results.settingsTabNames = tabs.map((b) => b.textContent).join('|') === 'General|Terminal|Logging|Updates';
+      results.settingsTabNames = tabs.map((b) => b.textContent).join('|') === 'General|Terminal|Features|Logging|Updates';
       results.settingsFirstFieldFocused = document.activeElement === m.querySelector('.mpage.active input[type=text]') && m.querySelector('.mpage.active') === m.querySelector('.mpage') && tabs[0].classList.contains('active');
       const fit = {}, heights900 = new Set();
       for (const b of tabs) {
