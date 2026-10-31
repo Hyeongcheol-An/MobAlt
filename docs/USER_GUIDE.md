@@ -39,6 +39,12 @@ Three paths lead to a new release; all of them end with the new bundle at `/Appl
 - **DMG**: download the new DMG from [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) and
   drag MobAlt to Applications, replacing the old one.
 
+In-app updates and Homebrew get along. With "Check for updates at startup" on (Settings → Updates) MobAlt keeps
+itself current, and `brew upgrade --cask mobalt` is always safe to run as well: if the app already updated
+itself, Homebrew simply reinstalls the version that is already there. Because the cask declares `auto_updates`,
+a plain `brew upgrade` (no cask named) skips MobAlt unless you pass `--greedy`; name the cask, or add
+`--greedy`, when you want Homebrew to do the updating.
+
 Upgrading while MobAlt is running is fine — even from one of MobAlt's own terminals. The running app keeps
 executing the old version from memory, notices the new bundle on disk (within a minute, or as soon as the
 window is focused again) and shows a banner above the tabs: *MobAlt 0.11.0 is installed on disk — you are
@@ -72,9 +78,16 @@ for the root). A folder's context menu can open every session inside it in a gri
 **Icons and colours**: pick an emoji and a colour in the editor. They show on the row, the tab and the
 pane header, so a red "production" session is hard to confuse with a green "staging" one.
 
-**Import**: the panel footer imports `~/.ssh/config` (hosts, users, ports, keys, ProxyJump) and a
+**Import / export**: the panel footer imports `~/.ssh/config` (hosts, users, ports, keys, ProxyJump) and a
 MobaXterm `MobaXterm.ini` (bookmarks). Export / import all sessions as JSON from the tree's
-context menu.
+context menu. The JSON file holds every session and folder but never a password or passphrase: those stay in
+MobAlt's encrypted store on this Mac, and the file only records that one was saved (`hasPassword`), so an
+imported session asks again on its first connection. Import merges into what you have: a session whose `id`
+matches an existing one is replaced by the file's version, every other one is added (a hand-written entry
+without an `id` is always added, one without a `name` is skipped), folders are added and nothing is deleted,
+so importing the same file twice changes nothing. `~/.ssh/config` skips hosts you already have (same folder
+and name); a MobaXterm import always adds its bookmarks under a `MobaXterm` folder, so importing the same
+`.ini` twice duplicates them.
 
 **Startup commands** (Terminal tab): one command per line, typed into the terminal once it is
 ready. For SSH that is right after login; for local shells right after the prompt appears. Example:

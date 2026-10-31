@@ -36,6 +36,12 @@ MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트�
 - **DMG**: [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases)에서 새 DMG를 받아 MobAlt를
   Applications로 끌어다 놓아 기존 앱을 바꿉니다.
 
+앱 내 업데이트와 Homebrew는 서로 부딪히지 않습니다. Settings → Updates의 "Check for updates at startup"이
+켜져 있으면 MobAlt가 스스로 최신 버전을 유지하고, 그래도 `brew upgrade --cask mobalt`는 언제 실행해도
+안전합니다. 앱이 이미 스스로 업데이트했다면 Homebrew는 이미 있는 그 버전을 다시 설치할 뿐입니다. cask가
+`auto_updates`를 선언하므로 cask 이름 없이 `brew upgrade`만 실행하면 `--greedy`를 붙이지 않는 한 MobAlt는
+건너뜁니다. Homebrew로 업데이트하려면 cask 이름을 적거나 `--greedy`를 붙이세요.
+
 MobAlt가 실행 중인 채로 업그레이드해도 괜찮습니다 — MobAlt의 터미널 안에서 실행해도 마찬가지입니다.
 실행 중인 앱은 메모리에 있는 옛 버전을 계속 돌리다가 디스크의 새 번들을 알아차리고(1분 안에, 또는 창에
 다시 포커스가 오는 즉시) 탭 위에 배너를 띄웁니다: *MobAlt 0.11.0 is installed on disk — you are running
@@ -68,9 +74,15 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
 **아이콘·색상**: 편집기에서 이모지와 색을 고르면 행·탭·페인 머리글에 표시되어 빨간 "운영" 세션과
 초록 "스테이징" 세션을 헷갈리지 않습니다.
 
-**가져오기**: 패널 하단에서 `~/.ssh/config`(호스트, 사용자, 포트, 키, ProxyJump)와 MobaXterm의
+**가져오기·내보내기**: 패널 하단에서 `~/.ssh/config`(호스트, 사용자, 포트, 키, ProxyJump)와 MobaXterm의
 `MobaXterm.ini`(북마크)를 가져옵니다. 트리 우클릭 메뉴에서 전체 세션을 JSON으로 내보내고 가져올 수
-있습니다.
+있습니다. JSON 파일에는 모든 세션과 폴더가 들어가지만 비밀번호와 키 암호는 절대 들어가지 않습니다. 그것들은
+이 Mac의 암호화된 저장소에만 남고 파일에는 저장돼 있었다는 표시(`hasPassword`)만 남으므로, 가져온 세션은
+첫 접속 때 다시 묻습니다. 가져오기는 기존 세션에 합칩니다. `id`가 같은 세션은 파일의 내용으로 바뀌고 나머지는
+추가되며(`id`가 없는 손으로 쓴 항목은 항상 추가, `name`이 없는 항목은 건너뜀), 폴더는 추가되고 아무것도
+지워지지 않습니다. 같은 파일을 두 번 가져와도 달라지는 것이 없습니다. `~/.ssh/config`는 이미 있는 호스트(같은
+폴더·이름)를 건너뛰고, MobaXterm 가져오기는 북마크를 항상 `MobaXterm` 폴더 아래 새로 추가하므로 같은 `.ini`를
+두 번 가져오면 중복됩니다.
 
 **시작 명령**(Terminal 탭): 한 줄에 명령 하나씩 적으면 터미널이 준비됐을 때 자동으로 입력됩니다. SSH는
 로그인 직후, 로컬 셸은 프롬프트가 뜬 직후입니다. 예: 로컬 세션의 Start folder를 프로젝트 폴더로,
