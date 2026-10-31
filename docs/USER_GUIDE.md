@@ -205,6 +205,17 @@ connects, and you are told if one fails to bind.
 
 - **Tools** panel: ping, traceroute, DNS lookup, port scan and local network info, with a Stop
   button for long runs.
+- **Wake-on-LAN** (Tools panel): type the MAC address in any spelling (`aa:bb:cc:dd:ee:ff`,
+  `aa-bb-…`, `aabb.ccdd.eeff` or bare hex) and press Wake: the magic packet goes out three times as a
+  UDP broadcast (255.255.255.255, port 9 by default; a directed broadcast such as 192.168.1.255
+  reaches another subnet). The last 10 addresses are remembered with an optional label and offered
+  as you type.
+- **Network scanner** (Tools panel): scan a CIDR (`192.168.1.0/24`), a range (`10.0.0.1-10.0.0.50`
+  or `10.0.0.1-50`) or one host, up to a /16, by ICMP ping and/or TCP connects to a short port list
+  (22, 80, 443, 3389, 5900 by default), with adjustable concurrency and timeout and a reverse DNS
+  lookup of every hit. Hosts that answer appear in a sortable table as they are found (IP, host name,
+  round-trip time, open ports) while the progress bar counts `123/254`; Stop cancels, ＋ opens the
+  session editor with SSH to that host filled in, and "Copy as text" puts the table on the clipboard.
 - **Macros** panel: record keystrokes in a terminal (● Rec / ■ Stop), save them under a name and
   replay them into the active terminal or into all terminals. Text macros can be typed directly;
   escape sequences such as `\n` or `\x1b[A` are supported.

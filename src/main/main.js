@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
+const dgram = require('dgram');
 const { Store, validChrome } = require('./store');
 const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, spawnMosh } = require('./terminals');
 const { SshManager } = require('./ssh');
@@ -13,6 +14,8 @@ const { setupUpdater } = require('./updater');
 const { TunnelManager } = require('./tunnels');
 const importers = require('./importers');
 const tools = require('./tools');
+const wol = require('./wol');
+const netscan = require('./netscan');
 const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
 const { liveConnections, quitQuestion } = require('./live');
@@ -20,6 +23,8 @@ const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
 
 const pkg = require('../../package.json');
+const scans = new Map(); // running network scans: id → { cancel, promise } (netscan.js); quitting cancels them
+let wolListener = null; // test-only UDP listener for Wake-on-LAN packets (test:wol-listen)
 app.setName('MobAlt');
 if (process.env.MOBALT_USER_DATA) app.setPath('userData', process.env.MOBALT_USER_DATA); // test isolation
 const store = new Store();
@@ -476,6 +481,26 @@ function registerIpc() {
     if (result === undefined || result === null) return { pending: dialogs.pending() };
     return { pending: dialogs.enqueue(result) };
   });
+  // Test-only: a UDP listener on 127.0.0.1:<port> (0 = any free port) for Wake-on-LAN packets, and what it has
+  // received ({ from, port, length, hex }), so a test can assert the magic packet. Listening again replaces it.
+  ipcMain.handle('test:wol-listen', (_e, port) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    return new Promise((resolve, reject) => {
+      if (wolListener) { try { wolListener.socket.close(); } catch {} wolListener = null; }
+      const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+      const packets = [];
+      socket.on('message', (msg, rinfo) => packets.push({ from: rinfo.address, port: rinfo.port, length: msg.length, hex: msg.toString('hex') }));
+      socket.once('error', reject);
+      socket.bind(port | 0, '127.0.0.1', () => {
+        wolListener = { socket, packets };
+        resolve({ port: socket.address().port });
+      });
+    });
+  });
+  ipcMain.handle('test:wol-packets', () => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    return wolListener ? wolListener.packets.slice() : [];
+  });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
@@ -706,6 +731,36 @@ function registerIpc() {
   ipcMain.handle('tools:lookup', (_e, host) => tools.lookup(host));
   ipcMain.handle('tools:netinfo', () => tools.netinfo());
   ipcMain.handle('tools:stop', (_e, id) => tools.stop(id));
+  // Wake-on-LAN and the network scanner (src/main/wol.js, src/main/netscan.js). What fails validation comes back as
+  // { error } instead of a rejection, so the renderer shows the message as it is.
+  ipcMain.handle('tools:wake', (_e, opts) => wol.wake(opts || {}).then((r) => ({ ok: true, ...r }), (e) => ({ ok: false, error: e.message })));
+  ipcMain.handle('tools:scan-start', (_e, opts = {}) => {
+    let targets, ports;
+    try {
+      targets = netscan.expandTargets(opts.target);
+      ports = netscan.parsePorts(opts.ports);
+    } catch (e) {
+      return { error: e.message };
+    }
+    const clamp = (v, def, min, max) => (Number.isInteger(v) ? Math.min(max, Math.max(min, v)) : def);
+    const id = 'scan_' + crypto.randomBytes(4).toString('hex');
+    const send = (ev) => win && !win.isDestroyed() && win.webContents.send('tools:scan', { id, ...ev });
+    const s = netscan.scan(targets, {
+      method: ['ping', 'tcp', 'both'].includes(opts.method) ? opts.method : 'both',
+      ports,
+      concurrency: clamp(opts.concurrency, 64, 1, 512),
+      timeout: clamp(opts.timeout, 600, 50, 10000),
+      reverseDns: opts.reverseDns !== false,
+    }, send);
+    scans.set(id, s);
+    s.promise.finally(() => scans.delete(id));
+    return { id, total: s.total, ports };
+  });
+  ipcMain.handle('tools:scan-stop', (_e, id) => {
+    const s = scans.get(id);
+    if (s) s.cancel();
+    return !!s;
+  });
 
   ipcMain.handle('clipboard:write', (_e, t) => clipboard.writeText(t));
   ipcMain.handle('clipboard:read', () => clipboard.readText());
@@ -751,6 +806,7 @@ app.on('before-quit', (e) => {
     return;
   }
   quitting = true;
+  for (const s of scans.values()) s.cancel();
   tunnels.stopAll();
   ssh.disconnectAll();
   ftp.disconnectAll();

@@ -102,7 +102,70 @@
               <button data-tool="stop" class="danger">Stop</button>
             </div>
           </div>
+          <!-- Wake-on-LAN: the magic packet (6 × FF + the MAC 16 times) as a UDP broadcast, 3 times (panels.js ToolsPanel.wake) -->
+          <details class="tools-group" id="tools-wol" open>
+            <summary>Wake-on-LAN</summary>
+            <div class="tools-form">
+              <div class="row">
+                <input id="wol-mac" list="wol-history" placeholder="MAC aa:bb:cc:dd:ee:ff" aria-label="MAC address" title="MAC address: aa:bb:cc:dd:ee:ff, aa-bb-cc-dd-ee-ff, aabb.ccdd.eeff or bare hex; the last 10 are remembered" spellcheck="false" autocomplete="off" />
+                <datalist id="wol-history"></datalist>
+                <button data-wol="wake" title="Send the magic packet (⏎)">Wake</button>
+              </div>
+              <div class="row">
+                <input id="wol-broadcast" value="255.255.255.255" placeholder="255.255.255.255" aria-label="Broadcast address" title="Broadcast address (a directed broadcast such as 192.168.1.255 reaches another subnet)" spellcheck="false" />
+                <input id="wol-port" type="number" value="9" min="1" max="65535" aria-label="UDP port" title="UDP port" />
+                <input id="wol-label" placeholder="label (optional)" aria-label="Label for the history" title="A name to remember this MAC by" spellcheck="false" />
+              </div>
+            </div>
+          </details>
+          <!-- Network scanner: a CIDR / range / host → ping and TCP connects over a worker queue in the main process, hits streamed into the table below -->
+          <details class="tools-group" id="tools-scan" open>
+            <summary>Network scanner</summary>
+            <div class="tools-form">
+              <div class="row">
+                <input id="scan-target" placeholder="192.168.1.0/24, 10.0.0.1-50 or host" aria-label="Scan target" title="A CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or one host; up to a /16" spellcheck="false" />
+                <button data-scan="start" title="Scan (⏎)">Scan</button>
+                <button data-scan="stop" class="danger" title="Stop the scan">Stop</button>
+              </div>
+              <div class="row">
+                <select id="scan-method" aria-label="Scan method" title="How a host is probed">
+                  <option value="both">Ping + TCP</option>
+                  <option value="ping">Ping</option>
+                  <option value="tcp">TCP</option>
+                </select>
+                <input id="scan-ports" value="22,80,443,3389,5900" aria-label="TCP ports" title="TCP ports to try (comma-separated, ranges allowed)" spellcheck="false" />
+                <label class="chk" title="Look up the host name of every hit"><input type="checkbox" id="scan-rdns" checked /> rDNS</label>
+              </div>
+              <div class="row">
+                <label class="lbl" for="scan-concurrency">Workers</label>
+                <input id="scan-concurrency" type="number" value="64" min="1" max="512" title="Hosts probed at the same time" />
+                <label class="lbl" for="scan-timeout">Timeout</label>
+                <input id="scan-timeout" type="number" value="600" min="50" max="10000" step="50" title="Per probe, in milliseconds" />
+                <span class="lbl">ms</span>
+              </div>
+              <div class="row scan-progress" id="scan-progress" hidden>
+                <progress id="scan-bar" value="0" max="1" aria-label="Scan progress"></progress>
+                <span id="scan-count" class="count">0/0</span>
+                <button data-scan="copy" title="Copy the results as text">Copy as text</button>
+              </div>
+            </div>
+          </details>
           <pre id="tool-output" class="tool-output"></pre>
+          <div id="scan-results" class="scan-results" hidden>
+            <table class="list-table scan-table" aria-label="Scan results">
+              <thead>
+                <tr>
+                  <th aria-sort="ascending"><button type="button" class="on" data-sort="ip">IP</button></th>
+                  <th aria-sort="none"><button type="button" data-sort="hostname">Host</button></th>
+                  <th aria-sort="none"><button type="button" data-sort="rtt">RTT</button></th>
+                  <th aria-sort="none"><button type="button" data-sort="ports">Ports</button></th>
+                  <th><span class="sr">Add as session</span></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div id="scan-empty" class="tree-empty" hidden>No host answered.</div>
+          </div>
         </section>
 
         <!-- Macros panel -->

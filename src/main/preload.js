@@ -39,7 +39,7 @@ if (process.env.MOBALT_TEST_SCRIPT) {
 
 const EVENT_CHANNELS = [
   'term:data', 'term:exit', 'ssh:status', 'sftp:transfer', 'sftp:edit-synced', 'tunnels:changed',
-  'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'app:notice', 'app:bundle-updated',
+  'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'tools:scan', 'app:notice', 'app:bundle-updated',
 ];
 const on = (channel, fn) => {
   if (!EVENT_CHANNELS.includes(channel)) throw new Error('Unknown channel ' + channel);
@@ -63,6 +63,8 @@ contextBridge.exposeInMainWorld('api', {
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testNotice: (text) => invoke('test:notice', text),
     testNextDialog: (result) => invoke('test:next-dialog', result),
+    testWolListen: (port) => invoke('test:wol-listen', port), // UDP listener on 127.0.0.1:<port> for magic packets (test mode only)
+    testWolPackets: () => invoke('test:wol-packets'), // what it received: [{ from, port, length, hex }]
     checkUpdates: () => invoke('app:check-updates'),
     // main-process notices ({ level, text }): internal errors that would otherwise be lost in the console
     onNotice: (fn) => on('app:notice', fn),
@@ -159,6 +161,9 @@ contextBridge.exposeInMainWorld('api', {
     lookup: (host) => invoke('tools:lookup', host),
     netinfo: () => invoke('tools:netinfo'),
     stop: (id) => invoke('tools:stop', id),
+    wake: (opts) => invoke('tools:wake', opts), // { mac, broadcast?, port? } → { ok, mac, broadcast, port, sent } | { ok: false, error }
+    scanStart: (opts) => invoke('tools:scan-start', opts), // { target, method, ports, concurrency, timeout, reverseDns } → { id, total, ports } | { error }; events on tools:scan
+    scanStop: (id) => invoke('tools:scan-stop', id),
   },
   clipboard: {
     write: (t) => invoke('clipboard:write', t),

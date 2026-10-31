@@ -45,7 +45,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | MultiExec | ✅ | Type into every visible terminal of the tab at once (⇧⌘M) |
 | Split terminals | ✅ | Right/down splits and grids up to 2 × 4 (8 panes); drag sessions onto empty panes or pane edges; drag tabs between panes |
 | Macros | ✅ | Record/replay keystrokes, text macros, play to all terminals |
-| Tools | ✅ Tools panel | Ping, traceroute, DNS lookup, port scan, network info |
+| Tools | ✅ Tools panel | Ping, traceroute, DNS lookup, port scan, network info, Wake-on-LAN, network scanner |
 | Telnet | ✅ | NAWS/TTYPE negotiation |
 | Serial console | ✅ | USB-serial discovery, baud/framing/flow control, local echo, CR/LF/CRLF |
 | Local terminal | ✅ | Your login shell (zsh/bash) with folder-following integration |
@@ -169,7 +169,9 @@ src/main/        Electron main process
   x11.js         XQuartz discovery/start and X11 channel proxy
   knownhosts.js  host key verification
   importers.js   ~/.ssh/config and MobaXterm.ini import
-  tools.js       ping / traceroute / port scan / DNS
+  tools.js       ping / traceroute / port scan / DNS, and the probes the scanner uses
+  wol.js         Wake-on-LAN magic packet
+  netscan.js     network scanner: CIDR / range expansion, worker queue
   zdotdir.js     zsh integration for local shells (OSC 7)
 src/renderer/    renderer (plain ES modules, no framework)
   app.js         controller: actions, events, status bar

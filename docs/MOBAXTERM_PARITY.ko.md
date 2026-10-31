@@ -31,17 +31,17 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 2. SSH 세부 기능 | 15 | 10 | 10 | 2 | 37 |
 | 3. 터미널 | 7 | 13 | 10 | 1 | 31 |
 | 4. X 서버와 내장 Unix 도구 | 2 | 1 | 1 | 17 | 21 |
-| 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 4 | 2 | 10 | 19 | 35 |
+| 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 6 | 2 | 8 | 19 | 35 |
 | 6. 작업대 기능 | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional 전용 항목과 Home 에디션 제한 | 0 | 0 | 0 | 13 | 13 |
-| **1–7절 합계(기능당 한 번)** | **42** | **41** | **41** | **59** | **183** |
+| **1–7절 합계(기능당 한 번)** | **44** | **41** | **39** | **59** | **183** |
 | 8. 최근 추가 기능(24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
 | 9. 파워 유저가 기대는 UX | 5 | 11 | 3 | 1 | 20 |
-| **전체 표 합계** | **49** | **68** | **53** | **63** | **233** |
+| **전체 표 합계** | **51** | **68** | **51** | **63** | **233** |
 
 8절과 9절은 원본 목록의 구성을 그대로 따른 것이라 1–7절에 이미 나온 기능을 다시 세므로, "전체 표 합계"에는
 같은 기능이 두 번 들어갑니다. 인용할 때는 1–7절 합계를 쓰세요. 다르게 읽으면, macOS에서 의미가 있는 기능
-124개(1–7절에서 ➖ 제외) 가운데 MobAlt는 42개를 그대로, 41개를 더 좁거나 다른 형태로 갖고 있고, 41개는
+124개(1–7절에서 ➖ 제외) 가운데 MobAlt는 44개를 그대로, 41개를 더 좁거나 다른 형태로 갖고 있고, 39개는
 없습니다.
 
 ## 1. 세션 종류
@@ -178,11 +178,11 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 
 | MobaXterm 기능 | MobAlt | MobAlt의 방식, 또는 없는 이유 |
 |---|---|---|
-| 네트워크 스캐너(서브넷) | ❌ | 미구현 |
+| 네트워크 스캐너(서브넷) | ✅ | Tools 패널(⌘3) → Network scanner: CIDR·주소 범위·단일 호스트(/16까지), ping과 TCP 연결(포트 목록), 역방향 DNS, 실시간 정렬 표, Stop, "Add as session", 텍스트로 복사 |
 | 포트 스캐너 | ✅ | Tools 패널(⌘3) → Port scan: 포트 범위, 동시 TCP 연결 |
 | 패킷 캡처(TCPCapture) | ❌ | Local 터미널에서 `sudo tcpdump`, 또는 Wireshark |
 | 열린 네트워크 포트 목록(MobaListPorts) | ❌ | Local 터미널에서 `lsof -iTCP -sTCP:LISTEN` |
-| Wake-on-LAN | ❌ | 미구현 |
+| Wake-on-LAN | ✅ | Tools 패널 → Wake-on-LAN: UDP 브로드캐스트 매직 패킷(주소·포트 변경 가능), 최근 MAC 10개를 라벨과 함께 기억 |
 | Ping | ✅ | Tools 패널 → Ping(실시간 출력, Stop 버튼) |
 | Traceroute | ✅ | Tools 패널 → Traceroute(GUI. MobaXterm에는 CLI뿐) |
 | iperf / httping | ➖ | `brew install iperf3 httping` 후 Local 세션에서 실행 |
@@ -318,7 +318,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 로컬 터미널이 진짜 Unix 셸 | ✅ | 원래 그렇고, 내 dotfile이 그대로 적용 |
 | X11이 "그냥 됨"(자동 시작, DISPLAY, WM, XDMCP) | 🟡 | XQuartz를 필요 시 띄우고 쿠키 교체. 포워딩은 세션별 옵션. 윈도 매니저나 XDMCP는 없음 |
 | 게임과 펭귄 | ➖ | 없음 |
-| 만능 서랍 같은 Tools 메뉴 | 🟡 | Tools 패널(ping, traceroute, DNS, 포트 스캔, 네트워크 정보)과 Tunneling. 나머지는 macOS나 Homebrew로 |
+| 만능 서랍 같은 Tools 메뉴 | 🟡 | Tools 패널(ping, traceroute, DNS, 포트 스캔, 네트워크 정보, Wake-on-LAN, 네트워크 스캐너)과 Tunneling. 나머지는 macOS나 Homebrew로 |
 | 어디에나 있는 전문가 설정(터미널, SSH, RDP) | 🟡 | "Legacy algorithms"와 터미널 설정 몇 가지. 전문가 SSH / RDP 대화상자는 없음 |
 | 텔레메트리 없음, 자동 업데이트 없음, 관리자 권한 불필요 | 🟡 | 텔레메트리 없음. 시작 시 업데이트 확인은 끌 수 있고 동의해야만 설치. 관리자 권한 불필요(Applications로 드래그 또는 Homebrew) |
 
@@ -357,7 +357,6 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 편집 가능한 미리보기와 악성 붙여넣기 검사(동형 문자, 셸로 파이프, 프로필 리디렉션, 폭 없는 공백)가 있는 여러 줄 붙여넣기 보호 | MobaXterm에서 가장 자주 언급되는 안전장치. xterm.js가 붙여넣기 경로를 이미 노출함 | M |
 | 터미널 안 Zmodem(rz/sz) 전송 | SFTP를 못 쓰는 시리얼 콘솔과 점프 호스트 너머로 파일을 옮기는 고전적 방법 | M |
 | SSH 연결의 exec 채널을 주기적으로 돌리는 원격 모니터링 바(CPU / RAM / 디스크 / 네트워크) | MobaXterm은 25.2부터 기본 켜짐. ssh2 연결은 이미 있음 | M |
-| Tools 패널의 Wake-on-LAN과 서브넷 / 네트워크 스캐너 | Tools를 완성함. WoL은 UDP 매직 패킷, 스캐너는 포트 스캔 워커를 재사용 | S + M |
 | 터미널 키워드 구문 강조 | 색이 없는 서버에서도 읽기 좋은 로그. xterm.js decorations API | M |
 | 탭 고정, 왼쪽/오른쪽 닫기, 창으로 분리 | 탭 색상은 이미 있음. 분리는 터미널 레지스트리를 공유하는 두 번째 BrowserWindow가 필요 | M |
 | SSH 키 생성 UI(`ssh-keygen` 래퍼) | 가장 흔한 "SSH 첫걸음" 작업. MobaKeyGen 공백도 메움 | S |

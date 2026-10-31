@@ -608,3 +608,43 @@ input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: defaul
 /* Text selection in fields and selectable text follows the theme, not the OS highlight colour. */
 ::selection { background: var(--selection); color: var(--selection-fg); }
 input::selection, textarea::selection { background: var(--selection); color: var(--selection-fg); }
+
+/* ---- net tools ---- */
+/* Tools panel → Wake-on-LAN and Network scanner: two collapsible groups under the classic tools (index.html, panels.js
+   ToolsPanel). Their boxes are .tools-form rows like the ones above, so the field, button and focus rules apply. */
+.tools-group { border-bottom: 1px solid var(--divider); flex: none; }
+.tools-group > summary { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font-size: 11px; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; color: var(--fg-dim); list-style: none; cursor: default; user-select: none; }
+.tools-group > summary::-webkit-details-marker { display: none; }
+.tools-group > summary::before { content: ""; width: 0; height: 0; border: 4px solid transparent; border-left: 5px solid var(--fg-dim); margin-left: 2px; transition: transform .12s; }
+.tools-group[open] > summary::before { transform: rotate(90deg); }
+.tools-group > summary:hover { color: var(--fg); }
+.tools-group > summary:focus { outline: none; }
+.tools-group > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: var(--radius-s); }
+.tools-group > .tools-form { border-bottom: 0; padding-top: 2px; }
+.tools-form .lbl { flex: none; color: var(--fg-dim); font-size: 11.5px; }
+.tools-form label.chk { display: flex; align-items: center; gap: 4px; flex: none; }
+.tools-form label.chk input[type=checkbox] { flex: none; width: auto; height: auto; padding: 0; border: 0; background: none; margin: 0; }
+#tools-scan input[type=number] { flex: 0 0 64px; }  /* "10000" fits */
+#tools-scan select { flex: none; height: 26px; padding: 0 4px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); color: var(--fg); }
+#tools-scan select:focus { border-color: var(--accent); outline: none; }
+/* progress row: the bar in the accent colour, "123/254" beside it (monospace, so the text does not jiggle) */
+.scan-progress progress { flex: 1 1 60px; min-width: 0; height: 8px; accent-color: var(--accent); }
+.scan-progress .count { flex: none; min-width: 60px; text-align: right; font: 11px var(--font-mono); color: var(--fg-dim); }
+/* results: a sticky-header table that shares the output area with the <pre> of the classic tools (one of the two is shown) */
+.scan-results { flex: 1; min-height: 0; overflow: auto; user-select: text; }
+.scan-table th { position: sticky; top: 0; z-index: 1; padding: 0; background: var(--bg); }
+.scan-table th button { height: 24px; width: 100%; padding: 0 6px; border: 0; border-radius: 0; background: transparent; color: var(--fg-dim); font-weight: 500; text-align: left; white-space: nowrap; }
+.scan-table th button:hover { color: var(--fg); background: var(--bg-3); }
+.scan-table th button.on { color: var(--fg); }
+.scan-table th[aria-sort=ascending] button.on::after { content: " ▲"; font-size: 8px; }
+.scan-table th[aria-sort=descending] button.on::after { content: " ▼"; font-size: 8px; }
+.scan-table td { padding: 3px 6px; }
+.scan-table td.host { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
+.scan-table td.num { text-align: right; }
+.scan-table td.act { width: 26px; padding: 0 2px; text-align: center; }
+.scan-table tbody tr:hover td { background: var(--bg-3); }
+.scan-table .scan-add { height: 20px; min-width: 22px; padding: 0 4px; border: 1px solid transparent; border-radius: var(--radius-s); background: transparent; color: var(--accent); font-size: 13px; line-height: 1; }
+.scan-table .scan-add:hover { background: var(--bg-active); border-color: var(--divider); }
+.scan-results .tree-empty { padding: 14px; }
+/* a visually hidden text (the action column's header) */
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

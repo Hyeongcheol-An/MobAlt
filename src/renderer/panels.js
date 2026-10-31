@@ -1,5 +1,8 @@
-// Tools panel (ping/traceroute/port scan/DNS/net info) and Macros panel.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, showModal } from './ui.js';
+// Tools panel (ping/traceroute/port scan/DNS/net info, Wake-on-LAN, network scanner) and Macros panel.
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, showModal, plural } from './ui.js';
+
+const ipKey = (ip) => (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip.split('.').map((o) => o.padStart(3, '0')).join('.') : '~' + ip); // IPv4 in address order, anything else after
+const fmtRtt = (ms) => (ms >= 100 ? String(Math.round(ms)) : ms.toFixed(ms < 10 ? 2 : 1)) + ' ms';
 
 export class ToolsPanel {
   constructor(app) {
@@ -16,11 +19,19 @@ export class ToolsPanel {
     window.api.on('tools:done', ({ id }) => {
       if (id === this.running) this.running = null;
     });
+    this.initWol();
+    this.initScanner();
   }
 
   append(text) {
     this.out.textContent += text;
     this.out.scrollTop = this.out.scrollHeight;
+  }
+
+  /** The classic tools write into the <pre>, the scanner fills its table: the output area shows whichever ran last. */
+  showOutput(which) {
+    this.out.hidden = which !== 'text';
+    $('#scan-results').hidden = which !== 'scan';
   }
 
   async run(tool) {
@@ -41,6 +52,7 @@ export class ToolsPanel {
     }
     if (run !== this.runSeq) return; // another tool was started while the previous one was being stopped
     this.out.textContent = '';
+    this.showOutput('text');
     try {
       if (tool === 'ping' || tool === 'traceroute') {
         const id = await (tool === 'ping' ? window.api.tools.ping(host, 5) : window.api.tools.traceroute(host));
@@ -86,6 +98,200 @@ export class ToolsPanel {
     } catch (e) {
       append(`error: ${e.message}\n`);
     }
+  }
+
+  // ---------- Wake-on-LAN ----------
+  initWol() {
+    this.wolMac = $('#wol-mac');
+    this.wolBroadcast = $('#wol-broadcast');
+    this.wolPort = $('#wol-port');
+    this.wolLabel = $('#wol-label');
+    this.waking = false;
+    $('[data-wol="wake"]').addEventListener('click', () => this.wake());
+    for (const el of [this.wolMac, this.wolBroadcast, this.wolPort, this.wolLabel]) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.wake(); } });
+    // a MAC picked from the history (or typed again) brings its label along
+    this.wolMac.addEventListener('input', () => {
+      const known = this.wolHistory.find((x) => x.mac === this.wolMac.value.trim().toLowerCase());
+      if (known && known.label) this.wolLabel.value = known.label;
+    });
+    this.renderWolHistory();
+  }
+
+  /** The last 10 MACs woken, newest first: [{ mac, label, at }] (settings key wolHistory). */
+  get wolHistory() {
+    return Array.isArray(this.app.settings.wolHistory) ? this.app.settings.wolHistory : [];
+  }
+
+  /** The MAC box's datalist: every remembered address, its label as the option's secondary text. */
+  renderWolHistory() {
+    $('#wol-history').replaceChildren(...this.wolHistory.map((e) => h('option', { value: e.mac, label: e.label || null })));
+  }
+
+  /** Wake: the main process validates, builds and broadcasts the magic packet; a success goes into the history with the label. */
+  async wake() {
+    if (this.waking) return;
+    const mac = this.wolMac.value.trim();
+    if (!mac) return toast('Enter a MAC address', 'warn');
+    const port = this.wolPort.value.trim() === '' ? 9 : parseInt(this.wolPort.value, 10);
+    const broadcast = this.wolBroadcast.value.trim() || '255.255.255.255';
+    this.waking = true;
+    try {
+      const r = await window.api.tools.wake({ mac, broadcast, port });
+      if (!r.ok) return toast(r.error, 'warn');
+      const old = this.wolHistory.find((x) => x.mac === r.mac);
+      const label = this.wolLabel.value.trim() || (old && old.label) || '';
+      const wolHistory = [{ mac: r.mac, label, at: Date.now() }, ...this.wolHistory.filter((x) => x.mac !== r.mac)].slice(0, 10);
+      await this.app.saveSettings({ wolHistory }, true);
+      this.renderWolHistory();
+      this.wolMac.value = r.mac; // the spelling the history keeps
+      toast(`Magic packet sent to ${label ? `${label} (${r.mac})` : r.mac} via ${r.broadcast}:${r.port}`, 'success');
+    } catch (e) {
+      toast(`Wake-on-LAN failed: ${e.message}`, 'error');
+    } finally {
+      this.waking = false;
+    }
+  }
+
+  // ---------- network scanner ----------
+  initScanner() {
+    this.scanTarget = $('#scan-target');
+    this.scanBody = $('#scan-results tbody');
+    this.scan = null; // the last run: { id, total, done, rows, running, cancelled, ms, target }
+    this.scanSort = { key: 'ip', dir: 1 };
+    for (const b of document.querySelectorAll('[data-scan]')) b.addEventListener('click', () => this.scanCmd(b.dataset.scan));
+    for (const el of [this.scanTarget, $('#scan-ports'), $('#scan-concurrency'), $('#scan-timeout')]) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); this.startScan(); } });
+    for (const b of document.querySelectorAll('#scan-results th button[data-sort]')) b.addEventListener('click', () => this.sortScan(b.dataset.sort));
+    window.api.on('tools:scan', (ev) => this.onScanEvent(ev));
+    this.syncScanButtons();
+  }
+
+  scanCmd(name) {
+    if (name === 'start') this.startScan();
+    else if (name === 'stop') this.stopScan();
+    else if (name === 'copy') this.copyScan();
+  }
+
+  /** Scan while idle, Stop while running, Copy once there is a row — the keyboard is moved off a button before it goes inert. */
+  syncScanButtons() {
+    const running = !!(this.scan && this.scan.running);
+    const start = $('[data-scan="start"]'), stop = $('[data-scan="stop"]');
+    if (running) {
+      stop.disabled = false;
+      if (document.activeElement === start) stop.focus();
+      start.disabled = true;
+    } else {
+      start.disabled = false;
+      if (document.activeElement === stop) start.focus();
+      stop.disabled = true;
+    }
+    $('[data-scan="copy"]').disabled = !(this.scan && this.scan.rows.length);
+  }
+
+  async startScan() {
+    if (this.scan && this.scan.running) return;
+    const target = this.scanTarget.value.trim();
+    if (!target) return toast('Enter a CIDR, an address range or a host', 'warn');
+    const int = (sel, def) => { const v = parseInt($(sel).value, 10); return Number.isInteger(v) ? v : def; };
+    const r = await window.api.tools.scanStart({ target, method: $('#scan-method').value, ports: $('#scan-ports').value, concurrency: int('#scan-concurrency', 64), timeout: int('#scan-timeout', 600), reverseDns: $('#scan-rdns').checked });
+    if (!r || r.error) return toast(r ? r.error : 'The scan could not start', 'warn');
+    this.scan = { id: r.id, total: r.total, done: 0, rows: [], running: true, cancelled: false, ms: 0, target };
+    this.scanBody.replaceChildren();
+    $('#scan-progress').hidden = false;
+    this.showOutput('scan');
+    this.renderScanProgress();
+    this.renderScanEmpty();
+    this.syncScanButtons();
+  }
+
+  async stopScan() {
+    if (!this.scan || !this.scan.running) return;
+    await window.api.tools.scanStop(this.scan.id); // the run's 'done' event (cancelled) closes it
+  }
+
+  onScanEvent(ev) {
+    const s = this.scan;
+    if (!s || ev.id !== s.id) return; // an earlier run's late events
+    if (ev.type === 'progress') {
+      s.done = ev.done;
+      this.renderScanProgress();
+    } else if (ev.type === 'hit') {
+      s.rows.push(ev);
+      this.renderScanRows();
+    } else if (ev.type === 'error') {
+      toast(ev.message, 'warn');
+    } else if (ev.type === 'done') {
+      Object.assign(s, { done: ev.done, running: false, cancelled: ev.cancelled, ms: ev.ms });
+      this.renderScanProgress();
+      this.renderScanEmpty();
+      this.syncScanButtons();
+      const up = plural(s.rows.length, 'host');
+      toast(ev.cancelled ? `Scan stopped: ${up} up, ${ev.done}/${ev.total} scanned` : `Scan finished: ${up} up of ${ev.total} in ${(ev.ms / 1000).toFixed(1)} s`, ev.cancelled ? 'warn' : 'success');
+    }
+  }
+
+  renderScanProgress() {
+    const s = this.scan, bar = $('#scan-bar');
+    bar.max = s.total || 1;
+    bar.value = s.done;
+    $('#scan-count').textContent = `${s.done}/${s.total}`;
+  }
+
+  renderScanEmpty() {
+    $('#scan-empty').hidden = !this.scan || this.scan.running || this.scan.rows.length > 0;
+  }
+
+  /** A header click sorts by that column; the same column again flips the direction (aria-sort says which). */
+  sortScan(key) {
+    this.scanSort = this.scanSort.key === key ? { key, dir: -this.scanSort.dir } : { key, dir: 1 };
+    for (const b of document.querySelectorAll('#scan-results th button[data-sort]')) {
+      const on = b.dataset.sort === key;
+      b.classList.toggle('on', on);
+      b.closest('th').setAttribute('aria-sort', on ? (this.scanSort.dir > 0 ? 'ascending' : 'descending') : 'none');
+    }
+    this.renderScanRows();
+  }
+
+  sortedScanRows() {
+    const { key, dir } = this.scanSort;
+    const byIp = (a, b) => (ipKey(a.ip) < ipKey(b.ip) ? -1 : ipKey(a.ip) > ipKey(b.ip) ? 1 : 0);
+    const cmp = {
+      ip: byIp,
+      hostname: (a, b) => (a.hostname || '').localeCompare(b.hostname || '') || byIp(a, b),
+      rtt: (a, b) => (a.rtt ?? Infinity) - (b.rtt ?? Infinity) || byIp(a, b),
+      ports: (a, b) => b.ports.length - a.ports.length || (a.ports[0] ?? 1e6) - (b.ports[0] ?? 1e6) || byIp(a, b),
+    }[key] || byIp;
+    return [...this.scan.rows].sort((a, b) => dir * cmp(a, b));
+  }
+
+  renderScanRows() {
+    this.scanBody.replaceChildren(...this.sortedScanRows().map((r) => h('tr', {},
+      h('td', { class: 'mono' }, r.ip),
+      h('td', { class: 'host', title: r.hostname || null }, r.hostname || '—'),
+      h('td', { class: 'mono num' }, r.rtt == null ? '—' : fmtRtt(r.rtt)),
+      h('td', { class: 'mono' }, r.ports.length ? r.ports.join(', ') : '—'),
+      h('td', { class: 'act' }, h('button', { type: 'button', class: 'scan-add', title: `Add ${r.ip} as an SSH session`, 'aria-label': `Add ${r.ip} as session`, onclick: () => this.addScanSession(r) }, '＋')),
+    )));
+    this.renderScanEmpty();
+    this.syncScanButtons();
+  }
+
+  /** "Add as session": the session editor with SSH to this host on port 22 filled in (named after the reverse lookup). */
+  addScanSession(r) {
+    const s = { type: 'ssh', host: r.ip, port: 22 };
+    if (r.hostname) s.name = r.hostname;
+    this.app.editSession(s);
+  }
+
+  /** "Copy as text": the table as it is sorted, in aligned columns. */
+  async copyScan() {
+    if (!this.scan || !this.scan.rows.length) return toast('No scan results to copy', 'warn');
+    const rows = this.sortedScanRows();
+    const cols = [['IP', (r) => r.ip], ['Hostname', (r) => r.hostname || '-'], ['RTT', (r) => (r.rtt == null ? '-' : fmtRtt(r.rtt))], ['Open ports', (r) => (r.ports.length ? r.ports.join(',') : '-')]];
+    const cells = rows.map((r) => cols.map(([, f]) => f(r)));
+    const widths = cols.map(([name], i) => Math.max(name.length, ...cells.map((c) => c[i].length)));
+    const line = (c) => c.map((v, i) => (i === cols.length - 1 ? v : v.padEnd(widths[i]))).join('  ');
+    await window.api.clipboard.write([line(cols.map(([name]) => name)), ...cells.map(line)].join('\n') + '\n');
+    toast(`Copied ${plural(rows.length, 'host')} as text`, 'success');
   }
 }
 

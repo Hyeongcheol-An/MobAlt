@@ -44,7 +44,7 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | MultiExec | ✅ | 모든 터미널에 동시 입력 (⇧⌘M) |
 | 분할 터미널 | ✅ | 오른쪽/아래 분할과 최대 2×4(8개) 격자. 빈 페인이나 페인 가장자리에 세션 드롭, 탭을 페인으로 드래그 |
 | Macros | ✅ | 키 입력 녹화/재생, 텍스트 매크로, 모든 터미널에 재생 |
-| Tools | ✅ Tools 패널 | Ping, Traceroute, DNS 조회, 포트 스캔, 네트워크 정보 |
+| Tools | ✅ Tools 패널 | Ping, Traceroute, DNS 조회, 포트 스캔, 네트워크 정보, Wake-on-LAN, 네트워크 스캐너 |
 | Telnet | ✅ | NAWS/TTYPE 협상 |
 | Serial 콘솔 | ✅ | USB-시리얼 자동 검색, baud/framing/flow, 로컬 에코, CR/LF/CRLF |
 | 로컬 터미널 | ✅ | 로그인 셸(zsh/bash) 그대로, 폴더 추종 통합 |

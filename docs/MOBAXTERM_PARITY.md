@@ -32,18 +32,18 @@ last column says which parts are missing.
 | 2. SSH specifics | 15 | 10 | 10 | 2 | 37 |
 | 3. Terminal | 7 | 13 | 10 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
-| 5. Network and admin tools, embedded servers, Moba* utilities | 4 | 2 | 10 | 19 | 35 |
+| 5. Network and admin tools, embedded servers, Moba* utilities | 6 | 2 | 8 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **42** | **41** | **41** | **59** | **183** |
+| **Sections 1–7 (each feature once)** | **44** | **41** | **39** | **59** | **183** |
 | 8. Recent additions (24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
 | 9. UX details power users rely on | 5 | 11 | 3 | 1 | 20 |
-| **All tables** | **49** | **68** | **53** | **63** | **233** |
+| **All tables** | **51** | **68** | **51** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
+MobAlt has 44 in full, 41 in a narrower or different form and lacks 39.
 
 ## 1. Session types
 
@@ -179,11 +179,11 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 
 | MobaXterm feature | MobAlt | How MobAlt does it, or why not |
 |---|---|---|
-| Network scanner (subnet) | ❌ | not implemented |
+| Network scanner (subnet) | ✅ | Tools panel (⌘3) → Network scanner: a CIDR, an address range or one host (up to a /16); ping and/or TCP connect to a port list, reverse DNS, live sortable table, Stop, "Add as session", Copy as text |
 | Ports scanner | ✅ | Tools panel (⌘3) → Port scan: port range, concurrent TCP connect |
 | Packet capture (TCPCapture) | ❌ | `sudo tcpdump` in a Local terminal or Wireshark |
 | List open network ports (MobaListPorts) | ❌ | `lsof -iTCP -sTCP:LISTEN` in a Local terminal |
-| Wake-on-LAN | ❌ | not implemented |
+| Wake-on-LAN | ✅ | Tools panel → Wake-on-LAN: magic packet by UDP broadcast (address and port adjustable), the last 10 MACs remembered with a label |
 | Ping | ✅ | Tools panel → Ping (streamed, Stop button) |
 | Traceroute | ✅ | Tools panel → Traceroute (a GUI; MobaXterm only has the CLI) |
 | iperf / httping | ➖ | `brew install iperf3 httping`, run in a Local session |
@@ -319,7 +319,7 @@ MobAlt has 42 in full, 41 in a narrower or different form and lacks 41.
 | Local terminal is a real Unix shell | ✅ | natively, with your own dotfiles |
 | X11 "just works" (auto-start, DISPLAY, WMs, XDMCP) | 🟡 | XQuartz started on demand and the cookie swapped; forwarding is a per-session option; no window managers or XDMCP |
 | Games and penguins | ➖ | none |
-| Tools menu as a Swiss-army drawer | 🟡 | Tools panel (ping, traceroute, DNS, port scan, network info) and Tunneling; the rest through macOS or Homebrew |
+| Tools menu as a Swiss-army drawer | 🟡 | Tools panel (ping, traceroute, DNS, port scan, network info, Wake-on-LAN, network scanner) and Tunneling; the rest through macOS or Homebrew |
 | Expert settings everywhere (terminal, SSH, RDP) | 🟡 | "Legacy algorithms" and a few terminal knobs; no expert SSH / RDP dialogs |
 | No telemetry, no auto-update, no admin rights | 🟡 | no telemetry; the startup update check is optional and only installs with consent; no admin rights (drag to Applications or Homebrew) |
 
@@ -358,7 +358,6 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 | Multi-line paste guard with editable preview and malicious-paste checks (homographs, pipe-to-shell, profile redirects, zero-width spaces) | the single most-cited MobaXterm safety net; xterm.js exposes the paste path already | M |
 | Zmodem (rz/sz) transfers in the terminal | the classic way to move files through serial consoles and jump hosts where SFTP is unavailable | M |
 | Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
-| Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
 | Keyword syntax highlighting in the terminal | readable logs on colour-less servers; xterm.js decorations API | M |
 | Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
 | SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
