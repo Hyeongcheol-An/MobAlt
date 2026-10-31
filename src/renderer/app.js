@@ -195,8 +195,12 @@ class App {
       this.updateStatusRight();
     });
     window.api.app.onBundleUpdated((info) => this.onBundleUpdated(info));
-    // main-process errors (uncaughtException) reach the user instead of only the terminal that launched the app
-    window.api.app.onNotice((n) => toast(String((n && n.text) || n), (n && n.level) || 'error', 8000));
+    // main-process errors (uncaughtException) reach the user instead of only the terminal that launched the app.
+    // A notice is {text, level} or a bare string; one without text shows nothing (never "[object Object]").
+    window.api.app.onNotice((n) => {
+      const text = String((n && typeof n === 'object' ? n.text : n) ?? '').trim();
+      if (text) toast(text, (n && n.level) || 'error', 8000);
+    });
   }
 
   // ---------- UI wiring ----------
@@ -702,13 +706,21 @@ class App {
     if (from && !targets.includes(from)) from.write(data); // input into a terminal that is not on screen still reaches its own shell (once)
   }
 
+  /** Wording for an empty broadcast set: no tab at all, or a tab whose panes are empty cards, FTP cards or dead shells. */
+  multiexecNoneText() {
+    return this.workspace.active ? 'no terminal is visible in this tab — connect a session first' : 'no terminal is visible — open a session first';
+  }
+
   /** Banner, toolbar state and the visible-terminal count; called whenever the active tab or a pane's life changes. */
   updateMultiexec() {
     const banner = $('#multiexec-banner');
     const wasHidden = banner.hidden;
     banner.hidden = !this.multiexec;
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
-    $('#multiexec-count').textContent = String(this.multiexecTargets().length);
+    const n = this.multiexecTargets().length;
+    // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminal(s)"
+    const count = h('b', { id: 'multiexec-count', hidden: n === 0 }, String(n));
+    banner.replaceChildren('MultiExec is ON — ', ...(n === 0 ? [this.multiexecNoneText(), count] : ['keystrokes go to ', count, ' visible terminal(s) in this tab']));
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
 
@@ -845,7 +857,8 @@ class App {
         this.updateMultiexec();
         const n = this.multiexecTargets().length;
         toast(!this.multiexec ? 'MultiExec OFF'
-          : n < 2 ? `MultiExec ON: only ${n} terminal${n === 1 ? ' is' : 's are'} visible — split the tab to broadcast`
+          : n === 0 ? `MultiExec ON: ${this.multiexecNoneText()}`
+          : n === 1 ? 'MultiExec ON: only 1 terminal is visible — split the tab to broadcast'
           : 'MultiExec ON: input goes to every visible terminal in this tab', this.multiexec ? 'warn' : 'info');
         return;
       }

@@ -2,6 +2,8 @@
 // and the banner count follows tab switches, splits, closes, deaths and reconnects.
 //   test/qa/run.sh test/e2e-multiexec.js <out-dir>
 // (There is no pane zoom/maximize feature — "zoom" is the font size — so "visible" is every pane of the active tab.)
+// Also: the tab titles after a tab → pane drop, the FTP card in a split (test/ftpd.py on 127.0.0.1:2151 when it is
+// running; without a server the failed card has the same box) and the wording when nothing can be broadcast to.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -125,6 +127,78 @@
     app.action('multiexec');
     await sleep(100);
     results.offAtEnd = !app.multiexec && banner().hidden;
+
+    // --- tab → pane drop: an auto-titled source tab follows the pane it shows once its active pane moved out; the target takes that pane's name
+    const d = await app.openSession(local, { split: 'right' }); // tab1 = a | d
+    await prompt(d);
+    d.updateTitle(); // the pane reports its title (as a shell's title sequence does): the tab, auto-titled, takes "local 2" from its active pane
+    results.sourceTitledByActivePane = tab1.autoTitle && tab1.activePane === d && tab1.title === 'local 2';
+    app.workspace.activate(tab2);
+    await sleep(200);
+    await app.dropOnPane(c, { tabId: tab1.id }, 'down');
+    await sleep(400);
+    results.tabDropMovesPane = d.tab === tab2 && tab2.panes().length === 2 && tab1.panes().length === 1 && tab1.panes()[0] === a;
+    results.sourceRetitledAfterDrop = tab1.title === a.title && tab1.tabEl.querySelector('.title').textContent === a.title;
+    results.targetRetitledAfterDrop = tab2.title === 'local 2' && tab2.tabEl.querySelector('.title').textContent === 'local 2';
+    log('titles after tab drop: source', JSON.stringify(tab1.title), 'target', JSON.stringify(tab2.title), '(pane a:', JSON.stringify(a.title) + ')');
+    await shot('65-tab-drop-titles');
+
+    // --- placeholder cards in a split (empty pane, FTP): they start below the pane head, whose title and buttons stay reachable
+    const ftpSession = await app.saveSession({ name: 'ftp-local', type: 'ftp', host: '127.0.0.1', port: 2151, username: 'user', password: 'pw' });
+    await app.splitActive('right'); // next to d: tab2 = c / (d | empty)
+    await sleep(300);
+    const cardCheck = (pane, cardSel) => {
+      const card = pane.el.querySelector(cardSel);
+      const head = pane.headEl.getBoundingClientRect(), cardRect = card.getBoundingClientRect();
+      const closeBtn = pane.headEl.querySelector('button[title="Close pane"]');
+      const cb = closeBtn.getBoundingClientRect();
+      const hitClose = document.elementFromPoint(cb.left + cb.width / 2, cb.top + cb.height / 2);
+      const hitTitle = document.elementFromPoint(head.left + 30, head.top + head.height / 2);
+      log(cardSel, pane.status, 'head bottom', head.bottom.toFixed(1), 'card top', cardRect.top.toFixed(1), 'hit', hitClose && hitClose.tagName, hitTitle && hitTitle.className);
+      return {
+        belowHead: pane.el.classList.contains('show-head') && head.height >= 20 && cardRect.top >= head.bottom - 0.5 && cardRect.height > 60,
+        headReachable: closeBtn.contains(hitClose) && !!hitTitle && hitTitle.closest('.pane-head') === pane.headEl,
+      };
+    };
+    const emptyPane = tab2.panes().find((p) => p.kind === 'empty');
+    const emptyCard = cardCheck(emptyPane, '.pane-placeholder:not(.ftp-info)');
+    results.emptyCardBelowPaneHead = emptyCard.belowHead;
+    results.emptyPaneHeadReachable = emptyCard.headReachable;
+    await shot('66-empty-card-in-split');
+    const ftpPane = await app.replacePane(emptyPane, ftpSession, true); // test/ftpd.py on 2151 → connected card; no server → failed card, same box
+    await waitFor(() => ftpPane.status === 'connected' || ftpPane.status === 'failed', 10000, 'ftp card');
+    await sleep(300);
+    const ftpCard = cardCheck(ftpPane, '.pane-placeholder.ftp-info');
+    results.ftpCardBelowPaneHead = ftpCard.belowHead;
+    results.ftpPaneHeadReachable = ftpCard.headReachable;
+    await shot('67-ftp-card-in-split');
+
+    // --- nothing to broadcast to (no tab at all; a tab with only an empty card): the toast and banner say so, not "0 terminals — split the tab"
+    for (const t of [...app.workspace.tabs]) await app.closeTab(t);
+    await sleep(300);
+    app.action('multiexec');
+    await sleep(150);
+    results.zeroNoTabToast = toasts().includes('MultiExec ON: no terminal is visible — open a session first') && !toasts().includes('only 0');
+    results.zeroNoTabBanner = !banner().hidden && bannerCount() === '0' && /MultiExec is ON — no terminal is visible — open a session first/.test(banner().textContent) && !/0 visible terminal/.test(banner().textContent) && !/in this tab/.test(banner().textContent);
+    await shot('68-multiexec-no-terminal');
+    app.action('multiexec');
+    await sleep(100);
+    const e1 = await app.newLocalTab();
+    await prompt(e1);
+    await app.splitActive('right');
+    await sleep(300);
+    const onlyEmptyTab = app.workspace.active;
+    await app.closePane(e1, true);
+    await sleep(300);
+    results.onlyEmptyPaneLeft = onlyEmptyTab.panes().length === 1 && onlyEmptyTab.panes()[0].kind === 'empty';
+    app.action('multiexec');
+    await sleep(150);
+    results.zeroInTabToast = toasts().includes('MultiExec ON: no terminal is visible in this tab — connect a session first');
+    results.zeroInTabBanner = bannerCount() === '0' && /MultiExec is ON — no terminal is visible in this tab — connect a session first/.test(banner().textContent) && getComputedStyle(document.getElementById('multiexec-count')).display === 'none';
+    await shot('69-multiexec-only-empty-pane');
+    app.action('multiexec');
+    await sleep(100);
+    results.offAfterZeroChecks = !app.multiexec && banner().hidden;
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-multiexec] FAIL', e.message, e.stack);

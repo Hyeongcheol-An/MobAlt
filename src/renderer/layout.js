@@ -428,7 +428,10 @@ export class Workspace {
     if (tab.activePane === pane) {
       const first = tab.panes()[0];
       tab.activePane = first || null;
-      if (first) this.app.focusPane(first, true);
+      if (first) {
+        this.app.focusPane(first, true);
+        this.app.onPaneTitle(first); // an auto-titled tab follows the pane it shows now, not the one that left (closed or moved to another tab)
+      }
     }
     return false;
   }
@@ -473,6 +476,7 @@ export class Workspace {
     }
     this.activate(dstTab);
     this.app.focusPane(pane, true);
+    this.app.onPaneTitle(pane); // the moved pane is the target tab's active pane now: an auto-titled target takes its name
   }
 
   render(tab) {

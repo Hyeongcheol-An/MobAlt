@@ -484,3 +484,15 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 #update-banner .btn.small:not(.primary):hover { background: rgba(255, 255, 255, .08); }
 #update-banner .btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; } /* the accent ring would sink into the blue bar */
 .form-grid .checks .upd-status { align-self: center; font-size: 12px; color: var(--fg-dim); } /* "Check now" outcome in Settings → Updates */
+
+/* ---- qa3 features ---- */
+/* Toasts never cover the open find bar, whatever sits under the bar (status-bar height, a wrapped status row):
+   the stack is anchored 8px above the bar's top edge; the fallback is the bar's usual top (22 + 30 + 40px). */
+#find-bar { anchor-name: --find-bar; }
+body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
+/* A notice with an unbroken path or URL wraps inside the toast; the stack never runs past the window edge. */
+#toast-root { max-width: calc(100vw - 32px); }
+.toast { overflow-wrap: anywhere; max-width: min(360px, calc(100vw - 32px)); }
+.toast.warn { margin: 0; }                                              /* the dialog .warn note's margin-bottom would open a 10px hole under a warn toast (MultiExec ON) */
+/* The FTP card and the empty-pane card in a split start below the 22px pane head: its title and buttons stay usable. */
+.pane.show-head .pane-placeholder { top: 22px; }
