@@ -65,8 +65,11 @@ contextBridge.exposeInMainWorld('api', {
     quit: () => send('app:quit'),
     screenshot: (name) => invoke('app:screenshot', name),
     testDrag: (from, to) => invoke('test:drag', { from, to }),
+    testDropFiles: (paths, at, windowId) => invoke('test:drop-files', { paths, at, windowId }), // files dropped at a window point as Finder drops them (test mode only)
     testResize: (w, h) => invoke('test:resize', w, h),
-    testKey: (keyCode) => invoke('test:key', keyCode),
+    testKey: (key) => invoke('test:key', key), // a key name, or { keyCode, modifiers, char, windowId } for a real press with modifiers (test mode only)
+    testClipboardPng: (dataUrl, text) => invoke('test:clipboard-png', dataUrl, text), // a PNG on the clipboard, with text beside it or alone (test mode only)
+    testPaste: (windowId) => invoke('test:paste', windowId), // Edit → Paste (webContents.paste: a real paste event with the clipboard) in that window (test mode only)
     testQuitCheck: (verb) => invoke('test:quit-check', verb),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testNotice: (text) => invoke('test:notice', text),
@@ -216,6 +219,7 @@ contextBridge.exposeInMainWorld('api', {
   clipboard: {
     write: (t) => invoke('clipboard:write', t),
     read: () => invoke('clipboard:read'),
+    kinds: () => invoke('clipboard:kinds'), // { text, image, formats }: what a paste would find
   },
   getPathForFile: (file) => webUtils.getPathForFile(file),
 });

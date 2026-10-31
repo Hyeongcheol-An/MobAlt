@@ -141,7 +141,8 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
   *Start folder* set to a project and `claude --resume <id>` as the startup command.
 - **MultiExec**: toolbar button or ⇧⌘M; while on, keystrokes go to every terminal visible in the active tab (its split panes), not to other tabs. Tick the box under a terminal to exclude it (it stays connected; what you type into it goes to it alone); right-click a box's strip or the banner for Activate all / none, Invert selection and synchronised wheel scrolling.
 - **Keyboard**: Help → Keyboard Shortcuts. Right-click pastes (⇧-right-click for the menu), selecting
-  copies. Shift+Enter and Option+Enter send ESC+CR, which TUI apps such as Claude Code treat as a newline.
+  copies. Shift+Enter and Option+Enter send ESC+CR, which TUI apps such as Claude Code treat as a newline;
+  with an image on the clipboard, ⌘V hands it to Claude Code (`[Image #1]`).
 
 ## Data and privacy
 
