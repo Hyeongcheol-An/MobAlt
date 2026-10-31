@@ -242,7 +242,7 @@ The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on
 (Settings → General → "Switch to SFTP panel when SSH connects").
 
 - Navigate by double-clicking folders, typing a path (`~` works) or using ⬆ / 🏠 / ⟳.
-  "Follow terminal folder" keeps the panel on the shell's current directory (needs the session
+  "Follow terminal" keeps the panel on the shell's current directory (needs the session
   option, which injects a small prompt hook). `>_` sends `cd` to the terminal.
 - Toolbar and context menu: new folder, rename, permissions, delete, download, upload. Multi-select
   with ⌘ / ⇧. Drag files from Finder onto the list to upload; existing names ask before overwriting.
