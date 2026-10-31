@@ -8,6 +8,7 @@ const { pingOnce, tcpConnect, runQueue } = require('./tools');
 
 const MAX_HOSTS = 65536; // a /16
 const MAX_PORTS = 256;
+const MAX_ADDRESSES = 4; // of one host name: IPv4 first, then IPv6 (a CDN name may have dozens)
 const DEFAULT_PORTS = [22, 80, 443, 3389, 5900];
 
 const ip4 = (s) => (net.isIPv4(s) ? s.split('.').reduce((n, o) => n * 256 + Number(o), 0) : null);
@@ -72,9 +73,10 @@ function parsePorts(spec) {
 /**
  * Scans `targets` (expandTargets' list) and reports through `emit`:
  *   { type: 'hit', ip, host, hostname, rtt, ports }  a host that answered (ping reply or an open port); rtt in ms — the
- *                                                     ping's, else the fastest connect —, ports the open ones
+ *                                                     ping's, else the fastest connect —, ports the open ones; `ip`
+ *                                                     is the address that answered (a name's IPv4 before its IPv6)
  *   { type: 'progress', done, total }                 at most every ~100 ms, and once at the end
- *   { type: 'error', host, message }                  a host name that does not resolve
+ *   { type: 'error', host, message }                  a host name that does not resolve, or none of whose addresses answered
  *   { type: 'done', done, total, hits, cancelled, ms }
  * `method` is 'ping', 'tcp' or 'both'; `reverseDns` looks the name of every hit up (1.5 s at most). Returns
  * { promise, cancel, total }: cancel() stops the queue, kills the pings and connects still in flight and the 'done'
@@ -98,25 +100,42 @@ function scan(targets, { method = 'both', ports = DEFAULT_PORTS, concurrency = 6
     const t = setTimeout(() => fin(null), 1500);
     dns.promises.reverse(ip).then((names) => fin(names[0] || null), () => fin(null));
   });
-  const one = async (target) => {
-    let ip = target, hostname = null;
-    if (!net.isIP(target)) {
-      try { ip = (await dns.promises.lookup(target)).address; hostname = target; }
-      catch { if (!cancelled) emit({ type: 'error', host: target, message: `Cannot resolve ${target}` }); return; }
-    }
-    if (cancelled) return;
+  // every address a name stands for, IPv4 first: a dual-stack name whose service listens on IPv4 only (the usual
+  // case on a LAN) was reported down when only the first answer of the resolver — ::1 for localhost — was tried
+  const addressesOf = async (name) => {
+    const all = await dns.promises.lookup(name, { all: true });
+    const v4 = all.filter((a) => a.family === 4).map((a) => a.address), v6 = all.filter((a) => a.family === 6).map((a) => a.address);
+    return [...new Set([...v4, ...v6])].slice(0, MAX_ADDRESSES);
+  };
+  // one address: { up, rtt, ports } (ports: the open ones)
+  const probe = async (ip) => {
     const [ping, tcp] = await Promise.all([
       usePing ? pingOnce(ip, timeout, procs) : null,
       useTcp ? Promise.all(ports.map((port) => tcpConnect(ip, port, timeout, sockets).then((r) => ({ port, ...r })))) : [],
     ]);
-    if (cancelled) return;
     const open = tcp.filter((r) => r.open);
-    if (!(ping && ping.alive) && !open.length) return;
-    const rtt = ping && ping.alive && ping.ms !== null ? ping.ms : open.length ? Math.min(...open.map((r) => r.ms)) : null;
-    if (reverseDns && !hostname) hostname = await reverse(ip);
-    if (cancelled) return;
-    hits++;
-    emit({ type: 'hit', ip, host: target, hostname, rtt, ports: open.map((r) => r.port) });
+    const alive = !!(ping && ping.alive);
+    const rtt = alive && ping.ms !== null ? ping.ms : open.length ? Math.min(...open.map((r) => r.ms)) : null;
+    return { up: alive || open.length > 0, rtt, ports: open.map((r) => r.port) };
+  };
+  const one = async (target) => {
+    let addrs = [target], hostname = null;
+    if (!net.isIP(target)) {
+      try { addrs = await addressesOf(target); hostname = target; } catch { addrs = []; }
+      if (!addrs.length) { if (!cancelled) emit({ type: 'error', host: target, message: `Cannot resolve ${target}` }); return; }
+    }
+    for (const ip of addrs) { // in order; the first address that answers is the hit
+      if (cancelled) return;
+      const r = await probe(ip);
+      if (cancelled) return;
+      if (!r.up) continue;
+      if (reverseDns && !hostname) hostname = await reverse(ip);
+      if (cancelled) return;
+      hits++;
+      emit({ type: 'hit', ip, host: target, hostname, rtt: r.rtt, ports: r.ports });
+      return;
+    }
+    if (hostname && addrs.length > 1) emit({ type: 'error', host: target, message: `No answer from ${target} (tried ${addrs.join(', ')})` });
   };
   const promise = runQueue(targets, concurrency, async (t) => {
     try { await one(t); } catch {}
