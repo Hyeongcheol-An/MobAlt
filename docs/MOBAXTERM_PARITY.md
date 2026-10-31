@@ -327,7 +327,7 @@ MobAlt has 52 in full, 40 in a narrower or different form and lacks 32.
 
 Each item is verified against the 0.12.0 source.
 
-- **An interface in ten languages.** English, Korean, Simplified Chinese, Japanese, Vietnamese, Hindi, German, French, Spanish and Portuguese, following the macOS language list or chosen in Settings, switched live without a restart, with the user guide in each (`src/main/i18n.js`, `src/locales/`, `docs/USER_GUIDE.<code>.md`). MobaXterm's interface is English only.
+- **An interface in eleven languages.** English, Korean, Simplified Chinese, Japanese, Vietnamese, Hindi, German, French, Spanish, Portuguese and Arabic (right-to-left, mirrored chrome), following the macOS language list or chosen in Settings, switched live without a restart, with the user guide in each (`src/main/i18n.js`, `src/locales/`, `docs/USER_GUIDE.<code>.md`). MobaXterm's interface is English only.
 - **Whole-window themes with contrast guarantees.** The chrome palette is derived from the terminal theme (`src/renderer/theme.js`); every text token keeps ≥ 4.5:1 and borders ≥ 3:1 on every surface, asserted by `test/unit/theme.test.js` for all six themes including Light. MobaXterm themes the terminal and offers one dark skin.
 - **Keyboard accessibility.** Session tree and SFTP list are a tree / listbox with a roving tabindex and Finder-style type-ahead, context menus open with ⇧F10 or the Menu key, dialogs trap and return focus (`src/renderer/sidebar.js`, `src/renderer/sftp.js`, `test/e2e-a11y.js`).
 - **Mosh with an SFTP companion.** A Mosh pane gets a shell-less SSH connection to the same host for the Sftp panel (`src/main/ssh.js`, `sftpOnly`).

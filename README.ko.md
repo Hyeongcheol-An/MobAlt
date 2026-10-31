@@ -13,7 +13,7 @@
 </p>
 
 <p align="center"><a href="README.md">English README</a> · <a href="docs/USER_GUIDE.ko.md">사용자 안내서</a></p>
-<p align="center">사용자 안내서 언어: <a href="docs/USER_GUIDE.md">English</a> · <a href="docs/USER_GUIDE.ko.md">한국어</a> · <a href="docs/USER_GUIDE.zh-CN.md">简体中文</a> · <a href="docs/USER_GUIDE.ja.md">日本語</a> · <a href="docs/USER_GUIDE.vi.md">Tiếng Việt</a> · <a href="docs/USER_GUIDE.hi.md">हिन्दी</a> · <a href="docs/USER_GUIDE.de.md">Deutsch</a> · <a href="docs/USER_GUIDE.fr.md">Français</a> · <a href="docs/USER_GUIDE.es.md">Español</a> · <a href="docs/USER_GUIDE.pt.md">Português</a></p>
+<p align="center">사용자 안내서 언어: <a href="docs/USER_GUIDE.md">English</a> · <a href="docs/USER_GUIDE.ko.md">한국어</a> · <a href="docs/USER_GUIDE.zh-CN.md">简体中文</a> · <a href="docs/USER_GUIDE.ja.md">日本語</a> · <a href="docs/USER_GUIDE.vi.md">Tiếng Việt</a> · <a href="docs/USER_GUIDE.hi.md">हिन्दी</a> · <a href="docs/USER_GUIDE.de.md">Deutsch</a> · <a href="docs/USER_GUIDE.fr.md">Français</a> · <a href="docs/USER_GUIDE.es.md">Español</a> · <a href="docs/USER_GUIDE.pt.md">Português</a> · <a href="docs/USER_GUIDE.ar.md">العربية</a></p>
 
 ![MobAlt: 세션 트리와 나란히 띄운 원격 셸 두 개](docs/images/hero.png)
 
@@ -60,7 +60,7 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | 세션 내보내기 / 가져오기 | ✅ | 모든 세션과 폴더를 JSON 파일로(비밀번호·키 암호는 절대 포함하지 않음). Session 메뉴 또는 트리 우클릭 메뉴. 가져올 때 같은 id는 교체하고 나머지는 추가 |
 | 분할 페인 최대화 | ✅ Zoom | ⇧⌘⏎(또는 페인 머리글의 ⤢)로 포커스된 페인이 탭을 가득 채우고 다시 되돌림. 탭마다 기억하며 재시작 후에도 유지 |
 | 탭 고정, 왼쪽 / 오른쪽 탭 닫기, 창으로 분리 | ✅ | ⇧⌘P로 탭을 왼쪽에 고정(짧은 제목, ✕ 없음, 재시작 후 유지). Close Others / Tabs to the Left / Tabs to the Right / All은 고정 탭을 건너뛰고 살아 있는 연결을 모두 세어 한 번만 물음. ⌥⌘N은 탭을 터미널이 살아 있는 채로 별도 창으로 옮기고, 그 창을 닫으면 되돌아오며, 작업대가 그런 창을 다시 엶 |
-| 인터페이스 언어 | ✅ | English, 한국어, 简体中文, 日本語, Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português — macOS 언어 목록을 따르거나 설정 → 일반 → 언어에서 선택, 재시작 없이 즉시 전환. 사용자 안내서도 모든 언어로 제공 |
+| 인터페이스 언어 | ✅ | English, 한국어, 简体中文, 日本語, Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português, العربية — macOS 언어 목록을 따르거나 설정 → 일반 → 언어에서 선택, 재시작 없이 즉시 전환. 사용자 안내서도 모든 언어로 제공 |
 | 색상 테마 / 다크 모드 | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark, Light가 터미널만이 아니라 창 전체(툴바·사이드바·탭·대화상자)에 적용. 세션별로 터미널 테마만 덮어쓰기 가능 |
 | 키워드 강조 | ✅ | 오류·경고·OK·IP 주소·URL·용량을 모든 터미널에서 색으로 표시. 편집 가능한 규칙 표(일반 텍스트 또는 정규식, 색 / 배경 / 굵게 / 밑줄, Settings → Features), 색은 테마에서 가져옴. 세션별로 켜고 끌 수 있음 |
 | Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩, 동반 SSH 연결로 SFTP |

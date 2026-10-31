@@ -14,7 +14,7 @@
   const ui = await import('./ui.js');
   const text = (sel) => (document.querySelector(sel)?.textContent || '').trim();
   const flat = (items, out = []) => { for (const it of items || []) { if (it.label) out.push(it.label); if (it.submenu) flat(it.submenu, out); } return out; };
-  const LANGS = ['ko', 'zh-CN', 'ja', 'vi', 'hi', 'de', 'fr', 'es', 'pt'];
+  const LANGS = ['ko', 'zh-CN', 'ja', 'vi', 'hi', 'de', 'fr', 'es', 'pt', 'ar'];
   const closeModals = async () => { for (let i = 0; i < 6 && document.querySelector('.modal'); i++) { document.querySelector('.modal .close')?.click(); await sleep(200); document.querySelector('.modal.narrow .btn.primary')?.click(); await sleep(150); } };
   try {
     await app.saveSettings({ confirmClose: false });
@@ -22,13 +22,13 @@
     await sleep(400);
     const en = { html: document.documentElement.lang, settings: text('[data-action=settings]'), session: text('[data-action=new-session]'), menu: flat(await window.api.app.testMenuLabels()), tree: text('#session-tree'), status: text('#st-session'), filter: document.querySelector('#session-filter')?.placeholder };
     check('bootEnglish', en.html === 'en' && en.settings === 'Settings' && en.session === 'Session' && en.menu.includes('Settings…') && en.menu.includes('User Guide'), en);
-    check('languagesListed', i18n.LANGUAGES.map((l) => l.code).join() === 'en,ko,zh-CN,ja,vi,hi,de,fr,es,pt', i18n.LANGUAGES);
+    check('languagesListed', i18n.LANGUAGES.map((l) => l.code).join() === 'en,ko,zh-CN,ja,vi,hi,de,fr,es,pt,ar', i18n.LANGUAGES);
     check('hooksPresent', document.querySelectorAll('[data-i18n],[data-i18n-title],[data-i18n-placeholder],[data-i18n-aria-label]').length >= 40, document.querySelectorAll('[data-i18n],[data-i18n-title],[data-i18n-placeholder],[data-i18n-aria-label]').length);
     check('guideUrlPerLanguage', (await window.api.i18n.guideUrl('ja')).endsWith('/docs/USER_GUIDE.ja.md') && (await window.api.i18n.guideUrl('en')).endsWith('/docs/USER_GUIDE.md'));
     // the Language list in Settings
     app.action('settings'); await sleep(400);
     const sel = [...document.querySelectorAll('.modal select')].find((s) => [...s.options].some((o) => o.value === 'system'));
-    check('languageSelectShown', !!sel && sel.options.length === 11 && sel.value === 'system' && /\(/.test(sel.options[0].textContent), sel && [...sel.options].map((o) => o.value + ':' + o.textContent));
+    check('languageSelectShown', !!sel && sel.options.length === 12 && sel.value === 'system' && /\(/.test(sel.options[0].textContent), sel && [...sel.options].map((o) => o.value + ':' + o.textContent));
     check('languageSelectIsFirstControl', document.activeElement === sel);
     await closeModals();
 
@@ -37,6 +37,7 @@
       await sleep(600);
       const cur = { html: document.documentElement.lang, settings: text('[data-action=settings]'), session: text('[data-action=new-session]'), menu: flat(await window.api.app.testMenuLabels()), tree: text('#session-tree'), status: text('#st-session'), filter: document.querySelector('#session-filter')?.placeholder };
       check(`${code}.htmlLang`, cur.html === code, cur.html);
+      check(`${code}.direction`, document.documentElement.dir === (code === 'ar' ? 'rtl' : 'ltr'), document.documentElement.dir);
       check(`${code}.settingSaved`, app.settings.language === code);
       check(`${code}.toolbarTranslated`, cur.settings !== en.settings && cur.settings.length > 0, cur.settings);
       check(`${code}.menuTranslated`, !cur.menu.includes('Settings…') && !cur.menu.includes('User Guide') && cur.menu.length === en.menu.length, { len: cur.menu.length, sample: cur.menu.slice(0, 12) });
@@ -87,6 +88,7 @@
     // back to English: everything returns to the source strings
     await app.saveSettings({ language: 'en' }); await sleep(600);
     const back = { html: document.documentElement.lang, settings: text('[data-action=settings]'), menu: flat(await window.api.app.testMenuLabels()), filter: document.querySelector('#session-filter')?.placeholder, tree: text('#session-tree'), status: text('#st-session') };
+    check('backToEnglishDir', document.documentElement.dir === 'ltr', document.documentElement.dir);
     check('backToEnglish', back.html === 'en' && back.settings === en.settings && back.filter === en.filter && back.tree === en.tree && back.status === en.status && back.menu.join() === en.menu.join(), back);
     // 'system' follows the Mac: whatever that resolves to, the window shows it
     await app.saveSettings({ language: 'system' }); await sleep(600);
