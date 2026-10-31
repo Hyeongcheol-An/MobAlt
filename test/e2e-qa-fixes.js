@@ -113,6 +113,59 @@
     closeModal();
     await sleep(150);
 
+    // --- settings: four section tabs (General / Terminal / Logging / Updates), each fits the 900×560 minimum window
+    //     without scrolling; the first field of the first tab is focused; "Check now" and its status line are on
+    //     Updates; a field changed on any tab round-trips through Save (and Cancel keeps the saved values)
+    {
+      const size0 = { w: window.outerWidth, h: window.outerHeight };
+      await window.api.app.testResize(900, 560);
+      await sleep(300);
+      const before = { ...app.settings };
+      app.action('settings');
+      await sleep(400);
+      const m = document.querySelector('.modal'), body = m.querySelector('.modal-body');
+      const tabs = [...m.querySelectorAll('.mtabs button')];
+      results.settingsTabNames = tabs.map((b) => b.textContent).join('|') === 'General|Terminal|Logging|Updates';
+      results.settingsFirstFieldFocused = document.activeElement === m.querySelector('.mpage.active input[type=text]') && m.querySelector('.mpage.active') === m.querySelector('.mpage') && tabs[0].classList.contains('active');
+      const fit = {};
+      for (const b of tabs) {
+        b.click();
+        await sleep(80);
+        const page = m.querySelector('.mpage.active');
+        fit[b.textContent] = !!page && page.id === b.getAttribute('aria-controls') && b.classList.contains('active') && m.querySelectorAll('.mpage.active').length === 1
+          && body.scrollHeight <= body.clientHeight && body.scrollWidth <= body.clientWidth && page.scrollWidth <= page.clientWidth
+          && m.getBoundingClientRect().bottom <= window.innerHeight && m.getBoundingClientRect().right <= window.innerWidth;
+        await shot(`56-settings-${b.textContent.toLowerCase()}-900x560`);
+      }
+      log('settings tabs at 900×560', JSON.stringify(fit));
+      results.settingsTabsFit900x560 = Object.keys(fit).length === 4 && Object.values(fit).every(Boolean);
+      const upd = m.querySelector('.mpage.active'); // Updates is in front now
+      results.settingsCheckNowOnUpdates = tabs[3].classList.contains('active') && [...upd.querySelectorAll('button')].some((x) => x.textContent === 'Check now') && !!upd.querySelector('.upd-status');
+      const fieldOf = (root, txt) => [...root.querySelectorAll('.form-grid > label')].find((l) => l.textContent === txt)?.nextElementSibling;
+      const cbOf = (root, txt) => [...root.querySelectorAll('.checks label')].find((l) => l.textContent.includes(txt))?.querySelector('input[type=checkbox]');
+      tabs[0].click(); fieldOf(m, 'SSH keep-alive (s)').value = '45'; cbOf(m, 'Confirm quit').checked = true;
+      tabs[1].click(); fieldOf(m, 'Font size').value = '15'; fieldOf(m, 'Theme').value = 'dracula'; cbOf(m, 'Copy on select').checked = true;
+      tabs[2].click(); fieldOf(m, 'Log folder').value = '/private/tmp/mobalt-logs-roundtrip'; cbOf(m, 'Strip colours').checked = true;
+      tabs[3].click(); cbOf(m, 'Check for updates').checked = false;
+      m.querySelector('.modal-foot .btn.primary').click(); // Save
+      await sleep(400);
+      const s = app.settings;
+      results.settingsRoundTripSaved = !document.querySelector('.modal') && s.keepAliveInterval === 45 && s.confirmClose === true && s.fontSize === 15 && s.theme === 'dracula'
+        && s.copyOnSelect === true && s.logDir === '/private/tmp/mobalt-logs-roundtrip' && s.logPlainText === true && s.autoUpdate === false;
+      app.action('settings');
+      await sleep(400);
+      const m2 = document.querySelector('.modal');
+      results.settingsRoundTripShown = fieldOf(m2, 'SSH keep-alive (s)').value === '45' && cbOf(m2, 'Confirm quit').checked && fieldOf(m2, 'Font size').value === '15' && fieldOf(m2, 'Theme').value === 'dracula'
+        && cbOf(m2, 'Copy on select').checked && fieldOf(m2, 'Log folder').value === '/private/tmp/mobalt-logs-roundtrip' && cbOf(m2, 'Strip colours').checked && !cbOf(m2, 'Check for updates').checked;
+      fieldOf(m2, 'Font size').value = '20';
+      m2.querySelector('.modal-foot .btn').click(); // Cancel
+      await sleep(200);
+      results.settingsCancelKeepsSaved = !document.querySelector('.modal') && app.settings.fontSize === 15;
+      await app.saveSettings({ keepAliveInterval: before.keepAliveInterval, confirmClose: false, fontSize: before.fontSize, theme: before.theme, copyOnSelect: before.copyOnSelect, logDir: before.logDir, logPlainText: before.logPlainText, autoUpdate: before.autoUpdate });
+      await window.api.app.testResize(size0.w, size0.h);
+      await sleep(300);
+    }
+
     // --- sidebar: filter without matches shows the empty state; root menu from the gutter
     await app.saveSession({ name: 'db-01', folder: 'Production/EU', type: 'ssh', host: 'db-01.example.com', username: 'postgres' });
     await app.saveSession({ name: 'Project shell', type: 'local', cwd: '/tmp' });

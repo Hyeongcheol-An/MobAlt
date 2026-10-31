@@ -64,6 +64,55 @@ function pickRow(label) {
   return row;
 }
 
+/**
+ * ←/→ (↑/↓) on a dialog's `.mtabs` strip move between its section tabs (wrapping, hidden ones skipped) and show that
+ * section; Home/End jump to the first/last. Every tab stays a Tab stop of its own, so Tab/⇧Tab reach them as well.
+ */
+function tabStripKeys(strip) {
+  strip.addEventListener('keydown', (e) => {
+    const tabs = [...strip.querySelectorAll('button:not([hidden])')];
+    const i = tabs.indexOf(e.target), n = tabs.length;
+    if (i < 0 || e.metaKey || e.ctrlKey || e.altKey) return;
+    let to;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') to = tabs[(i + 1) % n];
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') to = tabs[(i - 1 + n) % n];
+    else if (e.key === 'Home') to = tabs[0];
+    else if (e.key === 'End') to = tabs[n - 1];
+    else return;
+    e.preventDefault();
+    to.focus();
+    to.click();
+  });
+  return strip;
+}
+let tabSeq = 0;
+/**
+ * Section tabs of a dialog: the `.mtabs` strip (a tablist) and one `.mpage` panel per section, the first one shown.
+ * `sections` = [[key, label, panel], …]; returns { strip, pages, show(key) }. Every panel stays in the DOM, so a
+ * Save handler reads all its fields whichever section is in front.
+ */
+function modalTabs(sections) {
+  const seq = ++tabSeq;
+  const btns = {}, pages = {};
+  const show = (k) => {
+    for (const key of Object.keys(pages)) {
+      pages[key].classList.toggle('active', key === k);
+      btns[key].classList.toggle('active', key === k);
+      btns[key].setAttribute('aria-selected', String(key === k));
+    }
+  };
+  const strip = tabStripKeys(h('div', { class: 'mtabs', role: 'tablist' }, sections.map(([k, label, page]) => {
+    page.classList.add('mpage');
+    page.id = `mtab-${seq}-${k}`;
+    page.setAttribute('role', 'tabpanel');
+    page.setAttribute('aria-label', label);
+    pages[k] = page;
+    return (btns[k] = h('button', { type: 'button', role: 'tab', 'aria-controls': page.id, onclick: () => show(k) }, label));
+  })));
+  show(sections[0][0]);
+  return { strip, pages, show };
+}
+
 /** Session editor. Resolves with the session object to save, or null. */
 export function sessionEditor(app, initial = {}) {
   const s = { type: 'ssh', port: 22, authMethod: 'auto', sftpAuto: true, followCwd: false, tunnels: [], ...initial };
@@ -219,7 +268,7 @@ export function sessionEditor(app, initial = {}) {
     tunnels: h('div', { class: 'mpage' }, h('p', { style: { color: 'var(--fg-dim)', marginTop: 0 } }, 'Port forwards started automatically when this session connects.'), tunnelTable),
   };
   const tabBtns = {};
-  const tabs = h('div', { class: 'mtabs' }, Object.keys(pages).map((k) => (tabBtns[k] = h('button', { onclick: () => showPage(k) }, { basic: 'Basic', advanced: 'Advanced SSH', terminal: 'Terminal', tunnels: `Tunnels` }[k]))));
+  const tabs = tabStripKeys(h('div', { class: 'mtabs' }, Object.keys(pages).map((k) => (tabBtns[k] = h('button', { onclick: () => showPage(k) }, { basic: 'Basic', advanced: 'Advanced SSH', terminal: 'Terminal', tunnels: `Tunnels` }[k])))));
   const showPage = (k) => {
     for (const [n, p] of Object.entries(pages)) {
       p.classList.toggle('active', n === k);
@@ -509,22 +558,36 @@ export function settingsDialog(app) {
       updStatus.textContent = e.message;
     }
   } }, 'Check now');
-  const m = showModal({
-    title: 'Settings',
-    width: 'wide',
-    body: h('div', { class: 'form-grid' },
+  // Four section tabs (General / Terminal / Logging / Updates): each fits the 900×560 minimum window without scrolling.
+  // Every field stays in the DOM whichever tab is in front, so Save reads them all.
+  const { strip, pages } = modalTabs([
+    ['general', 'General', h('div', { class: 'form-grid' },
+      h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
+      ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
+      ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
+      ...field('Download folder', downloadDir), ...field('SSH keep-alive (s)', keepAlive),
+      h('label', {}, 'Data'), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, 'Open config folder'))
+    )],
+    ['terminal', 'Terminal', h('div', { class: 'form-grid' },
       ...field('Font family', fontFamily), ...field('Font size', fontSize), ...field('Line height', lineHeight),
       ...field('Cursor', cursorStyle), h('label', {}), h('div', { class: 'checks' }, cursorBlink.el),
       ...field('Scrollback lines', scrollback), ...field('Theme', theme),
-      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el),
-      ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
-      ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
-      ...field('Download folder', downloadDir), ...field('Log folder', logDir), ...field('SSH keep-alive (s)', keepAlive),
-      h('label', {}, 'Logging'), h('div', { class: 'checks' }, logPlain.el),
-      h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
-      h('label', {}, 'Updates'), h('div', { class: 'checks' }, autoUpdate.el, checkNow, updStatus),
-      h('label', {}, 'Data'), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, 'Open config folder'))
-    ),
+      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
+    )],
+    ['logging', 'Logging', h('div', { class: 'form-grid' },
+      ...field('Log folder', logDir, 'Terminal → Start Session Log, or a session\'s Logging option, writes here'),
+      h('label', {}, 'Session logs'), h('div', { class: 'checks' }, logPlain.el)
+    )],
+    ['updates', 'Updates', h('div', { class: 'form-grid' },
+      h('label', {}, 'Updates'), h('div', { class: 'checks' }, autoUpdate.el),
+      h('div', { class: 'form-help' }, 'Releases on GitHub; a newer version is offered in a dialog and installed only when you agree'),
+      h('label', {}), h('div', { class: 'checks' }, checkNow, updStatus)
+    )],
+  ]);
+  const m = showModal({
+    title: 'Settings',
+    width: 'wide',
+    body: h('div', { class: 'settings-tabs' }, strip, ...Object.values(pages)),
     buttons: [
       { label: 'Cancel', value: null },
       { label: 'Save', primary: true, action: (api) => api.close({
@@ -595,19 +658,32 @@ export function kbdIntDialog(p) {
 }
 
 export function shortcutsDialog(app) {
-  const rows = [
-    ['New session', '⌘N'], ['New local terminal', '⌘T'], ['Quick connect', '⇧⌘N'], ['Duplicate session', '⇧⌘T'], ['Reconnect', '⌘R'], ['Close tab', '⌘W'],
-    ['Split right / down', '⌘D / ⇧⌘D'], ['Grid 2 / 4 / 6 / 8 panes', '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], ['Unsplit', '⌥⌘1'], ['Close pane', '⇧⌘W'], ['Next pane', '⌘]'], ['Zoom pane (fill the tab) / restore', '⇧⌘⏎'], ['Next / previous tab', '⌃Tab / ⌃⇧Tab'],
-    ['Find', '⌘F'], ['Clear terminal', '⌘K'], ['Zoom', '⌘= / ⌘- / ⌘0'], ['Toggle sidebar', '⌘B'], ['Sessions / SFTP / Tools / Macros', '⌘1 / ⌘2 / ⌘3 / ⌘4'],
-    ['MultiExec', '⇧⌘M'], ['Tunnels', '⇧⌘U'], ['Settings', '⌘,'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', app.settings.rightClickPaste !== false ? 'Right-click' : '⌘V'], ['Terminal menu', app.settings.rightClickPaste !== false ? '⇧Right-click' : 'Right-click'],
-    ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'],
-    ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'], ['Focused session row: move / fold / open', '↑ ↓ / ← → / ⏎'],
-    ['Focused session row: open in split / delete', '⌘⏎ or ⇧⏎ / ⌫'], ['Context menu: focused tab, row, macro, SFTP entry', '⇧F10 / Menu key'],
-    ['Focused macro: play / delete, context menu', '⏎ / ⌫, ⇧F10'], ['SFTP list: context menu / delete / parent folder', '⇧F10 or Menu / Del or ⌘⌫ / ⌫'],
-    ['SFTP list: move / open', '↑ ↓ Home End PgUp PgDn / ⏎'], ['SFTP list: extend selection / toggle row / select all', '⇧↑ ⇧↓ ⇧Home ⇧End / Space / ⌘A'],
-    ['SFTP list: sort by a column', 'Tab to a header, ⏎ or Space'], ['Session tree, SFTP list: jump to a name', 'type its first letters'],
-    ['Icon & colour picks: move / choose', '← → ↑ ↓ / ⏎ or Space'],
+  const rightClick = app.settings.rightClickPaste !== false;
+  // One section tab per area, each two columns of label + key chip (a chip that does not fit beside its label drops
+  // to its own line, styles.css .shortcuts): every section fits the 900×560 minimum window without scrolling.
+  const sections = [
+    ['sessions', 'Sessions & tabs', [
+      ['New session', '⌘N'], ['New local terminal', '⌘T'], ['Quick connect', '⇧⌘N'], ['Duplicate session', '⇧⌘T'], ['Reconnect', '⌘R'], ['Close tab', '⌘W'],
+      ['Next / previous tab', '⌃Tab / ⌃⇧Tab'], ['Switch to tab 1-9', '⌃⌘1 … ⌃⌘9'], ['Focused tab: move / activate / close', '← → / ⏎ / ⌫'],
+    ]],
+    ['panes', 'Panes & terminal', [
+      ['Split right / down', '⌘D / ⇧⌘D'], ['Grid 2 / 4 / 6 / 8 panes', '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], ['Unsplit', '⌥⌘1'], ['Close pane', '⇧⌘W'], ['Next pane', '⌘]'], ['Zoom pane (fill the tab) / restore', '⇧⌘⏎'],
+      ['Find', '⌘F'], ['Clear terminal', '⌘K'], ['Zoom', '⌘= / ⌘- / ⌘0'], ['Copy / Paste', '⌘C / ⌘V'], ['Paste (terminal)', rightClick ? 'Right-click' : '⌘V'], ['Terminal menu', rightClick ? '⇧Right-click' : 'Right-click'],
+      ['Newline in TUI apps (ESC+CR)', '⇧Enter / ⌥Enter'], ['MultiExec', '⇧⌘M'],
+    ]],
+    ['sidebar', 'Sidebar, SFTP & lists', [
+      ['Toggle sidebar', '⌘B'], ['Sessions / SFTP / Tools / Macros', '⌘1 / ⌘2 / ⌘3 / ⌘4'],
+      ['Focused session row: move / fold / open', '↑ ↓ / ← → / ⏎'], ['Focused session row: open in split / delete', '⌘⏎ or ⇧⏎ / ⌫'],
+      ['Focused macro: play / delete, context menu', '⏎ / ⌫, ⇧F10'], ['Context menu: focused tab, row, macro, SFTP entry', '⇧F10 / Menu key'],
+      ['SFTP list: context menu / delete / parent folder', '⇧F10 or Menu / Del or ⌘⌫ / ⌫'], ['SFTP list: move / open', '↑ ↓ Home End PgUp PgDn / ⏎'],
+      ['SFTP list: extend selection / toggle row / select all', '⇧↑ ⇧↓ ⇧Home ⇧End / Space / ⌘A'], ['SFTP list: sort by a column', 'Tab to a header, ⏎ or Space'],
+      ['Session tree, SFTP list: jump to a name', 'type its first letters'],
+    ]],
+    ['dialogs', 'Dialogs', [
+      ['Settings', '⌘,'], ['Tunnels', '⇧⌘U'], ['Icon & colour picks: move / choose', '← → ↑ ↓ / ⏎ or Space'],
+      ['Dialog: confirm / close', '⏎ / Esc'], ['Dialog: next / previous control', 'Tab / ⇧Tab'], ['Dialog tabs: previous / next, first / last section', '← → / Home End'],
+    ]],
   ];
-  // wide: two columns of label + key chip; a chip that does not fit beside its label drops to its own line (styles.css .shortcuts)
-  showModal({ title: 'Keyboard shortcuts', width: 'wide', body: h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))), buttons: [{ label: 'Close', value: null }] });
+  const { strip, pages } = modalTabs(sections.map(([k, label, rows]) => [k, label, h('div', {}, h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))))]));
+  showModal({ title: 'Keyboard shortcuts', width: 'wide', body: h('div', { class: 'shortcuts-tabs' }, strip, ...Object.values(pages)), buttons: [{ label: 'Close', value: null }] });
 }
