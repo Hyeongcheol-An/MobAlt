@@ -84,7 +84,8 @@ await window.api.app.testNextDialog({ canceled: true });                        
 ```
 
 Answers are consumed in order by whatever opens next: Session → Export / Import Sessions (JSON), Import from
-MobaXterm.ini, the session editor's private-key "Browse…", the key generator's "Browse…" (a save dialog), the
+MobaXterm.ini, the session editor's private-key "Browse…" and a local session's Start folder "Browse…" (a folder
+picker), the key generator's "Browse…" (a save dialog), the
 SFTP panel's download-to / upload-from pickers, the renderer's `window.api.dialog.*` bridge and the updater's
 sheets. An empty queue means the real dialog
 opens and a headless run hangs on it, so queue exactly one answer per dialog and check that `pending` is 0

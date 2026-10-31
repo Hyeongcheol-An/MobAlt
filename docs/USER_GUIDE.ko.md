@@ -1,6 +1,6 @@
 # MobAlt 사용자 안내서
 
-[English guide](USER_GUIDE.md)
+이 안내서의 다른 언어: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md)
 
 MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트리, 가운데에 탭·분할 터미널, 사이드
 패널에 SFTP 브라우저·네트워크 도구·매크로가 있습니다.
