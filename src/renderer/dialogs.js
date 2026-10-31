@@ -798,6 +798,9 @@ export function settingsDialog(app) {
   const confirmClose = check(t('Confirm quit with open connections (SSH, Mosh, SFTP, FTP)'), s.confirmClose);
   const restoreWs = check(t('Restore tabs & split layout at startup'), s.restoreWorkspace !== false);
   const sftpAutoOpen = check(t('Switch to SFTP panel when SSH connects'), s.sftpAutoOpen !== false);
+  // Settings → Terminal → Unsplit: what ⌥⌘1 does with the other panes of a split tab (app.js unsplit); an unknown saved value shows
+  // the default. The explanation is the tooltip: General has no room left at 900×560, and Terminal (the tallest section) only fits without a help line
+  const unsplit = select([['tabs', t('Move the other panes to tabs of their own')], ['active', t('Keep the active pane, close the others')], ['ask', t('Ask every time')]], s.unsplitMode === 'active' || s.unsplitMode === 'ask' ? s.unsplitMode : 'tabs', { 'aria-label': t('Unsplit'), title: t('⌥⌘1 on a split tab: the other panes keep their terminals as tabs right after this one, or close') });
   const downloadDir = text(s.downloadDir, { placeholder: '~/Downloads' });
   const logDir = text(s.logDir, { placeholder: '~/Documents/MobAlt Logs' });
   const logPlain = check(t('Strip colours and control sequences from session logs (plain text)'), !!s.logPlainText);
@@ -834,7 +837,8 @@ export function settingsDialog(app) {
       ...field(t('Cursor'), h('div', { class: 'inline' }, cursorStyle, cursorBlink.el)), // the blink toggle shares the row: Terminal is the tallest section and must fit the 560px window
       ...field(t('Scrollback lines'), scrollback),
       ...field(t('Theme'), h('div', { class: 'inline theme-field' }, theme, themePreview), t('Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme')),
-      h('label', {}, t('Mouse / keys')), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
+      h('label', {}, t('Mouse / keys')), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el),
+      ...field(t('Unsplit'), unsplit) // ⌥⌘1: the other panes of a split tab become tabs of their own, close, or ask (the tooltip explains; no help line: 900×560)
     )],
     ['features', t('Features'), h('div', { class: 'form-grid' },
       h('label', {}, t('Paste guard')), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el),
@@ -866,7 +870,7 @@ export function settingsDialog(app) {
         pasteConfirmMultiline: pasteConfirm.cb.checked, pasteWarnSuspicious: pasteWarn.cb.checked,
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
         confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(), logPlainText: logPlain.cb.checked,
-        keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked, language: language.value,
+        keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked, language: language.value, unsplitMode: unsplit.value,
         monitorBar: monitorBar.cb.checked, monitorInterval: clamp(parseInt(monitorInterval.value, 10), 2, 30, 3),
         highlightEnabled: hlEnabled.cb.checked, highlightRules: hlRules,
       }) },

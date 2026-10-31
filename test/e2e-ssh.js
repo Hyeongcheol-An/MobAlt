@@ -201,6 +201,7 @@
     results.grid8 = grid.length === 8 && grid.filter((p) => p.kind === 'empty').length === 4 && !!app.workspace.active.root && app.workspace.active.root.dir === 'v';
     await shot('08-grid-2x4');
     app.settings.confirmClose = false; // unsplit would otherwise ask before dropping live panes
+    app.settings.unsplitMode = 'active'; // close the other panes (the default moves them to tabs of their own: test/e2e-unsplit.js)
     await app.unsplit();
     await sleep(500);
     results.unsplit = app.workspace.active.panes().length === 1;

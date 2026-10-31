@@ -57,7 +57,7 @@ const pane = await app.openSession(s, { split: 'right'|'down', target: pane });
 app.editSession(s);                         // opens the session editor on s
 app.activePane(); pane.term (xterm.js); pane.status; pane.cwd; pane.disconnect(); pane.term.input('ls\r');
 app.workspace.active (tab) / app.workspace.tabs / tab.panes()
-app.applyLayout('2x2'); app.unsplit(); app.splitActive('right'|'down');
+app.applyLayout('2x2'); app.unsplit('tabs'|'active'|'ask' /* default: Settings → Terminal → Unsplit */); app.splitActive('right'|'down');
 app.settings (object); await app.saveSettings({ theme: 'solarized-dark', fontSize: 14, confirmClose: false }); // themes: moba-dark one-dark dracula solarized-dark gruvbox-dark light
 import('./ui.js').then((ui) => ui.toast('text'));   // toasts live in ui.js, not on app
 await window.api.app.testDrag({ x, y }, { x, y });  // real drag between window coordinates (CDP)

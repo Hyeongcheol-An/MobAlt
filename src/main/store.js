@@ -102,6 +102,7 @@ const DEFAULT_SETTINGS = {
   sidebarTab: 'sessions',
   sftpAutoOpen: true,
   restoreWorkspace: true,
+  unsplitMode: 'tabs', // ⌥⌘1 on a split tab: 'tabs' moves the other panes to tabs of their own right after it (terminals kept), 'active' closes them and keeps the active pane, 'ask' asks each time
   autoUpdate: true,
   downloadDir: '',
   logDir: '',
