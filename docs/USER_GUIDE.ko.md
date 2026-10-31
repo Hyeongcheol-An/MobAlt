@@ -129,6 +129,15 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
 - **찾기**(⌘F): 대소문자·정규식 토글과 일치 수 표시가 있는 증분 검색.
 - **클립보드**: 선택하면 복사(Settings → Terminal → Copy on select), 우클릭은 붙여넣기(⇧+우클릭은 메뉴). Finder
   파일을 SSH 터미널에 놓으면 업로드, 로컬 터미널에 놓으면 경로가 붙여넣어집니다.
+- **붙여넣기 보호**: 두 줄 이상(또는 1000자 초과)을 붙여넣으면 먼저 묻습니다. *Paste N lines into …?*
+  대화상자에 편집 가능한 미리보기가 보이고, ⌘⏎로 붙여넣기, Esc로 취소합니다. 모든 붙여넣기는 클립보드에서
+  보이지 않는 것도 검사합니다: 폭 없는 문자와 bidi 제어 문자, 제어 문자, 마지막 줄바꿈(마지막 줄이 바로
+  실행됨), 줄 안의 캐리지 리턴, `curl … | sh`, `~/.zshrc` 같은 프로필이나 `~/.ssh/authorized_keys`에
+  쓰기, `rm -rf /` 류 명령, 키릴·그리스 문자가 섞인 라틴 단어(동형 문자). 발견 항목은 목록과 미리보기의
+  표시로 보여 주고, *Paste cleaned*는 숨은 문자와 마지막 줄바꿈을 걷어내며 *Paste as is*는 그대로
+  보냅니다. 두 검사 모두 Settings → Terminal → Paste guard에서 끌 수 있고(기본 켜짐) ⌘V, 우클릭, 페인에
+  놓은 텍스트에 적용되며 매크로에는 적용되지 않습니다. MultiExec가 켜져 있으면 확인 한 번으로 보이는 모든
+  터미널에 들어갑니다.
 - **키**: Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈이 됩니다.
   Option은 기본적으로 Meta로 동작합니다.
 - **로그**: Terminal → Start/Stop Session Log 또는 세션 옵션으로 출력을 `~/Documents/MobAlt Logs/`에
@@ -233,6 +242,7 @@ SFTP 패널 전환, 작업대 복원, 로컬 셸과 폴더 통합, 외부 편집
 | 사이드바, Sessions / SFTP / Tools / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, 터널, 설정 | ⇧⌘M, ⇧⌘U, ⌘, |
 | TUI 앱에서 줄바꿈 | ⇧Enter 또는 ⌥Enter |
+| 붙여넣기 보호 대화상자(여러 줄 또는 의심스러운 붙여넣기): 붙여넣기 / 취소 | ⌘⏎ / Esc |
 | 포커스된 탭: 이동 / 활성화 / 닫기, 컨텍스트 메뉴 | ← → / ⏎ / ⌫, ⇧F10 또는 Menu 키 |
 | 포커스된 세션 행: 이동 / 접기·펼치기 / 열기 / 분할로 열기 / 삭제 | ↑ ↓ / ← → / ⏎ / ⌘⏎ 또는 ⇧⏎ / ⌫ |
 | 포커스된 세션 행·폴더: 컨텍스트 메뉴 (폴더: Move to Folder…) | ⇧F10 또는 Menu 키 |

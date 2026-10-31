@@ -43,6 +43,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Built-in X server | ✅ via XQuartz | Starts XQuartz on demand and proxies the X11 channel with cookie replacement |
 | MobaSSHTunnel | ✅ Tunneling | Local (-L), remote (-R) and dynamic SOCKS5 (-D); per-session auto-start or standalone |
 | MultiExec | ✅ | Type into every visible terminal of the tab at once (⇧⌘M) |
+| Paste guard (multi-line confirmation, malicious-paste checks) | ✅ | A multi-line or long paste asks first with an editable preview; every paste is checked for zero-width / bidi / control characters, a trailing newline, `curl \| sh`, profile writes, `rm -rf /` and look-alike letters, with a "Paste cleaned" option |
 | Split terminals | ✅ | Right/down splits and grids up to 2 × 4 (8 panes); drag sessions onto empty panes or pane edges; drag tabs between panes |
 | Macros | ✅ | Record/replay keystrokes, text macros, play to all terminals |
 | Tools | ✅ Tools panel | Ping, traceroute, DNS lookup, port scan, network info, Wake-on-LAN, network scanner |
