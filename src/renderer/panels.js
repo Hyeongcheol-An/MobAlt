@@ -6,7 +6,8 @@ export class ToolsPanel {
     this.app = app;
     this.out = $('#tool-output');
     this.host = $('#tool-host');
-    this.running = null;
+    this.running = null; // id of the streaming tool (ping / traceroute) whose output belongs on screen
+    this.runSeq = 0; // bumped by every run: output of an earlier run is dropped once a later one owns the panel
     for (const b of document.querySelectorAll('[data-tool]')) b.addEventListener('click', () => this.run(b.dataset.tool));
     this.host.addEventListener('keydown', (e) => e.key === 'Enter' && this.run('ping'));
     window.api.on('tools:output', ({ id, text }) => {
@@ -25,54 +26,65 @@ export class ToolsPanel {
   async run(tool) {
     const host = this.host.value.trim();
     if (tool === 'stop') {
-      if (this.running) await window.api.tools.stop(this.running);
+      if (this.running) await window.api.tools.stop(this.running); // its "[stopped]" line is the answer to the click
       return;
     }
     if (tool !== 'netinfo' && !host) return toast('Enter a host', 'warn');
-    if (this.running) await window.api.tools.stop(this.running);
+    // From here the panel belongs to this run: the previous tool's "[stopped]" line (sent when the kill lands, after
+    // stop() has answered) and a still-pending lookup or port scan are dropped instead of landing in this output.
+    const run = ++this.runSeq;
+    const append = (text) => run === this.runSeq && this.append(text);
+    if (this.running) {
+      const prev = this.running;
+      this.running = null;
+      await window.api.tools.stop(prev);
+    }
+    if (run !== this.runSeq) return; // another tool was started while the previous one was being stopped
     this.out.textContent = '';
     try {
-      if (tool === 'ping') this.running = await window.api.tools.ping(host, 5);
-      else if (tool === 'traceroute') this.running = await window.api.tools.traceroute(host);
-      else if (tool === 'lookup') {
-        this.append(`Resolving ${host}…\n`);
+      if (tool === 'ping' || tool === 'traceroute') {
+        const id = await (tool === 'ping' ? window.api.tools.ping(host, 5) : window.api.tools.traceroute(host));
+        if (run === this.runSeq) this.running = id;
+        else window.api.tools.stop(id); // superseded while starting: never show its output
+      } else if (tool === 'lookup') {
+        append(`Resolving ${host}…\n`);
         const r = await window.api.tools.lookup(host);
         const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(':');
         const mx = r.mx || [], txt = r.txt || [], ptr = r.reverse || [];
-        if (r.error) this.append(`  ${r.error}\n`);
-        for (const a of r.addresses || []) this.append(`  ${a.family === 6 ? 'AAAA' : 'A   '}  ${a.address}\n`);
-        for (const m of mx) this.append(`  MX    ${m.priority} ${m.exchange}\n`);
-        for (const t of txt) this.append(`  TXT   ${t.join('')}\n`);
-        for (const p of ptr) this.append(`  PTR   ${p}\n`);
+        if (r.error) append(`  ${r.error}\n`);
+        for (const a of r.addresses || []) append(`  ${a.family === 6 ? 'AAAA' : 'A   '}  ${a.address}\n`);
+        for (const m of mx) append(`  MX    ${m.priority} ${m.exchange}\n`);
+        for (const t of txt) append(`  TXT   ${t.join('')}\n`);
+        for (const p of ptr) append(`  PTR   ${p}\n`);
         // say explicitly what was not found instead of ending the listing silently
         if (isIp) {
-          if (!ptr.length) this.append(`  (no PTR record: ${host} has no reverse DNS name)\n`);
+          if (!ptr.length) append(`  (no PTR record: ${host} has no reverse DNS name)\n`);
         } else if (!r.error) {
-          if (!mx.length) this.append('  (no MX records)\n');
-          if (!txt.length) this.append('  (no TXT records)\n');
+          if (!mx.length) append('  (no MX records)\n');
+          if (!txt.length) append('  (no TXT records)\n');
         }
-        if (!r.error && !(r.addresses || []).length && !ptr.length) this.append('  no records\n');
+        if (!r.error && !(r.addresses || []).length && !ptr.length) append('  no records\n');
       } else if (tool === 'netinfo') {
         const r = await window.api.tools.netinfo();
-        this.append(`Hostname: ${r.hostname}\nDNS: ${r.dns.join(', ')}\n`);
+        append(`Hostname: ${r.hostname}\nDNS: ${r.dns.join(', ')}\n`);
         let last = null;
         for (const i of r.interfaces) {
-          if (i.name !== last) { this.append(`\n${i.name}${i.mac && i.mac !== '00:00:00:00:00:00' ? `  (${i.mac})` : ''}\n`); last = i.name; }
-          this.append(`  ${i.family === 'IPv6' ? 'v6' : 'v4'}  ${i.address}${i.netmask ? ' / ' + i.netmask : ''}\n`);
+          if (i.name !== last) { append(`\n${i.name}${i.mac && i.mac !== '00:00:00:00:00:00' ? `  (${i.mac})` : ''}\n`); last = i.name; }
+          append(`  ${i.family === 'IPv6' ? 'v6' : 'v4'}  ${i.address}${i.netmask ? ' / ' + i.netmask : ''}\n`);
         }
       } else if (tool === 'portscan') {
         const from = $('#tool-port-from').value.trim() === '' ? 1 : parseInt($('#tool-port-from').value, 10);
         const to = $('#tool-port-to').value.trim() === '' ? 1024 : parseInt($('#tool-port-to').value, 10);
         if (!(from >= 1 && from <= 65535) || !(to >= 1 && to <= 65535)) return toast('Ports must be between 1 and 65535', 'warn');
         if (from > to) return toast('The first port must not be greater than the last', 'warn');
-        this.append(`Scanning ${host} ports ${from}-${to}…\n`);
+        append(`Scanning ${host} ports ${from}-${to}…\n`);
         const t0 = Date.now();
         const open = await window.api.tools.portScan(host, from, to);
-        this.append(open.length ? open.map((p) => `  ${p}/tcp open`).join('\n') + '\n' : '  no open ports found\n');
-        this.append(`done in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
+        append(open.length ? open.map((p) => `  ${p}/tcp open`).join('\n') + '\n' : '  no open ports found\n');
+        append(`done in ${((Date.now() - t0) / 1000).toFixed(1)}s\n`);
       }
     } catch (e) {
-      this.append(`error: ${e.message}\n`);
+      append(`error: ${e.message}\n`);
     }
   }
 }

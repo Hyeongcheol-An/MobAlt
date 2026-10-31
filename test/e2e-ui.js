@@ -51,10 +51,21 @@
 
     // tools: ping localhost
     app.showPanel('tools');
+    const toolOut = () => document.getElementById('tool-output').textContent;
     document.getElementById('tool-host').value = '127.0.0.1';
     document.querySelector('[data-tool="ping"]').click();
     await sleep(3500);
-    results.ping = /bytes from 127\.0\.0\.1/.test(document.getElementById('tool-output').textContent);
+    results.ping = /bytes from 127\.0\.0\.1/.test(toolOut());
+    // QA4-08: DNS started while a ping still runs owns the output — the killed ping's late "[stopped]" line is dropped
+    const until = async (fn, ms) => { const t0 = Date.now(); while (!fn() && Date.now() - t0 < ms) await sleep(100); return fn(); };
+    document.querySelector('[data-tool="ping"]').click();
+    await until(() => /bytes from/.test(toolOut()), 10000);
+    document.getElementById('tool-host').value = 'localhost';
+    document.querySelector('[data-tool="lookup"]').click();
+    await until(() => /\n  (A {3}|AAAA|no records|error:|\(no )/.test(toolOut()), 10000);
+    await sleep(1500); // time for the ping's "[stopped]" to arrive — and be ignored
+    results.toolSwitchNoStaleLine = toolOut().startsWith('Resolving localhost…\n') && !/\[stopped\]|bytes from|PING/.test(toolOut());
+    if (!results.toolSwitchNoStaleLine) log('tool output after switching:', JSON.stringify(toolOut()));
     document.querySelector('[data-tool="netinfo"]').click();
     await sleep(500);
     results.netinfo = /Hostname:/.test(document.getElementById('tool-output').textContent);
