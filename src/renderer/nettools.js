@@ -1,6 +1,7 @@
 // Pure helpers of the Tools panel (panels.js ToolsPanel): the Wake-on-LAN form's MAC / label / port handling and
 // the scanner table's rules. No DOM, so test/unit/nettools.test.js imports them directly (like monitor.js).
 
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 export const LABEL_MAX = 40;
 
 /**

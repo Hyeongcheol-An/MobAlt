@@ -4,6 +4,7 @@
 const net = require('net');
 const crypto = require('crypto');
 const EventEmitter = require('events');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 function pipe(a, b) {
   a.pipe(b).pipe(a);

@@ -37,6 +37,7 @@ const { STATUS_DIM, STATUS_FAIL } = require('./terminals');
 
 let Zmodem = null;
 const zm = () => Zmodem || (Zmodem = require('zmodem.js')); // loaded on first use (unit tests of the pure parts need no library)
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 const DBG = !!process.env.MOBALT_ZMODEM_DEBUG;
 const dbg = (...a) => DBG && console.log('[zmodem]', ...a);
 

@@ -6,6 +6,7 @@ const fs = require('fs');
 const net = require('net');
 const crypto = require('crypto');
 const { execFileSync, spawn } = require('child_process');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 const XAUTH_CANDIDATES = ['/opt/X11/bin/xauth', '/usr/X11/bin/xauth', 'xauth'];
 

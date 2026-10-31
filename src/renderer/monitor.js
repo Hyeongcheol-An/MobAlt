@@ -1,6 +1,7 @@
 // Formatting for the remote monitoring bar (terminal.js): pure functions over a sample from src/main/monitor.js.
 // Unit-tested through test/unit/monitor.test.js (dynamic import, like theme.js).
 
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
 /**

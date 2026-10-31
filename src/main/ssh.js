@@ -14,6 +14,7 @@ const keygen = require('./keygen');
 const { execFile } = require('child_process');
 
 const { STATUS_DIM, STATUS_FAIL } = require('./terminals');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 const GREY = STATUS_DIM; // status lines are painted by the renderer from the pane's palette (SGR 90 is invisible on Solarized Dark)
 const RED = STATUS_FAIL;
 const RESET = '\x1b[0m';

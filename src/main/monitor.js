@@ -10,6 +10,7 @@
 // or tail), which busybox and dash have. Case arms are written `(pattern)`: bash 3.2 (macOS's /bin/sh) cannot
 // parse a bare `pattern)` inside `$( … )`.
 
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 const SENTINEL = 'MOBALT_MON ';
 const EXEC_TIMEOUT = 10000; // a poll that takes longer than this is abandoned (the channel is closed)
 

@@ -1,6 +1,7 @@
 // Tools panel (ping/traceroute/port scan/DNS/net info, Wake-on-LAN, network scanner) and Macros panel.
 import { $, h, contextMenu, confirmDialog, promptDialog, toast, showModal, plural } from './ui.js';
 import { normMac, trimLabel, parsePort, sshPortOf, comparePorts } from './nettools.js';
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 const ipKey = (ip) => (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) ? ip.split('.').map((o) => o.padStart(3, '0')).join('.') : '~' + ip); // IPv4 in address order, anything else after
 const fmtRtt = (ms) => (ms >= 100 ? String(Math.round(ms)) : ms.toFixed(ms < 10 ? 2 : 1)) + ' ms';

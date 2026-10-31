@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { userDataFile } = require('./store');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 function readKeyType(keyBuf) {
   // SSH public key blob: uint32 len, string type, ...

@@ -9,6 +9,7 @@
 //
 //   pasteGuardMode(analysis, settings) → { confirm, warn, ask }  the two Settings → Features toggles applied
 
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 /** A paste longer than this many characters asks for confirmation even on one line. */
 export const PASTE_CONFIRM_CHARS = 1000;
 

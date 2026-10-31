@@ -10,6 +10,9 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
 
 - `<out-dir>/userdata` is a fresh user-data folder (sessions/settings start empty), so your real
   sessions are never touched or shown.
+- The interface runs in English (`MOBALT_LANG=en`, whatever the Mac's language is) unless the command sets
+  `MOBALT_LANG=<code>` (ko, zh-CN, ja, vi, hi, de, fr, es, pt); a script can also switch at run time with
+  `app.saveSettings({ language: 'ko' })` and read the native menu as shown with `window.api.app.testMenuLabels()`.
 - The script runs inside the renderer after the UI is ready. It must end with
   `window.api.app.quit()`; otherwise the app quits after `auto-quit-ms` (default 60 s) and writes
   `shots/final.png`.
@@ -40,6 +43,7 @@ await window.api.app.testWindows();                      // every window: [{ id,
 await window.api.app.testEval(id, 'window.app.workspace.tabs.length'); // run code in another window (its own window.app); the resolved value comes back
 await window.api.app.testCloseWindow(id);                // close a window as its close button would (a detached window hands its tabs back first)
 await window.api.app.testMenuState();                    // the native Session menu's tab items as enabled right now: { 'tab-pin': true, 'tab-close-left': false, … } (test mode only)
+await window.api.app.testMenuLabels();                   // the application menu as shown: [{ label, submenu: [{ label, enabled, type? }] }] — labels follow the interface language (test mode only)
 pane.webgl; pane.webglLosses; pane.visibleInTab();       // the WebGL budget (terminal.js): the addon while the pane is on screen (null = DOM renderer), context losses so far
 // screenshot() captures the window it is called from: a detached window shoots itself through testEval (see test/e2e-detach.js)
 app.action('new-session' | 'new-local' | 'quick-connect' | 'duplicate' | 'reconnect' | 'disconnect' |

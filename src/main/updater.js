@@ -7,6 +7,7 @@
 const { app } = require('electron');
 const dialogs = require('./dialogs'); // sheets go through the wrapper so that test runs can answer them
 const { compareVersions } = require('./bundlewatch');
+const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
 let autoUpdater = null;
 try {

@@ -1,5 +1,6 @@
 // Sessions tree (left panel): folders, filter, drag to folder, context menus.
 import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead, repointOpeners, plural } from './ui.js';
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
 

@@ -1,4 +1,5 @@
 // Small DOM helpers, context menus, modals and toasts (no framework).
+import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
