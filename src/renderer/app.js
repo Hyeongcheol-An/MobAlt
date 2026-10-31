@@ -1,6 +1,6 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
 import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons } from './ui.js';
-import { TermPane, THEMES } from './terminal.js';
+import { TermPane, THEMES, searchDecorations } from './terminal.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
@@ -272,7 +272,9 @@ class App {
     });
     // find bar
     const fb = $('#find-bar'), fi = $('#find-input');
-    const opts = () => ({ caseSensitive: $('#find-case').checked, regex: $('#find-regex').checked, decorations: { matchBackground: '#515c6a', activeMatchBackground: '#e6b422', activeMatchBorder: '#e6b422', matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#e6b422' } });
+    // highlight colours follow the active terminal's palette (a light theme needs a pale tint under its dark text)
+    this.findDecorations = () => searchDecorations(this.activePane()?.themeFor?.() || THEMES[this.settings.theme] || THEMES['moba-dark']);
+    const opts = () => ({ caseSensitive: $('#find-case').checked, regex: $('#find-regex').checked, decorations: this.findDecorations() });
     // an unfinished regex (e.g. "h[ae") throws inside the search addon: show it as an invalid pattern instead
     const safeFind = (fn) => {
       try { fn(); fb.classList.remove('bad-pattern'); return true; }
@@ -746,7 +748,7 @@ class App {
   onBundleUpdated({ version, current }) {
     if (!version || version === this.updateDismissed) return;
     this.updateOnDisk = version;
-    $('#update-banner-text').replaceChildren('MobAlt ', h('b', {}, version), ' is installed on disk — you are running ', h('b', {}, current || this.info.version), '. Relaunch to use it.');
+    $('#update-banner-text').replaceChildren('MobAlt ', h('b', {}, version), ' is installed on disk — you are running ', h('b', {}, current || this.info.version), '. ', h('span', { class: 'keep' }, 'Relaunch to use it.'));
     this.showUpdateBanner(true);
   }
 
@@ -812,6 +814,7 @@ class App {
     this.settings = await window.api.settings.set(patch);
     this._applyThemeVar();
     if (!quiet) this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
+    if (!quiet && this._findResearch) this._findResearch(); // open find highlights take the new theme's colours
   }
 
   /** The active tab and the content area take the terminal theme's background. */

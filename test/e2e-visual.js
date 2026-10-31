@@ -1,5 +1,5 @@
 // Renderer-side visual-consistency checks: one icon style, token radii/heights, narrow sidebar, FTP panel, DNS output.
-//   python3 test/ftpd.py <root> 2121 demo demo &          # for the FTP "follow folder" check (pyftpdlib)
+//   python3 test/ftpd.py <root> 2121 demo demo &          # for the FTP checks (pyftpdlib); another port: replace __FTP_PORT__ below
 //   test/qa/run.sh test/e2e-visual.js <out-dir>
 // Screenshots: toolbar + sidebar panels, a dialog and the find bar in moba-dark and light, plus a 180px sidebar.
 (async () => {
@@ -20,6 +20,26 @@
   const emoji = /\p{Extended_Pictographic}/u;
   const radii = new Set(['4px', '6px', '10px']);
   const px = (el, prop) => getComputedStyle(el)[prop];
+  const ftpPort = Number('__FTP_PORT__') || 2121; // the runner may substitute the placeholder (a second ftpd beside the default one)
+  // WCAG contrast: between two colours, or of an element's text (its opacity applied) over the nearest opaque background behind it
+  const parseColor = (c) => {
+    let m = /^rgba?\(([^)]+)\)/.exec(c);
+    if (m) { const [r, g, b, a = 1] = m[1].split(/[\s,\/]+/).filter(Boolean).map(Number); return { r, g, b, a }; }
+    m = /^color\(srgb ([^)]+)\)/.exec(c); // what color-mix() computes to
+    if (m) { const [r, g, b, a = 1] = m[1].split(/[\s\/]+/).filter(Boolean).map(Number); return { r: r * 255, g: g * 255, b: b * 255, a }; }
+    m = /^#([0-9a-f]{6})$/i.exec(c);
+    if (m) return { r: parseInt(m[1].slice(0, 2), 16), g: parseInt(m[1].slice(2, 4), 16), b: parseInt(m[1].slice(4, 6), 16), a: 1 };
+    return null;
+  };
+  const lum = ({ r, g, b }) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const ratio = (a, b) => { const l1 = lum(a), l2 = lum(b); return Math.round((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05) * 100) / 100; };
+  const contrastOf = (el) => {
+    let bg = null;
+    for (let e = el; e && !bg; e = e.parentElement) { const c = parseColor(px(e, 'backgroundColor')); if (c && c.a >= 0.9) bg = c; }
+    bg = bg || { r: 30, g: 30, b: 30 };
+    const fg = parseColor(px(el, 'color')), op = parseFloat(px(el, 'opacity')) || 1;
+    return ratio({ r: fg.r * op + bg.r * (1 - op), g: fg.g * op + bg.g * (1 - op), b: fg.b * op + bg.b * (1 - op) }, bg);
+  };
   try {
     await window.api.app.testResize(1200, 760);
     await app.saveSettings({ confirmClose: false, sftpAutoOpen: false, theme: 'moba-dark' });
@@ -55,6 +75,8 @@
     results.panelControls26 = [...document.querySelectorAll('.tools-form button, .tools-form input, .icon-btn, .panel-head input')].every((el) => el.getBoundingClientRect().height === 26 || el.offsetParent === null);
 
     // --- 3. themes: toolbar, sidebar panels, find bar, toast in dark and light
+    app.activePane().term.input('clear; for i in 1 2 3; do echo "needle $i in the haystack"; done\r'); // something for the find bar to highlight
+    await sleep(800);
     for (const theme of ['moba-dark', 'light']) {
       await app.saveSettings({ theme });
       await sleep(250);
@@ -65,7 +87,14 @@
       app.showPanel('macros'); await sleep(150);
       await shot(`63-macros-${theme}`);
       app.action('find'); await sleep(150);
+      // the match highlight follows the palette: readable under the theme's text (the light theme used to get the dark grey)
+      const deco = app.findDecorations(), pal = app.activePane().themeFor();
+      results[`findMatchReadable-${theme}`] = ratio(parseColor(deco.matchBackground), parseColor(pal.foreground)) >= 4.5 && (theme === 'light' ? deco.matchBackground !== '#515c6a' : deco.matchBackground === '#515c6a');
+      const fi = document.getElementById('find-input');
+      fi.value = 'needle'; fi.dispatchEvent(new Event('input', { bubbles: true }));
+      await sleep(300);
       await shot(`64-find-${theme}`);
+      fi.value = ''; fi.dispatchEvent(new Event('input', { bubbles: true }));
       app.action('find-close');
       import('./ui.js').then((ui) => ui.toast('Settings saved', 'success'));
       await sleep(150);
@@ -116,9 +145,9 @@
 
     // --- 6. FTP: the "Follow terminal folder" option is hidden (FTP has no terminal)
     try {
-      const ftp = await app.saveSession({ name: 'demo ftp', folder: 'Test', type: 'ftp', host: '127.0.0.1', port: 2121, username: 'demo', password: 'demo', sftpAuto: false });
+      const ftp = await app.saveSession({ name: 'demo ftp', folder: 'Test', type: 'ftp', host: '127.0.0.1', port: ftpPort, username: 'demo', password: 'demo', sftpAuto: false });
       const pane = await app.openSession(ftp);
-      await waitFor(() => pane.status === 'connected', 8000, 'ftp connected (python3 test/ftpd.py <root> 2121 demo demo)');
+      await waitFor(() => pane.status === 'connected', 8000, `ftp connected (python3 test/ftpd.py <root> ${ftpPort} demo demo)`);
       app.showPanel('sftp');
       await sleep(500);
       const follow = document.getElementById('sftp-follow').closest('label');
@@ -132,10 +161,62 @@
       log('ftp check skipped/failed:', e.message);
     }
 
+    // --- 6b. the FTP card on the light theme: the dead / failed card's title, hint and error line clear 4.5:1 on the white card
+    try {
+      await app.saveSettings({ theme: 'light' });
+      await sleep(250);
+      const dead = await app.openSession(app.sessions.sessions.find((s) => s.name === 'demo ftp'));
+      await waitFor(() => dead.status === 'connected', 8000, 'ftp connected again');
+      await dead.disconnect();
+      await sleep(500);
+      const deadCard = dead.el.querySelector('.pane-placeholder.ftp-info');
+      const deadBig = contrastOf(deadCard.querySelector('.big')), deadHint = contrastOf(deadCard.querySelector('.hint'));
+      results.ftpDeadCardReadableLight = deadCard.classList.contains('disconnected') && deadBig >= 4.5 && deadHint >= 4.5;
+      await shot('71-ftp-disconnected-light');
+      const bad = await app.saveSession({ name: 'bad ftp', folder: 'Test', type: 'ftp', host: '127.0.0.1', port: ftpPort, username: 'demo', password: 'wrong', sftpAuto: false });
+      const failed = await app.openSession(bad);
+      await waitFor(() => failed.el.querySelector('.pane-placeholder.ftp-info.failed'), 8000, 'ftp login failed');
+      await sleep(500);
+      const failedCard = failed.el.querySelector('.pane-placeholder.ftp-info'), err = failedCard.querySelector('.ftp-err');
+      const failedBig = contrastOf(failedCard.querySelector('.big')), failedHint = contrastOf(failedCard.querySelector('.hint')), errRatio = err ? contrastOf(err) : 0;
+      results.ftpFailedCardReadableLight = failedBig >= 4.5 && failedHint >= 4.5 && errRatio >= 4.5;
+      log('ftp card contrast on light: dead', deadBig, deadHint, '| failed', failedBig, failedHint, '| error', errRatio);
+      await shot('72-ftp-failed-light');
+      await app.closePane(failed, true);
+      await app.closePane(dead, true);
+    } catch (e) {
+      results.ftpDeadCardReadableLight = false;
+      log('ftp light check skipped/failed:', e.message);
+    }
+    await app.saveSettings({ theme: 'moba-dark' });
+    await sleep(200);
+
     // --- 7. status bar: version and X11 share the bar's font size and colour
     const bar = document.getElementById('statusbar');
     const same = (id) => px(document.getElementById(id), 'fontSize') === px(bar, 'fontSize') && px(document.getElementById(id), 'color') === px(bar, 'color');
     results.statusBarUniform = same('st-version') && same('st-x11') && px(document.getElementById('st-x11'), 'opacity') === '1';
+
+    // --- 8. banners at the 900 px minimum width (default 280 px sidebar): the update banner's call to action never ends
+    //        up as a one-word line, nothing is clipped, and both banners sit above the tabs
+    document.documentElement.style.setProperty('--sidebar-w', '280px');
+    await window.api.app.testResize(900, 560);
+    await sleep(300);
+    await window.api.app.testBundleUpdated('0.12.1');
+    await sleep(250);
+    app.action('multiexec');
+    await sleep(200);
+    const ub = document.getElementById('update-banner'), ubText = document.getElementById('update-banner-text'), keep = ub.querySelector('.keep');
+    const range = document.createRange();
+    range.selectNodeContents(ubText);
+    const rects = [...range.getClientRects()].filter((r) => r.width > 0);
+    const lineWidths = [...new Set(rects.map((r) => Math.round(r.top)))].map((t) => { const rs = rects.filter((r) => Math.round(r.top) === t); return Math.max(...rs.map((r) => r.right)) - Math.min(...rs.map((r) => r.left)); });
+    results.bannerKeepOneLine = !ub.hidden && !!keep && keep.getClientRects().length === 1 && lineWidths.length <= 2 && lineWidths.every((w) => w > 100);
+    results.bannerNotClipped = ub.scrollWidth <= ub.clientWidth + 1 && ubText.scrollWidth <= ubText.clientWidth + 1 && [...ub.querySelectorAll('button')].every((b) => b.getBoundingClientRect().right <= ub.getBoundingClientRect().right);
+    results.bothBannersAboveTabs = !document.getElementById('multiexec-banner').hidden && ub.getBoundingClientRect().bottom <= document.getElementById('tabbar').getBoundingClientRect().top + 0.5;
+    log('update banner at 900px:', lineWidths.length, 'line(s) of', lineWidths.map(Math.round).join('/'), 'px, bar height', Math.round(ub.getBoundingClientRect().height));
+    await shot('73-banners-900');
+    app.action('multiexec');
+    app.showUpdateBanner(false);
 
     log('RESULTS ' + JSON.stringify(results));
     log('DONE');

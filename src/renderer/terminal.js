@@ -35,6 +35,23 @@ export const THEMES = {
     brightBlack: '#666666', brightRed: '#cd3131', brightGreen: '#14ce14', brightYellow: '#b5ba00', brightBlue: '#0451a5', brightMagenta: '#bc05bc', brightCyan: '#0598bc', brightWhite: '#a5a5a5' },
 };
 
+/** Relative luminance of a '#rrggbb' colour (0 black … 1 white). */
+const luminance = (hex) => {
+  const ch = (i) => { const v = parseInt(hex.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  return 0.2126 * ch(1) + 0.7152 * ch(3) + 0.0722 * ch(5);
+};
+/** `a` mixed into `b` by `t` (0…1), both '#rrggbb'. */
+const mix = (a, b, t) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * t + parseInt(b.slice(i, i + 2), 16) * (1 - t)).toString(16).padStart(2, '0')).join('');
+export const isLightTheme = (theme) => luminance(theme.background || '#1e1e1e') > 0.4;
+/**
+ * Find-bar highlight colours for a palette. The fixed greys suit the dark themes; under a light theme's dark text they
+ * turned every match but the active one into a dark block (1.9:1), so a light theme gets a pale tint of its own blue.
+ */
+export function searchDecorations(theme) {
+  const matchBackground = isLightTheme(theme) ? mix(theme.blue || '#0451a5', theme.background, 0.25) : '#515c6a';
+  return { matchBackground, activeMatchBackground: '#e6b422', activeMatchBorder: '#e6b422', matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#e6b422' };
+}
+
 let seq = 0;
 
 export class TermPane {
