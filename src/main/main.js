@@ -1,5 +1,5 @@
 'use strict';
-const { app, BrowserWindow, ipcMain, Menu, dialog, shell, clipboard, nativeTheme, webContents } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, dialog, shell, clipboard, nativeTheme, webContents, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -38,6 +38,8 @@ let win = null; // the main window: the sidebar, the test hooks and the fallback
 // backends stay here. A terminal's output goes to the window that spawned it or attached to it last.
 const owners = new Map(); // terminal id → webContents id
 const detachPayloads = new Map(); // key → the tabs a new detached window shows (its renderer fetches them once)
+let lastDetached = null; // the detached window opened last: the next one cascades from it (createWindow)
+const tabStates = new Map(); // webContents id → the window's tab state (app.js menuTabState): the Session menu's items follow the focused window
 let wsMain = null; // the main window's part of the workspace file ({ v, activeTab, tabs })…
 const wsParts = new Map(); // …and one { tabs, activeTab, bounds } per detached window, by window id (restored as windows)
 let quitting = false; // a quit is under way (confirmed, test hook, update install or relaunch): no more questions, tear down
@@ -197,6 +199,21 @@ function writeWorkspace() {
   store.saveWorkspace({ v: base.v || 1, activeTab: base.activeTab || 0, tabs: base.tabs || [], windows });
 }
 
+/**
+ * Where a new detached window goes: `step` px right and down from `src` (the window it cascades from), kept inside
+ * that display's work area — a window that would run off the right or bottom edge starts the cascade over at the top
+ * left, and one larger than the work area is shrunk to it.
+ */
+function cascadeBounds(src, step) {
+  const wa = screen.getDisplayMatching(src).workArea;
+  const width = Math.min(src.width, wa.width), height = Math.min(src.height, wa.height);
+  let x = (src.x || 0) + step, y = (src.y || 0) + step;
+  if (x + width > wa.x + wa.width || y + height > wa.y + wa.height) { x = wa.x + step; y = wa.y + step; }
+  x = Math.max(wa.x, Math.min(x, wa.x + wa.width - width));
+  y = Math.max(wa.y, Math.min(y, wa.y + wa.height - height));
+  return { x, y, width, height };
+}
+
 /** A detached window goes once its renderer handed its tabs back (detach:close-done), or when it never answers. */
 function finishClose(w) {
   if (!w || w.isDestroyed() || w === win) return;
@@ -211,7 +228,8 @@ const chromeOf = (settings) => validChrome(settings && settings.chrome) || { bac
 
 /**
  * The main window, or (`detached` = payload key) a window for tabs moved out of another one: the same page with
- * `?detached=<key>`, started the size of the window it came from and offset like a new document window, or at the
+ * `?detached=<key>`, started the size of the window it came from and offset like a new document window — the second
+ * and later ones cascade +30/+30 from the detached window opened last, so no two cover each other — or at the
  * bounds the workspace file saved for it. Closing the main window quits the app (its detached windows go with it;
  * their tabs are in the workspace file). Closing a detached window hands its tabs back to the main window: the
  * renderer releases its terminals (never ends them), the main window adopts them, and the window goes once the
@@ -222,8 +240,9 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
   const isMain = !detached;
   let b = isMain ? settings.windowBounds || { width: 1400, height: 880 } : bounds;
   if (!isMain && !b) {
-    const src = from && !from.isDestroyed() ? from.getBounds() : win && !win.isDestroyed() ? win.getBounds() : { x: 80, y: 80, width: 1200, height: 760 };
-    b = { x: (src.x || 0) + 40, y: (src.y || 0) + 40, width: src.width, height: src.height };
+    const anchor = lastDetached && !lastDetached.isDestroyed() ? lastDetached : from && !from.isDestroyed() ? from : win && !win.isDestroyed() ? win : null;
+    const src = anchor ? anchor.getBounds() : { x: 80, y: 80, width: 1200, height: 760 };
+    b = cascadeBounds(src, anchor === lastDetached ? 30 : 40);
   }
   const w = new BrowserWindow({
     ...b,
@@ -243,7 +262,11 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
     },
   });
   if (isMain) win = w;
-  else w._detachKey = detached;
+  else {
+    w._detachKey = detached;
+    lastDetached = w;
+  }
+  const wcId = w.webContents.id;
   w.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), detached ? { query: { detached } } : undefined);
   w.once('ready-to-show', () => w.show());
   if (isMain) {
@@ -273,6 +296,7 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
     w._closeTimer = setTimeout(() => finishClose(w), 8000);
   });
   w.on('closed', () => {
+    tabStates.delete(wcId);
     if (isMain) win = null;
     else if (!quitting) { // the tabs went back to the main window (or the window was closed by force): no longer a window of the workspace
       wsParts.delete(w.id);
@@ -360,13 +384,14 @@ function buildMenu() {
         { label: 'Reconnect', accelerator: 'Cmd+R', click: () => sendAction('reconnect') },
         { label: 'Disconnect', click: () => sendAction('disconnect') },
         { type: 'separator' },
-        { label: 'Rename Tab…', click: () => sendAction('rename-tab') },
-        { label: 'Pin / Unpin Tab', accelerator: 'Cmd+Shift+P', click: () => sendAction('pin-tab') },
-        { label: 'Detach Tab to New Window', accelerator: 'Cmd+Alt+N', click: () => sendAction('detach-tab') },
-        { label: 'Close Tab', accelerator: 'Cmd+W', click: () => sendAction('close') },
-        { label: 'Close Other Tabs', click: () => sendAction('close-others') },
-        { label: 'Close Tabs to the Left', click: () => sendAction('close-left') },
-        { label: 'Close Tabs to the Right', click: () => sendAction('close-right') },
+        // the tab items are enabled like the tab context menu's (applyMenuState, from the renderer's tabs:state)
+        { id: 'tab-rename', label: 'Rename Tab…', click: () => sendAction('rename-tab') },
+        { id: 'tab-pin', label: 'Pin / Unpin Tab', accelerator: 'Cmd+Shift+P', click: () => sendAction('pin-tab') },
+        { id: 'tab-detach', label: 'Detach Tab to New Window', accelerator: 'Cmd+Alt+N', click: () => sendAction('detach-tab') },
+        { id: 'tab-close', label: 'Close Tab', accelerator: 'Cmd+W', click: () => sendAction('close') },
+        { id: 'tab-close-others', label: 'Close Other Tabs', click: () => sendAction('close-others') },
+        { id: 'tab-close-left', label: 'Close Tabs to the Left', click: () => sendAction('close-left') },
+        { id: 'tab-close-right', label: 'Close Tabs to the Right', click: () => sendAction('close-right') },
         { type: 'separator' },
         { label: 'Import from ~/.ssh/config', click: () => sendAction('import-sshconfig') },
         { label: 'Import from MobaXterm.ini…', click: () => sendAction('import-moba') },
@@ -444,7 +469,29 @@ function buildMenu() {
     },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  applyMenuState();
 }
+
+// The Session menu's tab items follow the focused window's strip: nothing to rename, pin, detach or close without a
+// tab, no bulk close with nothing on that side (pinned tabs never count), exactly like the tab's context menu. A
+// window that has not reported yet keeps every item enabled.
+const TAB_MENU_IDS = ['tab-rename', 'tab-pin', 'tab-detach', 'tab-close', 'tab-close-others', 'tab-close-left', 'tab-close-right'];
+function menuEnabledFor(s) {
+  if (!s || typeof s !== 'object') return Object.fromEntries(TAB_MENU_IDS.map((id) => [id, true]));
+  const tab = !!s.tab;
+  return { 'tab-rename': tab, 'tab-pin': tab, 'tab-detach': tab, 'tab-close': tab, 'tab-close-others': s.others > 0, 'tab-close-left': s.left > 0, 'tab-close-right': s.right > 0 };
+}
+function applyMenuState() {
+  const menu = Menu.getApplicationMenu();
+  if (!menu) return;
+  const w = focusedWindow();
+  const enabled = menuEnabledFor(w && !w.isDestroyed() ? tabStates.get(w.webContents.id) : null);
+  for (const id of TAB_MENU_IDS) {
+    const item = menu.getMenuItemById(id);
+    if (item && item.enabled !== enabled[id]) item.enabled = enabled[id];
+  }
+}
+app.on('browser-window-focus', () => applyMenuState());
 
 // ---------- IPC ----------
 function sizeOf(size) {
@@ -619,6 +666,12 @@ function registerIpc() {
   ipcMain.handle('test:wol-packets', () => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     return wolListener ? wolListener.packets.slice() : [];
+  });
+  // Test-only: the Session menu's tab items as the user would see them ({ id: enabled })
+  ipcMain.handle('test:menu-state', () => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const menu = Menu.getApplicationMenu();
+    return Object.fromEntries(TAB_MENU_IDS.map((id) => { const it = menu && menu.getMenuItemById(id); return [id, it ? it.enabled : null]; }));
   });
   // Test-only: the open windows, code run inside one of them (its resolved value comes back) and closing one — the
   // test script lives in the main window; a detached window is driven through these.
@@ -919,6 +972,12 @@ function registerIpc() {
     }
   });
   ipcMain.on('detach:close-done', (e) => finishClose(wof(e)));
+  // the renderer's tab state (app.js onTabsChanged): the Session menu follows the window the user is in
+  ipcMain.on('tabs:state', (e, state) => {
+    tabStates.set(e.sender.id, state && typeof state === 'object' ? state : null);
+    const w = wof(e);
+    if (w && w === focusedWindow()) applyMenuState();
+  });
 
   ipcMain.handle('dialog:open', (e, opts) => dialogs.showOpenDialog(wof(e), opts));
   ipcMain.handle('dialog:save', (e, opts) => dialogs.showSaveDialog(wof(e), opts));

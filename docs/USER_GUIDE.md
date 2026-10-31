@@ -146,9 +146,11 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   menu): the tab moves into a second MobAlt window and keeps its terminals — nothing reconnects or
   restarts. The new window redraws the last 256 KB of each terminal's output and goes on from there;
   a split tab moves with all its panes. The window has the same toolbar, menus and shortcuts and
-  starts with the sidebar collapsed (⌘B shows it there); MultiExec is per window. Closing a detached
-  window hands its tabs back to the main window with their sessions still running — it never ends a
-  session; closing the main window quits MobAlt, detached windows included. The workspace remembers
+  starts with the sidebar collapsed (⌘B shows it there); MultiExec is per window. A second detached
+  window opens offset from the first, so none hides another. Closing a detached window hands its tabs
+  back to the main window with their sessions still running — it never ends a session; closing its
+  last tab (⌘W) closes the window itself, as nothing is left to hand back; closing the main window
+  quits MobAlt, detached windows included. The workspace remembers
   detached windows and opens them again on the next launch, reconnecting their sessions like the main
   window's. Tabs cannot be dragged between windows: close the window to bring them back, or detach
   again from there.

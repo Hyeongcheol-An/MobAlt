@@ -1,6 +1,8 @@
 // Tab strip overflow (arrows, fades, "all tabs" menu), plain-text session logs, theme kept across splits,
-// the empty workspace still offering "+" / ⌘T, and the tab menu's pin / close-left / close-right (section 5,
-// whose confirm-count checks open two SSH tabs on the local sshd: test/start-sshd.sh start).
+// the empty workspace still offering "+" / ⌘T, the tab menu's pin / close-left / close-right (section 5,
+// whose confirm-count checks open two SSH tabs on the local sshd: test/start-sshd.sh start), the WebGL budget
+// (section 6: 20 tabs, a 2 × 4 grid, zoom — only the panes on screen hold a GPU context, a lost one falls back at
+// once) and the keyboard focus / native Session menu state after pin and unpin (section 7).
 //   test/qa/run.sh test/e2e-tabbar.js <out-dir>
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -347,6 +349,157 @@
     results.restoreKeepsPinned = order() === 'GDH' && domOrder() === 'GDH' && !!rG && rG.pinned && rG.tabEl.classList.contains('pinned') && !closeShown(rG) && app.workspace.tabs.filter((t) => t.pinned).length === 1;
     await waitFor(() => app.workspace.allPanes().every((p) => p.status === 'connected'), 15000, 'restored shells');
     await shot('69c-pinned-restored');
+
+    // ---------- 6. WebGL budget: with 20 tabs (Chromium allows 16 GPU contexts per process) only the panes on screen hold ----------
+    // one, the others draw with the DOM renderer and no pane is ever lost or blank; a 2 × 4 grid and a zoom move the
+    // contexts around; a context the GPU takes away falls back at once and comes back on the next activation
+    for (const t of [...app.workspace.tabs]) await app.closeTab(t);
+    const all = () => app.workspace.allPanes();
+    const glOf = (p) => (p.webgl && p.webgl._renderer && p.webgl._renderer._gl) || null;
+    const screenCanvas = (p) => p.termEl.querySelector('.xterm-screen canvas'); // the renderer's canvases (the texture atlas keeps a hidden helper canvas elsewhere)
+    const healthy = (p) => (p.webgl ? !!glOf(p) && !glOf(p).isContextLost() : !screenCanvas(p)) && p.webglLosses === 0;
+    const rowsText = (p) => (p.termEl.querySelector('.xterm-rows')?.textContent || '').trim();
+    const onScreen = (p) => p.tab === app.workspace.active && (!p.tab.zoomed || p.tab.zoomed === p);
+    const budgetOk = () => all().every((p) => healthy(p) && !!p.webgl === onScreen(p)) && all().filter((p) => p.webgl).length <= 12;
+    while (app.workspace.tabs.length < 20) await app.newLocalTab();
+    await waitFor(() => all().every((p) => p.status === 'connected' && /[$%#>] ?$/.test(text(p).trimEnd())), 20000, '20 shells');
+    await sleep(300);
+    const lastPane = app.workspace.tabs[19].activePane;
+    await waitFor(() => lastPane.webgl, 1000, 'the shown pane took its context');
+    results.twentyTabsOneContext = app.workspace.tabs.length === 20 && all().filter((p) => p.webgl).length === 1 && budgetOk();
+    app.workspace.activate(app.workspace.tabs[0]); // tab 20's pane goes off screen: its DOM rows are drawn at once, so it has a picture for its next show
+    await sleep(100);
+    results.hiddenPanesDrawnByDom = !lastPane.webgl && rowsText(lastPane).length > 0 && all().filter((p) => !onScreen(p)).every((p) => !p.webgl && !screenCanvas(p));
+    // a full cycle: every tab shown once; each switch gives the previous pane's context back at once and the new pane
+    // takes one a few frames later (webglAfterMs); the switch itself is measured synchronously
+    const switchMs = [], webglAfterMs = [];
+    let cycleOk = true;
+    for (let round = 0; round < 2 && cycleOk; round++) for (const t of app.workspace.tabs) {
+      const t0 = performance.now();
+      app.workspace.activate(t);
+      switchMs.push(Math.round((performance.now() - t0) * 10) / 10);
+      const p = t.activePane;
+      await waitFor(() => p.webgl, 1500, 'context after the switch to ' + t.title).catch(() => {});
+      webglAfterMs.push(Math.round(performance.now() - t0));
+      if (!(p.webgl && healthy(p) && budgetOk())) { cycleOk = false; log('budget broken on', t.title, JSON.stringify({ webgl: !!p.webgl, losses: all().map((x) => x.webglLosses), contexts: all().filter((x) => x.webgl).length })); }
+      if (round === 0 && [0, 9, 19].includes(app.workspace.tabs.indexOf(t))) { await sleep(150); await shot(`69d-webgl-cycle-tab${app.workspace.tabs.indexOf(t) + 1}`); }
+    }
+    const sorted = [...switchMs].sort((a, b) => a - b), sortedGl = [...webglAfterMs].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)], worst = sorted[sorted.length - 1];
+    log('tab switch ms with 20 tabs:', JSON.stringify({ median, p90: sorted[Math.floor(sorted.length * 0.9)], worst, all: switchMs }));
+    log('ms until the shown pane draws with WebGL again:', JSON.stringify({ median: sortedGl[Math.floor(sortedGl.length / 2)], worst: sortedGl[sortedGl.length - 1] }));
+    results.cycleNeverLosesAPane = cycleOk && all().every((p) => p.webglLosses === 0);
+    results.switchUnder50ms = median < 50 && sorted[Math.floor(sorted.length * 0.9)] < 50; // median and p90 of 40 switches
+    results.switchWorstUnder100ms = worst < 100;
+    results.webglBackWithin250ms = sortedGl[Math.floor(sortedGl.length * 0.9)] < 250;
+    // typing and resizing work in a re-activated pane (DOM → WebGL → DOM → WebGL)
+    const first = app.workspace.tabs[0], fp = first.activePane;
+    app.workspace.activate(app.workspace.tabs[5]);
+    app.workspace.activate(first);
+    await waitFor(() => fp.webgl, 1500, 'context back on the first tab');
+    fp.term.input('echo WGL_OK_$((40+2))\r');
+    await waitFor(() => /WGL_OK_42/.test(text(fp)), 8000, 'typing after re-activation');
+    const cols0 = fp.term.cols;
+    await window.api.app.testResize(1400, 700);
+    await waitFor(() => fp.term.cols > cols0, 3000, 'resize after re-activation');
+    results.typingAndResizeAfterReactivation = !!fp.webgl && healthy(fp) && fp.term.cols > cols0;
+    await window.api.app.testResize(1100, 700);
+    await sleep(300);
+    // a 2 × 4 grid: 8 contexts on screen; a zoom keeps one (the siblings hand theirs back), the restore brings 8 back;
+    // the grid's panes give everything back while another tab is shown
+    await app.applyLayout('2x4'); // 7 placeholder panes join the shell: each becomes a shell (a placeholder never takes a context)
+    await sleep(200);
+    const grid = first.panes();
+    await Promise.all(grid.filter((p) => p.kind === 'empty').map((p) => p.becomeLocal()));
+    await waitFor(() => grid.every((p) => p.kind === 'local' && p.status === 'connected'), 20000, 'eight shells in the grid');
+    await waitFor(() => grid.every((p) => p.webgl), 2000, 'eight contexts');
+    results.gridEightContexts = grid.length === 8 && grid.every((p) => p.webgl && healthy(p)) && budgetOk();
+    await shot('69e-webgl-grid-2x4');
+    app.focusPane(grid[3], true);
+    app.toggleZoom(grid[3]);
+    await sleep(200);
+    results.zoomKeepsOneContext = first.zoomed === grid[3] && !!grid[3].webgl && grid.filter((p) => p.webgl).length === 1 && budgetOk();
+    await shot('69f-webgl-zoomed');
+    app.toggleZoom(grid[3]);
+    await waitFor(() => grid.every((p) => p.webgl), 2000, 'eight contexts after the restore');
+    results.unzoomRestoresEight = !first.zoomed && grid.every((p) => p.webgl) && budgetOk();
+    app.workspace.activate(app.workspace.tabs[1]);
+    await sleep(100);
+    results.hiddenGridGivesBack = grid.every((p) => !p.webgl && healthy(p)) && all().filter((p) => p.webgl).length <= 1;
+    app.workspace.activate(first);
+    await waitFor(() => grid.every((p) => p.webgl), 2000, 'eight contexts on the return');
+    await sleep(100);
+    results.gridBackOnReturn = grid.every((p) => p.webgl && healthy(p)) && all().every((p) => p.webglLosses === 0);
+    await shot('69g-webgl-grid-back');
+    // a context the GPU takes away (here: WEBGL_lose_context) falls back to the DOM renderer at once — no 3 s wait, the
+    // text is in the DOM rows right away — and the pane gets a context again once it is shown anew
+    const victim = grid[0], ext = glOf(victim) && glOf(victim).getExtension('WEBGL_lose_context');
+    if (ext) {
+      const tLoss = performance.now();
+      ext.loseContext();
+      await waitFor(() => !victim.webgl, 2000, 'fallback after the context loss').catch(() => {});
+      const fallbackMs = Math.round(performance.now() - tLoss);
+      await waitFor(() => rowsText(victim).length > 0, 2000, 'DOM rows after the context loss').catch(() => {});
+      log('context loss → DOM renderer after', fallbackMs, 'ms');
+      results.contextLossFallsBackAtOnce = fallbackMs < 500 && !victim.webgl && victim.webglLost === true && victim.webglLosses === 1 && !screenCanvas(victim) && rowsText(victim).length > 0; // the addon alone would wait 3000 ms
+      await shot('69h-webgl-lost-fallback');
+      app.workspace.activate(app.workspace.tabs[1]);
+      app.workspace.activate(first);
+      await waitFor(() => victim.webgl, 2000, 'context back after the loss').catch(() => {});
+      results.contextBackAfterActivation = !!victim.webgl && !glOf(victim).isContextLost() && !victim.webglLost && victim.webglLosses === 1;
+    } else results.contextLossFallsBackAtOnce = results.contextBackAfterActivation = 'skipped (no WEBGL_lose_context)';
+    for (const t of [...app.workspace.tabs]) await app.closeTab(t);
+    await sleep(200);
+
+    // ---------- 7. pin / unpin from the keyboard keep the focus on the tab; the native Session menu follows the strip ----------
+    const [kA, kB, kC] = [await named('A'), await named('B'), await named('C')];
+    await sleep(200);
+    const viaMenu = async (tab, label) => { // ⇧F10 on the focused tab, ↓ to the item, ⏎
+      tab.tabEl.focus();
+      tab.tabEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'F10', shiftKey: true, bubbles: true }));
+      await sleep(100);
+      const menu = $('#ctx-root .ctx');
+      const items = [...menu.querySelectorAll('.ctx-item')];
+      const idx = items.findIndex((i) => i.textContent.startsWith(label));
+      for (let i = 0; i < idx; i++) menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+      await sleep(30);
+      const onItem = document.activeElement === items[idx];
+      menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      await sleep(250);
+      return onItem;
+    };
+    results.menuPinKeepsFocus = (await viaMenu(kB, 'Pin Tab')) && kB.pinned && document.activeElement === kB.tabEl && order() === 'BAC';
+    results.menuUnpinKeepsFocus = (await viaMenu(kB, 'Unpin Tab')) && !kB.pinned && document.activeElement === kB.tabEl && order() === 'BAC';
+    kB.tabEl.focus();
+    await app.action('pin-tab'); // ⇧⌘P (the Session menu) on the active, focused tab
+    results.shortcutPinKeepsFocus = kB.pinned && document.activeElement === kB.tabEl;
+    await app.action('pin-tab');
+    results.shortcutUnpinKeepsFocus = !kB.pinned && document.activeElement === kB.tabEl;
+    await shot('69i-focus-after-pin');
+    // the Session menu's tab items: enabled like the tab context menu's (B first: nothing to the left; alone: no bulk close; no tab: nothing)
+    const menuState = async () => { await sleep(120); return window.api.app.testMenuState(); };
+    let ms = await menuState();
+    log('menu state (B first of 3):', JSON.stringify(ms));
+    results.menuLeftDisabledOnFirstTab = ms['tab-close-left'] === false && ms['tab-close-right'] === true && ms['tab-close-others'] === true && ms['tab-pin'] === true && ms['tab-detach'] === true && ms['tab-close'] === true;
+    app.workspace.activate(kC);
+    ms = await menuState();
+    results.menuRightDisabledOnLastTab = ms['tab-close-right'] === false && ms['tab-close-left'] === true;
+    app.workspace.setPinned(kA, true); // pinned tabs never count: from C, both tabs to the left are pinned
+    app.workspace.setPinned(kB, true);
+    ms = await menuState();
+    results.menuPinnedNeverCount = ms['tab-close-left'] === false && ms['tab-close-others'] === false;
+    await app.closeTabs([kC]);
+    app.workspace.setPinned(kA, false);
+    app.workspace.setPinned(kB, false);
+    await app.closeTab(kA);
+    ms = await menuState();
+    results.menuAloneNoBulkClose = app.workspace.tabs.length === 1 && ms['tab-close-others'] === false && ms['tab-close-left'] === false && ms['tab-close-right'] === false && ms['tab-close'] === true && ms['tab-pin'] === true;
+    await app.closeTab(kB);
+    ms = await menuState();
+    results.menuNoTabAllDisabled = app.workspace.tabs.length === 0 && ['tab-rename', 'tab-pin', 'tab-detach', 'tab-close', 'tab-close-others', 'tab-close-left', 'tab-close-right'].every((id) => ms[id] === false);
+    await app.newLocalTab();
+    ms = await menuState();
+    results.menuBackWithATab = ms['tab-close'] === true && ms['tab-pin'] === true && ms['tab-detach'] === true && ms['tab-rename'] === true;
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-tabbar] FAIL', e.message, e.stack);

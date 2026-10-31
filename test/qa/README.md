@@ -38,6 +38,8 @@ await window.api.app.testNextDialog({ canceled: false, filePaths: ['/f'] }); // 
 await window.api.app.testWindows();                      // every window: [{ id, main, detached, title, bounds }] (test mode only; a detached tab opens a second one)
 await window.api.app.testEval(id, 'window.app.workspace.tabs.length'); // run code in another window (its own window.app); the resolved value comes back
 await window.api.app.testCloseWindow(id);                // close a window as its close button would (a detached window hands its tabs back first)
+await window.api.app.testMenuState();                    // the native Session menu's tab items as enabled right now: { 'tab-pin': true, 'tab-close-left': false, … } (test mode only)
+pane.webgl; pane.webglLosses; pane.visibleInTab();       // the WebGL budget (terminal.js): the addon while the pane is on screen (null = DOM renderer), context losses so far
 // screenshot() captures the window it is called from: a detached window shoots itself through testEval (see test/e2e-detach.js)
 app.action('new-session' | 'new-local' | 'quick-connect' | 'duplicate' | 'reconnect' | 'disconnect' |
            'rename-tab' | 'close' | 'close-pane' | 'split' | 'split-menu' | 'layout' | 'unsplit' |

@@ -215,6 +215,7 @@ class App {
     tab = tab || this.workspace.active;
     if (!tab || !tab.root) return false;
     const payload = { tabs: [this.serializeTab(tab, true)], activeTab: 0 };
+    this._detaching = true; // a detached window emptied by this must not close before the new window is known to exist
     for (const p of tab.panes()) p.release();
     this.workspace.removeTab(tab);
     if (this.focused && this.focused.disposed) this.focused = null;
@@ -226,7 +227,25 @@ class App {
       toast(`Could not open a window: ${ipcMessage(e)}`, 'error');
       await this.adoptTabs(payload, { quiet: true });
       return false;
+    } finally {
+      this._detaching = false;
+      this._closeWhenEmpty();
     }
+  }
+
+  /**
+   * A detached window whose last tab went (⌘W, Close All, detached again) closes: its reason to exist is gone, and it
+   * has nothing to hand back. The main window keeps its empty state instead — it is the app. Deferred a tick so the
+   * close that emptied the strip finishes first (status bar, MultiExec banner), and never while a detach is in flight.
+   */
+  _closeWhenEmpty() {
+    if (!this.detached || this._closingEmpty || this._emptyCloseTimer) return;
+    this._emptyCloseTimer = setTimeout(() => {
+      this._emptyCloseTimer = null;
+      if (this._detaching || this._closingEmpty || this.workspace.tabs.length) return;
+      this._closingEmpty = true;
+      this.handOverAndClose();
+    }, 0);
   }
 
   /** Tabs handed to this window (its own on open, or the tabs of a detached window that closed): `attach` takes their live terminals over. */
@@ -257,12 +276,17 @@ class App {
     const TERM_KEYS = ['theme', 'fontFamily', 'fontSize', 'lineHeight', 'cursorBlink', 'cursorStyle', 'scrollback', 'macOptionIsMeta'];
     const termChanged = TERM_KEYS.some((k) => JSON.stringify(s[k]) !== JSON.stringify(this.settings[k]));
     const local = this.detached ? { sidebarVisible: this.settings.sidebarVisible, sidebarTab: this.settings.sidebarTab } : {}; // this window's own
+    const same = (k) => JSON.stringify(s[k]) === JSON.stringify(this.settings[k]);
+    const macrosChanged = !same('macros'), wolChanged = !same('wolHistory');
     this.settings = { ...s, ...local };
     this._applyTheme();
     if (termChanged) {
       this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
       if (this._findResearch) this._findResearch();
     }
+    // the panels that list settings follow too: a macro or a Wake-on-LAN address saved in the other window shows up here
+    if (macrosChanged) this.macrosPanel.render();
+    if (wolChanged) this.toolsPanel.renderWolHistory();
   }
 
   // ---------- main-process events ----------
@@ -860,7 +884,39 @@ class App {
     if (this._findResearch) this._findResearch(); // the find counter belongs to the new terminal
     this.updateStatus(tab ? tab.activePane : null);
     if (tab && tab.activePane) this.sftpPanel.setPane(tab.activePane);
+    this.onTabsChanged();
+    if (!tab) this._closeWhenEmpty(); // a detached window with no tab left goes
     this.saveWorkspaceSoon();
+  }
+
+  /**
+   * The strip changed (a tab added, removed, moved, pinned or activated): the native Session menu's tab items follow,
+   * enabled exactly like the tab context menu's (layout.js tabMenu) — nothing to pin, detach or close without a tab,
+   * nothing to the left of the first tab. One IPC per change, coalesced, and only when the state differs.
+   */
+  onTabsChanged() {
+    if (this._menuStateQueued) return;
+    this._menuStateQueued = true;
+    queueMicrotask(() => {
+      this._menuStateQueued = false;
+      const state = this.menuTabState();
+      const key = JSON.stringify(state);
+      if (key === this._menuStateKey) return;
+      this._menuStateKey = key;
+      if (typeof window.api.app.tabState === 'function') window.api.app.tabState(state);
+    });
+  }
+
+  /** What the Session menu needs: is there a tab, is it pinned, and how many tabs each bulk close would take. */
+  menuTabState() {
+    const ws = this.workspace, tab = ws.active;
+    return {
+      tab: !!tab,
+      pinned: !!(tab && tab.pinned),
+      others: tab ? ws.closeTargets(tab, 'others').length : 0,
+      left: tab ? ws.closeTargets(tab, 'left').length : 0,
+      right: tab ? ws.closeTargets(tab, 'right').length : 0,
+    };
   }
 
   /**

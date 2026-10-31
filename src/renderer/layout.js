@@ -270,8 +270,15 @@ export class Workspace {
     idx = Math.max(0, Math.min(idx, this.tabs.length));
     this.tabs.splice(idx, 0, tab);
     const next = this.tabs[idx + 1];
+    // re-inserting the element blurs it: a tab moved from the keyboard (⇧⌘P, the ⇧F10 menu's Pin / Unpin) keeps the focus
+    const hadFocus = document.activeElement === tab.tabEl;
     if (next && next.tabEl) next.tabEl.before(tab.tabEl);
     else this.tabsEl.append(tab.tabEl);
+    if (hadFocus) {
+      tab.tabEl.focus({ preventScroll: true });
+      this.revealTab(tab);
+    }
+    this.app.onTabsChanged?.(); // the native Session menu follows the strip (Close Tabs to the Left / Right)
     this.app.saveWorkspaceSoon?.();
     return idx;
   }
@@ -295,6 +302,7 @@ export class Workspace {
     if (order.every((t, i) => t === this.tabs[i])) return;
     this.tabs = order;
     for (const t of order) this.tabsEl.append(t.tabEl); // append moves an existing child: the DOM follows the array
+    this.app.onTabsChanged?.();
   }
 
   /**
@@ -496,6 +504,7 @@ export class Workspace {
       if (next) this.activate(next);
       else this.app.onActiveTabChanged(null);
     }
+    this.app.onTabsChanged?.();
     this.app.saveWorkspaceSoon?.();
   }
 

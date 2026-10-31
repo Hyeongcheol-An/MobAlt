@@ -86,6 +86,9 @@ contextBridge.exposeInMainWorld('api', {
     testFirstFrames: () => firstFrames.slice(),
     // the key of a detached window (null in the main window)
     detachedKey: () => detachedKey,
+    // this window's tab state ({ tab, pinned, others, left, right }, app.js menuTabState): the Session menu's items follow it
+    tabState: (state) => send('tabs:state', state),
+    testMenuState: () => invoke('test:menu-state'), // test mode: the Session menu's tab items, { id: enabled }
     // test mode: every window ({ id, main, detached, title, bounds }), run code in one of them, close one
     testWindows: () => invoke('test:windows'),
     testEval: (id, code) => invoke('test:eval', id, code),
