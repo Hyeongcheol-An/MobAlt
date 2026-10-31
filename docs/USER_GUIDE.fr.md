@@ -1,6 +1,6 @@
 # Guide de l'utilisateur de MobAlt
 
-This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md)
+Ce guide en : [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
 
 MobAlt est un poste de travail à la manière de MobaXterm pour macOS : une arborescence de sessions à gauche, des
 terminaux en onglets et en volets au centre, et un navigateur SFTP, des outils réseau et des macros dans les panneaux latéraux.
@@ -34,7 +34,7 @@ téléchargé ni installé sans votre confirmation. Voir [Mises à jour](#mises-
 Trois chemins mènent à une nouvelle version ; tous aboutissent au nouveau paquet dans `/Applications/MobAlt.app` :
 
 - **Mise à jour intégrée** : MobAlt consulte les GitHub Releases au démarrage (à désactiver dans Réglages → Mises à jour), et
-  Aide (Help) → Rechercher les mises à jour… ou « Vérifier » dans Réglages → Mises à jour lance la vérification à la main. Une
+  Aide → Rechercher les mises à jour… ou « Vérifier » dans Réglages → Mises à jour lance la vérification à la main. Une
   version plus récente est proposée dans un dialogue, téléchargée seulement si vous le décidez et installée quand vous quittez, ou
   tout de suite avec « Redémarrer ».
 - **Homebrew** : `brew upgrade --cask mobalt` remplace l'app dans Applications.
@@ -70,7 +70,7 @@ et remplissez l'onglet Base. Double-cliquez sur une session pour vous connecter�
 | Mosh | Terminal itinérant via le client `mosh` (amorcé par SSH) |
 | Local | Votre shell de connexion macOS (zsh/bash) avec suivi du dossier |
 | Telnet | Telnet classique avec négociation NAWS/TTYPE |
-| Serial | Console série USB (débit, trame, contrôle de flux, écho local) |
+| Série | Console série USB (débit, trame, contrôle de flux, écho local) |
 | FTP | Navigateur de fichiers FTP / FTPS (TLS explicite) dans le panneau Sftp |
 | RDP / VNC | Délègue à Windows App ou au Partage d'écran de macOS |
 
@@ -126,7 +126,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   dont les vieux équipements ont encore besoin. Seules les listes qui diffèrent des valeurs par défaut sont enregistrées.
 - **Hôtes de rebond** : SSH avancé → Hôte de rebond choisit une autre session enregistrée comme bastion (ProxyJump).
 - **En cas d'échec** : le terminal affiche ce qui s'est passé, par exemple
-  `échec de l'authentification — le serveur accepte : publickey ; essayé : ~/.ssh/id_ed25519`, ou indique que
+  `échec de l'authentification — le serveur accepte : publickey ; essayé : ~/.ssh/id_ed25519`, ou indique que
   rien n'a répondu sur le port. Voir [Dépannage](#dépannage).
 
 ## Terminal
@@ -196,9 +196,9 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   Seules les lignes nouvellement écrites sont analysées (les apps plein écran comme vim ne sont pas touchées) ; au plus 2 000 correspondances
   restent décorées par terminal — lors d'une longue rafale, les lignes les plus anciennes redeviennent brutes en premier — et ⌘K les efface toutes.
 - **Zmodem (rz/sz)** : transférez des fichiers par le terminal lui-même, à l'ancienne, via une console série ou un hôte de rebond
-  où SFTP n'est pas disponible. Lancez `sz fichier …` sur l'hôte distant pour télécharger vers le Mac, ou `rz` pour y envoyer depuis le Mac ; MobAlt
+  où SFTP n'est pas disponible. Lancez `sz file …` sur l'hôte distant pour télécharger vers le Mac, ou `rz` pour y envoyer depuis le Mac ; MobAlt
   repère le transfert dans le flux, met le terminal en pause et l'affiche dans la liste des transferts du panneau Sftp (avec Annuler)
-  et dans le compteur de la barre d'état. Les téléchargements vont dans le dossier Téléchargements (Réglages → Général), ou dans un dossier que vous choisissez s'il
+  et dans le compteur de la barre d'état. Les téléchargements vont dans le dossier de téléchargement (Réglages → Général → Dossier de téléchargement), ou dans un dossier que vous choisissez s'il
   n'est pas défini ; les envois ouvrent un sélecteur de fichiers. Fonctionne dans les volets SSH, locaux, telnet et série — pas Mosh (son flux est celui du
   client mosh, pas un flux d'octets brut). Désactivez-le avec Réglages → Fonctions → Transferts → *Transferts Zmodem (rz/sz)* (activé par défaut) ;
   désactivé, les octets de `rz`/`sz` s'affichent simplement comme des caractères parasites, comme avant. Ctrl-C dans le volet ou Annuler dans la liste
@@ -311,7 +311,7 @@ MobAlt restaure vos onglets, divisions et sessions (les onglets détachés dans 
 
 Les Réglages comptent cinq onglets, chacun tenant dans la plus petite fenêtre sans défilement : **Général**
 (la langue de l'interface, la confirmation à la fermeture, le passage au panneau SFTP, la restauration de l'espace de travail, le shell local et son intégration
-de dossier, l'éditeur externe, le dossier Téléchargements, le keep-alive SSH, et « Ouvrir le dossier de config. »,
+de dossier, l'éditeur externe, le dossier de téléchargement, le keep-alive SSH, et « Ouvrir le dossier de configuration »,
 qui montre où tout est stocké), **Terminal** (police, hauteur de ligne, curseur, historique, thème — l'apparence de toute la
 fenêtre, voir *Thèmes et apparence* — souris/touches, et ce que fait *Annuler la division* des autres volets d'un onglet divisé : les déplacer
 dans leurs propres onglets, les fermer, ou demander à chaque fois), **Fonctions** (le garde-collage, la barre de surveillance distante et son intervalle
@@ -320,16 +320,17 @@ et « Vérifier »).
 
 ### Langue de l'interface
 
-Les menus, la barre d'outils, les panneaux, les dialogues et les messages de MobAlt existent en dix langues : English, 한국어, 简体中文, 日本語,
-Tiếng Việt, हिन्दी, Deutsch, Français, Español et Português. Par défaut (**Langue du système**), l'interface suit
+Les menus, la barre d'outils, les panneaux, les dialogues et les messages de MobAlt existent en onze langues : English, 한국어, 简体中文, 日本語,
+Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português et العربية (en arabe, la fenêtre est inversée : barre latérale à droite,
+texte aligné à droite ; les terminaux restent de gauche à droite). Par défaut (**Langue du système**), l'interface suit
 la liste des langues de macOS (Réglages Système → Général → Langue et région) : la première langue de cette liste que
 MobAlt propose l'emporte, l'anglais si aucune ne convient. Réglages → Général → **Langue** en impose une ; le changement
 s'applique immédiatement dans toutes les fenêtres — rien ne redémarre, les connexions restent ouvertes — et il est mémorisé. La sortie des terminaux n'est jamais
-traduite : ce qu'affiche un hôte distant est montré tel quel. Le guide de l'utilisateur existe dans les mêmes dix langues
-(`docs/USER_GUIDE.<language>.md`) ; Aide (Help) → **Guide de l'utilisateur** ouvre celui de la langue actuelle.
+traduite : ce qu'affiche un hôte distant est montré tel quel. Le guide de l'utilisateur existe dans les mêmes onze langues
+(`docs/USER_GUIDE.<language>.md`) ; Aide → **Guide de l'utilisateur** ouvre celui de la langue actuelle.
 
 Pour lancer MobAlt une seule fois dans une langue sans modifier le réglage (captures d'écran, test), démarrez-le avec `MOBALT_LANG=<code>`
-dans l'environnement (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
+dans l'environnement (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
 
 ## Raccourcis clavier
 
@@ -360,7 +361,7 @@ dans l'environnement (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `
 | Choix d'icône et de couleur dans l'éditeur de session : déplacer / choisir | ← → ↑ ↓ / ⏎ ou Espace |
 | Boutons de panneau de la bande latérale / ⌘1-4 | ⏎ fait entrer le clavier dans le panneau ; changer de panneau mémorise la position |
 
-Aide (Help) → Raccourcis clavier affiche la même liste dans l'app. Tab atteint la barre d'outils, la bande
+Aide → Raccourcis clavier affiche la même liste dans l'app. Tab atteint la barre d'outils, la bande
 latérale, l'arborescence des sessions, la liste des macros, la liste SFTP et la barre d'onglets (chaque liste est un seul arrêt de
 Tab ; les flèches se déplacent à l'intérieur) ; les dialogues gardent Tab en leur sein et rendent le focus à l'onglet,
 à la ligne ou au bouton qui les a ouverts quand ils se ferment ; les menus contextuels acceptent ↑ ↓ / ⏎ / Échap. Échap dans le
