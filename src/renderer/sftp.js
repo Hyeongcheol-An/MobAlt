@@ -499,7 +499,7 @@ export class SftpPanel {
       row = cur && this.rowFor(cur.name);
     }
     const r = (row || this.els.list).getBoundingClientRect();
-    this.menu(r.left + 24, row ? r.bottom : r.top + 30, cur);
+    this.menu(document.documentElement.dir === 'rtl' ? r.right - 24 : r.left + 24, row ? r.bottom : r.top + 30, cur); // from the start edge
   }
 
   async open(e) {

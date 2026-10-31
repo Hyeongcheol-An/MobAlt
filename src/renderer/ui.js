@@ -171,6 +171,12 @@ export const TYPE_LABEL = new Proxy({}, {
   getOwnPropertyDescriptor: (_, k) => (TYPE_SRC[k] ? { enumerable: true, configurable: true, value: TYPE_SRC[k]() } : undefined),
 });
 
+// ---------- direction ----------
+/** True while the interface is right to left (<html dir="rtl">, Arabic): menus open towards the left of the pointer. */
+export function isRtl() {
+  return document.documentElement.dir === 'rtl';
+}
+
 // ---------- context menu ----------
 let ctxOpen = null;
 let ctxOpener = null; // element that had focus when the menu opened; focus goes back to it on close
@@ -207,7 +213,10 @@ export function contextMenu(x, y, items) {
   ctxOpen = menu;
   ctxOpener = document.activeElement;
   const r = menu.getBoundingClientRect();
-  menu.style.left = Math.min(x, window.innerWidth - r.width - 6) + 'px';
+  // left to right: the menu opens to the right of x; right to left: to its left (x is its right edge). Either way it
+  // stays inside the window, 6px from each edge, when it fits at all.
+  const left = isRtl() ? x - r.width : x;
+  menu.style.left = Math.max(6, Math.min(left, window.innerWidth - r.width - 6)) + 'px';
   menu.style.top = Math.max(6, Math.min(y, window.innerHeight - r.height - 6)) + 'px'; // a menu taller than the window keeps its first items reachable
   // keyboard: ↑/↓ cycle through enabled items, Home/End, Enter/Space activate, Esc (global) / Tab close
   const enabled = () => [...menu.querySelectorAll('.ctx-item:not(.disabled)')];
@@ -418,7 +427,7 @@ export function plural(n, word, words = word + 's') {
 }
 
 // ---------- toast ----------
-/** A notice in the bottom-right stack; #toast-root is a polite live region (role=status), an error toast is an alert of its own. */
+/** A notice in the bottom-right stack (bottom-left in a right-to-left interface: #toast-root sits at inset-inline-end); #toast-root is a polite live region (role=status), an error toast is an alert of its own. */
 export function toast(message, type = 'info', ms = 3500) {
   const root = $('#toast-root');
   // identical message already showing: restart its timer instead of stacking copies

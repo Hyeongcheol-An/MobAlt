@@ -338,8 +338,9 @@ export class SessionTree {
       case 'F10': case 'ContextMenu': { // ⇧F10 and the Menu key open the row's context menu
         if (e.key === 'F10' && !e.shiftKey) return;
         const r = row.getBoundingClientRect();
-        if (f) this.folderMenu(r.left + 24, r.bottom, f);
-        else { this.select(s.id); this.sessionMenu(r.left + 24, r.bottom, s); }
+        const x = document.documentElement.dir === 'rtl' ? r.right - 24 : r.left + 24; // the row's start edge (right to left: its right)
+        if (f) this.folderMenu(x, r.bottom, f);
+        else { this.select(s.id); this.sessionMenu(x, r.bottom, s); }
         break;
       }
       default: {

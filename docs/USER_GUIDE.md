@@ -329,6 +329,20 @@ applies at once in every window — nothing restarts, connections stay up — an
 translated: what a remote host prints is shown as it is. The user guide exists in the same eleven languages
 (`docs/USER_GUIDE.<language>.md`); Help → **User Guide** opens the one for the current language.
 
+In Arabic the whole window reads right to left: the side strip and the sidebar move to the right edge and the
+terminals to the left, the sidebar's ‹ hide button points the other way, the toolbar, the tab strip (the first tab at
+the right, its ‹ › scroll buttons swapped), the status bar, panel headers, pane heads and the monitoring bar mirror,
+dialogs put their labels on the right and ✕ on the left, menus open towards the left of the pointer and toasts stack
+at the bottom left. What stays left to right: the terminals themselves, and every field or label that holds a host, a
+port, a path, a command, a pattern, a MAC or CIDR, a key or a shortcut (quick connect, the SFTP path, the find box,
+the Tools panel's boxes, the status bar's folder and user@host, key chips, fingerprints, the key generator's public
+key, the paste-guard preview); a session, tab or folder name follows its own first letter, so an Arabic name reads
+right to left and `user@host` left to right, and a path or host name quoted inside a message keeps its own order.
+Splits keep their physical sense — "Split Right" still opens the new pane on the right, and a session dropped on a
+pane's right edge lands there. The arrow keys follow the order of things, not the screen: → moves to the next tab,
+pick or row (which is the one on its left in Arabic) and ← to the previous one, and in the session tree → opens a
+folder and ← closes it, as in English.
+
 To run MobAlt in a language once without changing the setting (screenshots, a test), start it with `MOBALT_LANG=<code>`
 in the environment (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
 

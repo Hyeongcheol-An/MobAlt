@@ -394,7 +394,7 @@ export class MacrosPanel {
       case 'F10': case 'ContextMenu': {
         if (e.key === 'F10' && !e.shiftKey) return;
         const r = row.getBoundingClientRect();
-        this.rowMenu(m, r.left + 24, r.bottom);
+        this.rowMenu(m, document.documentElement.dir === 'rtl' ? r.right - 24 : r.left + 24, r.bottom); // from the row's start edge
         break;
       }
       default: return;

@@ -4824,11 +4824,13 @@
     },
     "Scroll tabs left": {
       "refs": [
+        "src/renderer/layout.js",
         "src/renderer/index.html"
       ]
     },
     "Scroll tabs right": {
       "refs": [
+        "src/renderer/layout.js",
         "src/renderer/index.html"
       ]
     },
