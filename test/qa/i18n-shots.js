@@ -25,7 +25,8 @@
       const scroller = el.closest('.modal-body');
       const inScroller = scroller && scroller.scrollHeight > scroller.clientHeight + 1 && getComputedStyle(scroller).overflowY !== 'visible';
       const outside = !inScroller && (r.right > window.innerWidth + 1 || r.bottom > window.innerHeight + 1);
-      if (clipped || outside) overflows.push(`${view}: <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : ''}> "${(el.textContent || '').trim().slice(0, 60)}" scroll=${el.scrollWidth} client=${el.clientWidth}${outside ? ' OUTSIDE WINDOW' : ''}`);
+      const wrapped = el.tagName === 'BUTTON' && el.getBoundingClientRect().height > parseFloat(cs.fontSize) * 2.4 && !el.classList.contains('pick') && !el.closest('.type-picker');
+      if (clipped || outside || wrapped) overflows.push(`${view}: <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : ''}> "${(el.textContent || '').trim().slice(0, 60)}" scroll=${el.scrollWidth} client=${el.clientWidth}${outside ? ' OUTSIDE WINDOW' : ''}${wrapped ? ' WRAPPED BUTTON' : ''}`);
       if (nonLatin) {
         const text = (el.textContent || '').trim();
         if (/[A-Za-z]{2,}\s+[A-Za-z]{2,}/.test(text) && !KEEP.test(text) && !el.closest('.xterm')) latin.add(`${view}: "${text.slice(0, 80)}"`);
@@ -80,7 +81,7 @@
     const tree = document.querySelector('#session-tree');
     if (tree) { tree.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 200 })); await sleep(250); check('tree-menu'); await shot('52-tree-menu'); document.body.click(); await sleep(150); }
     const pane = app.activePane && app.activePane();
-    if (pane && pane.el) { pane.el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 500, clientY: 300, shiftKey: true })); await sleep(250); check('pane-menu'); await shot('53-pane-menu'); document.body.click(); await sleep(150); }
+    if (pane && pane.termEl) { pane.termEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 500, clientY: 300, shiftKey: true })); await sleep(250); check('pane-menu'); await shot('53-pane-menu'); document.body.click(); await sleep(150); }
     // split + multiexec banner + find bar
     app.applyLayout('2x2'); await sleep(600); app.action('multiexec'); await sleep(200); app.action('find'); await sleep(200);
     check('split-multiexec-find'); await shot('60-split-multiexec-find');

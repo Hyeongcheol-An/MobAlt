@@ -1,6 +1,11 @@
 {
   "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
   "strings": {
+    ", ": {
+      "refs": [
+        "src/main/live.js"
+      ]
+    },
     ", skipped {n}: {reasons}": {
       "refs": [
         "src/renderer/app.js"
@@ -300,8 +305,14 @@
         "src/renderer/panels.js"
       ]
     },
-    "{n} connection is still open ({kinds}). {verb} anyway?": {
-      "plural": "{n} connections are still open ({kinds}). {verb} anyway?",
+    "{n} connection is still open ({kinds}). Quit anyway?": {
+      "plural": "{n} connections are still open ({kinds}). Quit anyway?",
+      "refs": [
+        "src/main/live.js"
+      ]
+    },
+    "{n} connection is still open ({kinds}). Relaunch anyway?": {
+      "plural": "{n} connections are still open ({kinds}). Relaunch anyway?",
       "refs": [
         "src/main/live.js"
       ]
@@ -4533,7 +4544,6 @@
     },
     "Quit": {
       "refs": [
-        "src/main/live.js",
         "src/main/main.js"
       ]
     },

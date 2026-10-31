@@ -1218,7 +1218,8 @@ class App {
     const mine = all.filter((x) => ids.includes(x.id));
     const failed = mine.filter((x) => x.status === 'error');
     const ok = mine.length - failed.length;
-    if (failed.length) toast(tn('{failed} of {n} tunnel failed for {title}: {list}', '{failed} of {n} tunnels failed for {title}: {list}', mine.length, { failed: failed.length, title: pane.title, list: failed.map((x) => `${x.bindPort} (${x.error || t('error')})`).join('; ') }), 'error', 7000);
+    if (failed.length) toast(tn('{failed} of {n} tunnel failed for {title}: {list}', '{failed} of {n} tunnels failed for {title}: {list}', failed.length, // the plural form follows how many failed (the verb agrees with that)
+       { failed: failed.length, title: pane.title, list: failed.map((x) => `${x.bindPort} (${x.error || t('error')})`).join('; ') }), 'error', 7000);
     if (ok) toast(tn('{n} tunnel started for {title}', '{n} tunnels started for {title}', ok, { title: pane.title }), 'success');
   }
 
