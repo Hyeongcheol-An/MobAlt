@@ -106,6 +106,7 @@ const DEFAULT_SETTINGS = {
   macros: [],
   tunnels: [],
   windowBounds: null,
+  chrome: null, // { background, scheme } of the applied theme's chrome palette: the window and the native theme start in it (main.js)
   recentSessions: [],
 };
 

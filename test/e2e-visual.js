@@ -1,7 +1,8 @@
-// Renderer-side visual-consistency checks: one icon style, token radii/heights, narrow sidebar, FTP panel, DNS output.
+// Renderer-side visual-consistency checks: one icon style, token radii/heights, the global theme, narrow sidebar, FTP panel, DNS output.
 //   python3 test/ftpd.py <root> 2121 demo demo &          # for the FTP checks (pyftpdlib); another port: replace __FTP_PORT__ below
-//   test/qa/run.sh test/e2e-visual.js <out-dir>
-// Screenshots: toolbar + sidebar panels, a dialog and the find bar in moba-dark and light, plus a 180px sidebar.
+//   test/qa/run.sh test/e2e-visual.js <out-dir> 150000
+// Screenshots: toolbar + sidebar panels, a dialog and the find bar in moba-dark and light; for every theme the main window,
+// the session editor, Settings, a context menu, the toasts and the banners at 1400×900 (80-…85-<theme>); a 180px sidebar.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -87,9 +88,9 @@
       app.showPanel('macros'); await sleep(150);
       await shot(`63-macros-${theme}`);
       app.action('find'); await sleep(150);
-      // the match highlight follows the palette: readable under the theme's text (the light theme used to get the dark grey)
+      // the match and active-match highlights follow the palette: readable under the theme's text (no fixed grey / yellow any more)
       const deco = app.findDecorations(), pal = app.activePane().themeFor();
-      results[`findMatchReadable-${theme}`] = ratio(parseColor(deco.matchBackground), parseColor(pal.foreground)) >= 4.5 && (theme === 'light' ? deco.matchBackground !== '#515c6a' : deco.matchBackground === '#515c6a');
+      results[`findMatchReadable-${theme}`] = ratio(parseColor(deco.matchBackground), parseColor(pal.foreground)) >= 4.5 && ratio(parseColor(deco.activeMatchBackground), parseColor(pal.foreground)) >= 4.5 && deco.matchBackground !== '#515c6a';
       const fi = document.getElementById('find-input');
       fi.value = 'needle'; fi.dispatchEvent(new Event('input', { bubbles: true }));
       await sleep(300);
@@ -110,6 +111,92 @@
     await app.closePane(app.activePane(), true);
     await app.saveSettings({ theme: 'moba-dark' });
     await sleep(200);
+
+    // --- 3b. global theme: every theme recolours the whole window (toolbar, sidebar, tabs, status bar, dialogs, menus,
+    //         toasts, banners, cards). Per theme at 1400×900: screenshots of each surface, the window colour and
+    //         color-scheme the theme asks for (page and main process), and 4.5:1 text everywhere in the chrome.
+    const { THEMES, chromePalette } = await import('./theme.js');
+    const ui = await import('./ui.js');
+    const sel = (s) => document.querySelector(s);
+    const rgbOf = (hex) => { const c = parseColor(hex); return `rgb(${c.r}, ${c.g}, ${c.b})`; };
+    const rowOf = (name) => app.sessionTree.visibleRows().find((r) => r.querySelector('.label')?.textContent === name);
+    await window.api.app.testResize(1400, 900);
+    await app.newLocalTab();                                   // a second tab: an inactive tab label to measure
+    await sleep(400);
+    await app.action('split', 'right');                        // split terminals; the new pane shows the empty-pane card
+    await sleep(300);
+    app.sessionTree.reveal(app.sessions.sessions.find((s) => s.name === 'web-01')); // a selected row
+    const chromeBgs = new Map();
+    let updNo = 0;
+    for (const theme of Object.keys(THEMES)) {
+      await app.saveSettings({ theme });
+      await sleep(250);
+      const pal = chromePalette(THEMES[theme], theme), root = document.documentElement;
+      chromeBgs.set(theme, px(document.body, 'backgroundColor'));
+      const chrome = await window.api.app.testChrome();
+      results[`chromeApplied-${theme}`] = px(root, 'colorScheme') === pal.scheme && root.dataset.theme === theme && px(document.body, 'backgroundColor') === rgbOf(pal.bg)
+        && !!chrome && chrome.scheme === pal.scheme && String(chrome.background).toLowerCase() === pal.bg && chrome.stored && chrome.stored.background === pal.bg;
+      app.showPanel('sessions');
+      await sleep(100);
+      const checks = []; // [what, ratio|null]: measured while the element is on screen (menus, toasts and dialogs are gone later)
+      const measure = (pairs) => pairs.forEach(([what, el]) => checks.push([what, el ? contrastOf(el) : null]));
+      measure([
+        ['toolbar label', sel('#toolbar .tb-btn')], ['brand', sel('.brand')], ['quick connect', sel('#qc-input')], ['strip button', sel('.strip-btn span')],
+        ['sidebar row', rowOf('db-01')?.querySelector('.label')], ['sidebar row sub', rowOf('db-01')?.querySelector('.sub')],
+        ['selected row', sel('.tree-row.selected .label')], ['selected row sub', sel('.tree-row.selected .sub')],
+        ['active tab', sel('.tab.active .title')], ['inactive tab', sel('.tab:not(.active) .title')],
+        ['status bar', sel('#st-session')], ['status cwd', sel('#st-cwd')], ['status version', sel('#st-version')],
+        ['placeholder card', sel('.pane-placeholder .big')], ['placeholder hint', sel('.pane-placeholder .hint')], ['footer link', sel('.panel-foot .link-btn')],
+      ]);
+      await shot(`80-${theme}-main`);
+      app.editSession(app.sessions.sessions.find((s) => s.name === 'web-01'));
+      await sleep(400);
+      measure([['dialog title', sel('.modal .modal-title')], ['dialog label', sel('.modal .form-grid label')], ['dialog input', sel('.modal .form-grid input[type=text]')],
+        ['dialog select', sel('.modal .form-grid select')], ['dialog help', sel('.modal .form-help')], ['dialog tab', sel('.modal .mtabs button:not(.active)')],
+        ['dialog tab active', sel('.modal .mtabs button.active')], ['dialog button', sel('.modal .modal-foot .btn:not(.primary)')], ['primary button', sel('.modal .modal-foot .btn.primary')]]);
+      await shot(`81-${theme}-editor`);
+      closeModal();
+      await sleep(200);
+      app.action('settings');
+      await sleep(400);
+      measure([['settings label', sel('.modal .form-grid label')], ['settings check label', sel('.modal .checks label')], ['settings small button', sel('.modal .btn.small')]]);
+      const prev = sel('.modal .theme-preview'); // the preview is painted in the theme's own terminal colours, whatever the chrome
+      results[`themePreviewOwnColours-${theme}`] = !!prev && px(prev, 'backgroundColor') === rgbOf(THEMES[theme].background) && px(prev, 'color') === rgbOf(THEMES[theme].foreground);
+      await shot(`82-${theme}-settings`);
+      closeModal();
+      await sleep(200);
+      const row = rowOf('db-01'), rr = row.getBoundingClientRect();
+      row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rr.left + 60, clientY: rr.top + 12 }));
+      await sleep(150);
+      measure([['menu item', sel('.ctx .ctx-item')], ['menu key', sel('.ctx .ctx-item .k')], ['menu danger item', sel('.ctx .ctx-item[style]')]]); // (the hovered item's colours: unit test)
+      await shot(`83-${theme}-menu`);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(100);
+      for (const type of ['info', 'success', 'warn', 'error']) ui.toast(`${type} toast: ${theme}`, type, 60000);
+      await sleep(200);
+      measure([...document.querySelectorAll('.toast')].map((t) => [`toast ${t.className.split(' ')[1]}`, t]));
+      await shot(`84-${theme}-toasts`);
+      document.querySelectorAll('.toast').forEach((t) => { clearTimeout(t._timer); t.remove(); });
+      await window.api.app.testBundleUpdated(`0.13.${updNo++}`);
+      await sleep(200);
+      app.action('multiexec');
+      await sleep(200);
+      measure([['multiexec banner', sel('#multiexec-banner')], ['update banner', sel('#update-banner-text')], ['update banner bold', sel('#update-banner b')], ['update later', sel('#update-later')], ['update relaunch', sel('#update-relaunch')]]);
+      await shot(`85-${theme}-banners`);
+      app.action('multiexec');
+      app.showUpdateBanner(false);
+      await sleep(100);
+      document.querySelectorAll('.toast').forEach((t) => { clearTimeout(t._timer); t.remove(); }); // the MultiExec ON/OFF toasts
+      const low = checks.filter(([, r]) => r !== null && r < 4.5), missing = checks.filter(([, r]) => r === null).map(([what]) => what);
+      results[`chromeContrast-${theme}`] = low.length === 0 && missing.length === 0;
+      log(theme, 'chrome', pal.bg, pal.scheme, '| measured', checks.length - missing.length, '| below 4.5:1:', low.length ? JSON.stringify(low) : 'none', missing.length ? '| missing: ' + missing.join(', ') : '');
+    }
+    results.chromeDistinct = new Set(chromeBgs.values()).size === Object.keys(THEMES).length;
+    log('chrome backgrounds:', JSON.stringify([...chromeBgs]));
+    await app.closePane(app.activePane(), true);               // the empty pane (the second tab stays)
+    await app.saveSettings({ theme: 'moba-dark' });
+    await window.api.app.testResize(1200, 760);
+    await sleep(300);
 
     // --- 4. DNS: explicit "(no MX records)" / "(no TXT records)" for a name, PTR message for an IP
     app.showPanel('tools');

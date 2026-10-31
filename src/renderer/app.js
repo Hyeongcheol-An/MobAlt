@@ -1,6 +1,7 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
 import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons } from './ui.js';
 import { TermPane, THEMES, searchDecorations } from './terminal.js';
+import { chromePalette, cssVars } from './theme.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
@@ -32,7 +33,7 @@ class App {
   async init() {
     applyIcons(); // static toolbar / panel buttons carry data-icon hooks
     [this.settings, this.sessions, this.info] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info()]);
-    this._applyThemeVar();
+    this._applyTheme();
     document.documentElement.style.setProperty('--sidebar-w', (this.settings.sidebarWidth || 280) + 'px');
     this.workspace = new Workspace(this);
     this.sessionTree = new SessionTree(this);
@@ -913,16 +914,33 @@ class App {
 
   async saveSettings(patch, quiet = false) {
     this.settings = await window.api.settings.set(patch);
-    this._applyThemeVar();
+    this._applyTheme();
     if (!quiet) this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
     if (!quiet && this._findResearch) this._findResearch(); // open find highlights take the new theme's colours
   }
 
-  /** The active tab and the content area take the terminal theme's background. */
-  _applyThemeVar() {
-    const t = THEMES[this.settings.theme] || THEMES['moba-dark'];
-    document.documentElement.style.setProperty('--term-bg', t.background || '#1e1e1e');
-    document.documentElement.style.setProperty('--term-fg', t.foreground || '#ececec'); // empty-state text stays readable on light themes
+  /**
+   * The selected theme colours the whole program: its chrome palette (theme.js) goes on <html> as the CSS custom
+   * properties styles.css reads, `color-scheme` makes the native widgets (selects, checkboxes, scrollbars) follow,
+   * and the main process gets the window background so the title-bar strip matches (and the next launch starts in
+   * it). The active tab, the content area and the empty-state cards take the terminal theme's own colours
+   * (`--term-bg/--term-fg`); a session's own theme stays with its pane (TermPane.applyTheme).
+   */
+  _applyTheme() {
+    const name = THEMES[this.settings.theme] ? this.settings.theme : 'moba-dark';
+    const t = THEMES[name], palette = chromePalette(t, name);
+    const root = document.documentElement;
+    for (const [k, v] of Object.entries(cssVars(palette))) root.style.setProperty(k, v);
+    root.style.setProperty('--term-bg', t.background || '#1e1e1e');
+    root.style.setProperty('--term-fg', t.foreground || '#ececec'); // empty-state text stays readable on light themes
+    root.style.colorScheme = palette.scheme;
+    root.dataset.theme = name;
+    root.dataset.scheme = palette.scheme;
+    this.palette = palette;
+    const chrome = { background: palette.bg, scheme: palette.scheme };
+    if (this._chrome && this._chrome.background === chrome.background && this._chrome.scheme === chrome.scheme) return;
+    this._chrome = chrome;
+    window.api.app.chrome(chrome);
   }
 
   // ---------- actions ----------
