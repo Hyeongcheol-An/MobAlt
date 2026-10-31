@@ -604,13 +604,55 @@ function registerIpc() {
   // rings on programmatic focus the way it does once a user has touched the keyboard. :focus only
   // matches in the active window and macOS will not let a test steal activation, so the page is told
   // to behave as focused (what headless browsers do) instead.
-  ipcMain.handle('test:key', async (_e, keyCode) => {
+  // A bare key name presses that key in the main window. An object { keyCode, modifiers, char, windowId } presses it
+  // with modifiers (['shift'], ['alt'], ['control'], …) in that window (BrowserWindow id from test:windows; the main one
+  // by default), and with `char` also sends the character event a real press produces — the browser's keypress — so
+  // that what the page sees is what a user's key gives it: { keyCode: 'Enter', modifiers: ['shift'], char: '\r' }.
+  ipcMain.handle('test:key', async (_e, key) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
-    const dbg = win.webContents.debugger;
+    const o = key && typeof key === 'object' ? key : { keyCode: key };
+    const w = (o.windowId && BrowserWindow.fromId(o.windowId)) || win;
+    if (!w || w.isDestroyed()) throw new Error(`no window ${o.windowId}`);
+    const dbg = w.webContents.debugger;
     if (!dbg.isAttached()) dbg.attach('1.3');
     await dbg.sendCommand('Emulation.setFocusEmulationEnabled', { enabled: true });
-    win.webContents.sendInputEvent({ type: 'keyDown', keyCode });
-    win.webContents.sendInputEvent({ type: 'keyUp', keyCode });
+    const modifiers = Array.isArray(o.modifiers) ? o.modifiers : [];
+    w.webContents.sendInputEvent({ type: 'keyDown', keyCode: o.keyCode, modifiers });
+    if (o.char) w.webContents.sendInputEvent({ type: 'char', keyCode: o.char, modifiers });
+    w.webContents.sendInputEvent({ type: 'keyUp', keyCode: o.keyCode, modifiers });
+    return true;
+  });
+  // Test-only: a paste as Edit → Paste does it (webContents.paste(): the focused element gets a `paste` event with the
+  // real clipboard, text or image), in the main window or the one named by id.
+  ipcMain.handle('test:paste', (_e, windowId) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const w = (windowId && BrowserWindow.fromId(windowId)) || win;
+    if (!w || w.isDestroyed()) throw new Error(`no window ${windowId}`);
+    w.webContents.paste();
+    return true;
+  });
+  // Test-only: a PNG (a data: URL) on the clipboard, with `text` beside it or nothing else — what a screenshot or
+  // Copy Image leaves there — for the image-paste checks.
+  ipcMain.handle('test:clipboard-png', async (_e, dataUrl, text) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const { ClipboardItem } = require('electron');
+    const buf = Buffer.from(String(dataUrl).replace(/^data:image\/png;base64,/, ''), 'base64');
+    const entry = { 'image/png': new Blob([buf], { type: 'image/png' }) };
+    if (typeof text === 'string' && text) entry['text/plain'] = text;
+    await clipboard.write([new ClipboardItem(entry)]);
+    return true;
+  });
+  // Test-only: files dropped at a point of the window as Finder drops them — a drag of `paths` through the Chrome
+  // DevTools Protocol, so the page's File objects carry their paths (webUtils.getPathForFile) — in the main window or
+  // the one named by id.
+  ipcMain.handle('test:drop-files', async (_e, { paths, at, windowId }) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const w = (windowId && BrowserWindow.fromId(windowId)) || win;
+    if (!w || w.isDestroyed()) throw new Error(`no window ${windowId}`);
+    const dbg = w.webContents.debugger;
+    if (!dbg.isAttached()) dbg.attach('1.3');
+    const data = { items: [], files: paths, dragOperationsMask: 1 };
+    for (const type of ['dragEnter', 'dragOver', 'drop']) await dbg.sendCommand('Input.dispatchDragEvent', { type, x: at.x, y: at.y, data });
     return true;
   });
   ipcMain.handle('test:drag', async (_e, { from, to, steps = 8 }) => {
@@ -1126,6 +1168,15 @@ function registerIpc() {
 
   ipcMain.handle('clipboard:write', (_e, t) => clipboard.writeText(t));
   ipcMain.handle('clipboard:read', () => clipboard.readText());
+  // What the clipboard holds, for a paste that found no text (terminal.js pasteImage): `image` is true for a picture
+  // (a screenshot, a copied image, PNG data put there by a script) — the MIME types the platform clipboard offers,
+  // without decoding the image; `text` for a non-empty plain text.
+  ipcMain.handle('clipboard:kinds', async () => {
+    const items = await clipboard.read();
+    const formats = [...new Set(items.flatMap((i) => i.types || []))];
+    const text = (await clipboard.readText()).length > 0;
+    return { text, image: formats.some((f) => f.startsWith('image/')), formats };
+  });
 }
 
 // ---------- lifecycle ----------

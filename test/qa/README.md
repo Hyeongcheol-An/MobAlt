@@ -22,7 +22,15 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   appears in the images.
 - `testKey(k)` sends keyDown/keyUp only (no char event), so the native Enter activation of a focused button cannot
   be driven with `testKey('Enter')`; use `testKey('Space')` (buttons activate on Space) or `el.click()`. Widgets with
-  their own Enter handling (picker rows, lists, menus) do react to it.
+  their own Enter handling (picker rows, lists, menus) do react to it. The object form
+  `testKey({ keyCode: 'Enter', modifiers: ['shift'], char: '\r', windowId })` presses the key with modifiers and,
+  with `char`, the character event a real press gives the browser (the keypress), in the main window or the one
+  named — what a terminal pane sees from a user's Shift+Enter (test/e2e-claude-keys.js).
+- `test/qa/claude-code-check.js` drives the real Claude Code CLI (`claude` on the login shell's PATH or in
+  `~/.local/bin`, signed in): Shift+Enter as a newline in its composer and ⌘V with an image on the clipboard as
+  `[Image #1]`, in a plain, split, zoomed and detached pane. It is a manual check, not an e2e suite (those never need
+  the binary); it starts Claude Code in a fresh empty folder, answers the trust question and leaves with Ctrl+C, and it
+  never submits a prompt (plain Enter is never pressed while the composer holds text).
 
 ## Renderer API available to scripts
 
@@ -31,6 +39,11 @@ const app = window.app;                     // controller
 await window.api.app.screenshot('name');    // → <out-dir>/shots/name.png (window capture)
 await window.api.app.testResize(1000, 650); // resize the window (test mode only)
 await window.api.app.testKey('F19');        // one real key press: raises the window, enables :focus-visible rings (test mode only)
+await window.api.app.testKey({ keyCode: 'Enter', modifiers: ['shift'], char: '\r' }); // a real press with modifiers and its keypress; windowId for another window (test mode only)
+await window.api.app.testPaste(windowId?);               // Edit → Paste: a real paste event with the system clipboard, text or image (test mode only)
+await window.api.app.testClipboardPng(dataUrl, text?);   // a PNG on the clipboard, with text beside it or alone (test mode only)
+await window.api.app.testDropFiles([path], { x, y }, windowId?); // files dropped at a window point as Finder drops them (test mode only)
+await window.api.clipboard.kinds();                      // { text, image, formats }: what a paste would find on the clipboard
 await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
 (await window.api.app.testQuitCheck()).relaunchRequested; // true once the banner's Relaunch ran (test mode records, never restarts)
 await window.api.app.testNotice('Internal error: x'); // a main-process notice (app:notice) → error toast (test mode only)
