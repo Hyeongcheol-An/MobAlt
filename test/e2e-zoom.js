@@ -64,6 +64,8 @@
     results.siblingHidden = !shown(a) && a.el.isConnected && !a.disposed && live(a);
     results.noSplitterShown = [...tab1.pageEl.querySelectorAll('.splitter')].every((s) => getComputedStyle(s).display === 'none');
     results.headZoomedState = !b.zoomBadge.hidden && b.zoomBtn.title.startsWith('Restore panes') && b.zoomBtn.querySelector('svg')?.dataset.name === 'unzoom' && a.zoomBtn.querySelector('svg')?.dataset.name === 'zoom';
+    // an ARIA toggle button: the name stays "Zoom pane", only aria-pressed (and the tooltip) says it is zoomed
+    results.headZoomLabelConstant = b.zoomBtn.getAttribute('aria-label') === 'Zoom pane' && b.zoomBtn.getAttribute('aria-pressed') === 'true' && a.zoomBtn.getAttribute('aria-label') === 'Zoom pane' && a.zoomBtn.getAttribute('aria-pressed') === 'false';
     await shot('71-zoomed');
 
     // --- the hidden pane's shell keeps running: output written while hidden is there after the restore

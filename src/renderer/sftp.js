@@ -633,7 +633,7 @@ export class SftpPanel {
     } catch (err) {
       return toast(errMsg(err), 'error');
     }
-    const ta = h('textarea', { class: 'editor-area', spellcheck: false });
+    const ta = h('textarea', { class: 'editor-area', spellcheck: false, 'aria-label': `Contents of ${e.name}` });
     ta.value = content;
     let dirty = false;
     ta.addEventListener('input', () => (dirty = true));

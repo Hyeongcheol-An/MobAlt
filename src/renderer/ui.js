@@ -353,13 +353,16 @@ export function confirmDialog(message, { title = 'Confirm', okLabel = 'OK', dang
   return m.promise.then((r) => !!r);
 }
 
+let promptSeq = 0;
 export function promptDialog(title, { label = '', value = '', password = false, checkbox = null, okLabel = 'OK', placeholder = '' } = {}) {
-  const input = h('input', { type: password ? 'password' : 'text', value, placeholder, spellcheck: false, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
+  // the single box is named by the dialog's title ("Rename tab", "New folder"); the optional line above it describes it
+  const labelEl = label ? h('div', { id: `prompt-label-${++promptSeq}`, style: { marginBottom: '6px', color: 'var(--fg-dim)' } }, label) : null;
+  const input = h('input', { type: password ? 'password' : 'text', value, placeholder, spellcheck: false, 'aria-label': title, 'aria-describedby': labelEl ? labelEl.id : null, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
   const cb = checkbox ? h('input', { type: 'checkbox', checked: !!checkbox.checked }) : null;
   const m = showModal({
     title,
     width: 'narrow',
-    body: h('div', {}, label ? h('div', { style: { marginBottom: '6px', color: 'var(--fg-dim)' } }, label) : null, input, cb ? h('label', { style: { display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center' } }, cb, checkbox.label) : null),
+    body: h('div', {}, labelEl, input, cb ? h('label', { style: { display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center' } }, cb, checkbox.label) : null),
     buttons: [
       { label: 'Cancel', value: null },
       { label: okLabel, primary: true, action: (api) => api.close(checkbox ? { value: input.value, checked: cb.checked } : input.value) },
@@ -375,6 +378,7 @@ export function plural(n, word, words = word + 's') {
 }
 
 // ---------- toast ----------
+/** A notice in the bottom-right stack; #toast-root is a polite live region (role=status), an error toast is an alert of its own. */
 export function toast(message, type = 'info', ms = 3500) {
   const root = $('#toast-root');
   // identical message already showing: restart its timer instead of stacking copies
@@ -384,7 +388,7 @@ export function toast(message, type = 'info', ms = 3500) {
     dup._timer = setTimeout(() => dup.remove(), ms);
     return dup;
   }
-  const el = h('div', { class: 'toast ' + type }, message);
+  const el = h('div', { class: 'toast ' + type, role: type === 'error' ? 'alert' : null }, message);
   root.append(el);
   el._timer = setTimeout(() => el.remove(), ms);
   return el;

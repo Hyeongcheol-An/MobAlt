@@ -1,5 +1,6 @@
 // Keyboard accessibility checks: tab strip (arrows, overflow), session tree, context menus, dialog focus trap and
-// focus return, icon/colour pickers, macros list, toolbar, quick connect, panel switching. Everything is driven with dispatched
+// focus return, icon/colour pickers, macros list, toolbar, quick connect, panel switching, accessible names of every
+// form control (dialogs, prompts, panels), the editor's tab roles and the live regions. Everything is driven with dispatched
 // KeyboardEvents (plus a few real key presses); the SFTP list section runs only when the local test sshd
 // (test/start-sshd.sh, 127.0.0.1:2222) is up and is skipped otherwise.
 //   test/qa/run.sh test/e2e-a11y.js <out-dir>
@@ -719,6 +720,146 @@
       await press('Escape');
       await sleep(200);
       results.tunnelsClosed = !modal() && inTerminal();
+    }
+
+    // ---------- accessible names: every input / select / textarea is named by its label (label[for], aria-label or
+    // aria-labelledby — never the placeholder or title alone) in Settings (each tab), the session editor (SSH, Serial,
+    // FTP), Tunnels and the tunnel form, the Rename-tab and Move-to-folder prompts, the SFTP panel and the static
+    // boxes (A11Y4-03); the editor's strip has tab semantics (A11Y4-04); toasts and the MultiExec banner are live
+    // regions (A11Y4-07) ----------
+    {
+      const accName = (el) => {
+        const byIds = (ids) => ids.split(/\s+/).map((id) => document.getElementById(id)?.textContent.trim()).filter(Boolean).join(' ');
+        if (el.getAttribute('aria-labelledby')) return byIds(el.getAttribute('aria-labelledby'));
+        if (el.getAttribute('aria-label')) return el.getAttribute('aria-label').trim();
+        return [...(el.labels || [])].map((l) => l.textContent.trim()).filter(Boolean).join(' '); // label[for] and a wrapping label
+      };
+      const unnamed = [], dupIds = [];
+      const sweep = (where, root) => {
+        for (const el of root.querySelectorAll('input:not([type=hidden]), select, textarea')) {
+          if (!accName(el)) unnamed.push(`${where}: ${el.tagName.toLowerCase()}${el.type ? '[' + el.type + ']' : ''}${el.id ? '#' + el.id : ''}${el.placeholder ? ' placeholder="' + el.placeholder + '"' : ''}`);
+        }
+        const ids = [...root.querySelectorAll('[id]')].map((e) => e.id);
+        for (const id of ids.filter((id, i) => ids.indexOf(id) !== i)) dupIds.push(`${where}: #${id}`);
+      };
+      const labelFor = (root, txt) => { const l = [...root.querySelectorAll('label')].find((x) => x.textContent === txt); return l && l.htmlFor ? document.getElementById(l.htmlFor) : null; };
+      sweep('toolbar', $('#toolbar')); sweep('sessions panel', $('#panel-sessions')); sweep('sftp panel', $('#panel-sftp')); sweep('tools panel', $('#panel-tools')); sweep('find bar', $('#find-bar'));
+      // Settings: each tab in front once; the Theme select sits in a wrapper with its preview chip
+      app.activePane().focus();
+      app.action('settings');
+      await sleep(400);
+      {
+        const m = modal();
+        for (const b of m.querySelectorAll('.mtabs button')) { b.click(); await sleep(30); sweep(`Settings/${b.textContent}`, m.querySelector('.mpage.active')); }
+        results.settingsLabelsPointAtControls = labelFor(m, 'Theme')?.tagName === 'SELECT' && labelFor(m, 'Font size')?.type === 'number' && labelFor(m, 'Local shell')?.type === 'text' && labelFor(m, 'Cursor')?.tagName === 'SELECT';
+        await press('Escape');
+        await sleep(200);
+      }
+      // session editor: the SSH, Serial and FTP forms (hidden rows included), the strip's tab roles, a tunnel row and the tunnel form
+      app.action('new-session');
+      await sleep(350);
+      {
+        const m = modal();
+        const typeBtn = (t) => [...m.querySelectorAll('.type-picker button')].find((b) => b.textContent.includes(t));
+        const strip = m.querySelector('.mtabs'), tabs = [...strip.querySelectorAll('button')];
+        const panelOf = (b) => m.querySelector('#' + CSS.escape(b.getAttribute('aria-controls') || '-'));
+        results.editorTabRoles = strip.getAttribute('role') === 'tablist' && tabs.length === 4 && tabs.every((b) => b.getAttribute('role') === 'tab' && panelOf(b)?.getAttribute('role') === 'tabpanel' && panelOf(b).classList.contains('mpage'))
+          && tabs.filter((b) => b.getAttribute('aria-selected') === 'true').length === 1 && tabs[0].getAttribute('aria-selected') === 'true';
+        tabs[2].click(); // Terminal
+        await sleep(30);
+        results.editorTabSelectedFollows = tabs[2].getAttribute('aria-selected') === 'true' && tabs[0].getAttribute('aria-selected') === 'false' && m.querySelector('.mpage.active') === panelOf(tabs[2]);
+        results.editorLabelsPointAtControls = labelFor(m, 'Port')?.type === 'number' && labelFor(m, 'Authentication')?.tagName === 'SELECT' && labelFor(m, 'Jump host')?.tagName === 'SELECT'
+          && labelFor(m, 'Private key')?.type === 'text' && labelFor(m, 'Theme')?.tagName === 'SELECT' && labelFor(m, 'Startup commands')?.tagName === 'TEXTAREA';
+        sweep('editor/SSH', m);
+        typeBtn('Serial').click(); await sleep(60);
+        results.editorSerialLabels = labelFor(m, 'Serial port')?.tagName === 'SELECT' && labelFor(m, 'Baud rate')?.tagName === 'SELECT' && labelFor(m, 'Enter sends')?.tagName === 'SELECT';
+        sweep('editor/Serial', m);
+        typeBtn('FTP').click(); await sleep(60);
+        sweep('editor/FTP', m);
+        typeBtn('SSH').click(); await sleep(60);
+        tabs[3].click(); // Tunnels: the tunnel form, then the row it adds (its On checkbox)
+        await sleep(60);
+        [...m.querySelectorAll('button')].find((b) => b.textContent.includes('Add tunnel')).click();
+        await sleep(250);
+        const sub = modals()[1];
+        results.tunnelFormLabels = labelFor(sub, 'Type')?.tagName === 'SELECT' && labelFor(sub, 'Bind')?.getAttribute('aria-label') === 'Bind address' && labelFor(sub, 'Destination')?.getAttribute('aria-label') === 'Destination host';
+        sweep('tunnel form', sub);
+        const nums = sub.querySelectorAll('input[type=number]');
+        nums[0].value = '8080';
+        [...sub.querySelectorAll('input[type=text]')].find((i) => i.placeholder === 'localhost').value = 'localhost';
+        nums[1].value = '80';
+        sub.querySelector('.modal-foot .btn.primary').click();
+        await sleep(250);
+        sweep('editor/Tunnels', m.querySelector('.mpage.active'));
+        results.tunnelRowCheckboxNamed = modals().length === 1 && accName(m.querySelector('tbody input[type=checkbox]') || m) === 'Tunnel 8080 enabled';
+        await press('Escape');
+        await sleep(250);
+        const top = modals().pop(); // the tunnel made the editor dirty → discard prompt
+        if (top && /Discard/.test(top.textContent)) { top.querySelector('.modal-foot .btn.primary').click(); await sleep(250); }
+      }
+      // Tunnels dialog (web-01 is an SSH session) and its New tunnel… form
+      app.action('tunnels');
+      await sleep(400);
+      {
+        const m = modal();
+        results.tunnelsViaLabel = labelFor(m, 'Via')?.tagName === 'SELECT';
+        sweep('Tunnels', m);
+        [...m.querySelectorAll('button')].find((b) => b.textContent.includes('New tunnel')).click();
+        await sleep(250);
+        sweep('Tunnels/tunnel form', modals()[1]);
+        await press('Escape'); await sleep(150);
+        await press('Escape'); await sleep(200);
+      }
+      // prompts: Rename tab (from the tab's menu) and Move to folder (from the row's menu)
+      {
+        const tab = app.workspace.active.tabEl;
+        tab.focus();
+        await press('F10', { shiftKey: true });
+        await press('Enter'); // Rename Tab…
+        await sleep(250);
+        results.renameTabInputNamed = accName(modal().querySelector('input')) === 'Rename tab';
+        sweep('Rename tab', modal());
+        await press('Escape'); await sleep(200);
+        rowOf('web-01').focus();
+        await press('F10', { shiftKey: true });
+        items().find((i) => i.textContent.startsWith('Move to Folder')).click();
+        await sleep(250);
+        results.moveFolderSelectNamed = accName(modal().querySelector('select')) === 'Folder';
+        sweep('Move to folder', modal());
+        await press('Escape'); await sleep(200);
+      }
+      log('unnamed controls', JSON.stringify(unnamed), 'duplicate ids', JSON.stringify(dupIds));
+      results.controlsNamed = unnamed.length === 0;
+      results.noDuplicateIds = dupIds.length === 0;
+      results.promptsClosed = !modal() && !ctx();
+      // live regions: the toast stack is polite, an error toast is an alert of its own; the MultiExec banner is a status line
+      const ui = await import('./ui.js');
+      const troot = $('#toast-root');
+      const info = ui.toast('a11y probe'), err = ui.toast('a11y probe failed', 'error');
+      results.toastLiveRegion = troot.getAttribute('role') === 'status' && troot.getAttribute('aria-live') === 'polite' && !info.getAttribute('role') && err.getAttribute('role') === 'alert'
+        && $('#multiexec-banner').getAttribute('role') === 'status' && $('#update-banner').getAttribute('role') === 'status';
+      info.remove(); err.remove();
+      // focus cue on the find bar and the Tools boxes: the border turns --accent like every other text field (A11Y4-01/02)
+      const rgb = (c) => { const s = document.createElement('span'); s.style.color = c; document.body.append(s); const v = getComputedStyle(s).color; s.remove(); return v; };
+      const token = (t) => rgb(getComputedStyle(document.documentElement).getPropertyValue(t).trim());
+      const borderOf = (el) => getComputedStyle(el).borderTopColor;
+      app.action('find');
+      await sleep(150);
+      const fi = $('#find-input');
+      results.findInputFocusRing = active() === fi && borderOf(fi) === token('--accent') && token('--accent') !== token('--border');
+      await shot('84-find-input-focus');
+      app.action('find-close');
+      await sleep(100);
+      app.showPanel('tools');
+      await sleep(100);
+      const th = $('#tool-host'), tp = $('#tool-port-from');
+      th.focus();
+      results.toolHostFocusRing = borderOf(th) === token('--accent') && borderOf(tp) === token('--border');
+      tp.focus();
+      results.toolPortFocusRing = borderOf(tp) === token('--accent') && borderOf(th) === token('--border');
+      await shot('85-tools-focus');
+      app.showPanel('sessions');
+      await sleep(100);
     }
 
     // ---------- tab strip overflow: arrows never drop focus on <body>; focused tabs clear the edge fade ----------

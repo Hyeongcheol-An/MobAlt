@@ -127,11 +127,12 @@
       const tabs = [...m.querySelectorAll('.mtabs button')];
       results.settingsTabNames = tabs.map((b) => b.textContent).join('|') === 'General|Terminal|Logging|Updates';
       results.settingsFirstFieldFocused = document.activeElement === m.querySelector('.mpage.active input[type=text]') && m.querySelector('.mpage.active') === m.querySelector('.mpage') && tabs[0].classList.contains('active');
-      const fit = {};
+      const fit = {}, heights900 = new Set();
       for (const b of tabs) {
         b.click();
         await sleep(80);
         const page = m.querySelector('.mpage.active');
+        heights900.add(Math.round(m.getBoundingClientRect().height));
         fit[b.textContent] = !!page && page.id === b.getAttribute('aria-controls') && b.classList.contains('active') && m.querySelectorAll('.mpage.active').length === 1
           && body.scrollHeight <= body.clientHeight && body.scrollWidth <= body.clientWidth && page.scrollWidth <= page.clientWidth
           && m.getBoundingClientRect().bottom <= window.innerHeight && m.getBoundingClientRect().right <= window.innerWidth;
@@ -139,6 +140,7 @@
       }
       log('settings tabs at 900×560', JSON.stringify(fit));
       results.settingsTabsFit900x560 = Object.keys(fit).length === 4 && Object.values(fit).every(Boolean);
+      results.settingsHeightConstant900x560 = heights900.size === 1; // the body holds the tallest section's height: no jump on Terminal
       const upd = m.querySelector('.mpage.active'); // Updates is in front now
       results.settingsCheckNowOnUpdates = tabs[3].classList.contains('active') && [...upd.querySelectorAll('button')].some((x) => x.textContent === 'Check now') && !!upd.querySelector('.upd-status');
       const fieldOf = (root, txt) => { const el = [...root.querySelectorAll('.form-grid > label')].find((l) => l.textContent === txt)?.nextElementSibling; return el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) ? el : el?.querySelector('input,select,textarea'); }; // the Theme select sits in a wrapper with its preview chip
@@ -162,6 +164,17 @@
       m2.querySelector('.modal-foot .btn').click(); // Cancel
       await sleep(200);
       results.settingsCancelKeepsSaved = !document.querySelector('.modal') && app.settings.fontSize === 15;
+      // one dialog height whichever tab is in front, in a big window as well
+      await window.api.app.testResize(1400, 900);
+      await sleep(300);
+      app.action('settings');
+      await sleep(400);
+      const m3 = document.querySelector('.modal'), heights1400 = new Set();
+      for (const b of m3.querySelectorAll('.mtabs button')) { b.click(); await sleep(80); heights1400.add(Math.round(m3.getBoundingClientRect().height)); }
+      log('settings dialog heights at 900×560 / 1400×900', [...heights900].join(','), '/', [...heights1400].join(','));
+      results.settingsHeightConstant1400x900 = heights1400.size === 1;
+      m3.querySelector('.modal-foot .btn').click(); // Cancel
+      await sleep(200);
       await app.saveSettings({ keepAliveInterval: before.keepAliveInterval, confirmClose: false, fontSize: before.fontSize, theme: before.theme, copyOnSelect: before.copyOnSelect, logDir: before.logDir, logPlainText: before.logPlainText, autoUpdate: before.autoUpdate });
       await window.api.app.testResize(size0.w, size0.h);
       await sleep(300);

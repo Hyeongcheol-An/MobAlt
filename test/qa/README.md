@@ -14,6 +14,9 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `window.api.app.quit()`; otherwise the app quits after `auto-quit-ms` (default 60 s) and writes
   `shots/final.png`.
 - `console.log` output is echoed to the terminal prefixed with `[renderer:info]`.
+- `testKey(k)` sends keyDown/keyUp only (no char event), so the native Enter activation of a focused button cannot
+  be driven with `testKey('Enter')`; use `testKey('Space')` (buttons activate on Space) or `el.click()`. Widgets with
+  their own Enter handling (picker rows, lists, menus) do react to it.
 
 ## Renderer API available to scripts
 
