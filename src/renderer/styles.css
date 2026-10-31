@@ -769,3 +769,14 @@ body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }
 /* A transfer that came from a terminal (rz / sz) carries a small "zmodem" chip in the files panel's transfer list, so
    it is told apart from the panel's own SFTP / FTP transfers; the theme tokens keep it readable on every palette. */
 .xfer .xfer-proto { flex: 0 0 auto; font-size: 9px; line-height: 14px; padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .03em; }
+/* ---- qa5 terminal ---- */
+/* Paste guard: a mark is a light tint of the warn / danger colour over the input background (18 % and 20 %: the text
+   over it keeps ≥ 4.5:1 on every theme — One Dark is the floor at 4.7:1 — where the full --warn-bg fill read at
+   3.2:1); the 1px outline still says which kind it is. The "(line n)" suffix keeps the box's own text colour: at
+   opacity .8 it read at 3.2–3.7:1. */
+.pg-mark { background: color-mix(in srgb, var(--warn) 18%, var(--bg-input)); }
+.pg-mark.danger { background: color-mix(in srgb, var(--danger) 20%, var(--bg-input)); }
+.pg-findings .pg-where { opacity: 1; }
+/* Transfers: a visually hidden polite live region beside the list carries one sentence per finished transfer
+   (sftp.js _announce); the list re-renders on every progress tick, so it cannot be the live region itself. */
+.xfer-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }

@@ -694,6 +694,7 @@ export function highlightRulesDialog(initial) {
         } }, icon('x')))
       )))
     ));
+    for (const i of rows.querySelectorAll('tbody input[type=text]')) { try { i.setSelectionRange(0, 0); } catch {} } // a focused pattern reads from its start, not scrolled to its end
     if (focusRow !== undefined) rows.querySelectorAll('tbody input[type=text]')[focusRow]?.focus();
   };
   addBtn = h('button', { class: 'btn small', type: 'button', onclick: () => { rules.push(normalizeRule({ color: 'red' })); render(rules.length - 1); } }, '＋ Add rule');
@@ -720,6 +721,10 @@ export function highlightRulesDialog(initial) {
       } },
     ],
   });
+  setTimeout(() => { // showModal focused the first pattern: caret and scroll at its start, so the regex reads from its beginning
+    const f = rows.querySelector('tbody input[type=text]');
+    if (f && document.activeElement === f) { try { f.setSelectionRange(0, 0); } catch {} f.scrollLeft = 0; }
+  }, 20);
   return m.promise;
 }
 
@@ -789,7 +794,7 @@ export function settingsDialog(app) {
       ...field('Cursor', h('div', { class: 'inline' }, cursorStyle, cursorBlink.el)), // the blink toggle shares the row: Terminal is the tallest section and must fit the 560px window
       ...field('Scrollback lines', scrollback),
       ...field('Theme', h('div', { class: 'inline theme-field' }, theme, themePreview), 'Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme'),
-      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el, zmodemCb.el)
+      h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el)
     )],
     ['features', 'Features', h('div', { class: 'form-grid' },
       h('label', {}, 'Paste guard'), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el),
@@ -890,14 +895,16 @@ export function kbdIntDialog(p) {
  * a transparent textarea that has the same box and font (styles.css .pg-preview), so the marks sit under the editable
  * text. Zero-width characters and line breaks get a thin bar (padding without advance) so that they show at all.
  */
-function paintPasteMarks(pre, value, findings) {
+function paintPasteMarks(pre, value, findings, max = Infinity) {
   const ranges = [];
   for (const f of findings) for (const [index, length] of f.ranges) ranges.push({ index, length, kind: f.kind });
   ranges.sort((a, b) => a.index - b.index);
   const nodes = [];
-  let at = 0;
+  let at = 0, painted = 0;
   for (const r of ranges) {
     if (r.index < at) continue; // inside the previous mark (a look-alike word that also holds an invisible character)
+    if (painted >= max) break; // thousands of marks (every line of a long paste flagged) cost more to paint than they tell
+    painted++;
     if (r.index > at) nodes.push(document.createTextNode(value.slice(at, r.index)));
     const bar = r.kind === 'invisible' || r.kind === 'control' || r.kind === 'trailing-newline' || r.kind === 'cr';
     nodes.push(h('mark', { class: 'pg-mark' + (DANGER_KINDS.has(r.kind) ? ' danger' : '') + (bar ? ' pg-bar' : '') }, value.slice(r.index, r.index + r.length)));
@@ -906,7 +913,12 @@ function paintPasteMarks(pre, value, findings) {
   if (at < value.length) nodes.push(document.createTextNode(value.slice(at)));
   if (value.endsWith('\n')) nodes.push(document.createTextNode('\n')); // a textarea shows an empty last line after a final newline; a <pre> hangs it
   pre.replaceChildren(...nodes);
+  return { total: ranges.length, painted };
 }
+
+/** The preview re-analyses the edited text this long after the last keystroke, and paints at most this many marks. */
+const PG_DEBOUNCE_MS = 120;
+const PG_MAX_MARKS = 500;
 
 /**
  * The paste guard (app.js guardPaste): "Paste N lines into <where>?" with what src/renderer/pasteguard.js found, an
@@ -922,25 +934,35 @@ export function pasteGuardDialog({ text, analysis, where, warn = true }) {
   const backdrop = h('pre', { class: 'pg-backdrop', 'aria-hidden': 'true' });
   const list = h('ul', { class: 'pg-findings', hidden: true });
   const note = h('div', { class: 'pg-note' });
-  const edited = () => ta.value !== lf(text);
+  const lfText = lf(text);
+  const lfAnalysis = lfText === text ? analysis : analysePaste(lfText); // the marks sit on the textarea's own (LF) text, whose offsets differ once CRs are gone
+  const edited = () => ta.value !== lfText;
   const value = () => (edited() ? ta.value : text); // untouched: the original goes out, CR / CRLF intact
   const plural = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
-  let pasteBtn = null, cleanBtn = null;
+  const title = (a) => `Paste ${plural(a.lines, 'line')} into ${where}?`;
+  let pasteBtn = null, cleanBtn = null, m = null;
   const render = () => {
-    const current = edited() ? analysePaste(ta.value) : analysis;
+    const current = edited() ? analysePaste(ta.value) : analysis; // one analysis per render
+    const marks = edited() ? current : lfAnalysis;
     const fs = findingsOf(current);
     const danger = fs.some((f) => DANGER_KINDS.has(f.kind));
     list.hidden = !fs.length;
     list.className = 'pg-findings' + (danger ? ' danger' : '');
     list.replaceChildren(...fs.map((f) => h('li', {}, h('span', { class: 'pg-kind' }, KIND_LABEL[f.kind] || f.kind), h('span', { class: 'pg-msg' }, f.message, current.multiline ? h('span', { class: 'pg-where' }, ` (line ${f.line})`) : null))));
     const cleanable = warn && current.cleanable;
-    note.textContent = `${plural(current.lines, 'line')} · ${plural(current.chars, 'character')} · ⌘⏎ pastes, Esc cancels` + (cleanable ? ' · Paste cleaned removes the hidden characters and the trailing newline' : '');
-    paintPasteMarks(backdrop, ta.value, findingsOf(analysePaste(ta.value))); // offsets of the textarea's own (LF) text
+    const painted = paintPasteMarks(backdrop, ta.value, findingsOf(marks), PG_MAX_MARKS);
+    note.textContent = `${plural(current.lines, 'line')} · ${plural(current.chars, 'character')} · ⌘⏎ pastes, Esc cancels` + (cleanable ? ' · Paste cleaned removes the hidden characters and the trailing newline' : '')
+      + (painted.painted < painted.total ? ` · marks on the first ${painted.painted} of ${painted.total} places` : '');
     if (cleanBtn) cleanBtn.hidden = !cleanable;
     if (pasteBtn) pasteBtn.textContent = fs.length ? 'Paste as is' : 'Paste';
+    if (m) { // the title counts the lines of what will be pasted, edits included
+      const t = title(current);
+      m.el.querySelector('.modal-title-text').textContent = t;
+      m.el.setAttribute('aria-label', t);
+    }
   };
-  const m = showModal({
-    title: `Paste ${plural(analysis.lines, 'line')} into ${where}?`,
+  m = showModal({
+    title: title(analysis),
     width: 'wide',
     closeOnBackdrop: false,
     body: h('div', { class: 'pg' }, note, list, h('div', { class: 'pg-preview' }, backdrop, ta)),
@@ -952,7 +974,8 @@ export function pasteGuardDialog({ text, analysis, where, warn = true }) {
   });
   [, cleanBtn, pasteBtn] = [...m.el.querySelectorAll('.modal-foot button')];
   render();
-  ta.addEventListener('input', render);
+  let pending = null; // typing re-analyses once the keys pause, not per keystroke (a 5000-line flagged paste took 190 ms each)
+  ta.addEventListener('input', () => { clearTimeout(pending); pending = setTimeout(render, PG_DEBOUNCE_MS); });
   ta.addEventListener('scroll', () => { backdrop.scrollTop = ta.scrollTop; backdrop.scrollLeft = ta.scrollLeft; });
   m.el.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.metaKey && !e.isComposing) { e.preventDefault(); e.stopPropagation(); m.close(value()); }

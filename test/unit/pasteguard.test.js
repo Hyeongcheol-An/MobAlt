@@ -70,7 +70,20 @@ test('invisible characters: zero-width, bidi controls, BOM, soft hyphen; grouped
   assert.match(bidi.findings[0].message, /U\+202E right-to-left override.*Trojan Source/);
   assert.equal(bidi.cleaned, 'echo abcd');
   for (const c of ['‌', '‍', '‎', '‏', ' ', ' ', '‪', '‬', '⁠', '⁧', '⁨']) assert.deepEqual(kinds(analysePaste('x' + c + 'y')), ['invisible'], JSON.stringify(c));
-  assert.deepEqual(kinds(analysePaste('x y 　z')), [], 'ordinary spaces (NBSP, ideographic) are not invisible');
+  assert.deepEqual(kinds(analysePaste('x\u3000z')), [], 'an ideographic space is a visible space');
+  // the no-break spaces look like a space and are not one: flagged, and cleaned into a real space (not into nothing)
+  const nb = analysePaste('ls\u00a0-d /tmp');
+  assert.match(one(nb, 'invisible').message, /U\+00A0 no-break space: looks like a space but is not one/);
+  assert.equal(nb.cleaned, 'ls -d /tmp');
+  assert.equal(analysePaste('a\u202fb').cleaned, 'a b');
+  assert.match(one(analysePaste('a\u202fb'), 'invisible').message, /narrow no-break space/);
+  // format characters that render as nothing: the Mongolian vowel separator, variation selectors, tag characters (invisible text)
+  for (const [c, name] of [['\u180e', 'Mongolian vowel separator'], ['\ufe0f', 'variation selector'], ['\ufe00', 'variation selector'], ['\u{e0041}', 'tag character'], ['\u{e007f}', 'tag character']]) {
+    const a = analysePaste('x' + c + 'y');
+    assert.match(one(a, 'invisible').message, new RegExp(name), JSON.stringify(c));
+    assert.equal(a.cleaned, 'xy', JSON.stringify(c));
+  }
+  assert.equal(analysePaste('\u{e0041}\u{e0042}').findings.length, 2, 'one finding per distinct character');
 });
 
 test('control characters: everything but tab / newline / CR, named, cleaned away', async () => {
@@ -132,7 +145,7 @@ test('profile writes: >> ~/.zshrc & co, tee -a, $HOME, authorized_keys', async (
     one(analysePaste(t), 'profile-write');
   }
   assert.match(one(analysePaste('echo k >> ~/.ssh/authorized_keys'), 'profile-write').message, /SSH access/);
-  for (const t of ['cat ~/.zshrc', 'source ~/.bashrc', 'echo x >> ~/notes.txt', 'vim ~/.zshrc', 'grep PATH ~/.profile']) assert.deepEqual(kinds(analysePaste(t)), [], t);
+  for (const t of ['cat ~/.zshrc', 'source ~/.bashrc', 'echo x >> ~/notes.txt', 'vim ~/.zshrc', 'grep PATH ~/.profile', 'grep foo bar > .zshrc.bak', 'echo x >> ~/.zshrc-old', 'echo x > ~/.profile.d/x']) assert.deepEqual(kinds(analysePaste(t)), [], t);
 });
 
 test('destructive commands: rm -rf on / ~ *, dd / > onto a disk, mkfs, fork bomb, chmod on /; sudo is named', async () => {
@@ -141,12 +154,12 @@ test('destructive commands: rm -rf on / ~ *, dd / > onto a disk, mkfs, fork bomb
   assert.match(one(s, 'destructive').message, /rm -rf.*\(with sudo\)$/);
   assert.equal(s.findings[0].index, 5);
   assert.doesNotMatch(one(analysePaste('rm -rf ~'), 'destructive').message, /sudo/);
-  for (const t of ['rm -rf /', 'rm -Rf /*', 'rm -r -f "$HOME"', 'rm -rf *', 'rm -rf ~/*', 'sudo rm -fr ${HOME}', 'rm --recursive --force /',
+  for (const t of ['rm -rf /', 'rm -Rf /*', 'rm -r -f "$HOME"', 'rm -rf *', 'rm -rf ~/*', 'sudo rm -fr ${HOME}', 'rm --recursive --force /', 'rm -rf ~/', 'rm -rf $HOME/', 'rm -rf "$HOME/"', 'rm -rf ${HOME}/;', 'rm -rf ~/ && ls',
     'dd if=/dev/zero of=/dev/disk2 bs=1m', 'sudo dd if=x.img of=/dev/sda', 'cat x > /dev/rdisk0', 'mkfs.ext4 /dev/sdb1', 'sudo newfs /dev/disk3', 'diskutil eraseDisk JHFS+ X disk2',
     ':(){ :|:& };:', ':() { : | : & } ; :', 'sudo chmod -R 777 /', 'chmod 000 /']) {
     one(analysePaste(t), 'destructive');
   }
-  for (const t of ['rm -rf ~/.cache', 'rm -rf build/*', 'rm -rf ./dist', 'rm file', 'dd if=/dev/zero of=out.img bs=1m count=10', 'chmod 755 /usr/local/bin/x', 'ls /dev/disk2']) {
+  for (const t of ['rm -rf ~/.cache', 'rm -rf build/*', 'rm -rf ./dist', 'rm file', 'rm -rf ~/x', 'rm -rf $HOME/.cache', 'rm -rf "$HOME/tmp"', 'dd if=/dev/zero of=out.img bs=1m count=10', 'chmod 755 /usr/local/bin/x', 'ls /dev/disk2']) {
     assert.deepEqual(kinds(analysePaste(t)), [], t);
   }
   one(analysePaste('echo "rm -rf /"'), 'destructive'); // quotes do not hide the shape: sh -c "rm -rf /" looks the same, and the guard only warns
@@ -167,6 +180,9 @@ test('homoglyphs: Cyrillic or Greek letters inside a Latin word; pure Cyrillic /
   const twice = analysePaste('ѕudo ls; ѕudo pwd');
   assert.equal(one(twice, 'homoglyph').count, 2);
   for (const t of ['привет мир', 'echo "γειά σου"', 'cd ~/Документы', 'echo café naïve', 'ls 한국어']) assert.deepEqual(kinds(analysePaste(t)), [], t);
+  // the Greek mu as a micro prefix is a unit, not a spoofed name: what every latency / benchmark line carries
+  for (const t of ['echo 200μs', 'took 1.5μs', 'μm μg 5μA 12μV', 'p99 850μs max']) assert.deepEqual(kinds(analysePaste(t)), [], t);
+  assert.equal(one(analysePaste('open μicrosoft.com'), 'homoglyph').word, 'μicrosoft', 'a mu that starts a long Latin word is still a look-alike');
   assert.equal(a.cleaned, a.text, 'look-alikes are not stripped: the user decides');
 });
 
