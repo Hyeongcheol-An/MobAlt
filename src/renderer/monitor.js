@@ -1,7 +1,7 @@
 // Formatting for the remote monitoring bar (terminal.js): pure functions over a sample from src/main/monitor.js.
 // Unit-tested through test/unit/monitor.test.js (dynamic import, like theme.js).
 
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { t } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 const UNITS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
 
 /**
@@ -23,15 +23,15 @@ export function formatRate(bytesPerSecond) {
   return `${formatBytes(Math.max(0, bytesPerSecond))}/s`;
 }
 
-/** Seconds of uptime as the two largest units: 3d 4h, 4h 12m, 12m, 45s. */
+/** Seconds of uptime as the two largest units: 3d 4h, 4h 12m, 12m, 45s (the unit letters follow the interface language). */
 export function formatUptime(seconds) {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return '—';
   const s = Math.floor(seconds);
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m`;
-  return `${s}s`;
+  if (d > 0) return t('{d}d {h}h', { d, h });
+  if (h > 0) return t('{h}h {m}m', { h, m });
+  if (m > 0) return t('{m}m', { m });
+  return t('{s}s', { s });
 }
 
 /** The three load averages with two decimals, or an em dash. */
