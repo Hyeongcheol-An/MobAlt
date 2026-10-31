@@ -1,5 +1,5 @@
 // Small DOM helpers, context menus, modals and toasts (no framework).
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { t, tn, locale } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -72,21 +72,44 @@ export function fmtSize(n) {
   return (n < 10 ? n.toFixed(1) : Math.round(n)) + ' ' + u[i];
 }
 
+/**
+ * A file date for a listing, in the interface language's order (10/31, 14:05 · 31.10., 14:05 · 10. 31. 14:05):
+ * month, day and time within this year, the full date (year first or last as the language has it) otherwise.
+ */
 export function fmtDate(ts) {
   if (!ts) return '';
   const d = new Date(ts);
   const now = new Date();
-  const pad = (x) => String(x).padStart(2, '0');
-  if (d.getFullYear() === now.getFullYear()) return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const opts = d.getFullYear() === now.getFullYear()
+    ? { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
+    : { year: 'numeric', month: '2-digit', day: '2-digit' };
+  try { return new Intl.DateTimeFormat(locale(), opts).format(d); } catch { return new Intl.DateTimeFormat('en', opts).format(d); }
 }
 
 export function fmtDuration(ms) {
-  if (ms < 10000) return (Math.max(0, ms) / 1000).toFixed(1) + 's'; // a quick transfer or cancel is not "0s"
+  if (ms < 10000) return t('{s}s', { s: (Math.max(0, ms) / 1000).toFixed(1) }); // a quick transfer or cancel is not "0s"
   const s = Math.round(ms / 1000);
-  if (s < 60) return s + 's';
+  if (s < 60) return t('{s}s', { s });
   const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
+  return t('{m}m {s}s', { m, s: s % 60 });
+}
+
+/**
+ * A translated sentence with elements in it: fillNodes(t('MobAlt {version} is installed'), { version: h('b', {}, v) })
+ * → ['MobAlt ', <b>, ' is installed'], for replaceChildren / h(). A placeholder without a part stays as text.
+ */
+export function fillNodes(text, parts) {
+  const out = [];
+  const re = /\{(\w+)\}/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (!(m[1] in parts)) continue;
+    if (m.index > last) out.push(text.slice(last, m.index));
+    out.push(parts[m[1]]);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
 }
 
 // ---------- monochrome UI icons (16px inline SVG, currentColor) ----------
@@ -269,7 +292,7 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
   };
   modal.append(
     // the title text is its own box so a very long session name is clipped with an ellipsis (full text in the tooltip)
-    h('div', { class: 'modal-title' }, h('span', { class: 'modal-title-text', title: typeof title === 'string' ? title : null }, title), h('button', { class: 'close', 'aria-label': 'Close', title: 'Close (Esc)', onclick: () => api.close(null) }, icon('x'))),
+    h('div', { class: 'modal-title' }, h('span', { class: 'modal-title-text', title: typeof title === 'string' ? title : null }, title), h('button', { class: 'close', 'aria-label': t('Close'), title: t('Close (Esc)'), onclick: () => api.close(null) }, icon('x'))),
     h('div', { class: 'modal-body' }, body)
   );
   if (buttons.length) {
@@ -349,13 +372,13 @@ export function repointOpeners(fn) {
   }
 }
 
-export function confirmDialog(message, { title = 'Confirm', okLabel = 'OK', danger = false } = {}) {
+export function confirmDialog(message, { title = t('Confirm'), okLabel = t('OK'), danger = false } = {}) {
   const m = showModal({
     title,
     width: 'narrow',
     body: h('div', {}, message),
     buttons: [
-      { label: 'Cancel', value: false },
+      { label: t('Cancel'), value: false },
       { label: okLabel, primary: true, danger, value: true },
     ],
   });
@@ -363,7 +386,7 @@ export function confirmDialog(message, { title = 'Confirm', okLabel = 'OK', dang
 }
 
 let promptSeq = 0;
-export function promptDialog(title, { label = '', value = '', password = false, checkbox = null, okLabel = 'OK', placeholder = '' } = {}) {
+export function promptDialog(title, { label = '', value = '', password = false, checkbox = null, okLabel = t('OK'), placeholder = '' } = {}) {
   // the single box is named by the dialog's title ("Rename tab", "New folder"); the optional line above it describes it
   const labelEl = label ? h('div', { id: `prompt-label-${++promptSeq}`, style: { marginBottom: '6px', color: 'var(--fg-dim)' } }, label) : null;
   const input = h('input', { type: password ? 'password' : 'text', value, placeholder, spellcheck: false, 'aria-label': title, 'aria-describedby': labelEl ? labelEl.id : null, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)' } });
@@ -373,7 +396,7 @@ export function promptDialog(title, { label = '', value = '', password = false, 
     width: 'narrow',
     body: h('div', {}, labelEl, input, cb ? h('label', { style: { display: 'flex', gap: '6px', marginTop: '10px', alignItems: 'center' } }, cb, checkbox.label) : null),
     buttons: [
-      { label: 'Cancel', value: null },
+      { label: t('Cancel'), value: null },
       { label: okLabel, primary: true, action: (api) => api.close(checkbox ? { value: input.value, checked: cb.checked } : input.value) },
     ],
   });
@@ -381,7 +404,7 @@ export function promptDialog(title, { label = '', value = '', password = false, 
   return m.promise;
 }
 
-/** "1 session" / "2 sessions": a count with its noun, for every toast and question that counts things. */
+/** "1 session" / "2 sessions" — English only: a label shown to the user uses tn('{n} session', '{n} sessions', n) instead. */
 export function plural(n, word, words = word + 's') {
   return `${n} ${n === 1 ? word : words}`;
 }

@@ -1,7 +1,7 @@
 // Pure helpers of the Tools panel (panels.js ToolsPanel): the Wake-on-LAN form's MAC / label / port handling and
 // the scanner table's rules. No DOM, so test/unit/nettools.test.js imports them directly (like monitor.js).
 
-import { t, tn } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { t } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 export const LABEL_MAX = 40;
 
 /**
@@ -29,9 +29,9 @@ export function trimLabel(text) {
 export function parsePort(raw) {
   const s = String(raw ?? '').trim();
   if (!s) return { port: 9 };
-  if (!/^\d{1,5}$/.test(s)) return { error: 'The port must be a whole number between 1 and 65535' };
+  if (!/^\d{1,5}$/.test(s)) return { error: t('The port must be a whole number between 1 and 65535') };
   const port = Number(s);
-  if (port < 1 || port > 65535) return { error: 'The port must be between 1 and 65535' };
+  if (port < 1 || port > 65535) return { error: t('The port must be between 1 and 65535') };
   return { port };
 }
 

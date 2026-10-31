@@ -1,6 +1,16 @@
 {
   "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
   "strings": {
+    ", skipped {n}: {reasons}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    ", updated {n} already in the tree": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "\"{pattern}\" is not a valid regular expression: {error}": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -106,6 +116,11 @@
         "src/main/ssh.js"
       ]
     },
+    "{d}d {h}h": {
+      "refs": [
+        "src/renderer/monitor.js"
+      ]
+    },
     "{entry}: {reason}": {
       "refs": [
         "src/main/main.js"
@@ -181,9 +196,20 @@
         "src/main/algorithms.js"
       ]
     },
+    "{failed} of {n} tunnel failed for {title}: {list}": {
+      "plural": "{failed} of {n} tunnels failed for {title}: {list}",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "{file} is replaced by the temp file path; omit it to append the path": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "{h}h {m}m": {
+      "refs": [
+        "src/renderer/monitor.js"
       ]
     },
     "{kind} bookmark (#{num}) not supported": {
@@ -199,6 +225,16 @@
     "{label} algorithms": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "{m}m": {
+      "refs": [
+        "src/renderer/monitor.js"
+      ]
+    },
+    "{m}m {s}s": {
+      "refs": [
+        "src/renderer/ui.js"
       ]
     },
     "{n} {kind}": {
@@ -218,6 +254,12 @@
         "src/main/live.js"
       ]
     },
+    "{n} empty pane added — drag sessions onto them": {
+      "plural": "{n} empty panes added — drag sessions onto them",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "{n} file": {
       "plural": "{n} files",
       "refs": [
@@ -228,6 +270,35 @@
       "plural": "{n} lines",
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "{n} live connection": {
+      "plural": "{n} live connections",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "{n} session": {
+      "plural": "{n} sessions",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "{n} tab back from the closed window": {
+      "plural": "{n} tabs back from the closed window",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "{n} terminals (MultiExec)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "{n} tunnel started for {title}": {
+      "plural": "{n} tunnels started for {title}",
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "{name} is not a file": {
@@ -250,9 +321,25 @@
         "src/main/keygen.js"
       ]
     },
+    "{s}s": {
+      "refs": [
+        "src/renderer/monitor.js",
+        "src/renderer/ui.js"
+      ]
+    },
     "{theme}: the terminal colours": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "{title} — MobAlt": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "{title} (pinned)": {
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "{type} keys can be {sizes} bits, not {bits}": {
@@ -301,6 +388,18 @@
         "src/renderer/terminal.js"
       ]
     },
+    "⇄ {n} tunnel": {
+      "plural": "⇄ {n} tunnels",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "⇅ {n} transfer": {
+      "plural": "⇅ {n} transfers",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "⇧F10 / Menu key": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -326,6 +425,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "＋ New session  ⌘N": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "＋ New tunnel…": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -334,6 +438,11 @@
     ">_ Local terminal": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    ">_ Local terminal  ⌘T": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "~user paths are not supported — use ~/ for your own home folder or an absolute path": {
@@ -359,6 +468,11 @@
     "── {what} Press Enter to reconnect, ⌘W to close. ──": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "● LOG": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "⚠️ Host key changed!": {
@@ -435,6 +549,16 @@
     "a key or escape sequence, not text; the terminal would act on it": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "A pane is zoomed": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
+    "A pane is zoomed (⇧⌘⏎ restores the layout)": {
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "A paste with more than one line, or over {n} characters, asks first and can be edited": {
@@ -654,6 +778,7 @@
     "Cancel": {
       "refs": [
         "src/renderer/dialogs.js",
+        "src/renderer/ui.js",
         "src/main/main.js"
       ]
     },
@@ -790,18 +915,54 @@
     },
     "Close": {
       "refs": [
+        "src/renderer/app.js",
         "src/renderer/dialogs.js",
-        "src/renderer/terminal.js"
+        "src/renderer/layout.js",
+        "src/renderer/terminal.js",
+        "src/renderer/ui.js"
+      ]
+    },
+    "Close \"{title}\"? The connection will be dropped.": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Close (⌘W)": {
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "Close (Esc)": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/ui.js"
+      ]
+    },
+    "Close {n} other pane? {conns} will be dropped.": {
+      "plural": "Close {n} other panes? {conns} will be dropped.",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Close {n} tab with {conns}?": {
+      "plural": "Close {n} tabs with {conns}?",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Close All": {
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "Close Other Tabs": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Close Others": {
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "Close pane": {
@@ -816,9 +977,15 @@
         "src/main/main.js"
       ]
     },
+    "Close panes": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Close tab": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/layout.js"
       ]
     },
     "Close Tab": {
@@ -826,13 +993,26 @@
         "src/main/main.js"
       ]
     },
+    "Close tab \"{title}\" with {n} live connection?": {
+      "plural": "Close tab \"{title}\" with {n} live connections?",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Close tabs": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Close Tabs to the Left": {
       "refs": [
+        "src/renderer/layout.js",
         "src/main/main.js"
       ]
     },
     "Close Tabs to the Right": {
       "refs": [
+        "src/renderer/layout.js",
         "src/main/main.js"
       ]
     },
@@ -863,7 +1043,8 @@
     },
     "Confirm": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/ui.js"
       ]
     },
     "Confirm multi-line pastes": {
@@ -874,6 +1055,11 @@
     "Confirm quit with open connections (SSH, Mosh, SFTP, FTP)": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "connected": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Connected to {path} @ {baud} {mode}": {
@@ -888,6 +1074,7 @@
     },
     "connecting": {
       "refs": [
+        "src/renderer/app.js",
         "src/renderer/dialogs.js"
       ]
     },
@@ -1005,6 +1192,11 @@
     "Could not connect to {where}: {error}": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "Could not open a window: {error}": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Could not write {file} on {where}: {error}": {
@@ -1148,6 +1340,11 @@
         "src/main/main.js"
       ]
     },
+    "Detach to New Window": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
     "Device path": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1207,6 +1404,7 @@
     },
     "disconnected": {
       "refs": [
+        "src/renderer/app.js",
         "src/renderer/dialogs.js"
       ]
     },
@@ -1257,7 +1455,13 @@
     },
     "Drag a session from the Sessions panel here, or:": {
       "refs": [
+        "src/renderer/app.js",
         "src/renderer/terminal.js"
+      ]
+    },
+    "Duplicate": {
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "Duplicate \"{name}\"": {
@@ -1325,6 +1529,11 @@
         "src/renderer/terminal.js"
       ]
     },
+    "empty pane — drag a session here": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "ends with a newline: the last line runs at once on a prompt without bracketed paste": {
       "refs": [
         "src/renderer/pasteguard.js"
@@ -1357,6 +1566,7 @@
     },
     "error": {
       "refs": [
+        "src/renderer/app.js",
         "src/renderer/dialogs.js"
       ]
     },
@@ -1395,6 +1605,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Export failed: {error}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Export sessions": {
       "refs": [
         "src/main/main.js"
@@ -1405,9 +1620,19 @@
         "src/main/main.js"
       ]
     },
+    "Exported to {file}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "External editor": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "failed": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Failed to open shell: {error}": {
@@ -1603,6 +1828,11 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Hide sidebar (⌘B)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1679,6 +1909,11 @@
         "src/main/keygen.js"
       ]
     },
+    "idle": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "ignore case": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1687,6 +1922,11 @@
     "Ignore case": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Import failed": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Import from ~/.ssh/config": {
@@ -1707,6 +1947,24 @@
     "Import sessions JSON": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Imported {imported} of {n} host from ~/.ssh/config": {
+      "plural": "Imported {imported} of {n} hosts from ~/.ssh/config",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Imported {n} session": {
+      "plural": "Imported {n} sessions",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Imported {n} session from {from}": {
+      "plural": "Imported {n} sessions from {from}",
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Imported key path from Windows; convert .ppk with puttygen and fix the path.": {
@@ -1762,6 +2020,11 @@
     "Invalid MAC address: {mac}": {
       "refs": [
         "src/main/wol.js"
+      ]
+    },
+    "Invalid pattern": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Invalid private key {key}: {error}": {
@@ -1909,6 +2172,31 @@
         "src/main/updater.js"
       ]
     },
+    "Layout 1 × 2  (2 side by side)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Layout 2 × 1  (2 stacked)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Layout 2 × 2  (4 panes)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Layout 2 × 3  (6 panes)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Layout 2 × 4  (8 panes)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Leave blank for your login shell": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1976,6 +2264,7 @@
     },
     "Local": {
       "refs": [
+        "src/renderer/app.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -1992,6 +2281,11 @@
     "Local echo": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "local shell": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Local shell": {
@@ -2113,6 +2407,11 @@
     "MobAlt {version} is available": {
       "refs": [
         "src/main/updater.js"
+      ]
+    },
+    "MobAlt {version} is installed on disk — you are running {current}.": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "MobAlt {version} is ready to install": {
@@ -2240,6 +2539,46 @@
         "src/main/main.js"
       ]
     },
+    "MultiExec is ON — {reason}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab (the zoomed pane only)": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "MultiExec OFF": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "MultiExec ON: {reason}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "MultiExec ON: input goes to every visible terminal in this tab": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "MultiExec ON: only 1 terminal is visible — split the tab to broadcast": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "MultiExec ON: only the zoomed pane is visible — restore the panes (⇧⌘⏎) to broadcast": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Name": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2345,6 +2684,11 @@
         "src/main/importers.js"
       ]
     },
+    "No matches": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "no matching {label}: this session offers {ours}; the server offers {theirs}": {
       "refs": [
         "src/main/algorithms.js"
@@ -2400,6 +2744,21 @@
         "src/renderer/terminal.js"
       ]
     },
+    "No session": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "No sessions found": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "No sessions found in {file}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "no sh on the host": {
       "refs": [
         "src/main/monitor.js"
@@ -2425,6 +2784,21 @@
         "src/main/ftp.js"
       ]
     },
+    "no terminal is visible — open a session first": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "no terminal is visible in this tab — connect a session first": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "No terminal open": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "No X server found (install XQuartz for X11 forwarding)": {
       "refs": [
         "src/renderer/app.js"
@@ -2438,6 +2812,16 @@
     "Not a CIDR, an address range or a host name: {target}": {
       "refs": [
         "src/main/netscan.js"
+      ]
+    },
+    "Not a MobAlt sessions file": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Not a MobaXterm.ini file": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Not a port: {part}": {
@@ -2510,6 +2894,11 @@
         "src/main/algorithms.js"
       ]
     },
+    "Nothing to zoom — open a session first": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Odd": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2522,7 +2911,8 @@
     },
     "OK": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/ui.js"
       ]
     },
     "On": {
@@ -2538,6 +2928,11 @@
     "One line for ~/.ssh/authorized_keys on the servers this key should open": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Only one pane in this tab": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Open config folder": {
@@ -2598,6 +2993,11 @@
     "Open the SFTP browser for this Mosh session first (Sftp panel)": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Opening {name} in {app}…": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Opens in macOS Screen Sharing (vnc:// URL).": {
@@ -2747,6 +3147,26 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Pin Tab": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
+    "Pinned": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
+    "Pinned \"{title}\" — it stays at the left and Close Others / Left / Right leave it alone": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Pinned (⇧⌘P unpins)": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
     "Pipe to shell": {
       "refs": [
         "src/renderer/pasteguard.js"
@@ -2832,6 +3252,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Quick connect  ⇧⌘N": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Quick Connect…": {
       "refs": [
         "src/main/main.js"
@@ -2846,6 +3271,11 @@
     "Range too large: {n} addresses; the limit is a /16 ({max})": {
       "refs": [
         "src/main/netscan.js"
+      ]
+    },
+    "Re-arrange current panes as grid": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Receive files with Zmodem into…": {
@@ -2890,6 +3320,11 @@
       "refs": [
         "src/main/main.js",
         "src/main/updater.js"
+      ]
+    },
+    "Relaunch to use it.": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Releases on GitHub; a newer version is offered in a dialog and installed only when you agree": {
@@ -2962,14 +3397,30 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Rename tab": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
     "Rename Tab…": {
       "refs": [
+        "src/renderer/layout.js",
         "src/main/main.js"
       ]
     },
     "repeat the passphrase": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Replace": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Replace \"{title}\" with \"{name}\"? The current connection will be dropped.": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Rescan ports": {
@@ -3010,6 +3461,11 @@
     "Restore panes (⇧⌘⏎)": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Restore Panes (unzoom)": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Restore tabs & split layout at startup": {
@@ -3125,6 +3581,11 @@
     "saved password": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "Screen Sharing": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Scrollback lines": {
@@ -3267,6 +3728,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Settings saved": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Settings…": {
       "refs": [
         "src/main/main.js"
@@ -3307,6 +3773,11 @@
         "src/main/main.js"
       ]
     },
+    "SFTP: {state}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Shell": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3331,6 +3802,11 @@
     "Show sessions": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Show sidebar (⌘B)": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Shown on the session, its tab and pane": {
@@ -3360,8 +3836,14 @@
     },
     "Split Down": {
       "refs": [
+        "src/renderer/layout.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
+      ]
+    },
+    "Split Down (top / bottom)": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Split right": {
@@ -3371,8 +3853,14 @@
     },
     "Split Right": {
       "refs": [
+        "src/renderer/layout.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
+      ]
+    },
+    "Split Right (side by side)": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Split right / down": {
@@ -3480,6 +3968,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Startup error: {error}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Status": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3535,6 +4028,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Tab Color": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
     "Tab to a header, ⏎ or Space": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3558,6 +4056,7 @@
     "Terminal": {
       "refs": [
         "src/renderer/dialogs.js",
+        "src/renderer/layout.js",
         "src/main/main.js"
       ]
     },
@@ -3569,6 +4068,11 @@
     "Terminal menu": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Terminal tabs": {
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "text": {
@@ -3654,11 +4158,13 @@
     },
     "The port must be a whole number between 1 and 65535": {
       "refs": [
+        "src/renderer/nettools.js",
         "src/main/wol.js"
       ]
     },
     "The port must be between 1 and 65535": {
       "refs": [
+        "src/renderer/nettools.js",
         "src/main/wol.js"
       ]
     },
@@ -3742,6 +4248,11 @@
         "src/main/importers.js"
       ]
     },
+    "the zoomed pane has no live terminal — restore the panes (⇧⌘⏎) or reconnect": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Theme": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3800,6 +4311,11 @@
     "Tunnel {port} enabled": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Tunnel {port}: {error}": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Tunneling…": {
@@ -3892,6 +4408,16 @@
         "src/main/importers.js"
       ]
     },
+    "Unpin Tab": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
+    "Unpinned \"{title}\"": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Unsplit": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3899,6 +4425,7 @@
     },
     "Unsplit (keep active pane)": {
       "refs": [
+        "src/renderer/app.js",
         "src/main/main.js"
       ]
     },
@@ -3942,9 +4469,19 @@
         "src/main/zmodem.js"
       ]
     },
+    "Upload failed: {error}": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Upload to {dir}": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Uploaded {name}": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Uptime": {
@@ -3955,6 +4492,11 @@
     "Use in this session": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Used by the ssh bootstrap; agent keys and password prompts work in the terminal": {
@@ -4015,6 +4557,11 @@
     "What this session offers the server, most preferred first (comma or newline separated). \"Legacy algorithms\" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Windows App / Remote Desktop": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "word joiner": {
@@ -4171,6 +4718,11 @@
     "Zoom Pane (fill the tab / restore)": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Zoom Pane (fill the tab)": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "Zoom pane (fill the tab) / restore": {
