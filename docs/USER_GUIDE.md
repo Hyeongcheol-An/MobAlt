@@ -219,8 +219,14 @@ folder dialog and leaves the field as it was when you cancel.
   unchanged. Both checks are Settings → Features → Paste guard toggles (on by default); they cover ⌘V,
   right-click and text dropped on a pane, not macros. With MultiExec on, one confirmation covers every
   visible terminal.
-- **Keys**: Shift+Enter and Option+Enter send ESC+CR (a newline in TUI apps such as Claude Code);
-  Option acts as Meta by default.
+- **Keys**: Shift+Enter and Option+Enter send ESC+CR — the sequence Claude Code's own `/terminal-setup`
+  binds in other terminals — so either key starts a new line in Claude Code's composer instead of sending
+  the prompt; Option acts as Meta by default.
+- **Images for Claude Code**: with an image and no text on the clipboard (a screenshot, *Copy Image*), ⌘V,
+  Edit → Paste and right-click paste send Ctrl+V to the terminal; Claude Code reads the system clipboard
+  itself and attaches the picture as `[Image #1]`. Text on the clipboard is pasted as usual (and wins when
+  both are there); a shell has no use for the key and shows nothing. An image file dropped from Finder on
+  a local pane pastes its quoted path (on an SSH pane files are uploaded, see *File drop* above).
 - **Logging**: Terminal → Start/Stop Session Log, or the session option, writes the raw output to
   `~/Documents/MobAlt Logs/`. Settings → Logging → *Strip colours and control sequences* keeps the
   logs as plain text instead (ANSI colours, cursor movement and the folder-tracking hook are removed).

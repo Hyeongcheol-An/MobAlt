@@ -201,8 +201,14 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   보냅니다. 두 검사 모두 Settings → Features → Paste guard에서 끌 수 있고(기본 켜짐) ⌘V, 우클릭, 페인에
   놓은 텍스트에 적용되며 매크로에는 적용되지 않습니다. MultiExec가 켜져 있으면 확인 한 번으로 보이는 모든
   터미널에 들어갑니다.
-- **키**: Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈이 됩니다.
-  Option은 기본적으로 Meta로 동작합니다.
+- **키**: Shift+Enter와 Option+Enter는 ESC+CR을 보냅니다. Claude Code의 `/terminal-setup`이 다른
+  터미널에 설정하는 바로 그 시퀀스이므로, 두 키 모두 Claude Code 입력창에서 프롬프트를 보내지 않고 줄을
+  바꿉니다. Option은 기본적으로 Meta로 동작합니다.
+- **Claude Code에 이미지 붙여넣기**: 클립보드에 텍스트 없이 이미지만 있을 때(스크린샷, *이미지 복사*) ⌘V,
+  Edit → Paste, 우클릭 붙여넣기는 터미널에 Ctrl+V를 보냅니다. Claude Code는 시스템 클립보드를 직접 읽어
+  그림을 `[Image #1]`로 첨부합니다. 클립보드에 텍스트가 있으면 지금처럼 텍스트가 붙여넣어지고(둘 다 있으면
+  텍스트 우선), 셸은 이 키를 쓸 일이 없어 아무것도 표시하지 않습니다. Finder에서 이미지 파일을 로컬 페인에
+  끌어다 놓으면 따옴표로 감싼 경로가 입력됩니다(SSH 페인에서는 위 *파일 드롭*처럼 업로드).
 - **로그**: Terminal → Start/Stop Session Log 또는 세션 옵션으로 출력을 `~/Documents/MobAlt Logs/`에
   기록합니다. Settings → Logging의 *Strip colours and control sequences*를 켜면 ANSI 색상·제어
   시퀀스·폴더 추적 훅을 걷어낸 일반 텍스트로 저장합니다.
