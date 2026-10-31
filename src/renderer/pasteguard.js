@@ -13,16 +13,23 @@ import { t, tn } from './i18n.js'; // interface language: every label / message 
 /** A paste longer than this many characters asks for confirmation even on one line. */
 export const PASTE_CONFIRM_CHARS = 1000;
 
-export const KIND_LABEL = {
-  invisible: 'Invisible character',
-  control: 'Control character',
-  'trailing-newline': 'Trailing newline',
-  cr: 'Carriage return',
-  'pipe-to-shell': 'Pipe to shell',
-  'profile-write': 'Profile write',
-  destructive: 'Destructive command',
-  homoglyph: 'Look-alike letters',
+// The label of each finding kind (the list in the paste guard dialog). A table of strings built at module load would
+// be frozen in the language of that moment, so each entry is looked up when it is read: kindLabel(kind), or the
+// KIND_LABEL object dialogs.js indexes, whose property reads call t() at access time.
+const KIND_SRC = {
+  invisible: () => t('Invisible character'),
+  control: () => t('Control character'),
+  'trailing-newline': () => t('Trailing newline'),
+  cr: () => t('Carriage return'),
+  'pipe-to-shell': () => t('Pipe to shell'),
+  'profile-write': () => t('Profile write'),
+  destructive: () => t('Destructive command'),
+  homoglyph: () => t('Look-alike letters'),
 };
+/** The label of a finding kind in the current language; undefined for an unknown kind. */
+export const kindLabel = (kind) => (Object.prototype.hasOwnProperty.call(KIND_SRC, kind) ? KIND_SRC[kind]() : undefined);
+/** KIND_LABEL[kind] === kindLabel(kind): the same labels as an object (every read is translated at that moment). */
+export const KIND_LABEL = new Proxy(KIND_SRC, { get: (src, kind) => (typeof kind === 'string' ? kindLabel(kind) : undefined) });
 
 /** Kinds that mean "this is probably an attack or a disaster", not "this may not be what you see". */
 export const DANGER_KINDS = new Set(['pipe-to-shell', 'profile-write', 'destructive']);
@@ -37,16 +44,17 @@ const SPACE_LOOKALIKE_RE = /[\u00A0\u202F]/g; // cleaned: a real space, not noth
 const CONTROL_RE = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\u0080-\u009F]/g;
 const LINE_BREAK_RE = /\r\n|\r|\n/g;
 
+// the names are shown in the findings list, so each is looked up (translated) when a finding is built, not at module load
 const INVISIBLE_NAMES = {
-  0x200b: 'zero-width space', 0x200c: 'zero-width non-joiner', 0x200d: 'zero-width joiner',
-  0x200e: 'left-to-right mark', 0x200f: 'right-to-left mark', 0x2028: 'line separator', 0x2029: 'paragraph separator',
-  0x202a: 'left-to-right embedding', 0x202b: 'right-to-left embedding', 0x202c: 'pop directional formatting',
-  0x202d: 'left-to-right override', 0x202e: 'right-to-left override',
-  0x2060: 'word joiner', 0x2061: 'function application', 0x2062: 'invisible times', 0x2063: 'invisible separator', 0x2064: 'invisible plus',
-  0x2066: 'left-to-right isolate', 0x2067: 'right-to-left isolate', 0x2068: 'first strong isolate', 0x2069: 'pop directional isolate',
-  0xfeff: 'byte order mark', 0xad: 'soft hyphen', 0xa0: 'no-break space', 0x202f: 'narrow no-break space', 0x180e: 'Mongolian vowel separator',
+  0x200b: () => t('zero-width space'), 0x200c: () => t('zero-width non-joiner'), 0x200d: () => t('zero-width joiner'),
+  0x200e: () => t('left-to-right mark'), 0x200f: () => t('right-to-left mark'), 0x2028: () => t('line separator'), 0x2029: () => t('paragraph separator'),
+  0x202a: () => t('left-to-right embedding'), 0x202b: () => t('right-to-left embedding'), 0x202c: () => t('pop directional formatting'),
+  0x202d: () => t('left-to-right override'), 0x202e: () => t('right-to-left override'),
+  0x2060: () => t('word joiner'), 0x2061: () => t('function application'), 0x2062: () => t('invisible times'), 0x2063: () => t('invisible separator'), 0x2064: () => t('invisible plus'),
+  0x2066: () => t('left-to-right isolate'), 0x2067: () => t('right-to-left isolate'), 0x2068: () => t('first strong isolate'), 0x2069: () => t('pop directional isolate'),
+  0xfeff: () => t('byte order mark'), 0xad: () => t('soft hyphen'), 0xa0: () => t('no-break space'), 0x202f: () => t('narrow no-break space'), 0x180e: () => t('Mongolian vowel separator'),
 };
-const invisibleName = (code) => INVISIBLE_NAMES[code] || (code >= 0xfe00 && code <= 0xfe0f ? 'variation selector' : code >= 0xe0000 && code <= 0xe007f ? 'tag character' : 'invisible character');
+const invisibleName = (code) => (INVISIBLE_NAMES[code] ? INVISIBLE_NAMES[code]() : code >= 0xfe00 && code <= 0xfe0f ? t('variation selector') : code >= 0xe0000 && code <= 0xe007f ? t('tag character') : t('invisible character'));
 const BIDI_RE = /[\u200E\u200F\u202A-\u202E\u2066-\u2069]/;
 const CONTROL_NAMES = {
   0: 'NUL', 1: 'SOH', 2: 'STX', 3: 'ETX (^C)', 4: 'EOT (^D)', 5: 'ENQ', 6: 'ACK', 7: 'BEL', 8: 'BS', 11: 'VT', 12: 'FF',
@@ -56,23 +64,24 @@ const CONTROL_NAMES = {
 
 const SHELLS = '(?:ba|z|k|da|fi|c|tc|)sh|python3?|perl|ruby|node';
 const FETCH = '(?:curl|wget|fetch)';
+// `message` is a function: the text is translated when the finding is built (a string here would be frozen at module load)
 const PIPE_TO_SHELL = [
-  { re: new RegExp(`\\b${FETCH}\\b[^|\\n]*\\|\\s*(?:sudo\\s+(?:-\\S+\\s+)*)?(?:${SHELLS})\\b`, 'i'), message: 'pipes a download straight into a shell (curl … | sh): the script runs without being seen' },
-  { re: new RegExp(`\\b(?:${SHELLS})\\s+(?:-\\S+\\s+)*-c\\s+["']?\\$\\(\\s*${FETCH}\\b`, 'i'), message: 'runs a download through sh -c "$(curl …)": the script runs without being seen' },
-  { re: new RegExp(`\\beval\\s+["']?\\$\\(\\s*${FETCH}\\b`, 'i'), message: 'evaluates a download (eval "$(curl …)"): the script runs without being seen' },
-  { re: new RegExp(`\\b(?:${SHELLS})\\s+(?:-\\S+\\s+)*<\\(\\s*${FETCH}\\b`, 'i'), message: 'runs a download through process substitution (sh <(curl …)): the script runs without being seen' },
+  { re: new RegExp(`\\b${FETCH}\\b[^|\\n]*\\|\\s*(?:sudo\\s+(?:-\\S+\\s+)*)?(?:${SHELLS})\\b`, 'i'), message: () => t('pipes a download straight into a shell (curl … | sh): the script runs without being seen') },
+  { re: new RegExp(`\\b(?:${SHELLS})\\s+(?:-\\S+\\s+)*-c\\s+["']?\\$\\(\\s*${FETCH}\\b`, 'i'), message: () => t('runs a download through sh -c "$(curl …)": the script runs without being seen') },
+  { re: new RegExp(`\\beval\\s+["']?\\$\\(\\s*${FETCH}\\b`, 'i'), message: () => t('evaluates a download (eval "$(curl …)"): the script runs without being seen') },
+  { re: new RegExp(`\\b(?:${SHELLS})\\s+(?:-\\S+\\s+)*<\\(\\s*${FETCH}\\b`, 'i'), message: () => t('runs a download through process substitution (sh <(curl …)): the script runs without being seen') },
 ];
 const PROFILE_FILES = 'bashrc|bash_profile|bash_login|bash_logout|profile|zshrc|zprofile|zshenv|zlogin|zlogout|ssh\\/authorized_keys|ssh\\/config|ssh\\/rc';
 const PROFILE_WRITE = new RegExp(`(?:>>?|\\btee\\b(?:\\s+-\\w+)*)\\s*["']?(?:~|\\$HOME|\\$\\{HOME\\}|\\/home\\/[\\w.-]+|\\/Users\\/[\\w.-]+|\\/root)?\\/?\\.(${PROFILE_FILES})(?![\\w.-])`, 'g'); // the exact file: .zshrc.bak is not the profile
 const DEVICE = '\\/dev\\/(?:r?disk|sd|hd|nvme|mmcblk|vd|xvd)\\w*';
 const DESTRUCTIVE = [
   // rm with a recursive flag somewhere in its options and the root, the home folder (with or without a trailing slash) or a bare * as the first target
-  { re: /\brm\s+(?=(?:-\S+\s+)*(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)\s)(?:-\S+\s+)+["']?(?:\/|~\/?|\$HOME\/?|\$\{HOME\}\/?|\/\*|~\/\*|\*)["']?(?=\s|$|[;&|)])/m, message: 'rm -rf on the root, the home folder or everything in the current folder' },
-  { re: new RegExp(`\\bdd\\b[^\\n|;]*\\bof=${DEVICE}`), message: 'dd writes raw data over a disk device' },
-  { re: new RegExp(`>\\s*${DEVICE}`), message: 'overwrites a disk device' },
-  { re: /\b(?:mkfs(?:\.\w+)?|mke2fs|newfs)\b|\bdiskutil\s+(?:erase\w*|reformat|partition\w*)\b/, message: 'formats a disk' },
-  { re: /:\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:/, message: 'fork bomb: exhausts the machine' },
-  { re: /\bchmod\s+(?:-\w+\s+)*(?:[0-7]{3,4}|[ugoa]*[+=-][rwxst]+)\s+["']?\/["']?(?=\s|$|[;&|)])/m, message: 'chmod on /: breaks the system' },
+  { re: /\brm\s+(?=(?:-\S+\s+)*(?:-[a-zA-Z]*[rR][a-zA-Z]*|--recursive)\s)(?:-\S+\s+)+["']?(?:\/|~\/?|\$HOME\/?|\$\{HOME\}\/?|\/\*|~\/\*|\*)["']?(?=\s|$|[;&|)])/m, message: () => t('rm -rf on the root, the home folder or everything in the current folder') },
+  { re: new RegExp(`\\bdd\\b[^\\n|;]*\\bof=${DEVICE}`), message: () => t('dd writes raw data over a disk device') },
+  { re: new RegExp(`>\\s*${DEVICE}`), message: () => t('overwrites a disk device') },
+  { re: /\b(?:mkfs(?:\.\w+)?|mke2fs|newfs)\b|\bdiskutil\s+(?:erase\w*|reformat|partition\w*)\b/, message: () => t('formats a disk') },
+  { re: /:\s*\(\s*\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:/, message: () => t('fork bomb: exhausts the machine') },
+  { re: /\bchmod\s+(?:-\w+\s+)*(?:[0-7]{3,4}|[ugoa]*[+=-][rwxst]+)\s+["']?\/["']?(?=\s|$|[;&|)])/m, message: () => t('chmod on /: breaks the system') },
 ];
 const WORD_RE = /[\p{L}\p{M}\p{N}_]+/gu;
 const LATIN_RE = /[A-Za-z]/;
@@ -142,48 +151,55 @@ export function analysePaste(input) {
   const lines = text === '' ? 0 : breaks + (endsWithBreak ? 0 : 1);
   const multiline = breaks > 0;
 
+  // a character finding reads "U+200B zero-width space ×2: <why>": the code point, its name, how often, the explanation
+  const charMessage = (what, why, n) => tn('{what}: {why}', '{what} ×{n}: {why}', n, { what, why });
   for (const g of grouped(text, INVISIBLE_RE, (m) => m[0])) {
     const code = g.key.codePointAt(0);
     const bidi = BIDI_RE.test(g.key);
     const what = `${hex(code)} ${invisibleName(code)}`;
-    const why = bidi ? 'a bidi control: the text can read in another order than it runs (Trojan Source)'
-      : SPACE_LOOKALIKE_RE.test(g.key) ? 'looks like a space but is not one to the shell: it becomes part of the word'
-      : 'takes no space on screen but is sent to the shell';
-    findings.push(finding(text, 'invisible', `${what}${g.ranges.length > 1 ? ` ×${g.ranges.length}` : ''}: ${why}`, g.ranges, { char: g.key }));
+    const why = bidi ? t('a bidi control: the text can read in another order than it runs (Trojan Source)')
+      : SPACE_LOOKALIKE_RE.test(g.key) ? t('looks like a space but is not one to the shell: it becomes part of the word')
+      : t('takes no space on screen but is sent to the shell');
+    findings.push(finding(text, 'invisible', charMessage(what, why, g.ranges.length), g.ranges, { char: g.key }));
   }
   for (const g of grouped(text, CONTROL_RE, (m) => m[0])) {
     const code = g.key.charCodeAt(0);
-    const name = CONTROL_NAMES[code] ? ` ${CONTROL_NAMES[code]}` : '';
-    findings.push(finding(text, 'control', `${hex(code)}${name}${g.ranges.length > 1 ? ` ×${g.ranges.length}` : ''}: a key or escape sequence, not text; the terminal would act on it`, g.ranges, { char: g.key }));
+    const what = CONTROL_NAMES[code] ? `${hex(code)} ${CONTROL_NAMES[code]}` : hex(code);
+    findings.push(finding(text, 'control', charMessage(what, t('a key or escape sequence, not text; the terminal would act on it'), g.ranges.length), g.ranges, { char: g.key }));
   }
   if (endsWithBreak) {
     const m = text.match(/(?:\r\n|\r|\n)+$/);
-    findings.push(finding(text, 'trailing-newline', 'ends with a newline: the last line runs at once on a prompt without bracketed paste', [[m.index, m[0].length]]));
+    findings.push(finding(text, 'trailing-newline', t('ends with a newline: the last line runs at once on a prompt without bracketed paste'), [[m.index, m[0].length]]));
   }
   {
     const ranges = [];
     for (let i = 0; i < text.length - 1; i++) if (text.charCodeAt(i) === 13 && text.charCodeAt(i + 1) !== 10) ranges.push([i, 1]);
-    if (ranges.length) findings.push(finding(text, 'cr', `a carriage return inside a line${ranges.length > 1 ? ` ×${ranges.length}` : ''}: the terminal presses Enter there, so what runs is not what you see`, ranges));
+    if (ranges.length) findings.push(finding(text, 'cr', tn('a carriage return inside a line: the terminal presses Enter there, so what runs is not what you see', 'a carriage return inside a line ×{n}: the terminal presses Enter there, so what runs is not what you see', ranges.length), ranges));
   }
   for (const { re, message } of PIPE_TO_SHELL) {
     const ranges = lineMatches(text, re).map(([i, l]) => [i, l]);
-    if (ranges.length) findings.push(finding(text, 'pipe-to-shell', message, ranges));
+    if (ranges.length) findings.push(finding(text, 'pipe-to-shell', message(), ranges));
   }
   for (const g of grouped(text, PROFILE_WRITE, (m) => m[1])) {
     const file = g.key.replace('\\/', '/');
     const ssh = file.startsWith('ssh/');
-    findings.push(finding(text, 'profile-write', ssh ? `writes to ~/.${file}: that grants or changes SSH access to this account` : `writes to ~/.${file}: a shell profile runs at every new shell`, g.ranges, { file }));
+    findings.push(finding(text, 'profile-write', ssh ? t('writes to ~/.{file}: that grants or changes SSH access to this account', { file }) : t('writes to ~/.{file}: a shell profile runs at every new shell', { file }), g.ranges, { file }));
   }
   for (const { re, message } of DESTRUCTIVE) {
     const hits = lineMatches(text, re);
     if (!hits.length) continue;
     const sudo = hits.some(([, , line]) => /\bsudo\b/.test(line));
-    findings.push(finding(text, 'destructive', `${message}${sudo ? ' (with sudo)' : ''}`, hits.map(([i, l]) => [i, l])));
+    const what = message();
+    findings.push(finding(text, 'destructive', sudo ? t('{what} (with sudo)', { what }) : what, hits.map(([i, l]) => [i, l])));
   }
   for (const g of grouped(text, WORD_RE, (m) => m[0]).filter((g) => LATIN_RE.test(g.key) && CONFUSABLE_RE.test(g.key) && !MICRO_UNIT_RE.test(g.key))) {
     const odd = [...g.key].filter((c) => CONFUSABLE_RE.test(c)).map((c) => `${c} (${hex(c.codePointAt(0))})`);
-    const script = /[\u0400-\u04FF]/.test(g.key) ? (/[\u0370-\u03FF]/.test(g.key) ? 'Cyrillic and Greek' : 'Cyrillic') : 'Greek';
-    findings.push(finding(text, 'homoglyph', `"${g.key}" mixes ${script} ${odd.length > 1 ? 'letters' : 'letter'} ${[...new Set(odd)].join(', ')} into a Latin word: it is not the name it looks like`, g.ranges, { word: g.key }));
+    const script = /[\u0400-\u04FF]/.test(g.key) ? (/[\u0370-\u03FF]/.test(g.key) ? t('Cyrillic and Greek') : t('Cyrillic')) : t('Greek');
+    const params = { word: g.key, script, letters: [...new Set(odd)].join(', ') };
+    const message = odd.length > 1
+      ? t('"{word}" mixes {script} letters {letters} into a Latin word: it is not the name it looks like', params)
+      : t('"{word}" mixes {script} letter {letters} into a Latin word: it is not the name it looks like', params);
+    findings.push(finding(text, 'homoglyph', message, g.ranges, { word: g.key }));
   }
   findings.sort((a, b) => a.index - b.index || a.kind.localeCompare(b.kind));
 
