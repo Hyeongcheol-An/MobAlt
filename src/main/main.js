@@ -24,6 +24,7 @@ const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
 const i18n = require('./i18n'); // interface language: t() for every label built here, the dictionary for the windows
+const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 const { ZmodemManager } = require('./zmodem');
 
@@ -55,14 +56,14 @@ let relaunchRequested = false; // test mode: app:relaunch records the request in
  * quitting may proceed. No dialog when the setting is off, during a confirmed quit, or in the headless test
  * runs (their scripts must quit unattended).
  */
-function confirmQuit(verb = 'Quit') {
+function confirmQuit(verb = t('Quit')) {
   if (quitting) return true;
   if (process.env.MOBALT_TEST_SCRIPT || process.env.MOBALT_SCREENSHOT) return true;
   const live = liveConnections(registry, ftp);
   if (!live.total || !store.getSettings().confirmClose) return true;
   const r = dialog.showMessageBoxSync(win && !win.isDestroyed() ? win : undefined, {
     type: 'question',
-    buttons: [verb, 'Cancel'],
+    buttons: [verb, t('Cancel')],
     defaultId: 1,
     cancelId: 1,
     message: quitQuestion(live, verb),
@@ -80,7 +81,7 @@ function confirmQuit(verb = 'Quit') {
  * restart is under way (in test mode: recorded, not performed).
  */
 function relaunch() {
-  if (!confirmQuit('Relaunch')) return false;
+  if (!confirmQuit(t('Relaunch'))) return false;
   if (process.env.MOBALT_TEST_SCRIPT) {
     relaunchRequested = true;
     return true;
@@ -390,7 +391,7 @@ function buildMenu() {
       submenu: [
         { role: 'about' },
         { type: 'separator' },
-        { label: 'Settings…', accelerator: 'Cmd+,', click: () => sendAction('settings') },
+        { label: t('Settings…'), accelerator: 'Cmd+,', click: () => sendAction('settings') },
         { type: 'separator' },
         { role: 'services' },
         { type: 'separator' },
@@ -400,99 +401,99 @@ function buildMenu() {
       ],
     },
     {
-      label: 'Session',
+      label: t('Session'),
       submenu: [
-        { label: 'New Session…', accelerator: 'Cmd+N', click: () => sendAction('new-session') },
-        { label: 'New Local Terminal', accelerator: 'Cmd+T', click: () => sendAction('new-local') },
-        { label: 'Quick Connect…', accelerator: 'Cmd+Shift+N', click: () => sendAction('quick-connect') },
+        { label: t('New Session…'), accelerator: 'Cmd+N', click: () => sendAction('new-session') },
+        { label: t('New Local Terminal'), accelerator: 'Cmd+T', click: () => sendAction('new-local') },
+        { label: t('Quick Connect…'), accelerator: 'Cmd+Shift+N', click: () => sendAction('quick-connect') },
         { type: 'separator' },
-        { label: 'Duplicate Session', accelerator: 'Cmd+Shift+T', click: () => sendAction('duplicate') },
-        { label: 'Reconnect', accelerator: 'Cmd+R', click: () => sendAction('reconnect') },
-        { label: 'Disconnect', click: () => sendAction('disconnect') },
+        { label: t('Duplicate Session'), accelerator: 'Cmd+Shift+T', click: () => sendAction('duplicate') },
+        { label: t('Reconnect'), accelerator: 'Cmd+R', click: () => sendAction('reconnect') },
+        { label: t('Disconnect'), click: () => sendAction('disconnect') },
         { type: 'separator' },
         // the tab items are enabled like the tab context menu's (applyMenuState, from the renderer's tabs:state)
-        { id: 'tab-rename', label: 'Rename Tab…', click: () => sendAction('rename-tab') },
-        { id: 'tab-pin', label: 'Pin / Unpin Tab', accelerator: 'Cmd+Shift+P', click: () => sendAction('pin-tab') },
-        { id: 'tab-detach', label: 'Detach Tab to New Window', accelerator: 'Cmd+Alt+N', click: () => sendAction('detach-tab') },
-        { id: 'tab-close', label: 'Close Tab', accelerator: 'Cmd+W', click: () => sendAction('close') },
-        { id: 'tab-close-others', label: 'Close Other Tabs', click: () => sendAction('close-others') },
-        { id: 'tab-close-left', label: 'Close Tabs to the Left', click: () => sendAction('close-left') },
-        { id: 'tab-close-right', label: 'Close Tabs to the Right', click: () => sendAction('close-right') },
+        { id: 'tab-rename', label: t('Rename Tab…'), click: () => sendAction('rename-tab') },
+        { id: 'tab-pin', label: t('Pin / Unpin Tab'), accelerator: 'Cmd+Shift+P', click: () => sendAction('pin-tab') },
+        { id: 'tab-detach', label: t('Detach Tab to New Window'), accelerator: 'Cmd+Alt+N', click: () => sendAction('detach-tab') },
+        { id: 'tab-close', label: t('Close Tab'), accelerator: 'Cmd+W', click: () => sendAction('close') },
+        { id: 'tab-close-others', label: t('Close Other Tabs'), click: () => sendAction('close-others') },
+        { id: 'tab-close-left', label: t('Close Tabs to the Left'), click: () => sendAction('close-left') },
+        { id: 'tab-close-right', label: t('Close Tabs to the Right'), click: () => sendAction('close-right') },
         { type: 'separator' },
-        { label: 'Import from ~/.ssh/config', click: () => sendAction('import-sshconfig') },
-        { label: 'Import from MobaXterm.ini…', click: () => sendAction('import-moba') },
-        { label: 'Import Sessions (JSON)…', click: () => sendAction('import-json') },
-        { label: 'Export Sessions (JSON)…', click: () => sendAction('export-json') },
+        { label: t('Import from ~/.ssh/config'), click: () => sendAction('import-sshconfig') },
+        { label: t('Import from MobaXterm.ini…'), click: () => sendAction('import-moba') },
+        { label: t('Import Sessions (JSON)…'), click: () => sendAction('import-json') },
+        { label: t('Export Sessions (JSON)…'), click: () => sendAction('export-json') },
         { type: 'separator' },
-        { label: 'Generate SSH Key…', click: () => sendAction('keygen') },
+        { label: t('Generate SSH Key…'), click: () => sendAction('keygen') },
       ],
     },
     {
-      label: 'Edit',
+      label: t('Edit'),
       submenu: [
         { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
         { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
         { type: 'separator' },
-        { label: 'Find…', accelerator: 'Cmd+F', click: () => sendAction('find') },
-        { label: 'Clear Terminal', accelerator: 'Cmd+K', click: () => sendAction('clear') },
+        { label: t('Find…'), accelerator: 'Cmd+F', click: () => sendAction('find') },
+        { label: t('Clear Terminal'), accelerator: 'Cmd+K', click: () => sendAction('clear') },
       ],
     },
     {
-      label: 'View',
+      label: t('View'),
       submenu: [
-        { label: 'Toggle Sidebar', accelerator: 'Cmd+B', click: () => sendAction('toggle-sidebar') },
-        { label: 'Sessions Panel', accelerator: 'Cmd+1', click: () => sendAction('sidebar', 'sessions') },
-        { label: 'SFTP Panel', accelerator: 'Cmd+2', click: () => sendAction('sidebar', 'sftp') },
-        { label: 'Tools Panel', accelerator: 'Cmd+3', click: () => sendAction('sidebar', 'tools') },
-        { label: 'Macros Panel', accelerator: 'Cmd+4', click: () => sendAction('sidebar', 'macros') },
+        { label: t('Toggle Sidebar'), accelerator: 'Cmd+B', click: () => sendAction('toggle-sidebar') },
+        { label: t('Sessions Panel'), accelerator: 'Cmd+1', click: () => sendAction('sidebar', 'sessions') },
+        { label: t('SFTP Panel'), accelerator: 'Cmd+2', click: () => sendAction('sidebar', 'sftp') },
+        { label: t('Tools Panel'), accelerator: 'Cmd+3', click: () => sendAction('sidebar', 'tools') },
+        { label: t('Macros Panel'), accelerator: 'Cmd+4', click: () => sendAction('sidebar', 'macros') },
         { type: 'separator' },
-        { label: 'Split Right', accelerator: 'Cmd+D', click: () => sendAction('split', 'right') },
-        { label: 'Split Down', accelerator: 'Cmd+Shift+D', click: () => sendAction('split', 'down') },
+        { label: t('Split Right'), accelerator: 'Cmd+D', click: () => sendAction('split', 'right') },
+        { label: t('Split Down'), accelerator: 'Cmd+Shift+D', click: () => sendAction('split', 'down') },
         {
-          label: 'Grid Layout',
+          label: t('Grid Layout'),
           submenu: [
-            { label: '1 × 2 (2 side by side)', accelerator: 'Cmd+Alt+2', click: () => sendAction('layout', '2x1') },
-            { label: '2 × 1 (2 stacked)', click: () => sendAction('layout', '1x2') },
-            { label: '2 × 2 (4 panes)', accelerator: 'Cmd+Alt+4', click: () => sendAction('layout', '2x2') },
-            { label: '2 × 3 (6 panes)', accelerator: 'Cmd+Alt+6', click: () => sendAction('layout', '2x3') },
-            { label: '2 × 4 (8 panes)', accelerator: 'Cmd+Alt+8', click: () => sendAction('layout', '2x4') },
+            { label: t('1 × 2 (2 side by side)'), accelerator: 'Cmd+Alt+2', click: () => sendAction('layout', '2x1') },
+            { label: t('2 × 1 (2 stacked)'), click: () => sendAction('layout', '1x2') },
+            { label: t('2 × 2 (4 panes)'), accelerator: 'Cmd+Alt+4', click: () => sendAction('layout', '2x2') },
+            { label: t('2 × 3 (6 panes)'), accelerator: 'Cmd+Alt+6', click: () => sendAction('layout', '2x3') },
+            { label: t('2 × 4 (8 panes)'), accelerator: 'Cmd+Alt+8', click: () => sendAction('layout', '2x4') },
           ],
         },
-        { label: 'Unsplit (keep active pane)', accelerator: 'Cmd+Alt+1', click: () => sendAction('unsplit') },
-        { label: 'Close Pane', accelerator: 'Cmd+Shift+W', click: () => sendAction('close-pane') },
-        { label: 'Focus Next Pane', accelerator: 'Cmd+]', click: () => sendAction('next-pane') },
-        { label: 'Zoom Pane (fill the tab / restore)', accelerator: 'Cmd+Shift+Return', click: () => sendAction('zoom-pane') },
-        { label: 'Remote Monitoring Bar', click: () => sendAction('toggle-monitor') },
+        { label: t('Unsplit (keep active pane)'), accelerator: 'Cmd+Alt+1', click: () => sendAction('unsplit') },
+        { label: t('Close Pane'), accelerator: 'Cmd+Shift+W', click: () => sendAction('close-pane') },
+        { label: t('Focus Next Pane'), accelerator: 'Cmd+]', click: () => sendAction('next-pane') },
+        { label: t('Zoom Pane (fill the tab / restore)'), accelerator: 'Cmd+Shift+Return', click: () => sendAction('zoom-pane') },
+        { label: t('Remote Monitoring Bar'), click: () => sendAction('toggle-monitor') },
         { type: 'separator' },
-        { label: 'Zoom In', accelerator: 'Cmd+=', click: () => sendAction('zoom', 1) },
-        { label: 'Zoom Out', accelerator: 'Cmd+-', click: () => sendAction('zoom', -1) },
-        { label: 'Reset Zoom', accelerator: 'Cmd+0', click: () => sendAction('zoom', 0) },
+        { label: t('Zoom In'), accelerator: 'Cmd+=', click: () => sendAction('zoom', 1) },
+        { label: t('Zoom Out'), accelerator: 'Cmd+-', click: () => sendAction('zoom', -1) },
+        { label: t('Reset Zoom'), accelerator: 'Cmd+0', click: () => sendAction('zoom', 0) },
         { type: 'separator' },
         { role: 'togglefullscreen' },
         { role: 'toggleDevTools' },
       ],
     },
     {
-      label: 'Terminal',
+      label: t('Terminal'),
       submenu: [
-        { label: 'MultiExec (broadcast input)', accelerator: 'Cmd+Shift+M', click: () => sendAction('multiexec') },
-        { label: 'Tunneling…', accelerator: 'Cmd+Shift+U', click: () => sendAction('tunnels') },
-        { label: 'Start/Stop Session Log', click: () => sendAction('toggle-log') },
+        { label: t('MultiExec (broadcast input)'), accelerator: 'Cmd+Shift+M', click: () => sendAction('multiexec') },
+        { label: t('Tunneling…'), accelerator: 'Cmd+Shift+U', click: () => sendAction('tunnels') },
+        { label: t('Start/Stop Session Log'), click: () => sendAction('toggle-log') },
         { type: 'separator' },
-        { label: 'Next Tab', accelerator: 'Ctrl+Tab', click: () => sendAction('next-tab') },
-        { label: 'Previous Tab', accelerator: 'Ctrl+Shift+Tab', click: () => sendAction('prev-tab') },
+        { label: t('Next Tab'), accelerator: 'Ctrl+Tab', click: () => sendAction('next-tab') },
+        { label: t('Previous Tab'), accelerator: 'Ctrl+Shift+Tab', click: () => sendAction('prev-tab') },
       ],
     },
     { role: 'windowMenu' },
     {
       role: 'help',
       submenu: [
-        { label: 'Check for Updates…', click: () => updater && updater.check(true) },
+        { label: t('Check for Updates…'), click: () => updater && updater.check(true) },
         { type: 'separator' },
-        { label: 'User Guide', click: () => shell.openExternal(i18n.guideUrl()) }, // the guide in the interface language (docs/)
-        { label: 'Keyboard Shortcuts', click: () => sendAction('shortcuts') },
+        { label: t('User Guide'), click: () => shell.openExternal(i18n.guideUrl()) }, // the guide in the interface language (docs/)
+        { label: t('Keyboard Shortcuts'), click: () => sendAction('shortcuts') },
         { type: 'separator' },
-        { label: 'MobAlt on disk', click: () => shell.showItemInFolder(app.getPath('userData')) },
+        { label: t('MobAlt on disk'), click: () => shell.showItemInFolder(app.getPath('userData')) },
       ],
     },
   ];
@@ -637,7 +638,7 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const live = liveConnections(registry, ftp);
     const wouldAsk = !quitting && live.total > 0 && !!store.getSettings().confirmClose;
-    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live, verb || 'Quit') : null, relaunchRequested };
+    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live, verb || t('Quit')) : null, relaunchRequested };
   });
   // Test-only: pretend that MobAlt `version` is now on disk — the same renderer event the bundle watch sends
   // (no de-duplication here, so the renderer's own "Later" logic is what gets exercised).
@@ -770,7 +771,7 @@ function registerIpc() {
   ipcMain.handle('term:spawn-mosh', async (e, opts) => {
     // the session's Advanced SSH algorithm settings apply to this check (and to the SFTP companion), not to mosh's own ssh
     const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms, algorithms: opts.algorithms });
-    if (!v.ok) throw new Error(v.error || 'host key not accepted');
+    if (!v.ok) throw new Error(v.error || t('host key not accepted'));
     return own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
   });
   ipcMain.handle('ftp:connect', async (e, cfg) => own(e, await ftp.connect(await mergeSecrets(cfg))));
@@ -821,8 +822,8 @@ function registerIpc() {
   // Install on a server: the saved session's own authentication (prompts included); { ok, added } or { ok: false, error }
   ipcMain.handle('keygen:install', async (_e, sessionId, publicKey, remoteFile) => {
     const s = await store.getSession(sessionId);
-    if (!s) return { ok: false, error: 'That session no longer exists' };
-    if (s.type !== 'ssh') return { ok: false, error: `${s.name} is not an SSH session` };
+    if (!s) return { ok: false, error: t('That session no longer exists') };
+    if (s.type !== 'ssh') return { ok: false, error: t('{name} is not an SSH session', { name: s.name }) };
     return ssh.installPublicKey(s, publicKey, remoteFile);
   });
   // one poll of the remote monitoring bar (src/main/monitor.js): { sample } or { error, fatal }
@@ -846,11 +847,11 @@ function registerIpc() {
       const base = s.downloadDir || app.getPath('downloads');
       const name = path.posix.basename(remote);
       if (isDir) {
-        const r = await dialogs.showOpenDialog(wof(e), { title: `Download folder "${name}" into…`, defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
+        const r = await dialogs.showOpenDialog(wof(e), { title: t('Download folder "{name}" into…', { name }), defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
         if (r.canceled || !r.filePaths[0]) return null;
         local = path.join(r.filePaths[0], name);
       } else {
-        const r = await dialogs.showSaveDialog(wof(e), { title: 'Download to…', defaultPath: path.join(base, name) });
+        const r = await dialogs.showSaveDialog(wof(e), { title: t('Download to…'), defaultPath: path.join(base, name) });
         if (r.canceled || !r.filePath) return null;
         local = r.filePath;
       }
@@ -859,7 +860,7 @@ function registerIpc() {
   });
   ipcMain.handle('sftp:upload', async (e, id, locals, remoteDir) => {
     if (!locals || !locals.length) {
-      const r = await dialogs.showOpenDialog(wof(e), { title: `Upload to ${remoteDir}`, properties: ['openFile', 'openDirectory', 'multiSelections'] });
+      const r = await dialogs.showOpenDialog(wof(e), { title: t('Upload to {dir}', { dir: remoteDir }), properties: ['openFile', 'openDirectory', 'multiSelections'] });
       if (r.canceled) return [];
       locals = r.filePaths;
     }
@@ -903,7 +904,7 @@ function registerIpc() {
   // single reason when the file could not be used at all — then imported and skipped are 0; file: the chosen file's
   // name, for "No sessions found in …") for one summary toast.
   ipcMain.handle('sessions:import-moba', async (e) => {
-    const r = await dialogs.showOpenDialog(wof(e), { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
+    const r = await dialogs.showOpenDialog(wof(e), { title: t('Select MobaXterm.ini'), filters: [{ name: t('MobaXterm settings'), extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
     const file = path.basename(r.filePaths[0]);
     let parsed;
@@ -931,23 +932,23 @@ function registerIpc() {
       updated++;
     }
     if (imported || updated) peers(e, 'sessions:changed');
-    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`), file };
+    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
   });
   // The chosen path on success, null when cancelled, { error } when the file could not be written (a read-only or
   // vanished folder): the renderer shows the reason instead of an unhandled rejection in the console.
   ipcMain.handle('sessions:export', async (e) => {
-    const r = await dialogs.showSaveDialog(wof(e), { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
+    const r = await dialogs.showSaveDialog(wof(e), { title: t('Export sessions'), defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
     if (r.canceled || !r.filePath) return null;
     const d = await store.getSessions();
     try {
       fs.writeFileSync(r.filePath, JSON.stringify({ folders: d.folders, sessions: d.sessions.map(publicSession) }, null, 2));
     } catch (e) {
-      return { error: `Could not write ${r.filePath}: ${String(e.message).replace(/, open '[^']*'$/, '')}` }; // "EPERM: operation not permitted"
+      return { error: t('Could not write {file}: {error}', { file: r.filePath, error: String(e.message).replace(/, open '[^']*'$/, '') }) }; // "EPERM: operation not permitted"
     }
     return r.filePath;
   });
   ipcMain.handle('sessions:import-json', async (e) => {
-    const r = await dialogs.showOpenDialog(wof(e), { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
+    const r = await dialogs.showOpenDialog(wof(e), { title: t('Import sessions JSON'), filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
     const file = path.basename(r.filePaths[0]);
     let parsed;
@@ -972,7 +973,7 @@ function registerIpc() {
       await store.saveSessions({ sessions: d.sessions, folders: [...new Set([...d.folders, ...parsed.folders])] });
     }
     if (imported || updated || parsed.folders.length) peers(e, 'sessions:changed');
-    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => `${x.entry}: ${x.reason}`), file };
+    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
   });
 
   ipcMain.handle('settings:get', () => store.getSettings());
@@ -1080,7 +1081,7 @@ function registerIpc() {
   ipcMain.handle('tools:wake', (_e, opts) => wol.wake(opts || {}).then((r) => ({ ok: true, ...r }), (e) => ({ ok: false, error: e.message })));
   ipcMain.handle('tools:scan-start', (_e, opts = {}) => {
     // one scan at a time: a second start (a double click before the first answered) would run untracked, with no Stop
-    if (scans.size) return { error: 'A scan is already running — stop it first' };
+    if (scans.size) return { error: t('A scan is already running — stop it first') };
     let targets, ports;
     try {
       targets = netscan.expandTargets(opts.target);
@@ -1118,7 +1119,7 @@ function registerIpc() {
 process.on('uncaughtException', (e) => {
   console.error('uncaught exception:', e);
   try {
-    if (win && !win.isDestroyed()) win.webContents.send('app:notice', { level: 'error', text: `Internal error: ${e.message}` });
+    if (win && !win.isDestroyed()) win.webContents.send('app:notice', { level: 'error', text: t('Internal error: {message}', { message: e.message }) });
   } catch {}
 });
 app.whenReady().then(() => {

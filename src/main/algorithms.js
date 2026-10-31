@@ -9,6 +9,9 @@ const { t, tn } = require('./i18n'); // interface language: every message shown 
 
 const CATEGORIES = ['kex', 'serverHostKey', 'cipher', 'hmac'];
 const LABELS = { kex: 'key exchange', serverHostKey: 'host key', cipher: 'cipher', hmac: 'MAC' };
+/** The category's label in the interface language, read at use time (a module-level table would be frozen in English). */
+const LABEL_OF = { kex: () => t('key exchange'), serverHostKey: () => t('host key'), cipher: () => t('cipher'), hmac: () => LABELS.hmac };
+const labelOf = (cat) => (LABEL_OF[cat] ? LABEL_OF[cat]() : LABELS[cat]);
 
 // ssh2 lists every Diffie-Hellman group it knows, but the group itself comes from Node's OpenSSL, which no longer has
 // the 1024-bit one (Node 24 dropped modp1 / modp2): negotiating diffie-hellman-group1-sha1 then fails with a raw
@@ -78,7 +81,7 @@ function presetLists(legacy) {
 
 /** The one-line note on an algorithm this build lacks (the renderer shows the same wording). */
 function unavailableMessage(cat, names) {
-  return `Not available in this build: ${names.join(', ')} (1024-bit Diffie-Hellman was removed from its crypto)`;
+  return t('Not available in this build: {names} (1024-bit Diffie-Hellman was removed from its crypto)', { names: names.join(', ') });
 }
 
 /**
@@ -94,7 +97,7 @@ function validate(lists) {
     const list = Array.isArray(raw) ? uniq(raw.map((s) => String(s).trim()).filter(Boolean)) : parseList(raw);
     const unknown = list.filter((a) => !SUPPORTED[cat].includes(a) && !UNAVAILABLE[cat].includes(a));
     const missing = list.filter((a) => UNAVAILABLE[cat].includes(a));
-    if (unknown.length) errors[cat] = `Unknown ${LABELS[cat]} algorithm${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`;
+    if (unknown.length) errors[cat] = unknown.length > 1 ? t('Unknown {label} algorithms: {names}', { label: labelOf(cat), names: unknown.join(', ') }) : t('Unknown {label} algorithm: {names}', { label: labelOf(cat), names: unknown.join(', ') });
     else if (missing.length) errors[cat] = unavailableMessage(cat, missing);
     value[cat] = list;
   }
@@ -171,17 +174,18 @@ function explainHandshake(message, cfg, remote) {
   const ours = offered(cfg || {}, cat);
   const theirs = remote && remote[cat];
   const custom = !!(cfg && cfg.algorithms && Array.isArray(cfg.algorithms[cat]) && cfg.algorithms[cat].length);
-  let msg = `no matching ${LABELS[cat]}: this session offers ${ours.join(', ')}; the server offers ${theirs && theirs.length ? theirs.join(', ') : 'nothing it told us about'}`;
+  const label = labelOf(cat);
+  let msg = t('no matching {label}: this session offers {ours}; the server offers {theirs}', { label, ours: ours.join(', '), theirs: theirs && theirs.length ? theirs.join(', ') : t('nothing it told us about') });
   const common = theirs ? theirs.filter((a) => SUPPORTED[cat].includes(a)) : [];
   const missing = theirs ? theirs.filter((a) => UNAVAILABLE[cat].includes(a)) : [];
   // only the legacy additions in common: the preset is the knob, not the lists
   const legacyOnly = common.length > 0 && common.every((a) => LEGACY[cat].includes(a) && !DEFAULTS[cat].includes(a));
-  if (custom && common.length) msg += `. Advanced SSH → Algorithms: add ${common.slice(0, 3).join(', ')} to the ${LABELS[cat]} list or Reset to defaults`;
-  else if (custom) msg += '. Advanced SSH → Algorithms: Reset to defaults';
-  else if (legacyOnly && !(cfg && cfg.legacyAlgorithms)) msg += '. The server only speaks old algorithms: tick "Legacy algorithms (old devices)" in Advanced SSH';
-  else if (theirs && !common.length && missing.length) msg += `. The server only offers ${missing.join(', ')}, which this build cannot do (1024-bit Diffie-Hellman was removed from its crypto)`;
-  else if (theirs && !common.length) msg += '. This version of MobAlt supports none of them';
-  else if (common.length) msg += `. Advanced SSH → Algorithms: add ${common.slice(0, 3).join(', ')} to the ${LABELS[cat]} list`;
+  if (custom && common.length) msg = t('{error}. Advanced SSH → Algorithms: add {names} to the {label} list or Reset to defaults', { error: msg, names: common.slice(0, 3).join(', '), label });
+  else if (custom) msg = t('{error}. Advanced SSH → Algorithms: Reset to defaults', { error: msg });
+  else if (legacyOnly && !(cfg && cfg.legacyAlgorithms)) msg = t('{error}. The server only speaks old algorithms: tick "Legacy algorithms (old devices)" in Advanced SSH', { error: msg });
+  else if (theirs && !common.length && missing.length) msg = t('{error}. The server only offers {names}, which this build cannot do (1024-bit Diffie-Hellman was removed from its crypto)', { error: msg, names: missing.join(', ') });
+  else if (theirs && !common.length) msg = t('{error}. This version of MobAlt supports none of them', { error: msg });
+  else if (common.length) msg = t('{error}. Advanced SSH → Algorithms: add {names} to the {label} list', { error: msg, names: common.slice(0, 3).join(', '), label });
   return msg;
 }
 
@@ -192,13 +196,13 @@ function explainHandshake(message, cfg, remote) {
 function explainDhGroup(message) {
   if (!/Unknown DH group/i.test(String(message || ''))) return null;
   const names = UNAVAILABLE.kex.length ? UNAVAILABLE.kex.join(', ') : 'diffie-hellman-group1-sha1';
-  return `${message} — this build cannot do ${names} (1024-bit Diffie-Hellman was removed from its crypto); Advanced SSH → Algorithms: take it out of the key exchange list or Reset to defaults`;
+  return t('{error} — this build cannot do {names} (1024-bit Diffie-Hellman was removed from its crypto); Advanced SSH → Algorithms: take it out of the key exchange list or Reset to defaults', { error: message, names });
 }
 
 /** What the renderer needs to build the editor section: the defaults, every supported name, the legacy additions, the names this build lacks. */
 function describe() {
   const copy = (o) => Object.fromEntries(CATEGORIES.map((c) => [c, [...o[c]]]));
-  return { categories: CATEGORIES.slice(), labels: { ...LABELS }, defaults: copy(DEFAULTS), supported: copy(SUPPORTED), legacy: copy(LEGACY), unavailable: copy(UNAVAILABLE) };
+  return { categories: CATEGORIES.slice(), labels: Object.fromEntries(CATEGORIES.map((c) => [c, labelOf(c)])), defaults: copy(DEFAULTS), supported: copy(SUPPORTED), legacy: copy(LEGACY), unavailable: copy(UNAVAILABLE) };
 }
 
 module.exports = { CATEGORIES, LABELS, DEFAULTS, SUPPORTED, LEGACY, UNAVAILABLE, parseList, presetLists, validate, normalize, connectOption, offered, noteRemote, explainHandshake, explainDhGroup, unavailableMessage, describe };

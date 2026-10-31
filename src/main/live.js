@@ -21,9 +21,9 @@ function liveConnections(registry, ftp) {
  * The question shown before the app goes away with live connections, e.g. "2 connections are still open
  * (1 SSH, 1 FTP). Quit anyway?". `verb` is what the user chose: "Quit" (⌘Q, close button) or "Relaunch" (the banner).
  */
-function quitQuestion(live, verb = 'Quit') {
-  const parts = Object.keys(LABEL).filter((k) => live[k]).map((k) => `${live[k]} ${LABEL[k]}`);
-  return `${live.total} connection${live.total === 1 ? ' is' : 's are'} still open (${parts.join(', ')}). ${verb} anyway?`;
+function quitQuestion(live, verb = t('Quit')) {
+  const kinds = Object.keys(LABEL).filter((k) => live[k]).map((k) => t('{n} {kind}', { n: live[k], kind: LABEL[k] })).join(', ');
+  return tn('{n} connection is still open ({kinds}). {verb} anyway?', '{n} connections are still open ({kinds}). {verb} anyway?', live.total, { kinds, verb });
 }
 
 module.exports = { liveConnections, quitQuestion };

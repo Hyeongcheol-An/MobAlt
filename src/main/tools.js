@@ -17,9 +17,9 @@ function streamCommand(win, cmd, args) {
   const send = (text) => win && !win.isDestroyed() && win.webContents.send('tools:output', { id, text });
   p.stdout.on('data', (d) => send(d.toString()));
   p.stderr.on('data', (d) => send(d.toString()));
-  p.on('error', (e) => send(`error: ${e.message}\n`));
+  p.on('error', (e) => send(t('error: {error}', { error: e.message }) + '\n'));
   p.on('close', (code) => {
-    send(code === null ? '\n[stopped]\n' : `\n[exit ${code}]\n`);
+    send('\n' + (code === null ? t('[stopped]') : t('[exit {code}]', { code })) + '\n');
     running.delete(id);
     win && !win.isDestroyed() && win.webContents.send('tools:done', { id, code });
   });
@@ -35,13 +35,13 @@ function stop(id) {
 const v6Tool = (tool, host) => (net.isIPv6(host) ? (process.platform === 'linux' ? { bin: tool, args: ['-6'] } : { bin: tool + '6', args: [] }) : { bin: tool, args: [] });
 
 function ping(win, host, count = 5) {
-  const t = v6Tool('ping', host);
-  return streamCommand(win, t.bin, [...t.args, '-c', String(count), host]);
+  const tool = v6Tool('ping', host);
+  return streamCommand(win, tool.bin, [...tool.args, '-c', String(count), host]);
 }
 
 function traceroute(win, host) {
-  const t = v6Tool('traceroute', host);
-  return streamCommand(win, t.bin, [...t.args, '-m', '30', '-q', '1', '-w', '2', host]);
+  const tool = v6Tool('traceroute', host);
+  return streamCommand(win, tool.bin, [...tool.args, '-m', '30', '-q', '1', '-w', '2', host]);
 }
 
 /** Runs fn(item, index) over `items` with at most `concurrency` in flight; once isCancelled() is true no further item is taken. */

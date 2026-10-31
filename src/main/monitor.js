@@ -154,14 +154,14 @@ class RemoteMonitor {
       r = await this.ssh.exec(id, this.command, { timeout: EXEC_TIMEOUT });
     } catch (e) {
       const msg = (e && e.message) || String(e);
-      return { error: msg, fatal: /not connected/i.test(msg) };
+      return { error: msg, fatal: (e && e.code === 'ENOTCONN') || /not connected/i.test(msg) };
     }
     const sample = parseMonitorOutput(r.stdout, this.prev.get(id) || null);
     if (!sample) {
       const err = String(r.stderr || '').trim().split('\n').pop() || '';
-      const why = r.code === 127 || /not found|No such file/i.test(err) ? 'no sh on the host'
-        : r.code === 126 || /Permission denied/i.test(err) ? 'permission denied'
-        : err ? err.slice(0, 120) : `no output (exit ${r.code === null || r.code === undefined ? '?' : r.code})`;
+      const why = r.code === 127 || /not found|No such file/i.test(err) ? t('no sh on the host')
+        : r.code === 126 || /Permission denied/i.test(err) ? t('permission denied')
+        : err ? err.slice(0, 120) : t('no output (exit {code})', { code: r.code === null || r.code === undefined ? '?' : r.code });
       return { error: why, fatal: true };
     }
     this.prev.set(id, sample);

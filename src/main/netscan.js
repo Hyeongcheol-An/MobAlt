@@ -25,12 +25,12 @@ const fmt = (n) => n.toLocaleString('en-US');
  */
 function expandTargets(spec) {
   const s = String(spec ?? '').trim();
-  if (!s) throw new Error('Enter a target: a CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or a host');
-  const tooLarge = (n) => new Error(`Range too large: ${fmt(n)} addresses; the limit is a /16 (${fmt(MAX_HOSTS)})`);
+  if (!s) throw new Error(t('Enter a target: a CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or a host'));
+  const tooLarge = (n) => new Error(t('Range too large: {n} addresses; the limit is a /16 ({max})', { n: fmt(n), max: fmt(MAX_HOSTS) }));
   let m;
   if ((m = s.match(/^(\S+)\/(\d{1,2})$/))) {
     const base = ip4(m[1]), prefix = Number(m[2]);
-    if (base === null || prefix > 32) throw new Error(`Not a valid CIDR: ${s}`);
+    if (base === null || prefix > 32) throw new Error(t('Not a valid CIDR: {target}', { target: s }));
     const size = 2 ** (32 - prefix);
     if (size > MAX_HOSTS) throw tooLarge(size);
     const network = Math.floor(base / size) * size;
@@ -41,8 +41,8 @@ function expandTargets(spec) {
     const from = ip4(m[1]);
     let to = ip4(m[2]);
     if (from !== null && to === null && /^\d{1,3}$/.test(m[2]) && Number(m[2]) <= 255) to = Math.floor(from / 256) * 256 + Number(m[2]);
-    if (from === null || to === null) throw new Error(`Not a valid range: ${s}`);
-    if (to < from) throw new Error(`The range ends before it starts: ${s}`);
+    if (from === null || to === null) throw new Error(t('Not a valid range: {target}', { target: s }));
+    if (to < from) throw new Error(t('The range ends before it starts: {target}', { target: s }));
     const size = to - from + 1;
     if (size > MAX_HOSTS) throw tooLarge(size);
     return Array.from({ length: size }, (_, i) => toIp4(from + i));
@@ -50,7 +50,7 @@ function expandTargets(spec) {
   if (net.isIP(s)) return [s];
   // a host name: labels of letters, digits and dashes; the last label is never all digits (that is a mistyped address)
   if (/^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?)*\.?$/i.test(s) && !/(^|\.)\d+\.?$/.test(s)) return [s];
-  throw new Error(`Not a CIDR, an address range or a host name: ${s}`);
+  throw new Error(t('Not a CIDR, an address range or a host name: {target}', { target: s }));
 }
 
 /** A port list such as `22,80,443` or `8000-8010 22` → sorted unique ports; empty → the default list. Throws on nonsense or more than 256 ports. */
@@ -60,12 +60,12 @@ function parsePorts(spec) {
   const set = new Set();
   for (const part of s.split(/[\s,;]+/).filter(Boolean)) {
     const m = part.match(/^(\d{1,5})(?:-(\d{1,5}))?$/);
-    if (!m) throw new Error(`Not a port: ${part}`);
+    if (!m) throw new Error(t('Not a port: {part}', { part }));
     const a = Number(m[1]), b = m[2] === undefined ? a : Number(m[2]);
-    if (a < 1 || b > 65535 || b < a) throw new Error(`Ports must be between 1 and 65535: ${part}`);
+    if (a < 1 || b > 65535 || b < a) throw new Error(t('Ports must be between 1 and 65535: {part}', { part }));
     for (let p = a; p <= b; p++) {
       set.add(p);
-      if (set.size > MAX_PORTS) throw new Error(`Too many ports; the limit is ${MAX_PORTS}`);
+      if (set.size > MAX_PORTS) throw new Error(t('Too many ports; the limit is {max}', { max: MAX_PORTS }));
     }
   }
   return [...set].sort((x, y) => x - y);
@@ -123,7 +123,7 @@ function scan(targets, { method = 'both', ports = DEFAULT_PORTS, concurrency = 6
     let addrs = [target], hostname = null;
     if (!net.isIP(target)) {
       try { addrs = await addressesOf(target); hostname = target; } catch { addrs = []; }
-      if (!addrs.length) { if (!cancelled) emit({ type: 'error', host: target, message: `Cannot resolve ${target}` }); return; }
+      if (!addrs.length) { if (!cancelled) emit({ type: 'error', host: target, message: t('Cannot resolve {host}', { host: target }) }); return; }
     }
     for (const ip of addrs) { // in order; the first address that answers is the hit
       if (cancelled) return;
@@ -136,7 +136,7 @@ function scan(targets, { method = 'both', ports = DEFAULT_PORTS, concurrency = 6
       emit({ type: 'hit', ip, host: target, hostname, rtt: r.rtt, ports: r.ports });
       return;
     }
-    if (hostname && addrs.length > 1) emit({ type: 'error', host: target, message: `No answer from ${target} (tried ${addrs.join(', ')})` });
+    if (hostname && addrs.length > 1) emit({ type: 'error', host: target, message: t('No answer from {host} (tried {addresses})', { host: target, addresses: addrs.join(', ') }) });
   };
   const promise = runQueue(targets, concurrency, async (t) => {
     try { await one(t); } catch {}

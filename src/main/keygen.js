@@ -33,16 +33,16 @@ function shortHome(p) {
  */
 function keygenArgs(opts = {}) {
   const spec = TYPES[opts.type];
-  if (!spec) throw new Error(`Unknown key type "${opts.type}" (ed25519, rsa or ecdsa)`);
+  if (!spec) throw new Error(t('Unknown key type "{type}" (ed25519, rsa or ecdsa)', { type: opts.type }));
   const file = opts.path && String(opts.path).trim();
-  if (!file) throw new Error('No output file');
+  if (!file) throw new Error(t('No output file'));
   const args = ['-q', '-t', opts.type];
   if (spec.bits) {
     const bits = opts.bits === undefined || opts.bits === null || opts.bits === '' ? spec.default : Number(opts.bits);
-    if (!spec.bits.includes(bits)) throw new Error(`${opts.type} keys can be ${spec.bits.join(', ')} bits, not ${opts.bits}`);
+    if (!spec.bits.includes(bits)) throw new Error(t('{type} keys can be {sizes} bits, not {bits}', { type: opts.type, sizes: spec.bits.join(', '), bits: opts.bits }));
     args.push('-b', String(bits));
   } else if (opts.bits !== undefined && opts.bits !== null && opts.bits !== '' && Number(opts.bits) !== 256) {
-    throw new Error('ed25519 keys have a fixed size');
+    throw new Error(t('ed25519 keys have a fixed size'));
   }
   args.push('-C', String(opts.comment ?? ''), '-N', String(opts.passphrase ?? ''), '-f', file);
   return args;
@@ -59,7 +59,7 @@ function nextFreePath(file, exists = fs.existsSync) {
     const f = `${file}_${n}`;
     if (free(f)) return f;
   }
-  throw new Error(`No free name next to ${file}`);
+  throw new Error(t('No free name next to {file}', { file }));
 }
 
 /**
@@ -85,11 +85,11 @@ const shq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
  * `exec sh -c` so a fish or csh login shell on the server does not get to parse it.
  */
 function installCommand(remoteFile, blob) {
-  if (!/^[A-Za-z0-9+/=]+$/.test(String(blob || ''))) throw new Error('Not a public key');
+  if (!/^[A-Za-z0-9+/=]+$/.test(String(blob || ''))) throw new Error(t('Not a public key'));
   const file = String(remoteFile || '').trim() || '~/.ssh/authorized_keys';
-  if (/[\r\n]/.test(file)) throw new Error('Bad remote file name');
+  if (/[\r\n]/.test(file)) throw new Error(t('Bad remote file name'));
   // quoted for the shell, "~bob/…" would be a folder literally named ~bob under the login's home
-  if (/^~[^/]/.test(file)) throw new Error('~user paths are not supported for the remote file — use ~/ (the login\'s home) or an absolute path');
+  if (/^~[^/]/.test(file)) throw new Error(t("~user paths are not supported for the remote file — use ~/ (the login's home) or an absolute path"));
   const target = file === '~' ? '"$HOME"' : file.startsWith('~/') ? `"$HOME"/${shq(file.slice(2))}` : shq(file);
   const script = [
     `f=${target}`, 'd=$(dirname "$f")', 'umask 077',
@@ -115,30 +115,30 @@ function run(bin, args, opts = {}) {
 async function generate(opts = {}, deps = {}) {
   const bin = deps.bin || SSH_KEYGEN;
   const raw = String(opts.path || '').trim();
-  if (!raw) throw new Error('Choose where to save the key');
+  if (!raw) throw new Error(t('Choose where to save the key'));
   // the two path shapes ssh-keygen would answer with a confusing "No such file or directory"
-  if (/^~[^/]/.test(raw)) throw new Error('~user paths are not supported — use ~/ for your own home folder or an absolute path');
-  if (raw.endsWith('/')) throw new Error('That is a folder; add a file name');
+  if (/^~[^/]/.test(raw)) throw new Error(t('~user paths are not supported — use ~/ for your own home folder or an absolute path'));
+  if (raw.endsWith('/')) throw new Error(t('That is a folder; add a file name'));
   const file = expandHome(raw);
-  if (!path.isAbsolute(file)) throw new Error(`The key path must be absolute (or start with ~): ${file}`);
+  if (!path.isAbsolute(file)) throw new Error(t('The key path must be absolute (or start with ~): {path}', { path: file }));
   let isDir = false;
   try { isDir = fs.statSync(file).isDirectory(); } catch {}
-  if (isDir) throw new Error(`${shortHome(file)} is a folder; add a file name`);
+  if (isDir) throw new Error(t('{path} is a folder; add a file name', { path: shortHome(file) }));
   const args = keygenArgs({ ...opts, path: file }); // validates type / bits first
-  if (fs.existsSync(file) || fs.existsSync(file + '.pub')) throw new Error(`${shortHome(file)} already exists — choose another file name`);
+  if (fs.existsSync(file) || fs.existsSync(file + '.pub')) throw new Error(t('{path} already exists — choose another file name', { path: shortHome(file) }));
   const dir = path.dirname(file);
   if (!fs.existsSync(dir)) {
     try {
       fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
     } catch (e) {
-      throw new Error(`Cannot create ${shortHome(dir)}: ${e.message}`);
+      throw new Error(t('Cannot create {dir}: {error}', { dir: shortHome(dir), error: e.message }));
     }
   }
   const r = await run(bin, args);
   if (r.err) {
-    if (r.err.code === 'ENOENT') throw new Error(`ssh-keygen was not found at ${bin} — install the Xcode Command Line Tools (xcode-select --install)`);
+    if (r.err.code === 'ENOENT') throw new Error(t('ssh-keygen was not found at {bin} — install the Xcode Command Line Tools (xcode-select --install)', { bin }));
     const why = r.stderr.trim().split('\n').pop() || r.err.message;
-    throw new Error(`ssh-keygen failed: ${why}`);
+    throw new Error(t('ssh-keygen failed: {error}', { error: why }));
   }
   try {
     fs.chmodSync(file, 0o600);
@@ -148,7 +148,7 @@ async function generate(opts = {}, deps = {}) {
   try {
     publicKey = fs.readFileSync(file + '.pub', 'utf8').trim();
   } catch (e) {
-    throw new Error(`The key was generated but ${shortHome(file)}.pub cannot be read: ${e.message}`);
+    throw new Error(t('The key was generated but {path}.pub cannot be read: {error}', { path: shortHome(file), error: e.message }));
   }
   const fp = await run(bin, ['-lf', file + '.pub']);
   const fingerprint = parseFingerprint(fp.stdout) || { bits: 0, hash: '', comment: '', type: '', line: fp.stdout.trim() || fp.stderr.trim() };
@@ -162,7 +162,7 @@ async function generate(opts = {}, deps = {}) {
  */
 async function addToAgent(keyPath, passphrase, deps = {}) {
   const bin = deps.bin || SSH_ADD;
-  if (!process.env.SSH_AUTH_SOCK) return { ok: false, error: 'No ssh-agent is running (SSH_AUTH_SOCK is not set)' };
+  if (!process.env.SSH_AUTH_SOCK) return { ok: false, error: t('No ssh-agent is running (SSH_AUTH_SOCK is not set)') };
   const file = expandHome(String(keyPath || ''));
   const env = { ...process.env };
   let helper = null;
@@ -177,10 +177,10 @@ async function addToAgent(keyPath, passphrase, deps = {}) {
   try {
     const r = await run(bin, ['--apple-use-keychain', file], { env, timeout: 20000 });
     if (r.err) {
-      if (r.err.code === 'ENOENT') return { ok: false, error: `ssh-add was not found at ${bin}` };
-      return { ok: false, error: `ssh-add failed: ${(r.stderr.trim() || r.err.message).split('\n').pop()}` };
+      if (r.err.code === 'ENOENT') return { ok: false, error: t('ssh-add was not found at {bin}', { bin }) };
+      return { ok: false, error: t('ssh-add failed: {error}', { error: (r.stderr.trim() || r.err.message).split('\n').pop() }) };
     }
-    return { ok: true, message: (r.stderr.trim() || r.stdout.trim() || 'Identity added').split('\n').pop() };
+    return { ok: true, message: (r.stderr.trim() || r.stdout.trim() || t('Identity added')).split('\n').pop() };
   } finally {
     if (helper) {
       try { fs.rmSync(path.dirname(helper), { recursive: true, force: true }); } catch {}
