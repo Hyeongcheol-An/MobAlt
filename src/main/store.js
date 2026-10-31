@@ -106,6 +106,8 @@ const DEFAULT_SETTINGS = {
   logPlainText: false,
   keepAliveInterval: 30,
   readyTimeout: 20000,
+  monitorBar: true, // remote monitoring bar under SSH panes (a session's own setting wins; a pane can be toggled by hand)
+  monitorInterval: 3, // seconds between two polls of the bar (2–30)
   macros: [],
   tunnels: [],
   windowBounds: null,

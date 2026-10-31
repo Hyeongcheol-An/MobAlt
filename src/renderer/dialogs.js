@@ -57,8 +57,9 @@ function num(value, attrs = {}) {
   return h('input', { type: 'number', value: value ?? '', ...attrs });
 }
 function check(label, checked, attrs = {}) {
-  const cb = h('input', { type: 'checkbox', checked: !!checked, ...attrs });
-  return { el: h('label', {}, cb, label), cb };
+  const { title, ...rest } = attrs; // a title explains the whole row (label + box), not only the box
+  const cb = h('input', { type: 'checkbox', checked: !!checked, ...rest });
+  return { el: h('label', { title }, cb, label), cb };
 }
 function select(options, value, attrs = {}) {
   return h('select', attrs, options.map(([v, l]) => h('option', { value: v, selected: v === value }, l)));
@@ -244,6 +245,8 @@ export function sessionEditor(app, initial = {}) {
   const agentFwd = check('Agent forwarding', s.agentForward);
   const compression = check('Compression', s.compression);
   const legacy = check('Legacy algorithms (old devices)', s.legacyAlgorithms);
+  // the remote monitoring bar: a session without its own value shows Settings → Terminal's default and saves it explicitly
+  const monitor = check('Show remote monitoring bar', s.monitor ?? app.settings.monitorBar !== false);
   // --- mosh / ftp
   const moshServer = text(s.moshServer, { placeholder: 'mosh-server (path on the remote host, optional)' });
   const moshPredict = select([['adaptive', 'Adaptive (default)'], ['always', 'Always'], ['never', 'Never'], ['experimental', 'Experimental']], s.moshPredict || 'adaptive');
@@ -423,7 +426,9 @@ export function sessionEditor(app, initial = {}) {
       h('label', { class: 'algo-title' }, 'Algorithms'), h('div', { class: 'algo-head' }, algoReset),
       h('div', { class: 'form-help' }, 'What this session offers the server, most preferred first (comma or newline separated). "Legacy algorithms" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.'),
       ...ALGO_CATS.flatMap(([cat, label]) => [...field(label, algoArea[cat]), algoErr[cat]]),
-    ] : [])
+    ] : []),
+    h('label', {}, 'Monitoring'), h('div', { class: 'checks' }, monitor.el),
+    h('div', { class: 'form-help' }, 'CPU, memory, disk, network, load and uptime under the terminal, polled over this connection every few seconds (Settings → Terminal sets the default and the refresh); the pane head and the View menu toggle it per pane')
   );
   pages.terminal.append(
     ...field('Startup commands', startup),
@@ -512,6 +517,7 @@ export function sessionEditor(app, initial = {}) {
       compression: compression.cb.checked,
       legacyAlgorithms: legacy.cb.checked,
       keepAliveInterval: parseInt(keepAlive.value, 10) || 0,
+      monitor: type === 'ssh' || type === 'mosh' ? monitor.cb.checked : s.monitor,
       startupCommand: startup.value.replace(/\n/g, '\r').trim(),
       sftpAuto: sftpAuto.cb.checked,
       followCwd: followCwd.cb.checked,
@@ -657,6 +663,9 @@ export function settingsDialog(app) {
   // the two paste-guard toggles (terminal.js pasteText); their long explanation lives in the user guide
   const pasteConfirm = check('Confirm multi-line pastes', s.pasteConfirmMultiline !== false, { title: `A paste with more than one line, or over ${PASTE_CONFIRM_CHARS} characters, asks first and can be edited` });
   const pasteWarn = check('Warn about suspicious pastes', s.pasteWarnSuspicious !== false, { title: 'Invisible or control characters, a trailing newline, curl | sh, writes to shell profiles, rm -rf / and look-alike letters are listed, with a "Paste cleaned" option' });
+  // the explanation is the row's tooltip: the Terminal section must keep fitting a 900×560 window without scrolling
+  const monitorBar = check('Remote monitoring bar on SSH sessions', s.monitorBar !== false, { title: 'CPU, memory, disk, network, load and uptime under each SSH terminal, polled over the session\'s own connection; a session (Advanced SSH) or a pane (its head, the View menu) can differ' });
+  const monitorInterval = num(s.monitorInterval ?? 3, { min: 2, max: 30, step: 1, class: 'mon-interval', 'aria-label': 'Monitoring bar refresh, seconds', title: 'Seconds between two polls (2–30)' });
   const localShell = text(s.localShell, { placeholder: '(login shell)' });
   const shellInt = check('zsh/bash integration (folder following)', s.localShellIntegration !== false);
   const editor = text(s.editorCommand, { placeholder: 'e.g. code --wait {file}   (blank = TextEdit)' });
@@ -695,7 +704,8 @@ export function settingsDialog(app) {
       ...field('Scrollback lines', scrollback),
       ...field('Theme', h('div', { class: 'inline theme-field' }, theme, themePreview), 'Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme'),
       h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el),
-      h('label', {}, 'Paste guard'), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el)
+      h('label', {}, 'Paste guard'), h('div', { class: 'checks' }, pasteConfirm.el, pasteWarn.el),
+      h('label', {}, 'Monitoring'), h('div', { class: 'checks' }, monitorBar.el, h('label', { class: 'mon-every' }, 'every', monitorInterval, 's'))
     )],
     ['logging', 'Logging', h('div', { class: 'form-grid' },
       ...field('Log folder', logDir, 'Terminal → Start Session Log, or a session\'s Logging option, writes here'),
@@ -722,6 +732,7 @@ export function settingsDialog(app) {
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
         confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(), logPlainText: logPlain.cb.checked,
         keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked,
+        monitorBar: monitorBar.cb.checked, monitorInterval: clamp(parseInt(monitorInterval.value, 10), 2, 30, 3),
       }) },
     ],
   });
