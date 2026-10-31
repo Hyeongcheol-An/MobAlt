@@ -168,10 +168,38 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   ẩn; đầu ngăn hiện nhãn *phóng to* và thẻ hiện một dấu ⤢ nhỏ. Nhấn lại (hoặc ⤡ ở đầu ngăn)
   để đưa bố cục trở lại. Chia ngăn, đóng một ngăn, chọn bố cục lưới hoặc chuyển tới một ngăn đang ẩn (⌘])
   sẽ khôi phục bố cục trước. Mỗi thẻ giữ trạng thái phóng to riêng, kể cả sau khi khởi động lại.
+- **Menu ngăn** (nhấp chuột phải vào terminal; ⇧- hoặc ⌃-chuột phải khi *Chuột phải để dán* đang bật): ngoài sao chép,
+  dán, tìm, xóa màn hình, chia và phóng to, menu còn có các mục theo từng terminal của menu terminal trong MobaXterm.
+  *Đổi tên ngăn…* (*Rename Terminal* của MobaXterm) đặt tên cho chính ngăn: đầu ngăn hiện tên đó, thẻ lấy tên đó khi
+  ngăn quyết định tên thẻ, và các chuỗi đặt tiêu đề của shell không còn thay đổi được nó; để trống tên thì quay về
+  tiêu đề tự động. *Cài đặt ngăn…* là chức năng "cấu hình lại terminal hiện tại" của MobaXterm: chủ đề, phông chữ và
+  cỡ chữ, kiểu con trỏ và con trỏ nhấp nháy, cuộn ngược, tô sáng từ khóa, thanh giám sát (SSH / Mosh), chỉ đọc và
+  nhãn nền cho riêng ngăn này, đè lên giá trị của phiên và của Cài đặt (trường để trống thì theo các giá trị đó).
+  *Áp dụng cho ngăn này* chỉ thay đổi ngăn này — các giá trị đi theo ngăn qua phóng to, tách cửa sổ và không gian
+  làm việc — còn *Lưu vào phiên* (chỉ với phiên đã lưu) ghi thêm các trường mà phiên có (chủ đề, cỡ chữ, tô sáng
+  từ khóa, giám sát, nhãn nền), để mọi ngăn mở từ phiên đó về sau đều theo. *Cỡ chữ ▸* tăng giảm phông chữ của
+  ngăn này (⌘= / ⌘- / ⌘0 làm tương tự cho ngăn đang chọn; *Đặt lại* trả về cỡ chữ riêng của ngăn). *Chỉ đọc* bỏ qua
+  phím gõ và nội dung dán vào ngăn trong khi đầu ra vẫn tiếp tục chảy — đầu ngăn hiện nhãn *chỉ đọc*, và MultiExec
+  bỏ qua ngăn đó.
+- **Nhãn nền**: một cái tên lớn, mờ vẽ phía sau văn bản của ngăn — mặc định là tên phiên — để bạn nhận ra máy chủ
+  trong nháy mắt, giống badge của iTerm2 (MobaXterm chỉ đặt tên ngăn trên dải thẻ). *Nhãn nền ▸* trong menu ngăn
+  hiện hoặc ẩn nhãn, đặt nội dung (*Đặt nội dung…*; để trống = nhãn của phiên, nếu không có thì tên phiên hoặc tiêu
+  đề ngăn) và đặt nhãn ở giữa hoặc góc trên phải; thẻ Terminal của trình sửa phiên (*Nhãn nền*: hiện, nội dung, vị
+  trí) bật nhãn cho mọi ngăn của một phiên, và cài đặt riêng của ngăn luôn được ưu tiên hơn cài đặt của phiên.
+  Nhãn co giãn theo ngăn, ẩn đi trong ô quá nhỏ, dùng màu chữ của ngăn với độ mờ 16 %, và không bao giờ thuộc về
+  bộ đệm terminal, vùng chọn, nội dung sao chép hay nhật ký phiên.
 - **MultiExec** (⇧⌘M): khi bật, mọi phím gõ được gửi tới mọi terminal đang hiện trên màn hình — các
   ngăn đang chạy của thẻ hiện hành, hoặc chỉ ngăn đang phóng to khi ngăn đó lấp đầy thẻ. Các thẻ khác không bao giờ
   nhận được, vì vậy hãy chia thẻ (hoặc dùng lưới) để đặt cạnh nhau những máy chủ bạn muốn điều khiển.
   Biểu ngữ cho biết có bao nhiêu terminal đang hiện nhận phím gõ và đi theo thẻ bạn chuyển sang.
+  Để loại một ngăn ra, đánh dấu ô dưới terminal của nó — *Loại trừ "tên" khỏi chế độ MultiExec*, như trong
+  MobaXterm — hoặc dùng *Loại trừ khỏi MultiExec* trong menu chuột phải của ngăn: ngăn vẫn hiện trên màn hình và
+  vẫn kết nối, phím gõ ở nơi khác không còn tới ngăn đó, và những gì bạn gõ vào ngăn đó chỉ đi tới riêng nó (tiện
+  khi chạy một lệnh trên một máy chủ duy nhất mà không phải rời chế độ). Biểu ngữ khi đó thêm *, N bị loại trừ*,
+  hoặc báo rằng mọi terminal đang hiện đều bị loại trừ. Nhấp chuột phải vào dải chứa ô đánh dấu hoặc vào biểu ngữ
+  (⇧F10 trên ô đang chọn) mở menu của chế độ: *Kích hoạt tất cả*, *Bỏ kích hoạt tất cả*, *Đảo ngược lựa chọn* và
+  *Đồng bộ cuộn bằng con lăn chuột* — khi bạn cuộn một terminal bằng con lăn, các terminal đang nhận phím gõ khác
+  cũng cuộn cùng số dòng. Các ô đánh dấu được xóa mỗi khi tắt MultiExec; không có gì về chúng được lưu lại.
 - **Thanh giám sát từ xa**: mỗi ngăn SSH hiện một dải một dòng dưới đầu ngăn — CPU, bộ nhớ đã dùng / tổng,
   dung lượng đĩa gốc đã dùng, tốc độ mạng ↓ / ↑, tải trung bình, thời gian hoạt động và tên máy chủ — làm mới mỗi 3 giây
   (Cài đặt → Tính năng → Giám sát, 2–30 giây). Một đoạn mã POSIX `sh` nhỏ chạy qua chính kết nối của phiên, nên
@@ -216,8 +244,14 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   không thay đổi. Cả hai bước kiểm tra là các tùy chọn bật/tắt trong Cài đặt → Tính năng → Bảo vệ dán (bật theo mặc định);
   chúng áp dụng cho ⌘V, chuột phải và văn bản thả vào ngăn, không áp dụng cho macro. Khi bật MultiExec, một lần xác nhận áp dụng cho mọi
   terminal đang hiện.
-- **Phím**: Shift+Enter và Option+Enter gửi ESC+CR (xuống dòng trong ứng dụng TUI như Claude Code);
-  Option hoạt động như Meta theo mặc định.
+- **Phím**: Shift+Enter và Option+Enter gửi ESC+CR — chuỗi mà chính lệnh `/terminal-setup` của Claude Code
+  gán trong các terminal khác — nên phím nào cũng xuống dòng trong ô soạn của Claude Code thay vì gửi
+  prompt; Option hoạt động như Meta theo mặc định.
+- **Hình ảnh cho Claude Code**: khi bảng nhớ tạm có hình ảnh mà không có văn bản (ảnh chụp màn hình, *Sao chép hình
+  ảnh*), ⌘V, Sửa → Dán và dán bằng chuột phải sẽ gửi Ctrl+V tới terminal; Claude Code tự đọc bảng nhớ tạm của hệ
+  thống và đính kèm ảnh thành `[Image #1]`. Văn bản trong bảng nhớ tạm được dán như thường (và được ưu tiên khi có
+  cả hai); shell không dùng phím này và không hiện gì. Tệp ảnh thả từ Finder vào ngăn cục bộ sẽ dán đường dẫn của
+  nó trong dấu ngoặc kép (trên ngăn SSH, tệp được tải lên, xem *Bảng nhớ tạm* ở trên).
 - **Ghi nhật ký**: Terminal → Bắt đầu/Dừng ghi nhật ký phiên, hoặc tùy chọn trong phiên, ghi đầu ra thô vào
   `~/Documents/MobAlt Logs/`. Cài đặt → Nhật ký → *Bỏ màu và chuỗi điều khiển* giữ
   nhật ký ở dạng văn bản thuần (màu ANSI, lệnh di chuyển con trỏ và hook theo dõi thư mục bị loại bỏ).
@@ -325,6 +359,20 @@ MobAlt có sẽ được dùng, và tiếng Anh nếu không có ngôn ngữ nà
 có hiệu lực ngay trong mọi cửa sổ — không có gì khởi động lại, các kết nối vẫn giữ — và được ghi nhớ. Đầu ra terminal không bao giờ
 được dịch: những gì máy chủ từ xa in ra được hiển thị nguyên vẹn. Hướng dẫn sử dụng cũng có đủ mười một ngôn ngữ đó
 (`docs/USER_GUIDE.<language>.md`); Trợ giúp → **Hướng dẫn sử dụng** mở bản cho ngôn ngữ hiện tại.
+
+Với tiếng Ả Rập, toàn bộ cửa sổ đọc từ phải sang trái: dải bên và thanh bên chuyển sang mép phải, còn các terminal
+sang trái; nút ẩn ‹ của thanh bên quay ngược chiều; thanh công cụ, dải thẻ (thẻ đầu tiên ở bên phải, hai nút cuộn ‹ ›
+đổi chỗ cho nhau), thanh trạng thái, tiêu đề bảng, đầu ngăn và thanh giám sát đều được lật gương; hộp thoại đặt nhãn
+ở bên phải và ✕ ở bên trái, menu mở về phía bên trái con trỏ và thông báo xếp chồng ở góc dưới bên trái. Những gì
+vẫn giữ từ trái sang phải: chính các terminal, và mọi trường hay nhãn chứa máy chủ, cổng, đường dẫn, lệnh, mẫu tìm
+kiếm, địa chỉ MAC hoặc CIDR, khóa hay phím tắt (kết nối nhanh, đường dẫn SFTP, ô tìm kiếm, các ô của bảng Công cụ,
+thư mục và user@host trên thanh trạng thái, nhãn phím, dấu vân tay, khóa công khai của trình tạo khóa, ô xem trước
+của bảo vệ dán); tên phiên, thẻ hoặc thư mục đi theo chữ cái đầu tiên của chính nó, nên tên tiếng Ả Rập đọc từ phải
+sang trái còn `user@host` đọc từ trái sang phải, và đường dẫn hay tên máy chủ được trích trong một thông báo vẫn giữ
+thứ tự riêng. Chia ngăn giữ nguyên ý nghĩa vật lý — "Chia phải" vẫn mở ngăn mới ở bên phải, và một phiên thả vào cạnh
+phải của ngăn sẽ nằm ở đó. Các phím mũi tên đi theo thứ tự của các mục, không theo màn hình: → chuyển tới thẻ, mục
+chọn hoặc hàng tiếp theo (trong tiếng Ả Rập là mục nằm bên trái) và ← về mục trước, còn trong cây phiên → mở một thư
+mục và ← đóng nó, như trong tiếng Anh.
 
 Để chạy MobAlt bằng một ngôn ngữ trong một lần mà không đổi cài đặt (chụp màn hình, kiểm thử), hãy khởi động với `MOBALT_LANG=<code>`
 trong biến môi trường (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
