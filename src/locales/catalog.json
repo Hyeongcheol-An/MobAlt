@@ -1,10 +1,688 @@
 {
   "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
   "strings": {
+    "(empty)": {
+      "refs": [
+        "src/main/wol.js:26"
+      ]
+    },
+    "[exit {code}]": {
+      "refs": [
+        "src/main/tools.js:22"
+      ]
+    },
+    "[stopped]": {
+      "refs": [
+        "src/main/tools.js:22"
+      ]
+    },
+    "{account}'s FTP password": {
+      "refs": [
+        "src/main/ftp.js:138"
+      ]
+    },
+    "{account}'s password": {
+      "refs": [
+        "src/main/ssh.js:206"
+      ]
+    },
+    "{account}'s password (attempt {n})": {
+      "refs": [
+        "src/main/ssh.js:206"
+      ]
+    },
+    "{entry}: {reason}": {
+      "refs": [
+        "src/main/main.js:935",
+        "src/main/main.js:976"
+      ]
+    },
+    "{error} — Advanced SSH → Algorithms names an algorithm this version of MobAlt cannot do; Reset to defaults there.": {
+      "refs": [
+        "src/main/ssh.js:657"
+      ]
+    },
+    "{error} — no SSH banner within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal), or the port is not an SSH service.": {
+      "refs": [
+        "src/main/ssh.js:648"
+      ]
+    },
+    "{error} — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.": {
+      "refs": [
+        "src/main/ssh.js:646"
+      ]
+    },
+    "{error} — the host is reachable but nothing listens on that port.": {
+      "refs": [
+        "src/main/ssh.js:650"
+      ]
+    },
+    "{error} — the server cut the connection after too many key attempts; pick a specific key file or \"Password\" auth in the session.": {
+      "refs": [
+        "src/main/ssh.js:652"
+      ]
+    },
+    "{error} — this build cannot do {names} (1024-bit Diffie-Hellman was removed from its crypto); Advanced SSH → Algorithms: take it out of the key exchange list or Reset to defaults": {
+      "refs": [
+        "src/main/algorithms.js:199"
+      ]
+    },
+    "{error}. Advanced SSH → Algorithms: add {names} to the {label} list": {
+      "refs": [
+        "src/main/algorithms.js:188"
+      ]
+    },
+    "{error}. Advanced SSH → Algorithms: add {names} to the {label} list or Reset to defaults": {
+      "refs": [
+        "src/main/algorithms.js:183"
+      ]
+    },
+    "{error}. Advanced SSH → Algorithms: Reset to defaults": {
+      "refs": [
+        "src/main/algorithms.js:184"
+      ]
+    },
+    "{error}. The server only offers {names}, which this build cannot do (1024-bit Diffie-Hellman was removed from its crypto)": {
+      "refs": [
+        "src/main/algorithms.js:186"
+      ]
+    },
+    "{error}. The server only speaks old algorithms: tick \"Legacy algorithms (old devices)\" in Advanced SSH": {
+      "refs": [
+        "src/main/algorithms.js:185"
+      ]
+    },
+    "{error}. The session uses key authentication but no key file is set.": {
+      "refs": [
+        "src/main/ssh.js:643"
+      ]
+    },
+    "{error}. This session is set to Password authentication but the server does not offer it — switch it to Automatic or Private key.": {
+      "refs": [
+        "src/main/ssh.js:641"
+      ]
+    },
+    "{error}. This version of MobAlt supports none of them": {
+      "refs": [
+        "src/main/algorithms.js:187"
+      ]
+    },
+    "{kind} bookmark (#{num}) not supported": {
+      "refs": [
+        "src/main/importers.js:173"
+      ]
+    },
+    "{n} {kind}": {
+      "refs": [
+        "src/main/live.js:25"
+      ]
+    },
+    "{n} connection is still open ({kinds}). {verb} anyway?": {
+      "plural": "{n} connections are still open ({kinds}). {verb} anyway?",
+      "refs": [
+        "src/main/live.js:26"
+      ]
+    },
+    "{n} file": {
+      "plural": "{n} files",
+      "refs": [
+        "src/main/zmodem.js:607"
+      ]
+    },
+    "{name} is not a file": {
+      "refs": [
+        "src/main/zmodem.js:602"
+      ]
+    },
+    "{name} is not an SSH session": {
+      "refs": [
+        "src/main/main.js:826"
+      ]
+    },
+    "{path} already exists — choose another file name": {
+      "refs": [
+        "src/main/keygen.js:128"
+      ]
+    },
+    "{path} is a folder; add a file name": {
+      "refs": [
+        "src/main/keygen.js:126"
+      ]
+    },
+    "{type} keys can be {sizes} bits, not {bits}": {
+      "refs": [
+        "src/main/keygen.js:42"
+      ]
+    },
+    "{version} is already installed on disk; relaunch to use it": {
+      "refs": [
+        "src/main/updater.js:76"
+      ]
+    },
+    "~user paths are not supported — use ~/ for your own home folder or an absolute path": {
+      "refs": [
+        "src/main/keygen.js:120"
+      ]
+    },
+    "~user paths are not supported for the remote file — use ~/ (the login's home) or an absolute path": {
+      "refs": [
+        "src/main/keygen.js:92"
+      ]
+    },
+    "1 × 2 (2 side by side)": {
+      "refs": [
+        "src/main/main.js:455"
+      ]
+    },
+    "2 × 1 (2 stacked)": {
+      "refs": [
+        "src/main/main.js:456"
+      ]
+    },
+    "2 × 2 (4 panes)": {
+      "refs": [
+        "src/main/main.js:457"
+      ]
+    },
+    "2 × 3 (6 panes)": {
+      "refs": [
+        "src/main/main.js:458"
+      ]
+    },
+    "2 × 4 (8 panes)": {
+      "refs": [
+        "src/main/main.js:459"
+      ]
+    },
+    "a block arrived damaged (CRC) — try again": {
+      "refs": [
+        "src/main/zmodem.js:230"
+      ]
+    },
+    "A scan is already running — stop it first": {
+      "refs": [
+        "src/main/main.js:1084"
+      ]
+    },
+    "authentication cancelled": {
+      "refs": [
+        "src/main/ftp.js:141",
+        "src/main/ssh.js:636"
+      ]
+    },
+    "authentication failed — server accepts: {accepts}; tried: {tried}": {
+      "refs": [
+        "src/main/ssh.js:638"
+      ]
+    },
+    "bad port {port}": {
+      "refs": [
+        "src/main/importers.js:189",
+        "src/main/importers.js:251"
+      ]
+    },
+    "Bad remote file name": {
+      "refs": [
+        "src/main/keygen.js:90"
+      ]
+    },
+    "Cancel": {
+      "refs": [
+        "src/main/main.js:66"
+      ]
+    },
+    "cancelled": {
+      "refs": [
+        "src/main/zmodem.js:225",
+        "src/main/zmodem.js:666"
+      ]
+    },
+    "cancelled by the remote side": {
+      "refs": [
+        "src/main/zmodem.js:224",
+        "src/main/zmodem.js:691"
+      ]
+    },
+    "cannot connect to local X server at {display}: {error}": {
+      "refs": [
+        "src/main/x11.js:125"
+      ]
+    },
+    "Cannot create {dir}: {error}": {
+      "refs": [
+        "src/main/keygen.js:134"
+      ]
+    },
+    "Cannot open {path}: {error}": {
+      "refs": [
+        "src/main/terminals.js:568"
+      ]
+    },
+    "Cannot read private key {key}: {error}": {
+      "refs": [
+        "src/main/ssh.js:98"
+      ]
+    },
+    "Cannot resolve {host}": {
+      "refs": [
+        "src/main/netscan.js:126"
+      ]
+    },
+    "Cannot send to {where}; check the broadcast address ({code})": {
+      "refs": [
+        "src/main/wol.js:40"
+      ]
+    },
+    "Cannot send to {where}: {error}": {
+      "refs": [
+        "src/main/wol.js:41"
+      ]
+    },
+    "cannot write {file}: {error}": {
+      "refs": [
+        "src/main/zmodem.js:570"
+      ]
+    },
+    "cannot write to {dir}: {error}": {
+      "refs": [
+        "src/main/zmodem.js:561"
+      ]
+    },
+    "cannot write to the terminal: {error}": {
+      "refs": [
+        "src/main/zmodem.js:743"
+      ]
+    },
+    "Check for Updates…": {
+      "refs": [
+        "src/main/main.js:491"
+      ]
+    },
+    "Choose where to save the key": {
+      "refs": [
+        "src/main/keygen.js:118"
+      ]
+    },
+    "cipher": {
+      "refs": [
+        "src/main/algorithms.js:13"
+      ]
+    },
+    "Clear Terminal": {
+      "refs": [
+        "src/main/main.js:438"
+      ]
+    },
+    "Close Other Tabs": {
+      "refs": [
+        "src/main/main.js:419"
+      ]
+    },
+    "Close Pane": {
+      "refs": [
+        "src/main/main.js:463"
+      ]
+    },
+    "Close Tab": {
+      "refs": [
+        "src/main/main.js:418"
+      ]
+    },
+    "Close Tabs to the Left": {
+      "refs": [
+        "src/main/main.js:420"
+      ]
+    },
+    "Close Tabs to the Right": {
+      "refs": [
+        "src/main/main.js:421"
+      ]
+    },
+    "Connected to {path} @ {baud} {mode}": {
+      "refs": [
+        "src/main/terminals.js:571"
+      ]
+    },
+    "Connected to {target}": {
+      "refs": [
+        "src/main/terminals.js:465"
+      ]
+    },
+    "Connecting to {target}...": {
+      "refs": [
+        "src/main/ssh.js:546"
+      ]
+    },
+    "Connecting to jump host {target}...": {
+      "refs": [
+        "src/main/ssh.js:440"
+      ]
+    },
+    "connection closed during the host key check": {
+      "refs": [
+        "src/main/ssh.js:368"
+      ]
+    },
+    "Connection failed: {error}": {
+      "refs": [
+        "src/main/ssh.js:621"
+      ]
+    },
+    "Connection not ready": {
+      "refs": [
+        "src/main/tunnels.js:178"
+      ]
+    },
+    "Connection refused ({where}) — the host is reachable but no FTP server listens on that port": {
+      "refs": [
+        "src/main/ftp.js:67"
+      ]
+    },
+    "Connection timed out ({error}) — check the host/port, VPN or firewall": {
+      "refs": [
+        "src/main/ftp.js:68"
+      ]
+    },
+    "Could not connect to {where}: {error}": {
+      "refs": [
+        "src/main/ssh.js:688"
+      ]
+    },
+    "Could not write {file} on {where}: {error}": {
+      "refs": [
+        "src/main/ssh.js:705"
+      ]
+    },
+    "Could not write {file}: {error}": {
+      "refs": [
+        "src/main/main.js:946"
+      ]
+    },
+    "Data connection failed ({code} {detail}) — is passive mode blocked by a firewall?": {
+      "refs": [
+        "src/main/ftp.js:65"
+      ]
+    },
+    "data was lost on the way (ZMODEM error correction is not implemented) — try again": {
+      "refs": [
+        "src/main/zmodem.js:229"
+      ]
+    },
+    "Detach Tab to New Window": {
+      "refs": [
+        "src/main/main.js:417"
+      ]
+    },
+    "Disconnect": {
+      "refs": [
+        "src/main/main.js:412"
+      ]
+    },
+    "download": {
+      "refs": [
+        "src/main/zmodem.js:488",
+        "src/main/zmodem.js:694"
+      ]
+    },
+    "Download": {
+      "refs": [
+        "src/main/updater.js:95"
+      ]
+    },
+    "Download failed": {
+      "refs": [
+        "src/main/updater.js:98"
+      ]
+    },
+    "Download folder \"{name}\" into…": {
+      "refs": [
+        "src/main/main.js:850"
+      ]
+    },
+    "Download to…": {
+      "refs": [
+        "src/main/main.js:854"
+      ]
+    },
+    "duplicate id": {
+      "refs": [
+        "src/main/importers.js:254"
+      ]
+    },
+    "duplicate of an earlier bookmark": {
+      "refs": [
+        "src/main/importers.js:181",
+        "src/main/importers.js:208"
+      ]
+    },
+    "Duplicate Session": {
+      "refs": [
+        "src/main/main.js:410"
+      ]
+    },
+    "ed25519 keys have a fixed size": {
+      "refs": [
+        "src/main/keygen.js:45"
+      ]
+    },
+    "Edit": {
+      "refs": [
+        "src/main/main.js:432"
+      ]
+    },
+    "Enter a target: a CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or a host": {
+      "refs": [
+        "src/main/netscan.js:28"
+      ]
+    },
+    "Enter passphrase for key {key}": {
+      "refs": [
+        "src/main/ssh.js:109"
+      ]
+    },
+    "entry {n}": {
+      "refs": [
+        "src/main/importers.js:240"
+      ]
+    },
+    "error: {error}": {
+      "refs": [
+        "src/main/tools.js:20"
+      ]
+    },
+    "exit status {code}": {
+      "refs": [
+        "src/main/ssh.js:704"
+      ]
+    },
+    "Export sessions": {
+      "refs": [
+        "src/main/main.js:940"
+      ]
+    },
+    "Export Sessions (JSON)…": {
+      "refs": [
+        "src/main/main.js:426"
+      ]
+    },
+    "Failed to open shell: {error}": {
+      "refs": [
+        "src/main/ssh.js:593"
+      ]
+    },
+    "File too large ({size} bytes)": {
+      "refs": [
+        "src/main/ftp.js:259",
+        "src/main/sftp.js:125"
+      ]
+    },
+    "Find…": {
+      "refs": [
+        "src/main/main.js:437"
+      ]
+    },
+    "Focus Next Pane": {
+      "refs": [
+        "src/main/main.js:464"
+      ]
+    },
+    "FTP password": {
+      "refs": [
+        "src/main/ftp.js:137"
+      ]
+    },
+    "FTP session is closed": {
+      "refs": [
+        "src/main/ftp.js:185",
+        "src/main/ftp.js:203",
+        "src/main/ftp.js:371",
+        "src/main/ftp.js:408",
+        "src/main/ftp.js:453"
+      ]
+    },
+    "Generate SSH Key…": {
+      "refs": [
+        "src/main/main.js:428"
+      ]
+    },
+    "Grid Layout": {
+      "refs": [
+        "src/main/main.js:453"
+      ]
+    },
+    "host is required": {
+      "refs": [
+        "src/main/terminals.js:423"
+      ]
+    },
+    "host key": {
+      "refs": [
+        "src/main/algorithms.js:13"
+      ]
+    },
+    "host key check failed": {
+      "refs": [
+        "src/main/ssh.js:363"
+      ]
+    },
+    "host key not accepted": {
+      "refs": [
+        "src/main/main.js:774",
+        "src/main/ssh.js:384",
+        "src/main/ssh.js:662"
+      ]
+    },
+    "Host not found ({host}) — check the host name": {
+      "refs": [
+        "src/main/ftp.js:69"
+      ]
+    },
+    "Identity added": {
+      "refs": [
+        "src/main/keygen.js:183"
+      ]
+    },
+    "Import from ~/.ssh/config": {
+      "refs": [
+        "src/main/main.js:423"
+      ]
+    },
+    "Import from MobaXterm.ini…": {
+      "refs": [
+        "src/main/main.js:424"
+      ]
+    },
+    "Import Sessions (JSON)…": {
+      "refs": [
+        "src/main/main.js:425"
+      ]
+    },
+    "Import sessions JSON": {
+      "refs": [
+        "src/main/main.js:951"
+      ]
+    },
+    "Imported key path from Windows; convert .ppk with puttygen and fix the path.": {
+      "refs": [
+        "src/main/importers.js:204"
+      ]
+    },
+    "Incorrect passphrase. Enter passphrase for key {key}": {
+      "refs": [
+        "src/main/ssh.js:107"
+      ]
+    },
+    "Installing the key on {where} failed: {error}": {
+      "refs": [
+        "src/main/ssh.js:707"
+      ]
+    },
+    "Internal error: {message}": {
+      "refs": [
+        "src/main/main.js:1122"
+      ]
+    },
+    "Invalid broadcast address: {address}": {
+      "refs": [
+        "src/main/wol.js:55"
+      ]
+    },
+    "Invalid broadcast address: 0.0.0.0 — use 255.255.255.255 or the subnet's broadcast such as 192.168.1.255": {
+      "refs": [
+        "src/main/wol.js:56"
+      ]
+    },
+    "Invalid MAC address: {mac}": {
+      "refs": [
+        "src/main/wol.js:26"
+      ]
+    },
+    "Invalid private key {key}: {error}": {
+      "refs": [
+        "src/main/ssh.js:120"
+      ]
+    },
+    "Jump established, connecting to {target}...": {
+      "refs": [
+        "src/main/ssh.js:447"
+      ]
+    },
+    "Jump host failed: {error}": {
+      "refs": [
+        "src/main/ssh.js:450"
+      ]
+    },
+    "key exchange": {
+      "refs": [
+        "src/main/algorithms.js:13"
+      ]
+    },
+    "Keyboard Shortcuts": {
+      "refs": [
+        "src/main/main.js:494"
+      ]
+    },
+    "keyboard-interactive (saved password)": {
+      "refs": [
+        "src/main/ssh.js:195"
+      ]
+    },
+    "keyboard-interactive prompt": {
+      "refs": [
+        "src/main/ssh.js:217"
+      ]
+    },
     "Language": {
       "refs": [
         "src/renderer/dialogs.js:790",
         "src/renderer/dialogs.js:806"
+      ]
+    },
+    "Later": {
+      "refs": [
+        "src/main/updater.js:84",
+        "src/main/updater.js:95",
+        "src/main/updater.js:111"
       ]
     },
     "Local X server: {display}": {
@@ -13,9 +691,160 @@
         "src/renderer/app.js:1198"
       ]
     },
+    "Login failed (530): check the username/password": {
+      "refs": [
+        "src/main/ftp.js:53"
+      ]
+    },
+    "Login failed. {account}'s FTP password (attempt {n})": {
+      "refs": [
+        "src/main/ftp.js:138"
+      ]
+    },
+    "Macros Panel": {
+      "refs": [
+        "src/main/main.js:448"
+      ]
+    },
     "Menus, panels and dialogs switch at once; terminal output is not translated": {
       "refs": [
         "src/renderer/dialogs.js:806"
+      ]
+    },
+    "MobAlt {version} is already installed on disk; relaunch to use it": {
+      "refs": [
+        "src/main/updater.js:82"
+      ]
+    },
+    "MobAlt {version} is available": {
+      "refs": [
+        "src/main/updater.js:90",
+        "src/main/updater.js:93"
+      ]
+    },
+    "MobAlt {version} is ready to install": {
+      "refs": [
+        "src/main/updater.js:109"
+      ]
+    },
+    "MobAlt {version} is up to date": {
+      "refs": [
+        "src/main/updater.js:103"
+      ]
+    },
+    "MobAlt is up to date": {
+      "refs": [
+        "src/main/updater.js:104"
+      ]
+    },
+    "MobAlt on disk": {
+      "refs": [
+        "src/main/main.js:496"
+      ]
+    },
+    "MobaXterm settings": {
+      "refs": [
+        "src/main/main.js:907"
+      ]
+    },
+    "mosh client not found — install it with \"brew install mosh\"": {
+      "refs": [
+        "src/main/terminals.js:422"
+      ]
+    },
+    "MultiExec (broadcast input)": {
+      "refs": [
+        "src/main/main.js:479"
+      ]
+    },
+    "New Local Terminal": {
+      "refs": [
+        "src/main/main.js:407"
+      ]
+    },
+    "New Session…": {
+      "refs": [
+        "src/main/main.js:406"
+      ]
+    },
+    "Next Tab": {
+      "refs": [
+        "src/main/main.js:483"
+      ]
+    },
+    "no \"sessions\" array": {
+      "refs": [
+        "src/main/importers.js:234"
+      ]
+    },
+    "No answer from {host} (tried {addresses})": {
+      "refs": [
+        "src/main/netscan.js:139"
+      ]
+    },
+    "No free name next to {file}": {
+      "refs": [
+        "src/main/keygen.js:62"
+      ]
+    },
+    "no host": {
+      "refs": [
+        "src/main/importers.js:206"
+      ]
+    },
+    "no matching {label}: this session offers {ours}; the server offers {theirs}": {
+      "refs": [
+        "src/main/algorithms.js:178"
+      ]
+    },
+    "no name": {
+      "refs": [
+        "src/main/importers.js:243"
+      ]
+    },
+    "no output (exit {code})": {
+      "refs": [
+        "src/main/monitor.js:164"
+      ]
+    },
+    "No output file": {
+      "refs": [
+        "src/main/keygen.js:38"
+      ]
+    },
+    "No password set for this FTP session": {
+      "refs": [
+        "src/main/ftp.js:133"
+      ]
+    },
+    "no progress for {s} s": {
+      "refs": [
+        "src/main/zmodem.js:753"
+      ]
+    },
+    "No route to {target}; check the broadcast address ({code})": {
+      "refs": [
+        "src/main/wol.js:38"
+      ]
+    },
+    "no sh on the host": {
+      "refs": [
+        "src/main/monitor.js:162"
+      ]
+    },
+    "No space left on the server ({code} {detail})": {
+      "refs": [
+        "src/main/ftp.js:61"
+      ]
+    },
+    "No ssh-agent is running (SSH_AUTH_SOCK is not set)": {
+      "refs": [
+        "src/main/keygen.js:165"
+      ]
+    },
+    "No such file: {path}": {
+      "refs": [
+        "src/main/ftp.js:236"
       ]
     },
     "No X server found (install XQuartz for X11 forwarding)": {
@@ -24,9 +853,646 @@
         "src/renderer/app.js:1198"
       ]
     },
+    "Not a CIDR, an address range or a host name: {target}": {
+      "refs": [
+        "src/main/netscan.js:53"
+      ]
+    },
+    "Not a port: {part}": {
+      "refs": [
+        "src/main/netscan.js:63"
+      ]
+    },
+    "Not a public key": {
+      "refs": [
+        "src/main/keygen.js:88"
+      ]
+    },
+    "Not a public key line (expected \"ssh-ed25519 AAAA… comment\")": {
+      "refs": [
+        "src/main/ssh.js:675"
+      ]
+    },
+    "Not a valid CIDR: {target}": {
+      "refs": [
+        "src/main/netscan.js:33"
+      ]
+    },
+    "Not a valid range: {target}": {
+      "refs": [
+        "src/main/netscan.js:44"
+      ]
+    },
+    "not an object": {
+      "refs": [
+        "src/main/importers.js:242"
+      ]
+    },
+    "Not available in this build: {names} (1024-bit Diffie-Hellman was removed from its crypto)": {
+      "refs": [
+        "src/main/algorithms.js:84"
+      ]
+    },
+    "not connected": {
+      "refs": [
+        "src/main/ssh.js:518"
+      ]
+    },
+    "Not connected": {
+      "refs": [
+        "src/main/ssh.js:23"
+      ]
+    },
+    "not JSON ({error})": {
+      "refs": [
+        "src/main/importers.js:231"
+      ]
+    },
+    "nothing": {
+      "refs": [
+        "src/main/ssh.js:638"
+      ]
+    },
+    "nothing it told us about": {
+      "refs": [
+        "src/main/algorithms.js:178"
+      ]
+    },
+    "password prompt": {
+      "refs": [
+        "src/main/ssh.js:199"
+      ]
+    },
+    "Path not found on the server ({code} {detail})": {
+      "refs": [
+        "src/main/ftp.js:58"
+      ]
+    },
+    "permission denied": {
+      "refs": [
+        "src/main/monitor.js:163"
+      ]
+    },
+    "Permission denied on the server ({code} {detail})": {
+      "refs": [
+        "src/main/ftp.js:60"
+      ]
+    },
+    "Pin / Unpin Tab": {
+      "refs": [
+        "src/main/main.js:416"
+      ]
+    },
+    "Ports must be between 1 and 65535: {part}": {
+      "refs": [
+        "src/main/netscan.js:65"
+      ]
+    },
+    "Previous Tab": {
+      "refs": [
+        "src/main/main.js:484"
+      ]
+    },
+    "Private key passphrase": {
+      "refs": [
+        "src/main/ssh.js:111"
+      ]
+    },
+    "Quick Connect…": {
+      "refs": [
+        "src/main/main.js:408"
+      ]
+    },
+    "Quit": {
+      "refs": [
+        "src/main/live.js:24",
+        "src/main/main.js:59",
+        "src/main/main.js:641"
+      ]
+    },
+    "Range too large: {n} addresses; the limit is a /16 ({max})": {
+      "refs": [
+        "src/main/netscan.js:29"
+      ]
+    },
+    "Receive files with Zmodem into…": {
+      "refs": [
+        "src/main/zmodem.js:471"
+      ]
+    },
+    "Receive here": {
+      "refs": [
+        "src/main/zmodem.js:471"
+      ]
+    },
+    "Reconnect": {
+      "refs": [
+        "src/main/main.js:411"
+      ]
+    },
+    "Relaunch": {
+      "refs": [
+        "src/main/main.js:84",
+        "src/main/updater.js:84"
+      ]
+    },
+    "Remote forwards need a connection context": {
+      "refs": [
+        "src/main/tunnels.js:72"
+      ]
+    },
+    "Remote Monitoring Bar": {
+      "refs": [
+        "src/main/main.js:466"
+      ]
+    },
+    "Rename Tab…": {
+      "refs": [
+        "src/main/main.js:415"
+      ]
+    },
+    "Reset Zoom": {
+      "refs": [
+        "src/main/main.js:470"
+      ]
+    },
+    "Restart now": {
+      "refs": [
+        "src/main/updater.js:111"
+      ]
+    },
+    "Restart now to install it, or keep working: it is installed when you quit.": {
+      "refs": [
+        "src/main/updater.js:110"
+      ]
+    },
+    "saved password": {
+      "refs": [
+        "src/main/ssh.js:132"
+      ]
+    },
+    "Select MobaXterm.ini": {
+      "refs": [
+        "src/main/main.js:907"
+      ]
+    },
+    "Send": {
+      "refs": [
+        "src/main/zmodem.js:475"
+      ]
+    },
+    "Send files with Zmodem (rz)": {
+      "refs": [
+        "src/main/zmodem.js:475"
+      ]
+    },
+    "Sending to {where} is not allowed on this Mac ({code})": {
+      "refs": [
+        "src/main/wol.js:39"
+      ]
+    },
+    "Serial error: {error}": {
+      "refs": [
+        "src/main/terminals.js:574"
+      ]
+    },
+    "Server accepts: {methods}": {
+      "refs": [
+        "src/main/ssh.js:227"
+      ]
+    },
+    "Server error {code}: {detail}": {
+      "refs": [
+        "src/main/ftp.js:66"
+      ]
+    },
+    "Session": {
+      "refs": [
+        "src/main/main.js:404"
+      ]
+    },
+    "Session not found": {
+      "refs": [
+        "src/main/tunnels.js:194"
+      ]
+    },
+    "Sessions Panel": {
+      "refs": [
+        "src/main/main.js:445"
+      ]
+    },
+    "Settings…": {
+      "refs": [
+        "src/main/main.js:394"
+      ]
+    },
+    "SFTP Panel": {
+      "refs": [
+        "src/main/main.js:446"
+      ]
+    },
+    "Split Down": {
+      "refs": [
+        "src/main/main.js:451"
+      ]
+    },
+    "Split Right": {
+      "refs": [
+        "src/main/main.js:450"
+      ]
+    },
+    "SSH error: {error}": {
+      "refs": [
+        "src/main/ssh.js:533"
+      ]
+    },
+    "SSH password": {
+      "refs": [
+        "src/main/ssh.js:205"
+      ]
+    },
+    "ssh-add failed: {error}": {
+      "refs": [
+        "src/main/keygen.js:181"
+      ]
+    },
+    "ssh-add was not found at {bin}": {
+      "refs": [
+        "src/main/keygen.js:180"
+      ]
+    },
+    "ssh-agent keys": {
+      "refs": [
+        "src/main/ssh.js:138"
+      ]
+    },
+    "ssh-keygen failed: {error}": {
+      "refs": [
+        "src/main/keygen.js:141"
+      ]
+    },
+    "ssh-keygen was not found at {bin} — install the Xcode Command Line Tools (xcode-select --install)": {
+      "refs": [
+        "src/main/keygen.js:139"
+      ]
+    },
+    "Start/Stop Session Log": {
+      "refs": [
+        "src/main/main.js:481"
+      ]
+    },
+    "starting XQuartz…": {
+      "refs": [
+        "src/main/x11.js:88"
+      ]
+    },
     "System default ({name})": {
       "refs": [
         "src/renderer/dialogs.js:790"
+      ]
+    },
+    "Telnet error: {error}": {
+      "refs": [
+        "src/main/terminals.js:509"
+      ]
+    },
+    "Terminal": {
+      "refs": [
+        "src/main/main.js:477"
+      ]
+    },
+    "That is a folder; add a file name": {
+      "refs": [
+        "src/main/keygen.js:121"
+      ]
+    },
+    "That session no longer exists": {
+      "refs": [
+        "src/main/main.js:825"
+      ]
+    },
+    "the connection closed": {
+      "refs": [
+        "src/main/zmodem.js:277"
+      ]
+    },
+    "The folder is not empty ({code} {detail})": {
+      "refs": [
+        "src/main/ftp.js:59"
+      ]
+    },
+    "The key path must be absolute (or start with ~): {path}": {
+      "refs": [
+        "src/main/keygen.js:123"
+      ]
+    },
+    "The key was generated but {path}.pub cannot be read: {error}": {
+      "refs": [
+        "src/main/keygen.js:151"
+      ]
+    },
+    "The name already exists on the server ({code} {detail})": {
+      "refs": [
+        "src/main/ftp.js:57"
+      ]
+    },
+    "the port is closed": {
+      "refs": [
+        "src/main/terminals.js:585"
+      ]
+    },
+    "The port must be a whole number between 1 and 65535": {
+      "refs": [
+        "src/main/wol.js:58"
+      ]
+    },
+    "The port must be between 1 and 65535": {
+      "refs": [
+        "src/main/wol.js:59"
+      ]
+    },
+    "The range ends before it starts: {target}": {
+      "refs": [
+        "src/main/netscan.js:45"
+      ]
+    },
+    "the remote side ended the session": {
+      "refs": [
+        "src/main/zmodem.js:691"
+      ]
+    },
+    "the remote side fell back to YMODEM, which is not supported": {
+      "refs": [
+        "src/main/zmodem.js:226"
+      ]
+    },
+    "the remote side needs an unsupported mode ({detail})": {
+      "refs": [
+        "src/main/zmodem.js:227"
+      ]
+    },
+    "the remote side stopped": {
+      "refs": [
+        "src/main/zmodem.js:357"
+      ]
+    },
+    "The saved passphrase does not match. Enter passphrase for key {key}": {
+      "refs": [
+        "src/main/ssh.js:108"
+      ]
+    },
+    "The server closed the connection (421 {detail})": {
+      "refs": [
+        "src/main/ftp.js:64"
+      ]
+    },
+    "The server does not support FTPS (explicit TLS); untick FTPS": {
+      "refs": [
+        "src/main/ftp.js:55"
+      ]
+    },
+    "The server dropped the connection ({code})": {
+      "refs": [
+        "src/main/ftp.js:70"
+      ]
+    },
+    "The server refused the operation ({code} {detail})": {
+      "refs": [
+        "src/main/ftp.js:63"
+      ]
+    },
+    "The server rejected the request (501 {detail})": {
+      "refs": [
+        "src/main/ftp.js:62"
+      ]
+    },
+    "The server wants an account name (332) — not supported": {
+      "refs": [
+        "src/main/ftp.js:54"
+      ]
+    },
+    "the top level is not an object": {
+      "refs": [
+        "src/main/importers.js:233"
+      ]
+    },
+    "This is MobAlt {version} running from source.": {
+      "refs": [
+        "src/main/updater.js:43"
+      ]
+    },
+    "timed out after {s} s": {
+      "refs": [
+        "src/main/ssh.js:830"
+      ]
+    },
+    "TLS certificate not trusted ({error}) — tick \"Accept untrusted / self-signed certificate\" in the session if you trust this server": {
+      "refs": [
+        "src/main/ftp.js:71"
+      ]
+    },
+    "Toggle Sidebar": {
+      "refs": [
+        "src/main/main.js:444"
+      ]
+    },
+    "Too many ports; the limit is {max}": {
+      "refs": [
+        "src/main/netscan.js:68"
+      ]
+    },
+    "Tools Panel": {
+      "refs": [
+        "src/main/main.js:447"
+      ]
+    },
+    "Tunneling…": {
+      "refs": [
+        "src/main/main.js:480"
+      ]
+    },
+    "unexpected ZMODEM header ({header})": {
+      "refs": [
+        "src/main/zmodem.js:228"
+      ]
+    },
+    "unknown": {
+      "refs": [
+        "src/main/ssh.js:638"
+      ]
+    },
+    "Unknown {label} algorithm: {names}": {
+      "refs": [
+        "src/main/algorithms.js:100"
+      ]
+    },
+    "Unknown {label} algorithms: {names}": {
+      "refs": [
+        "src/main/algorithms.js:100"
+      ]
+    },
+    "unknown error": {
+      "refs": [
+        "src/main/zmodem.js:231"
+      ]
+    },
+    "Unknown key type \"{type}\" (ed25519, rsa or ecdsa)": {
+      "refs": [
+        "src/main/keygen.js:36"
+      ]
+    },
+    "Unknown tunnel type {type}": {
+      "refs": [
+        "src/main/tunnels.js:106"
+      ]
+    },
+    "unknown type {type}": {
+      "refs": [
+        "src/main/importers.js:246"
+      ]
+    },
+    "Unsplit (keep active pane)": {
+      "refs": [
+        "src/main/main.js:462"
+      ]
+    },
+    "unsupported session type #{num}": {
+      "refs": [
+        "src/main/importers.js:173"
+      ]
+    },
+    "Update check failed": {
+      "refs": [
+        "src/main/updater.js:121"
+      ]
+    },
+    "Update check failed: {error}": {
+      "refs": [
+        "src/main/updater.js:120",
+        "src/main/updater.js:129"
+      ]
+    },
+    "Updates are only checked in packaged builds": {
+      "refs": [
+        "src/main/updater.js:39"
+      ]
+    },
+    "upload": {
+      "refs": [
+        "src/main/zmodem.js:488",
+        "src/main/zmodem.js:694"
+      ]
+    },
+    "Upload to {dir}": {
+      "refs": [
+        "src/main/main.js:863"
+      ]
+    },
+    "User Guide": {
+      "refs": [
+        "src/main/main.js:493"
+      ]
+    },
+    "Version {version}": {
+      "refs": [
+        "src/main/updater.js:104"
+      ]
+    },
+    "View": {
+      "refs": [
+        "src/main/main.js:442"
+      ]
+    },
+    "X11 forwarding requested but no local X server found (install/start XQuartz).": {
+      "refs": [
+        "src/main/ssh.js:583"
+      ]
+    },
+    "X11: {message}": {
+      "refs": [
+        "src/main/ssh.js:565",
+        "src/main/ssh.js:576"
+      ]
+    },
+    "You are running {current}. Nothing needs to be downloaded; relaunching starts the version that is on disk.": {
+      "refs": [
+        "src/main/updater.js:83"
+      ]
+    },
+    "You are using {current}. Download it now? It is installed when you quit, or right away if you choose to restart after the download.": {
+      "refs": [
+        "src/main/updater.js:94"
+      ]
+    },
+    "Zmodem {kind} declined": {
+      "refs": [
+        "src/main/zmodem.js:491"
+      ]
+    },
+    "Zmodem {kind} declined: {reason}": {
+      "refs": [
+        "src/main/zmodem.js:491"
+      ]
+    },
+    "Zmodem {kind} of {name} cancelled": {
+      "refs": [
+        "src/main/zmodem.js:695"
+      ]
+    },
+    "Zmodem {kind} of {name} failed: {reason}": {
+      "refs": [
+        "src/main/zmodem.js:695"
+      ]
+    },
+    "Zmodem: {error}": {
+      "refs": [
+        "src/main/zmodem.js:499",
+        "src/main/zmodem.js:562"
+      ]
+    },
+    "Zmodem: {name} skipped by the remote side": {
+      "refs": [
+        "src/main/zmodem.js:613"
+      ]
+    },
+    "Zmodem: received {name} ({size}) → {path}": {
+      "refs": [
+        "src/main/zmodem.js:591"
+      ]
+    },
+    "Zmodem: receiving {name} ({size}) → {path}": {
+      "refs": [
+        "src/main/zmodem.js:573"
+      ]
+    },
+    "Zmodem: receiving {name} → {path}": {
+      "refs": [
+        "src/main/zmodem.js:573"
+      ]
+    },
+    "Zmodem: sending {name} ({size})": {
+      "refs": [
+        "src/main/zmodem.js:619"
+      ]
+    },
+    "Zmodem: sent {name} ({size})": {
+      "refs": [
+        "src/main/zmodem.js:651"
+      ]
+    },
+    "Zoom In": {
+      "refs": [
+        "src/main/main.js:468"
+      ]
+    },
+    "Zoom Out": {
+      "refs": [
+        "src/main/main.js:469"
+      ]
+    },
+    "Zoom Pane (fill the tab / restore)": {
+      "refs": [
+        "src/main/main.js:465"
       ]
     }
   }

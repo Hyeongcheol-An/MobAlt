@@ -37,7 +37,7 @@ const { STATUS_DIM, STATUS_FAIL } = require('./terminals');
 
 let Zmodem = null;
 const zm = () => Zmodem || (Zmodem = require('zmodem.js')); // loaded on first use (unit tests of the pure parts need no library)
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const i18n = require('./i18n'); // interface language: every message shown to the user goes through i18n.t() (`t` names the transfer in this file)
 const DBG = !!process.env.MOBALT_ZMODEM_DEBUG;
 const dbg = (...a) => DBG && console.log('[zmodem]', ...a);
 
@@ -220,14 +220,15 @@ function trailingText(bytes, max = DRAIN_TAIL) {
 function explainError(e) {
   const type = e && e.type;
   const s = String(e && e.message !== undefined ? e.message : e == null ? '' : e);
-  if (type === 'peer_aborted' || /peer aborted/i.test(s)) return 'cancelled by the remote side';
-  if (type === 'already_aborted' || type === 'aborted' || /session (already )?aborted/i.test(s)) return 'cancelled';
-  if (/fallen back to YMODEM/i.test(s)) return 'the remote side fell back to YMODEM, which is not supported';
-  if (/Half-duplex|Non-overlap|8-bit escaping|Buffer size/i.test(s)) return `the remote side needs an unsupported mode (${s.replace(/!$/, '')})`;
-  if (/Unhandled header/i.test(s)) return `unexpected ZMODEM header (${s.replace(/^.*Unhandled header: ?/, '')})`;
-  if (/Error correction is unimplemented|offset mismatch/i.test(s)) return 'data was lost on the way (ZMODEM error correction is not implemented) — try again';
-  if (/CRC check failed/i.test(s)) return 'a block arrived damaged (CRC) — try again';
-  return s.replace(/^PROTOCOL: /, '') || 'unknown error';
+  const t = i18n.t;
+  if (type === 'peer_aborted' || /peer aborted/i.test(s)) return t('cancelled by the remote side');
+  if (type === 'already_aborted' || type === 'aborted' || /session (already )?aborted/i.test(s)) return t('cancelled');
+  if (/fallen back to YMODEM/i.test(s)) return t('the remote side fell back to YMODEM, which is not supported');
+  if (/Half-duplex|Non-overlap|8-bit escaping|Buffer size/i.test(s)) return t('the remote side needs an unsupported mode ({detail})', { detail: s.replace(/!$/, '') });
+  if (/Unhandled header/i.test(s)) return t('unexpected ZMODEM header ({header})', { header: s.replace(/^.*Unhandled header: ?/, '') });
+  if (/Error correction is unimplemented|offset mismatch/i.test(s)) return t('data was lost on the way (ZMODEM error correction is not implemented) — try again');
+  if (/CRC check failed/i.test(s)) return t('a block arrived damaged (CRC) — try again');
+  return s.replace(/^PROTOCOL: /, '') || t('unknown error');
 }
 
 class ZmodemManager extends EventEmitter {
@@ -273,7 +274,7 @@ class ZmodemManager extends EventEmitter {
     g.handle.inputGate = null;
     g.handle.writeRaw = () => Promise.resolve();
     if (g.session) {
-      g.lastError = 'the connection closed';
+      g.lastError = i18n.t('the connection closed');
       this._abort(g);
     }
     g.detection = null;
@@ -353,7 +354,7 @@ class ZmodemManager extends EventEmitter {
       g.silence = null;
       if (g.session !== s || s.has_ended()) return;
       dbg('silence with', s._input_buffer.length, 'unparsed bytes: the peer stopped');
-      g.lastError = 'the remote side stopped';
+      g.lastError = i18n.t('the remote side stopped');
       this._abort(g);
     }, g.handle && g.handle.kind === 'serial' ? this.silenceSerialMs : this.silenceMs);
     if (g.silence.unref) g.silence.unref();
@@ -467,11 +468,11 @@ class ZmodemManager extends EventEmitter {
       const dir = expandHome(s.downloadDir);
       if (dir) return { dir };
       if (!this.dialogs) return { dir: this.downloadsDir() };
-      const r = await this.dialogs.showOpenDialog(win, { title: 'Receive files with Zmodem into…', defaultPath: this.downloadsDir(), buttonLabel: 'Receive here', properties: ['openDirectory', 'createDirectory'] });
+      const r = await this.dialogs.showOpenDialog(win, { title: i18n.t('Receive files with Zmodem into…'), defaultPath: this.downloadsDir(), buttonLabel: i18n.t('Receive here'), properties: ['openDirectory', 'createDirectory'] });
       return r.canceled || !r.filePaths[0] ? null : { dir: r.filePaths[0] };
     }
     if (!this.dialogs) return null;
-    const r = await this.dialogs.showOpenDialog(win, { title: 'Send files with Zmodem (rz)', buttonLabel: 'Send', properties: ['openFile', 'multiSelections'] });
+    const r = await this.dialogs.showOpenDialog(win, { title: i18n.t('Send files with Zmodem (rz)'), buttonLabel: i18n.t('Send'), properties: ['openFile', 'multiSelections'] });
     return r.canceled || !r.filePaths.length ? null : { files: r.filePaths };
   }
 
@@ -484,10 +485,10 @@ class ZmodemManager extends EventEmitter {
     g.held = null;
     const lead = leadingText(held);
     if (lead.length) this._out(g, lead);
-    const what = g.role === 'receive' ? 'download' : 'upload';
+    const kind = g.role === 'receive' ? i18n.t('download') : i18n.t('upload');
     if (!answer || !det.is_valid()) {
       try { det.deny(); } catch {}
-      this._line(g, GREY, `Zmodem ${what} declined${g.lastError ? ': ' + g.lastError : ''}`);
+      this._line(g, GREY, g.lastError ? i18n.t('Zmodem {kind} declined: {reason}', { kind, reason: g.lastError }) : i18n.t('Zmodem {kind} declined', { kind }));
       g.lastError = null;
       return;
     }
@@ -495,7 +496,7 @@ class ZmodemManager extends EventEmitter {
     try {
       session = det.confirm();
     } catch (e) {
-      this._line(g, RED, `Zmodem: ${explainError(e)}`);
+      this._line(g, RED, i18n.t('Zmodem: {error}', { error: explainError(e) }));
       return;
     }
     g.session = session;
@@ -557,8 +558,8 @@ class ZmodemManager extends EventEmitter {
       local = uniquePath(dir, name);
       ws = fs.createWriteStream(local);
     } catch (e) {
-      g.lastError = `cannot write to ${dir}: ${e.message}`;
-      this._line(g, RED, `Zmodem: ${g.lastError}`);
+      g.lastError = i18n.t('cannot write to {dir}: {error}', { dir, error: e.message });
+      this._line(g, RED, i18n.t('Zmodem: {error}', { error: g.lastError }));
       try { offer.skip(); } catch {}
       return;
     }
@@ -566,10 +567,10 @@ class ZmodemManager extends EventEmitter {
     t._ws = ws;
     t._partial = local;
     ws.on('error', (e) => {
-      g.lastError = `cannot write ${local}: ${e.message}`;
+      g.lastError = i18n.t('cannot write {file}: {error}', { file: local, error: e.message });
       this._abort(g);
     });
-    this._line(g, GREY, `Zmodem: receiving ${name}${d.size ? ` (${fmtBytes(d.size)})` : ''} → ${local}`);
+    this._line(g, GREY, d.size ? i18n.t('Zmodem: receiving {name} ({size}) → {path}', { name, size: fmtBytes(d.size), path: local }) : i18n.t('Zmodem: receiving {name} → {path}', { name, path: local }));
     offer
       .accept({
         on_input: (payload) => {
@@ -587,7 +588,7 @@ class ZmodemManager extends EventEmitter {
           }
           t._partial = null;
           this._finish(t, 'done');
-          this._line(g, GREY, `Zmodem: received ${name} (${fmtBytes(t.transferred)}) → ${local}`);
+          this._line(g, GREY, i18n.t('Zmodem: received {name} ({size}) → {path}', { name, size: fmtBytes(t.transferred), path: local }));
         });
       })
       .catch((e) => this._fail(g, e));
@@ -598,24 +599,24 @@ class ZmodemManager extends EventEmitter {
     const stats = [];
     for (const p of files) {
       const st = fs.statSync(p);
-      if (!st.isFile()) throw new Error(`${path.basename(p)} is not a file`);
+      if (!st.isFile()) throw new Error(i18n.t('{name} is not a file', { name: path.basename(p) }));
       stats.push({ path: p, size: st.size, mtime: st.mtime, mode: st.mode });
     }
     const batch = offerBatch(stats);
     const total = batch.reduce((n, f) => n + f.size, 0);
-    const t = this._newTransfer(g, 'upload', batch.length === 1 ? batch[0].name : `${batch.length} files`, batch[0].name, batch[0].path, total);
+    const t = this._newTransfer(g, 'upload', batch.length === 1 ? batch[0].name : i18n.tn('{n} file', '{n} files', batch.length), batch[0].name, batch[0].path, total);
     t.filesTotal = batch.length;
     const buf = Buffer.allocUnsafe(CHUNK);
     for (const f of batch) {
       const xfer = await this._race(g, session.send_offer({ name: f.name, size: f.size, mtime: f.mtime, mode: f.mode, files_remaining: f.files_remaining, bytes_remaining: f.bytes_remaining }));
       if (!xfer) { // ZSKIP: the receiver has it already (rz without -y) or does not want it
-        this._line(g, GREY, `Zmodem: ${f.name} skipped by the remote side`);
+        this._line(g, GREY, i18n.t('Zmodem: {name} skipped by the remote side', { name: f.name }));
         t.filesDone++;
         t.transferred += f.size;
         this._emit(t);
         continue;
       }
-      this._line(g, GREY, `Zmodem: sending ${f.name} (${fmtBytes(f.size)})`);
+      this._line(g, GREY, i18n.t('Zmodem: sending {name} ({size})', { name: f.name, size: fmtBytes(f.size) }));
       dbg('send start', f.name, 'offerOffset', xfer.get_offset());
       const fd = fs.openSync(f.path, 'r');
       try {
@@ -647,7 +648,7 @@ class ZmodemManager extends EventEmitter {
     await this._race(g, session.close());
     dbg('closed');
     this._finish(t, 'done');
-    this._line(g, GREY, `Zmodem: sent ${t.name} (${fmtBytes(t.transferred)})`);
+    this._line(g, GREY, i18n.t('Zmodem: sent {name} ({size})', { name: t.name, size: fmtBytes(t.transferred) }));
   }
 
   /** Wait for a protocol promise, or for the session's abort (cancel, stall, dropped connection) — whichever comes first. */
@@ -662,7 +663,7 @@ class ZmodemManager extends EventEmitter {
     g.role = null;
     const aborted = g.aborting || (typeof session.aborted === 'function' && session.aborted() === true); // ours, or the peer's CAN string
     if (g.abortReject) {
-      if (g.aborting) g.abortReject(new Error(g.lastError || 'cancelled')); // interrupt the send loop's awaits
+      if (g.aborting) g.abortReject(new Error(g.lastError || i18n.t('cancelled'))); // interrupt the send loop's awaits
       else g.abortResolve(); // normal end: let the protocol promise the loop is awaiting win, then _finish runs
       g.abortReject = null;
       g.abortResolve = null;
@@ -687,10 +688,11 @@ class ZmodemManager extends EventEmitter {
   _settle(g, t, aborted, session) {
     if (t && t.status === 'running' && !t._complete) {
       // a peer abort throws its reason only after this event: it is known from the session itself
-      const why = t.cancelled ? null : g.lastError || (aborted && !g.aborting ? 'cancelled by the remote side' : 'the remote side ended the session');
+      const why = t.cancelled ? null : g.lastError || (aborted && !g.aborting ? i18n.t('cancelled by the remote side') : i18n.t('the remote side ended the session'));
       this._finish(t, t.cancelled ? 'cancelled' : 'error', why);
       if (this.guards.has(g.id)) this.registry.data(g.id, ST); // whatever a stray byte opened is closed before the status line
-      this._line(g, t.cancelled ? GREY : RED, `Zmodem ${t.kind} of ${t.name} ${t.cancelled ? 'cancelled' : 'failed: ' + why}`);
+      const kind = t.kind === 'upload' ? i18n.t('upload') : i18n.t('download');
+      this._line(g, t.cancelled ? GREY : RED, t.cancelled ? i18n.t('Zmodem {kind} of {name} cancelled', { kind, name: t.name }) : i18n.t('Zmodem {kind} of {name} failed: {reason}', { kind, name: t.name, reason: why }));
     }
     g.lastError = null;
     if (aborted) this._startDrain(g, session && Array.isArray(session._input_buffer) ? session._input_buffer : []);
@@ -738,7 +740,7 @@ class ZmodemManager extends EventEmitter {
     }
     return p.catch((e) => {
       if (!g.session) return;
-      g.lastError = `cannot write to the terminal: ${e.message}`;
+      g.lastError = i18n.t('cannot write to the terminal: {error}', { error: e.message });
       this._abort(g);
     });
   }
@@ -748,7 +750,7 @@ class ZmodemManager extends EventEmitter {
     g.timer = setTimeout(() => {
       g.timer = null;
       if (!g.session) return;
-      g.lastError = `no progress for ${Math.round(STALL_MS / 1000)} s`;
+      g.lastError = i18n.t('no progress for {s} s', { s: Math.round(STALL_MS / 1000) });
       this._abort(g);
     }, STALL_MS);
     if (g.timer.unref) g.timer.unref();

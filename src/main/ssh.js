@@ -19,6 +19,8 @@ const GREY = STATUS_DIM; // status lines are painted by the renderer from the pa
 const RED = STATUS_FAIL;
 const RESET = '\x1b[0m';
 const DEFAULT_IDENTITY_FILES = ['id_ed25519', 'id_ecdsa', 'id_rsa'];
+/** The rejection of sftp() / exec() on a connection that is gone; the code lets monitor.js classify it whatever the language. */
+const notConnected = () => Object.assign(new Error(t('Not connected')), { code: 'ENOTCONN' });
 
 let agentKeysCache = null;
 /** Public keys (base64 blobs) currently held by ssh-agent; cached for 10 s. */
@@ -93,7 +95,7 @@ class SshManager {
       try {
         raw = fs.readFileSync(expandHome(file));
       } catch (e) {
-        ctx.out(`${RED}Cannot read private key ${display}: ${e.message}${RESET}\r\n`);
+        ctx.out(`${RED}${t('Cannot read private key {key}: {error}', { key: display, error: e.message })}${RESET}\r\n`);
         return null;
       }
       let passphrase = savePassphrase ? cfg.passphrase || undefined : undefined;
@@ -102,9 +104,11 @@ class SshManager {
       let tries = 0;
       while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
         // only a retry (or a saved passphrase that no longer fits) is blamed on the passphrase
-        const why = tries ? 'Incorrect passphrase. ' : hadSaved ? 'The saved passphrase does not match. ' : '';
+        const message = tries ? t('Incorrect passphrase. Enter passphrase for key {key}', { key: display })
+          : hadSaved ? t('The saved passphrase does not match. Enter passphrase for key {key}', { key: display })
+            : t('Enter passphrase for key {key}', { key: display });
         tries++;
-        const ans = await prompter.password({ kind: 'passphrase', title: 'Private key passphrase', message: `${why}Enter passphrase for key ${display}`, session: cfg });
+        const ans = await prompter.password({ kind: 'passphrase', title: t('Private key passphrase'), message, session: cfg });
         if (!ans) return null;
         passphrase = ans.password;
         parsed = utils.parseKey(raw, passphrase);
@@ -113,7 +117,7 @@ class SshManager {
         }
       }
       if (parsed instanceof Error) {
-        ctx.out(`${RED}Invalid private key ${display}: ${parsed.message}${RESET}\r\n`);
+        ctx.out(`${RED}${t('Invalid private key {key}: {error}', { key: display, error: parsed.message })}${RESET}\r\n`);
         return null;
       }
       return { type: 'publickey', username, key: raw, passphrase, _parsed: parsed };
@@ -125,13 +129,13 @@ class SshManager {
     // "auto" order: configured key → saved password → ssh-agent keys → default ~/.ssh keys (like the
     // ssh CLI) → keyboard-interactive with the saved password → interactive prompts.
     if ((method === 'password' || method === 'auto') && cfg.password) {
-      steps.push({ type: 'password', label: 'saved password', run: async () => ({ type: 'password', username, password: cfg.password }) });
+      steps.push({ type: 'password', label: t('saved password'), run: async () => ({ type: 'password', username, password: cfg.password }) });
     }
     // Every key is a failed attempt on the server side (MaxAuthTries, fail2ban), so when a password is
     // saved and the server accepts passwords, keys from the agent / default files are not tried.
     const keysWanted = () => !(cfg.password && Array.isArray(ctx.serverMethods) && ctx.serverMethods.includes('password'));
     if ((method === 'agent' || method === 'auto') && process.env.SSH_AUTH_SOCK) {
-      steps.push({ type: 'agent', label: 'ssh-agent keys', guard: keysWanted, run: async () => ((await agentPublicKeys()).size ? { type: 'agent', username, agent: process.env.SSH_AUTH_SOCK } : null) });
+      steps.push({ type: 'agent', label: t('ssh-agent keys'), guard: keysWanted, run: async () => ((await agentPublicKeys()).size ? { type: 'agent', username, agent: process.env.SSH_AUTH_SOCK } : null) });
     }
     if (method === 'auto' || (method === 'key' && !cfg.privateKeyPath)) {
       for (const name of DEFAULT_IDENTITY_FILES) {
@@ -188,18 +192,18 @@ class SshManager {
         },
       }),
     });
-    if (cfg.password) steps.push(kbdStep('keyboard-interactive (saved password)'));
+    if (cfg.password) steps.push(kbdStep(t('keyboard-interactive (saved password)')));
     for (let i = 0; i < MAX_PROMPTS; i++) {
       steps.push({
         type: 'password',
-        label: 'password prompt',
+        label: t('password prompt'),
         guard: () => promptCount < MAX_PROMPTS,
         run: async () => {
           promptCount++;
           const ans = await prompter.password({
             kind: 'password',
-            title: 'SSH password',
-            message: `${label}'s password${promptCount > 1 ? ' (attempt ' + promptCount + ')' : ''}`,
+            title: t('SSH password'),
+            message: promptCount > 1 ? t("{account}'s password (attempt {n})", { account: label, n: promptCount }) : t("{account}'s password", { account: label }),
             session: cfg,
           });
           if (!ans) {
@@ -210,7 +214,7 @@ class SshManager {
           return { type: 'password', username, password: ans.password };
         },
       });
-      steps.push(kbdStep('keyboard-interactive prompt'));
+      steps.push(kbdStep(t('keyboard-interactive prompt')));
     }
 
     // ssh2 reports the server's remaining methods by SSH name; agent auth is "publickey" on the wire.
@@ -220,7 +224,7 @@ class SshManager {
     return (methodsLeft, partialSuccess, cb) => {
       if (Array.isArray(methodsLeft) && !ctx.serverMethods) {
         ctx.serverMethods = methodsLeft.slice();
-        ctx.out(`${GREY}Server accepts: ${methodsLeft.join(', ')}${RESET}\r\n`);
+        ctx.out(`${GREY}${t('Server accepts: {methods}', { methods: methodsLeft.join(', ') })}${RESET}\r\n`);
       }
       if (ctx.currentLabel && ctx.currentLabel !== 'none') ctx.tried.push(ctx.currentLabel); // previous attempt was rejected
       const next = async () => {
@@ -356,12 +360,12 @@ class SshManager {
         if (settled) return;
         settled = true;
         try { client.end(); } catch {}
-        resolve(ok ? { ok: true } : { ok: false, error: error || 'host key check failed' });
+        resolve(ok ? { ok: true } : { ok: false, error: error || t('host key check failed') });
       };
       const ctx = {};
       const verifier = this._hostVerifier(cfg, ctx);
       client.on('error', (e) => finish(false, this._explainError(e, ctx, cfg)));
-      client.on('close', () => finish(false, 'connection closed during the host key check'));
+      client.on('close', () => finish(false, t('connection closed during the host key check')));
       client.on('ready', () => finish(true));
       ctx.readyTimer = this._readyTimer(client, settings.readyTimeout || 20000, (err) => {
         finish(false, this._explainError(err, ctx, cfg));
@@ -377,7 +381,7 @@ class SshManager {
               try { knownhosts.ensure(cfg.host, cfg.port || 22, key); } catch {}
             }
             cb(ok);
-            finish(ok, 'host key not accepted');
+            finish(ok, t('host key not accepted'));
           }),
           authHandler: (_methods, _partial, cb) => cb(false), // never reached: the check ends with the key exchange
           readyTimeout: 0, // ctx.readyTimer: the same limit, paused while the host-key dialog is open
@@ -433,17 +437,17 @@ class SshManager {
       let jump = null;
       let sock;
       if (jumpCfg) {
-        ctx.out(`${GREY}Connecting to jump host ${jumpCfg.username || ''}@${jumpCfg.host}:${jumpCfg.port || 22}...${RESET}\r\n`);
+        ctx.out(`${GREY}${t('Connecting to jump host {target}...', { target: `${jumpCfg.username || ''}@${jumpCfg.host}:${jumpCfg.port || 22}` })}${RESET}\r\n`);
         try {
           const j = await this.connectClient(jumpCfg, ctx, depth + 1);
           jump = j.client;
           sock = await new Promise((res, rej) =>
             jump.forwardOut('127.0.0.1', 0, cfg.host, cfg.port || 22, (err, stream) => (err ? rej(err) : res(stream)))
           );
-          ctx.out(`${GREY}Jump established, connecting to ${cfg.host}:${cfg.port || 22}...${RESET}\r\n`);
+          ctx.out(`${GREY}${t('Jump established, connecting to {target}...', { target: `${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
         } catch (e) {
           if (jump) jump.end();
-          return fail(new Error(`Jump host failed: ${e.message}`));
+          return fail(new Error(t('Jump host failed: {error}', { error: e.message })));
         }
       }
 
@@ -511,7 +515,7 @@ class SshManager {
       write: (d) => (info.stream && !hold ? info.stream.write(d) : (pending += d)),
       // ZMODEM bytes: resolves when the channel has taken them (ssh2 calls back once window space allowed the send)
       writeRaw: (buf) => new Promise((resolve, reject) => {
-        if (!info.stream || info.closed) return reject(new Error('not connected'));
+        if (!info.stream || info.closed) return reject(new Error(t('not connected')));
         info.stream.write(buf, (e) => (e ? reject(e) : resolve()));
       }),
       resize: (c, r) => {
@@ -526,7 +530,7 @@ class SshManager {
       out: (t) => this._out(id, t),
       onError: (e) => {
         info.lastError = e.message; // e.g. "Keepalive timeout": the reason a lost connection is reported with
-        this._out(id, `\r\n${RED}SSH error: ${e.message}${RESET}\r\n`);
+        this._out(id, `\r\n${RED}${t('SSH error: {error}', { error: e.message })}${RESET}\r\n`);
       },
       onClose: () => {
         if (info.closed) return;
@@ -539,7 +543,7 @@ class SshManager {
     };
 
     this.prompter.status(id, 'connecting');
-    this._out(id, `${GREY}Connecting to ${cfg.username || os.userInfo().username}@${cfg.host}:${cfg.port || 22}...${RESET}\r\n`);
+    this._out(id, `${GREY}${t('Connecting to {target}...', { target: `${cfg.username || os.userInfo().username}@${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
 
     this.connectClient(cfg, ctx)
       .then(async ({ client, jump }) => {
@@ -558,7 +562,7 @@ class SshManager {
         // requested with the defaults (vt100, 80×24, no modes), so the X11 request goes in its own argument
         const sessOpts = {};
         if (cfg.x11) {
-          const xp = await x11.prepare((msg) => this._out(id, `${GREY}X11: ${msg}${RESET}\r\n`));
+          const xp = await x11.prepare((msg) => this._out(id, `${GREY}${t('X11: {message}', { message: msg })}${RESET}\r\n`));
           if (info.closed) return;
           if (xp) {
             info.x11 = xp;
@@ -569,14 +573,14 @@ class SshManager {
                 x11.proxy(accept(), xp, (msg) => {
                   if (x11Warned) return;
                   x11Warned = true;
-                  this._out(id, `\r\n${RED}X11: ${msg}${RESET}\r\n`);
+                  this._out(id, `\r\n${RED}${t('X11: {message}', { message: msg })}${RESET}\r\n`);
                 });
               } catch (e) {
                 reject();
               }
             });
           } else {
-            this._out(id, `${RED}X11 forwarding requested but no local X server found (install/start XQuartz).${RESET}\r\n`);
+            this._out(id, `${RED}${t('X11 forwarding requested but no local X server found (install/start XQuartz).')}${RESET}\r\n`);
           }
         }
         client.on('tcp connection', (details, accept, reject) => {
@@ -586,7 +590,7 @@ class SshManager {
         });
         client.shell(shellOpts, sessOpts, (err, stream) => {
           if (err) {
-            this._out(id, `${RED}Failed to open shell: ${err.message}${RESET}\r\n`);
+            this._out(id, `${RED}${t('Failed to open shell: {error}', { error: err.message })}${RESET}\r\n`);
             info.closing = true; // our own end, not a drop
             client.end();
             return;
@@ -614,7 +618,7 @@ class SshManager {
       })
       .catch((e) => {
         const msg = this._explainError(e, ctx, cfg);
-        this._out(id, `\r\n${RED}Connection failed: ${msg}${RESET}\r\n`);
+        this._out(id, `\r\n${RED}${t('Connection failed: {error}', { error: msg })}${RESET}\r\n`);
         this.prompter.status(id, 'failed', e.message);
         if (!info.closed) {
           info.closed = true;
@@ -628,33 +632,34 @@ class SshManager {
   /** Turn a connect/auth failure into the message shown to the user (hints for the usual causes). */
   _explainError(e, ctx, cfg) {
     let msg = e.message;
-    if (ctx.cancelled) msg = 'authentication cancelled';
+    // the regexes classify ssh2's own (English) messages; the hints are composed around them as {error}
+    if (ctx.cancelled) msg = t('authentication cancelled');
     else if (e.level === 'client-authentication') {
-      msg = `authentication failed — server accepts: ${(ctx.serverMethods || []).join(', ') || 'unknown'}; tried: ${(ctx.tried || []).join(', ') || 'nothing'}`;
+      msg = t('authentication failed — server accepts: {accepts}; tried: {tried}', { accepts: (ctx.serverMethods || []).join(', ') || t('unknown'), tried: (ctx.tried || []).join(', ') || t('nothing') });
       const accepts = ctx.serverMethods || [];
       if (!(ctx.tried || []).length && cfg.authMethod === 'password' && accepts.length && !accepts.includes('password') && !accepts.includes('keyboard-interactive')) {
-        msg += '. This session is set to Password authentication but the server does not offer it — switch it to Automatic or Private key.';
+        msg = t('{error}. This session is set to Password authentication but the server does not offer it — switch it to Automatic or Private key.', { error: msg });
       } else if (!(ctx.tried || []).length && cfg.authMethod === 'key' && !cfg.privateKeyPath) {
-        msg += '. The session uses key authentication but no key file is set.';
+        msg = t('{error}. The session uses key authentication but no key file is set.', { error: msg });
       }
     } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
-      msg += ' — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.';
+      msg = t('{error} — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.', { error: msg });
     } else if (/Timed out while waiting for handshake/i.test(msg)) {
-      msg += ` — no SSH banner within ${Math.round((this.store.getSettings().readyTimeout || 20000) / 1000)}s. Usually the host/port is unreachable from this network (try "nc -vz ${cfg.host} ${cfg.port || 22}" in a local terminal), or the port is not an SSH service.`;
+      msg = t('{error} — no SSH banner within {s}s. Usually the host/port is unreachable from this network (try "nc -vz {host} {port}" in a local terminal), or the port is not an SSH service.', { error: msg, s: Math.round((this.store.getSettings().readyTimeout || 20000) / 1000), host: cfg.host, port: cfg.port || 22 });
     } else if (e.code === 'ECONNREFUSED' || /ECONNREFUSED/.test(msg)) {
-      msg += ' — the host is reachable but nothing listens on that port.';
+      msg = t('{error} — the host is reachable but nothing listens on that port.', { error: msg });
     } else if (/Too many authentication failures/i.test(msg)) {
-      msg += ' — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.';
+      msg = t('{error} — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.', { error: msg });
     } else if (/^Handshake failed: no matching/.test(msg)) {
       // nothing in common with the server's KEXINIT: say which side offers what (algorithms.js knows both lists)
       msg = algorithms.explainHandshake(msg, cfg, ctx.remoteAlgorithms) || msg;
     } else if (/^Unsupported algorithm: /.test(msg)) {
-      msg += ' — Advanced SSH → Algorithms names an algorithm this version of MobAlt cannot do; Reset to defaults there.';
+      msg = t('{error} — Advanced SSH → Algorithms names an algorithm this version of MobAlt cannot do; Reset to defaults there.', { error: msg });
     } else if (/Unknown DH group/i.test(msg)) {
       // the key exchange was agreed but Node's crypto has no such group (the 1024-bit one): algorithms.js knows the name
       msg = algorithms.explainDhGroup(msg) || msg;
     }
-    if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
+    if (/Host denied \(verification failed\)/i.test(msg)) msg = t('host key not accepted');
     return msg;
   }
 
@@ -667,7 +672,7 @@ class SshManager {
   async installPublicKey(cfg, publicKey, remoteFile = '~/.ssh/authorized_keys') {
     const line = String(publicKey || '').trim().split('\n')[0];
     const cols = line.split(/\s+/);
-    if (cols.length < 2 || !/^[A-Za-z0-9+/=]+$/.test(cols[1])) return { ok: false, error: 'Not a public key line (expected "ssh-ed25519 AAAA… comment")' };
+    if (cols.length < 2 || !/^[A-Za-z0-9+/=]+$/.test(cols[1])) return { ok: false, error: t('Not a public key line (expected "ssh-ed25519 AAAA… comment")') };
     let cmd;
     try {
       cmd = keygen.installCommand(remoteFile, cols[1]);
@@ -680,7 +685,7 @@ class SshManager {
     try {
       ({ client, jump } = await this.connectClient({ ...cfg }, ctx));
     } catch (e) {
-      return { ok: false, error: `Could not connect to ${where}: ${this._explainError(e, ctx, cfg)}` };
+      return { ok: false, error: t('Could not connect to {where}: {error}', { where, error: this._explainError(e, ctx, cfg) }) };
     }
     try {
       const r = await new Promise((resolve, reject) => {
@@ -696,10 +701,10 @@ class SshManager {
       });
       if (/MOBALT_KEY_ADDED/.test(r.out)) return { ok: true, added: true, remoteFile, host: where };
       if (/MOBALT_KEY_PRESENT/.test(r.out)) return { ok: true, added: false, remoteFile, host: where };
-      const why = (r.errOut.trim() || r.out.trim()).split('\n').pop() || `exit status ${r.code}`;
-      return { ok: false, error: `Could not write ${remoteFile} on ${where}: ${why}` };
+      const why = (r.errOut.trim() || r.out.trim()).split('\n').pop() || t('exit status {code}', { code: r.code });
+      return { ok: false, error: t('Could not write {file} on {where}: {error}', { file: remoteFile, where, error: why }) };
     } catch (e) {
-      return { ok: false, error: `Installing the key on ${where} failed: ${e.message}` };
+      return { ok: false, error: t('Installing the key on {where} failed: {error}', { where, error: e.message }) };
     } finally {
       try { client.end(); } catch {}
       if (jump) try { jump.end(); } catch {}
@@ -790,7 +795,7 @@ class SshManager {
   /** Get (opening if needed) the SFTP channel for a connection. */
   sftp(id) {
     const info = this.conns.get(id);
-    if (!info || !info.client) return Promise.reject(new Error('Not connected'));
+    if (!info || !info.client) return Promise.reject(notConnected());
     if (info.sftp) return Promise.resolve(info.sftp);
     if (info.sftpPromise) return info.sftpPromise;
     info.sftpPromise = new Promise((resolve, reject) => {
@@ -812,7 +817,7 @@ class SshManager {
    */
   exec(id, cmd, { timeout = 0 } = {}) {
     const info = this.conns.get(id);
-    if (!info || !info.client) return Promise.reject(new Error('Not connected'));
+    if (!info || !info.client) return Promise.reject(notConnected());
     this.execCount++;
     return new Promise((resolve, reject) => {
       info.client.exec(cmd, (err, stream) => {
@@ -822,7 +827,7 @@ class SshManager {
           if (done) return;
           done = true;
           try { stream.close(); } catch {}
-          reject(new Error(`timed out after ${Math.round(timeout / 1000)} s`));
+          reject(new Error(t('timed out after {s} s', { s: Math.round(timeout / 1000) })));
         }, timeout) : null;
         stream.on('data', (d) => (out += d));
         stream.stderr.on('data', (d) => (errOut += d));
