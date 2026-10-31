@@ -26,6 +26,10 @@
       <stop offset="0.75" stop-color="#ffffff" stop-opacity="0.025"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
+    <!-- 7 px soft edge for the label pills so they melt into the gradient -->
+    <filter id="pillEdge" x="-10%" y="-40%" width="120%" height="180%">
+      <feGaussianBlur stdDeviation="3.5"/>
+    </filter>
   </defs>
 
   <rect width="600" height="400" fill="url(#bg)"/>
@@ -48,6 +52,13 @@
   <circle cx="150" cy="190" r="84" fill="url(#pad)"/>
   <circle cx="450" cy="190" r="84" fill="url(#pad)"/>
 
+  <!-- label zone: Finder paints the item labels ~14 px below the 110 px icons (y ~250-285). A mid-tone
+       pill under each one keeps the label readable whether Finder draws it black (Light) or white (Dark). -->
+  <g fill="#6b84b3" fill-opacity="0.78" filter="url(#pillEdge)">
+    <rect x="70" y="248" width="160" height="36" rx="18" ry="18"/>
+    <rect x="370" y="248" width="160" height="36" rx="18" ry="18"/>
+  </g>
+
   <!-- arrow: x 225 -> 375 at y 190 -->
   <g fill="none" stroke="#6fb0f5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
     <path d="M 228 190 L 370 190"/>
@@ -55,5 +66,5 @@
   </g>
 
   <!-- caption, below the icons and their Finder labels -->
-  <text x="300" y="316" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" fill="#aab6cf">Drag MobAlt to the Applications folder</text>
+  <text x="300" y="326" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="13" fill="#aab6cf">Drag MobAlt to the Applications folder</text>
 </svg>
