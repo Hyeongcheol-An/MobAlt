@@ -1,8 +1,11 @@
 // Renderer-side visual-consistency checks: one icon style, token radii/heights, the global theme, narrow sidebar, FTP panel, DNS output.
-//   python3 test/ftpd.py <root> 2121 demo demo &          # for the FTP checks (pyftpdlib); another port: replace __FTP_PORT__ below
+//   python3 test/ftpd.py <root> 2121 demo demo &          # for the FTP checks (pyftpdlib; the root needs a dot-file or two); another port: replace __FTP_PORT__ below
+//   test/start-sshd.sh start                                # for the Tunnels error-line check (skipped when the sshd is down)
 //   test/qa/run.sh test/e2e-visual.js <out-dir> 150000
 // Screenshots: toolbar + sidebar panels, a dialog and the find bar in moba-dark and light; for every theme the main window,
-// the session editor, Settings, a context menu, the toasts and the banners at 1400×900 (80-…85-<theme>); a 180px sidebar.
+// the session editor, Settings, a context menu, the toasts and the banners at 1400×900 (80-…85-<theme>); a 180px sidebar;
+// the qa4 theme pass (86-…92-<theme>: disabled buttons, a coloured zoomed pane, an own-theme tab, the keyboard ring on a selected
+// row, the focused danger menu item, the Tunnels error line, the password field); hidden SFTP rows and the FTP cards per theme.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -162,13 +165,14 @@
       measure([['settings label', sel('.modal .form-grid label')], ['settings check label', sel('.modal .checks label')], ['settings small button', sel('.modal .btn.small')]]);
       const prev = sel('.modal .theme-preview'); // the preview is painted in the theme's own terminal colours, whatever the chrome
       results[`themePreviewOwnColours-${theme}`] = !!prev && px(prev, 'backgroundColor') === rgbOf(THEMES[theme].background) && px(prev, 'color') === rgbOf(THEMES[theme].foreground);
+      results[`themePreviewOutline-${theme}`] = !!prev && ratio(parseColor(px(prev, 'borderTopColor')), parseColor(px(prev, 'backgroundColor'))) >= 1.5; // the chip is framed (Solarized's bright black equals its background)
       await shot(`82-${theme}-settings`);
       closeModal();
       await sleep(200);
       const row = rowOf('db-01'), rr = row.getBoundingClientRect();
       row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rr.left + 60, clientY: rr.top + 12 }));
       await sleep(150);
-      measure([['menu item', sel('.ctx .ctx-item')], ['menu key', sel('.ctx .ctx-item .k')], ['menu danger item', sel('.ctx .ctx-item[style]')]]); // (the hovered item's colours: unit test)
+      measure([['menu item', sel('.ctx .ctx-item')], ['menu key', sel('.ctx .ctx-item .k')], ['menu danger item', sel('.ctx .ctx-item.danger')]]);
       await shot(`83-${theme}-menu`);
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       await sleep(100);
@@ -195,6 +199,195 @@
     log('chrome backgrounds:', JSON.stringify([...chromeBgs]));
     await app.closePane(app.activePane(), true);               // the empty pane (the second tab stays)
     await app.saveSettings({ theme: 'moba-dark' });
+    await window.api.app.testResize(1200, 760);
+    await sleep(300);
+
+    // --- 3c. qa4 theme pass: per theme, what the first pass did not measure — a coloured session's pane head and tree
+    //         dot, the ZOOMED chip, a danger menu item while focused, the keyboard ring on a selected row and on a menu
+    //         item, disabled buttons, the Tunnels error line, the LOG indicator, "Invalid pattern", prompt / password
+    //         fields, text selection in fields, the terminal selection band, and a tab whose pane has its own theme.
+    const dialogs = await import('./dialogs.js');
+    const bgBehind = (el) => { for (let e = el; e; e = e.parentElement) { const c = parseColor(px(e, 'backgroundColor')); if (c && c.a >= 0.9) return c; } return { r: 30, g: 30, b: 30 }; };
+    const shadowColor = (s) => parseColor((/rgba?\([^)]+\)|color\(srgb [^)]+\)/.exec(s || '') || [''])[0]);
+    const escModal = () => { const m = [...document.querySelectorAll('.modal')].pop(); (m || document).dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); };
+    // keyboard modality: a programmatic focus matches :focus-visible once a real key was pressed (F19: a no-op key);
+    // another window may take the key when several Electron instances run, so it is retried once
+    const focusVisibly = async (el) => {
+      for (let i = 0; i < 3; i++) {
+        el.focus({ preventScroll: true });
+        await sleep(60);
+        if (el.matches(':focus-visible')) return true;
+        await window.api.app.testKey('F19');
+        await sleep(200);
+      }
+      return false;
+    };
+    await window.api.app.testResize(1400, 900);
+    await app.saveSettings({ logDir: app.info.userData + '/logs' }); // the LOG indicator writes a file: into the test user data
+    const amber = await app.saveSession({ name: 'amber shell', folder: 'Test', type: 'local', color: '#e6b422' });
+    const amberPane = await app.openSession(amber);            // its own tab: the colour on the tab stripe
+    await sleep(400);
+    await app.action('split', 'right');                        // pane heads are shown in a split
+    await sleep(300);
+    app.focusPane(amberPane);
+    await app.action('zoom-pane');                             // the ZOOMED chip on its head
+    await sleep(300);
+    const amberTab = amberPane.tab;
+    const ownTheme = await app.saveSession({ name: 'dracula shell', folder: 'Test', type: 'local', theme: 'dracula' });
+    const draculaPane = await app.openSession(ownTheme);
+    await sleep(400);
+    const draculaTab = draculaPane.tab;
+    app.workspace.activate(amberTab);
+    app.focusPane(amberPane);
+    await amberPane.toggleLog(true);                           // ● LOG in the status bar
+    await sleep(200);
+    app.action('find');
+    await sleep(150);
+    const findRegex = document.getElementById('find-regex'), findInput = document.getElementById('find-input');
+    findRegex.checked = true; findRegex.dispatchEvent(new Event('change', { bubbles: true }));
+    findInput.value = '['; findInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await sleep(200);
+    results.badPatternShown = document.getElementById('find-bar').classList.contains('bad-pattern');
+    // a tunnel that fails (its bind port is the sshd's own) through a real connection to the local test sshd, when it is up
+    let tunnelPane = null;
+    try {
+      const keyDir = app.info.appPath + '/test/sshd-runtime', user = app.info.home.split('/').pop();
+      const sshd = await app.saveSession({ name: 'local sshd', folder: 'Test', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'key', privateKeyPath: keyDir + '/client_ed25519', sftpAuto: false });
+      const opening = app.openSession(sshd);
+      await waitFor(() => document.querySelector('.modal .btn.primary') || (app.activePane() && app.activePane().status === 'failed'), 8000, 'host key dialog');
+      document.querySelector('.modal .btn.primary')?.click();
+      tunnelPane = await opening;
+      await waitFor(() => tunnelPane.status === 'connected', 15000, 'sshd connected');
+      await window.api.tunnels.start({ connId: tunnelPane.termId, type: 'local', name: 'port in use', bindHost: '127.0.0.1', bindPort: 2222, destHost: '127.0.0.1', destPort: 22 });
+      await sleep(300);
+      const list = await window.api.tunnels.list();
+      results.tunnelFailedAsExpected = list.some((t) => t.status === 'error' && !!t.error);
+      log('tunnel:', JSON.stringify(list.map((t) => [t.status, t.error])));
+    } catch (e) {
+      results.tunnelFailedAsExpected = 'skipped';
+      log('tunnel error line not checked (needs test/start-sshd.sh start):', e.message);
+      escModal();
+    }
+    // disabled buttons are dimmed, with no hover and an arrow cursor (once: the rule is the same on every theme)
+    app.action('settings');
+    await sleep(400);
+    const dis = ui.h('button', { class: 'btn primary', disabled: true }, 'Disabled'), dis2 = ui.h('button', { class: 'btn', disabled: true }, 'Disabled');
+    document.querySelector('.modal .modal-foot').prepend(dis, dis2);
+    results.disabledButtonsDimmed = parseFloat(px(dis, 'opacity')) <= 0.6 && px(dis, 'cursor') === 'default' && px(dis, 'pointerEvents') === 'none' && parseFloat(px(dis2, 'opacity')) <= 0.6 && px(dis2, 'cursor') === 'default';
+    await shot('86-disabled-buttons');
+    closeModal();
+    await sleep(200);
+    for (const theme of Object.keys(THEMES)) {
+      await app.saveSettings({ theme });
+      await sleep(250);
+      const pal = chromePalette(THEMES[theme], theme), term = THEMES[theme];
+      const checks = [], notes = []; // [what, ratio|null, min]
+      const measure = (pairs) => pairs.forEach(([what, el, min = 4.5]) => checks.push([what, el ? contrastOf(el) : null, min]));
+      const pair = (what, fg, bg, min) => checks.push([what, fg && bg ? ratio(fg, bg) : null, min]);
+      // the amber session: its zoomed, focused pane head (title in the chrome text colour, the chip and its border), its tree dot
+      app.workspace.activate(amberTab);
+      app.focusPane(amberPane);
+      await sleep(150);
+      const head = amberPane.el.querySelector('.pane-head'), badge = amberPane.zoomBadge, headTitle = head.querySelector('.title');
+      measure([['pane-head title (coloured session)', headTitle], ['ZOOMED chip', badge]]);
+      pair('ZOOMED chip border', parseColor(px(badge, 'borderTopColor')), bgBehind(head), 3);
+      results[`sessionColourNotText-${theme}`] = amberPane.el.style.getPropertyValue('--pane-color') === '#e6b422' && px(headTitle, 'color') !== 'rgb(230, 180, 34)' && px(head, 'boxShadow').includes('rgb(230, 180, 34)');
+      const th = amberPane.term.options.theme;
+      results[`xtermSelectionVisible-${theme}`] = ratio(parseColor(th.selectionBackground), parseColor(term.background)) >= 2;
+      app.showPanel('sessions');
+      await sleep(100);
+      const amberRow = rowOf('amber shell'), swatch = amberRow && amberRow.querySelector('.ico.swatch');
+      const sw = swatch && getComputedStyle(swatch, '::before');
+      results[`sessionColourIsADot-${theme}`] = !!sw && sw.backgroundColor === 'rgb(230, 180, 34)' && !amberRow.querySelector('.ico').textContent;
+      pair('tree dot ring', sw && shadowColor(sw.boxShadow), amberRow && bgBehind(amberRow), 3);
+      // status bar LOG indicator and the find bar's "Invalid pattern"
+      measure([['status LOG', sel('#st-log.on')], ['find invalid pattern', sel('#find-bar.bad-pattern .find-count')]]);
+      // a pane with its own theme: its tab is painted in that theme; a pane on the global theme follows the global one
+      app.workspace.activate(draculaTab);
+      await sleep(150);
+      const dt = draculaTab.tabEl;
+      results[`ownThemeTab-${theme}`] = dt.classList.contains('active') && px(dt, 'backgroundColor') === rgbOf(THEMES.dracula.background) && px(dt.querySelector('.title'), 'color') === rgbOf(THEMES.dracula.foreground) && px(draculaPane.el, 'backgroundColor') === rgbOf(THEMES.dracula.background);
+      measure([['own-theme tab title', dt.querySelector('.title')]]);
+      if (theme === 'light') await shot('87-light-own-theme-tab');
+      app.workspace.activate(amberTab);
+      await sleep(150);
+      results[`globalThemeTab-${theme}`] = px(amberTab.tabEl, 'backgroundColor') === rgbOf(term.background) && px(amberTab.tabEl.querySelector('.title'), 'color') === rgbOf(term.foreground);
+      await shot(`88-${theme}-zoomed-amber`);
+      // the keyboard ring on the selected row: visible against the blue fill and against the panel around it
+      app.showPanel('sessions');
+      const dbRow = rowOf('db-01');
+      app.sessionTree.reveal(app.sessions.sessions.find((s) => s.name === 'db-01'));
+      await sleep(100);
+      if (await focusVisibly(dbRow)) {
+        const ring = parseColor(px(dbRow, 'outlineColor'));
+        pair('selected row ring vs fill', ring, parseColor(px(dbRow, 'backgroundColor')), 3);
+        pair('selected row ring vs panel', ring, bgBehind(dbRow.parentElement), 3);
+        await shot(`89-${theme}-row-ring`);
+      } else notes.push('row ring not measured (no :focus-visible)');
+      // the context menu: the focused item's ring, the danger item plain and focused
+      const rr = dbRow.getBoundingClientRect();
+      dbRow.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: rr.left + 60, clientY: rr.top + 12 }));
+      await sleep(150);
+      const first = sel('.ctx .ctx-item'), danger = sel('.ctx .ctx-item.danger'), menuBg = bgBehind(sel('.ctx'));
+      measure([['danger item', danger]]);
+      if (await focusVisibly(first)) {
+        const ring = parseColor(px(first, 'outlineColor'));
+        pair('menu focus ring vs fill', ring, parseColor(px(first, 'backgroundColor')), 3);
+        pair('menu focus ring vs menu', ring, menuBg, 3);
+      } else notes.push('menu ring not measured (no :focus-visible)');
+      if (danger && await focusVisibly(danger)) {
+        measure([['danger item focused', danger], ['danger item key focused', danger.querySelector('.k')]]);
+        results[`dangerFocusFill-${theme}`] = px(danger, 'backgroundColor') === rgbOf(pal['danger-fill']);
+        await shot(`90-${theme}-menu-danger-focused`);
+      } else notes.push('danger item focus not measured');
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await sleep(100);
+      // the Tunnels dialog: the error line under the "error" badge
+      if (results.tunnelFailedAsExpected === true) {
+        app.action('tunnels');
+        await sleep(500);
+        const badge = sel('.modal .list-table .badge.error');
+        measure([['tunnel error line', badge && badge.parentElement.querySelector('.form-help')]]);
+        if (theme === 'moba-dark' || theme === 'light') await shot(`91-${theme}-tunnels-error`);
+        closeModal();
+        await sleep(200);
+      }
+      // prompt / password / keyboard-interactive fields sit on the input surface, like every other field
+      ui.promptDialog('Rename tab', { value: 'amber' });
+      await sleep(150);
+      const pin = sel('.modal input[type=text]');
+      results[`promptInputSurface-${theme}`] = !!pin && px(pin, 'backgroundColor') === rgbOf(pal['bg-input']);
+      escModal();
+      await sleep(150);
+      dialogs.passwordDialog({ title: 'Password', message: 'Password for demo@host' });
+      await sleep(150);
+      const pw = sel('.modal input[type=password]');
+      results[`passwordInputSurface-${theme}`] = !!pw && px(pw, 'backgroundColor') === rgbOf(pal['bg-input']);
+      if (theme === 'light') await shot('92-light-password');
+      escModal();
+      await sleep(150);
+      dialogs.kbdIntDialog({ name: 'Authentication', label: 'host', prompts: [{ prompt: 'Verification code:', echo: false }] });
+      await sleep(150);
+      const ki = sel('.modal input[type=password]');
+      results[`kbdIntInputSurface-${theme}`] = !!ki && px(ki, 'backgroundColor') === rgbOf(pal['bg-input']);
+      escModal();
+      await sleep(150);
+      results[`promptsClosed-${theme}`] = !document.querySelector('.modal');
+      // text selection in fields follows the theme
+      const selStyle = getComputedStyle(document.getElementById('qc-input'), '::selection');
+      results[`inputSelectionThemed-${theme}`] = selStyle.backgroundColor === rgbOf(pal.selection) && selStyle.color === rgbOf(pal['selection-fg']);
+      const low = checks.filter(([, r, min]) => r !== null && r < min), missing = checks.filter(([, r]) => r === null).map(([what]) => what);
+      results[`qa4Contrast-${theme}`] = low.length === 0 && missing.length === 0;
+      log(theme, 'qa4 | measured', checks.length - missing.length, '| below target:', low.length ? JSON.stringify(low) : 'none', missing.length ? '| missing: ' + missing.join(', ') : '', notes.length ? '| ' + notes.join('; ') : '');
+    }
+    findInput.value = ''; findInput.dispatchEvent(new Event('input', { bubbles: true }));
+    findRegex.checked = false; findRegex.dispatchEvent(new Event('change', { bubbles: true }));
+    app.action('find-close');
+    await amberPane.toggleLog(false);
+    document.querySelectorAll('.toast').forEach((t) => { clearTimeout(t._timer); t.remove(); });
+    await app.saveSettings({ theme: 'moba-dark' });
+    for (const t of [draculaTab, amberTab, tunnelPane && tunnelPane.tab].filter(Boolean)) await app.closeTab(t);
+    await sleep(300);
     await window.api.app.testResize(1200, 760);
     await sleep(300);
 
@@ -242,38 +435,64 @@
       results.sftpToolbarNoEmoji = ![...document.querySelectorAll('.sftp-toolbar button')].some((b) => emoji.test(b.textContent));
       results.sftpToolbarFitsNarrow = [...document.querySelectorAll('.sftp-toolbar button')].every((b) => b.getBoundingClientRect().right <= sb.right + 0.5);
       await shot('70-narrow-sftp-ftp');
+      // dot-files (Show hidden) are dimmed as a colour, not an opacity: name and size still read at 4.5:1 on every theme
+      const hiddenCb = document.getElementById('sftp-hidden');
+      hiddenCb.checked = true;
+      hiddenCb.dispatchEvent(new Event('change', { bubbles: true }));
+      await waitFor(() => document.querySelector('.sftp-row.hidden-file'), 5000, 'hidden rows (the FTP root needs dot-files)');
+      for (const theme of Object.keys(THEMES)) {
+        await app.saveSettings({ theme });
+        await sleep(250);
+        const hr = document.querySelector('.sftp-row.hidden-file:not(.dir)'), hd = document.querySelector('.sftp-row.hidden-file.dir');
+        const name = hr ? contrastOf(hr.querySelector('.name')) : 0, size = hr ? contrastOf(hr.querySelector('.size')) : 0, dirName = hd ? contrastOf(hd.querySelector('.name')) : 4.5;
+        results[`hiddenRowsReadable-${theme}`] = name >= 4.5 && size >= 4.5 && dirName >= 4.5 && !!hr && px(hr, 'opacity') === '1';
+        log(theme, 'hidden rows: name', name, 'size', size, 'dir', dirName);
+        if (theme === 'light' || theme === 'solarized-dark') await shot(`74-hidden-rows-${theme}`);
+      }
+      await app.saveSettings({ theme: 'moba-dark' });
+      await sleep(200);
+      hiddenCb.checked = false;
+      hiddenCb.dispatchEvent(new Event('change', { bubbles: true }));
       await pane.disconnect();
     } catch (e) {
       results.ftpFollowHidden = false;
       log('ftp check skipped/failed:', e.message);
     }
 
-    // --- 6b. the FTP card on the light theme: the dead / failed card's title, hint and error line clear 4.5:1 on the white card
+    // --- 6b. the FTP card on every theme: the dead / failed card's title, hint and error line clear 4.5:1 on the card
+    //         (the error box's border 3:1); Solarized's dim text left no room for any dimming
     try {
-      await app.saveSettings({ theme: 'light' });
-      await sleep(250);
       const dead = await app.openSession(app.sessions.sessions.find((s) => s.name === 'demo ftp'));
       await waitFor(() => dead.status === 'connected', 8000, 'ftp connected again');
       await dead.disconnect();
       await sleep(500);
       const deadCard = dead.el.querySelector('.pane-placeholder.ftp-info');
-      const deadBig = contrastOf(deadCard.querySelector('.big')), deadHint = contrastOf(deadCard.querySelector('.hint'));
-      results.ftpDeadCardReadableLight = deadCard.classList.contains('disconnected') && deadBig >= 4.5 && deadHint >= 4.5;
-      await shot('71-ftp-disconnected-light');
       const bad = await app.saveSession({ name: 'bad ftp', folder: 'Test', type: 'ftp', host: '127.0.0.1', port: ftpPort, username: 'demo', password: 'wrong', sftpAuto: false });
       const failed = await app.openSession(bad);
       await waitFor(() => failed.el.querySelector('.pane-placeholder.ftp-info.failed'), 8000, 'ftp login failed');
       await sleep(500);
       const failedCard = failed.el.querySelector('.pane-placeholder.ftp-info'), err = failedCard.querySelector('.ftp-err');
-      const failedBig = contrastOf(failedCard.querySelector('.big')), failedHint = contrastOf(failedCard.querySelector('.hint')), errRatio = err ? contrastOf(err) : 0;
-      results.ftpFailedCardReadableLight = failedBig >= 4.5 && failedHint >= 4.5 && errRatio >= 4.5;
-      log('ftp card contrast on light: dead', deadBig, deadHint, '| failed', failedBig, failedHint, '| error', errRatio);
-      await shot('72-ftp-failed-light');
+      const bgBehindCard = (el) => { for (let e = el; e; e = e.parentElement) { const c = parseColor(px(e, 'backgroundColor')); if (c && c.a >= 0.9) return c; } return null; };
+      for (const theme of Object.keys(THEMES)) {
+        await app.saveSettings({ theme });
+        await sleep(250);
+        const deadBig = contrastOf(deadCard.querySelector('.big')), deadHint = contrastOf(deadCard.querySelector('.hint'));
+        const failedBig = contrastOf(failedCard.querySelector('.big')), failedHint = contrastOf(failedCard.querySelector('.hint')), errRatio = err ? contrastOf(err) : 0;
+        const errBorder = err ? ratio(parseColor(px(err, 'borderTopColor')), bgBehindCard(err)) : 0;
+        results[`ftpCardsReadable-${theme}`] = deadCard.classList.contains('disconnected') && deadBig >= 4.5 && deadHint >= 4.5 && failedBig >= 4.5 && failedHint >= 4.5 && errRatio >= 4.5 && errBorder >= 3;
+        log(theme, 'ftp card contrast: dead', deadBig, deadHint, '| failed', failedBig, failedHint, '| error', errRatio, 'border', errBorder);
+        if (theme === 'light' || theme === 'solarized-dark') {
+          app.workspace.activate(dead.tab); await sleep(100); await shot(`71-ftp-disconnected-${theme}`);
+          app.workspace.activate(failed.tab); await sleep(100); await shot(`72-ftp-failed-${theme}`);
+        }
+      }
+      results.ftpDeadCardReadableLight = results['ftpCardsReadable-light'];
+      results.ftpFailedCardReadableLight = results['ftpCardsReadable-light'];
       await app.closePane(failed, true);
       await app.closePane(dead, true);
     } catch (e) {
       results.ftpDeadCardReadableLight = false;
-      log('ftp light check skipped/failed:', e.message);
+      log('ftp card check skipped/failed:', e.message);
     }
     await app.saveSettings({ theme: 'moba-dark' });
     await sleep(200);

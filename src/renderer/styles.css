@@ -223,7 +223,7 @@ input, select, textarea { user-select: text; }
 #statusbar { display: flex; align-items: center; gap: 14px; height: var(--statusbar-h); padding: 0 10px; background: var(--bg-2); border-top: 1px solid var(--divider); font-size: 11px; color: var(--fg-dim); flex: none; }
 #statusbar .spacer { flex: 1; }
 #st-x11 { opacity: .35; } #st-x11.on { opacity: 1; color: var(--green); }
-#st-log.on { color: var(--yellow); }
+#st-log.on { color: var(--warn-fg); }
 #st-cwd { color: var(--fg-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50vw; }
 
 /* ---------- SFTP panel ---------- */
@@ -256,7 +256,7 @@ input, select, textarea { user-select: text; }
 .sftp-row.selected .size, .sftp-row.selected .date { color: var(--selection-fg-dim); }
 .sftp-row.dir .name { color: var(--accent); }
 .sftp-row.link .name { font-style: italic; }
-.sftp-row.hidden-file { opacity: .6; }
+.sftp-row.hidden-file:not(.selected) .name { color: var(--fg-dim); }   /* dimmed as a colour (≥ 4.5:1), not as an opacity */
 .sftp-msg { padding: 14px; color: var(--fg-faint); text-align: center; }
 .sftp-transfers { max-height: 160px; overflow: auto; border-top: 1px solid var(--divider); font-size: 11px; }
 .sftp-transfers:empty { display: none; }
@@ -352,7 +352,7 @@ input, select, textarea { user-select: text; }
 .tab .tabico { flex: none; font-size: 12px; line-height: 1; }
 .pane-head .picon { flex: none; font-size: 12px; line-height: 1; }
 .pane[style*="--pane-color"] .pane-head { box-shadow: inset 3px 0 0 var(--pane-color); }
-.pane[style*="--pane-color"].focused .pane-head .title { color: var(--pane-color); }
+.pane[style*="--pane-color"].focused .pane-head { box-shadow: inset 3px 0 0 var(--pane-color), inset 0 -2px 0 var(--accent); } /* the colour stays a bar; the title keeps the chrome's text colour (readable whatever colour was picked) */
 
 /* icon / colour pickers in the session editor */
 .pick-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
@@ -384,7 +384,7 @@ input::placeholder, textarea::placeholder { color: var(--fg-faint); }
 .sftp-empty .sftp-mosh { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--divider); color: var(--fg-dim); font-size: 12px; line-height: 1.5; }
 .sftp-empty .sftp-mosh p { margin: 0 0 10px; }
 .sftp-empty .sftp-mosh .btn[disabled] { opacity: .6; cursor: default; }
-.sftp-empty .sftp-mosh-err { margin-top: 8px; color: var(--red); font-size: 11.5px; word-break: break-word; }
+.sftp-empty .sftp-mosh-err { margin-top: 8px; color: var(--danger-fg); font-size: 11.5px; word-break: break-word; }
 /* ---- visual consistency ---- */
 /* one icon style: 16px stroked SVG (ui.js icon()) in the toolbar, side strip, panel heads, SFTP toolbar and find bar */
 svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -437,8 +437,8 @@ svg.i { width: 16px; height: 16px; display: block; flex: none; fill: none; strok
 /* ---- keyboard accessibility ---- */
 /* Rings are inset where the container clips (#tabs scrolls, .tree-row hides overflow, the side strip is flush). */
 .tab:focus-visible, .tree-row:focus-visible, .strip-btn:focus-visible, #tab-add:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.tree-row.selected:focus-visible { outline-color: var(--selection-fg); } /* the keyboard cursor stays visible on the blue selected fill */
-.ctx-item:focus-visible { background: var(--selection); color: var(--selection-fg); outline: none; }
+.tree-row.selected:focus-visible { outline-color: var(--fg-strong); } /* the keyboard cursor on the blue selected fill: white on the dark chromes, black on the light one (visible against the panel too) */
+.ctx-item:focus-visible { background: var(--selection); color: var(--selection-fg); outline: 2px solid var(--fg-strong); outline-offset: -2px; } /* the fill alone is 2.4–2.6:1 against a dark menu: a ring makes the keyboard cursor ≥ 3:1 */
 .ctx-item:focus-visible .k { color: var(--selection-fg-dim); }
 
 /* ---- visual QA follow-ups ---- */
@@ -467,7 +467,7 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 .tb-btn:focus-visible, #tab-scroll-left:focus-visible, #tab-scroll-right:focus-visible, #tab-list:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 /* SFTP list: an inset ring on the list while the keyboard is in it; the cursor row keeps a thin inner ring on its blue fill. */
 .sftp-list:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.sftp-list:focus-visible .sftp-row.selected { box-shadow: inset 0 0 0 1px var(--selection-fg); }
+.sftp-list:focus-visible .sftp-row.selected { box-shadow: inset 0 0 0 1px var(--fg-strong); }
 /* Icon / colour pickers (one Tab stop each): the ring sits outside the chosen pick's own 1px accent ring. */
 .pick-row .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
@@ -475,7 +475,7 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 .tab.active { color: var(--term-fg); }                                  /* readable on a light terminal theme */
 .tab.active .close { color: var(--term-fg); opacity: .75; }
 #find-bar.bad-pattern #find-input { border-color: var(--yellow); }
-#find-bar.bad-pattern .find-count { color: var(--yellow); }
+#find-bar.bad-pattern .find-count { color: var(--warn-fg); }
 #tool-output { white-space: pre-wrap; overflow-wrap: anywhere; }
 .pane-term { container-type: size; }
 .pane .pane-placeholder { overflow: hidden; }
@@ -493,12 +493,12 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 .pane .pane-placeholder.ftp-info.connecting .big::after { content: " · connecting…"; font-weight: 400; opacity: .7; }
 .pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: var(--fg-dim); }
 .pane .pane-placeholder.ftp-info.failed .big, .pane .pane-placeholder.ftp-info.disconnected .big { opacity: .75; }
-.pane .pane-placeholder.ftp-info .ftp-err { max-width: 70%; padding: 6px 10px; border: 1px solid var(--red); border-radius: var(--radius); color: var(--red); font-size: 12px; text-align: center; word-break: break-word; }
+.pane .pane-placeholder.ftp-info .ftp-err { max-width: 70%; padding: 6px 10px; border: 1px solid var(--danger-fg); border-radius: var(--radius); color: var(--danger-fg); font-size: 12px; text-align: center; word-break: break-word; }
 /* ---- list focus ---- */
 /* SFTP rows are the keyboard cursor now (roving tabindex, like the session tree): an inset ring on the focused row,
    white on the blue selected fill. The list itself only takes the focus while it has no rows (loading, empty root). */
 .sftp-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.sftp-row.selected:focus-visible { outline-color: var(--selection-fg); }
+.sftp-row.selected:focus-visible { outline-color: var(--fg-strong); }
 
 /* ---- on-disk update ---- */
 /* A different MobAlt.app was written over the running one (brew upgrade, a dragged DMG): a persistent bar above the
@@ -540,11 +540,11 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
    the ✕ keeps its place at the right. */
 .modal-title { min-width: 0; }
 .modal-title .modal-title-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* FTP card over a light terminal: the dim grey and the red were tuned for dark backgrounds (2.0:1 / 3.7:1 on white).
-   Mix the terminal's own foreground in instead, so the dead / failed card clears 4.5:1 on every theme. */
-.pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: color-mix(in srgb, var(--term-fg) 75%, var(--term-bg)); }
-.pane .pane-placeholder.ftp-info.failed .big, .pane .pane-placeholder.ftp-info.disconnected .big { opacity: 1; color: color-mix(in srgb, var(--term-fg) 80%, var(--term-bg)); }
-.pane .pane-placeholder.ftp-info .ftp-err { color: color-mix(in srgb, var(--red) 70%, var(--term-fg)); }
+/* FTP card: the dead / failed card is the terminal's own text colour, undimmed. Solarized's foreground reads at only
+   4.75:1 on its background, so no mix towards the background survives 4.5:1 there (75% landed at 3.3:1); the state is
+   told by the title, the Reconnect button and the error box (danger-fg: ≥ 4.5:1 on every theme's terminal background). */
+.pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: var(--term-fg); }
+.pane .pane-placeholder.ftp-info.failed .big, .pane .pane-placeholder.ftp-info.disconnected .big { opacity: 1; color: var(--term-fg); }
 /* Update banner at the 900 px minimum width: the call to action never ends up as a one-word line. */
 #update-banner .keep { white-space: nowrap; }
 
@@ -556,10 +556,10 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .tab-page.zoomed .splitter { display: none; }
 .tab-page.zoomed .pane:not(.zoomed) { display: none; }
 /* Pane head of the zoomed pane: a "zoomed" chip after the title and the ⤡ restore button in the accent colour. */
-.pane-head .zoom-badge { flex: none; padding: 0 6px; border: 1px solid var(--accent-2); border-radius: 9px; font-size: 10px; line-height: 15px; letter-spacing: .3px; color: var(--accent); text-transform: uppercase; }
+.pane-head .zoom-badge { flex: none; padding: 0 6px; border: 1px solid var(--accent); border-radius: 9px; font-size: 10px; line-height: 15px; letter-spacing: .3px; color: var(--accent); text-transform: uppercase; }
 .pane-head .zoom-badge[hidden] { display: none; }
 .pane.zoomed .pane-head button.zoom { color: var(--accent); }
-.pane.zoomed .pane-head button.zoom:hover { color: #fff; }
+.pane.zoomed .pane-head button.zoom:hover { color: var(--fg-strong); }
 /* Tab strip: a small ⤢ before the close button while one of the tab's panes is zoomed (also in the "all tabs" menu). */
 .tab .zoomico, .tab-menu-item .zoomico { flex: none; display: flex; color: var(--accent); }
 .tab .zoomico[hidden] { display: none; }
@@ -583,3 +583,22 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .workspace-empty .hint, .pane .pane-placeholder .hint { opacity: 1; }   /* the card's hint is the terminal foreground itself: Solarized's dim text has no 10% to spare */
 /* Settings → Theme: a sample line painted in the chosen theme's own colours (inline styles from dialogs.js, never the chrome's) */
 .theme-preview { display: inline-block; height: 28px; padding: 0 10px; border: 1px solid; border-radius: var(--radius); font: 11.5px/26px var(--font-mono); white-space: pre; flex: 0 0 auto; user-select: none; }
+
+/* ---- qa4 theme ---- */
+/* Danger menu items (Delete…) carry a class, not an inline colour, so the hover / keyboard-focus fill keeps a readable
+   text colour: the red fill with the selection text (≥ 4.5:1 on every theme) instead of red text on the blue fill. */
+.ctx-item.danger { color: var(--danger-fg); }
+.ctx-item.danger:hover, .ctx-item.danger:focus-visible { background: var(--danger-fill); color: var(--selection-fg); }
+.ctx-item.danger:hover .k, .ctx-item.danger:focus-visible .k { color: var(--selection-fg-dim); }
+/* Disabled controls are visibly inert: dimmed, no hover, arrow cursor (a disabled primary button looked live). */
+.btn[disabled], .btn:disabled, .tb-btn:disabled, .icon-btn:disabled, .tools-form button:disabled, #find-bar button:disabled, .pane-head button:disabled, .quick button:disabled { opacity: .5; cursor: default; pointer-events: none; }
+.btn.primary[disabled], .btn.primary:disabled { background: var(--selection); border-color: var(--selection); }
+input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: default; }
+/* A session's colour is an accent (tab stripe, pane-head bar, tree dot), never a text colour: the tree shows it as a
+   dot inside a 1px --border ring, which reads at ≥ 3:1 whatever colour was picked. */
+.tree-row .ico.swatch { display: inline-flex; align-items: center; justify-content: center; }
+.tree-row .ico.swatch::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--session-color, var(--fg-dim)); box-shadow: 0 0 0 1px var(--border); }
+.tree-row.selected .ico.swatch::before { box-shadow: 0 0 0 1px var(--selection-fg); }
+/* Text selection in fields and selectable text follows the theme, not the OS highlight colour. */
+::selection { background: var(--selection); color: var(--selection-fg); }
+input::selection, textarea::selection { background: var(--selection); color: var(--selection-fg); }

@@ -1,6 +1,7 @@
 // Modal dialogs: session editor, settings, tunnels, host key / password / keyboard-interactive prompts.
 import { h, showModal, toast, confirmDialog, TYPE_LABEL, icon } from './ui.js';
 import { THEMES } from './terminal.js';
+import { mix, contrast } from './theme.js';
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -13,7 +14,9 @@ function paintThemePreview(el, name) {
     h('span', { style: { color: t.green } }, 'user@host'), ':', h('span', { style: { color: t.blue } }, '~'), '$ ls ',
     h('span', { style: { color: t.cyan } }, 'src '), h('span', { style: { color: t.magenta } }, 'docs '), h('span', { style: { color: t.yellow } }, 'README')
   );
-  Object.assign(el.style, { background: t.background, color: t.foreground, borderColor: t.brightBlack || t.foreground });
+  // the outline: the theme's bright black where it shows against the chip (Solarized's equals its background), else a mid-tone of its text
+  const border = t.brightBlack && contrast(t.brightBlack, t.background) >= 1.5 ? t.brightBlack : mix(t.foreground, t.background, 0.5);
+  Object.assign(el.style, { background: t.background, color: t.foreground, borderColor: border });
   el.title = `${themeLabel(name)}: the terminal colours`;
   return el;
 }
@@ -494,7 +497,7 @@ export async function tunnelsDialog(app, preset = {}) {
             h('td', { class: 'mono' }, `${t.bindHost || '127.0.0.1'}:${t.bindPort}`),
             h('td', { class: 'mono' }, t.type === 'dynamic' ? 'SOCKS5' : `${t.destHost}:${t.destPort}`),
             h('td', {}, t.sessionName || t.connId || ''),
-            h('td', {}, h('span', { class: 'badge ' + t.status, title: t.error || '' }, t.status), t.error ? h('div', { class: 'form-help', style: { gridColumn: 'auto', color: 'var(--danger, #e5534b)', marginTop: '2px' } }, t.error) : null),
+            h('td', {}, h('span', { class: 'badge ' + t.status, title: t.error || '' }, t.status), t.error ? h('div', { class: 'form-help', style: { gridColumn: 'auto', color: 'var(--danger-fg)', marginTop: '2px' } }, t.error) : null),
             h('td', {}, String(t.connections || 0)),
             h('td', {}, h('button', { class: 'btn small', onclick: async () => { await window.api.tunnels.stop(t.id); render(); } }, 'Stop'))
           ))))
@@ -640,7 +643,7 @@ export function hostKeyDialog(p) {
 }
 
 export function passwordDialog(p) {
-  const input = h('input', { type: 'password', autocomplete: 'current-password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
+  const input = h('input', { type: 'password', autocomplete: 'current-password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)' } });
   const save = h('input', { type: 'checkbox', checked: false });
   const m = showModal({
     title: p.title || 'Password',
@@ -658,7 +661,7 @@ export function passwordDialog(p) {
 }
 
 export function kbdIntDialog(p) {
-  const inputs = (p.prompts || []).map((pr) => h('input', { type: pr.echo ? 'text' : 'password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)', marginBottom: '8px' } }));
+  const inputs = (p.prompts || []).map((pr) => h('input', { type: pr.echo ? 'text' : 'password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)', marginBottom: '8px' } }));
   const m = showModal({
     title: p.name || 'Authentication',
     width: 'narrow',

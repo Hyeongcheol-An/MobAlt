@@ -162,7 +162,7 @@ export function contextMenu(x, y, items) {
     }
     if (!it) continue;
     const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : ''), role: 'menuitem', tabindex: -1, 'aria-disabled': it.disabled ? 'true' : null, onclick: () => { closeContextMenu(); it.action && it.action(); } }, it.label, it.key ? h('span', { class: 'k' }, it.key) : null);
-    if (it.danger) row.style.color = 'var(--danger-fg)';
+    if (it.danger) row.classList.add('danger'); // styles.css: red text, and the red fill with the selection text while hovered / focused
     menu.append(row);
   }
   root.append(menu);
@@ -354,7 +354,7 @@ export function confirmDialog(message, { title = 'Confirm', okLabel = 'OK', dang
 }
 
 export function promptDialog(title, { label = '', value = '', password = false, checkbox = null, okLabel = 'OK', placeholder = '' } = {}) {
-  const input = h('input', { type: password ? 'password' : 'text', value, placeholder, spellcheck: false, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
+  const input = h('input', { type: password ? 'password' : 'text', value, placeholder, spellcheck: false, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)' } });
   const cb = checkbox ? h('input', { type: 'checkbox', checked: !!checkbox.checked }) : null;
   const m = showModal({
     title,

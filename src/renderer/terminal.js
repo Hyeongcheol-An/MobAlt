@@ -1,7 +1,7 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
 import { h, contextMenu, toast, icon } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
-import { THEMES, searchDecorations } from './theme.js';
+import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 
 /** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
 const startErrorText = (e) => errMsg(e);
@@ -54,7 +54,7 @@ export class TermPane {
       cursorBlink: s.cursorBlink,
       cursorStyle: s.cursorStyle || 'block',
       scrollback: s.scrollback || 10000,
-      theme: { ...theme },
+      theme: terminalTheme(theme), // the palette plus a selection band that is visible on it (theme.js)
       macOptionIsMeta: s.macOptionIsMeta !== false,
       rightClickSelectsWord: false,
       allowTransparency: false,
@@ -659,7 +659,7 @@ export class TermPane {
   applyTheme(s = this.app.settings) {
     if (this.disposed) return;
     const theme = this.themeFor(s);
-    this.term.options.theme = { ...theme };
+    this.term.options.theme = terminalTheme(theme); // always a fresh object (see above); the selection band is derived per palette
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e');
     this.el.style.setProperty('--term-fg', theme.foreground || '#ececec');
   }
