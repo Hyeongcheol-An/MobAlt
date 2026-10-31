@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  MobAlt app icon, macOS Big Sur+ grid.
+  Canvas 1024x1024, rounded square 824x824 centred (100..924), corner radius 185 (22.4%).
+  Render with: scripts/make-assets.sh  (rsvg-convert; no CSS variables, no foreignObject)
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <!-- body: deep navy, slightly warmer at the top, almost black at the foot -->
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#25406f"/>
+      <stop offset="0.55" stop-color="#162647"/>
+      <stop offset="1" stop-color="#0c1428"/>
+    </linearGradient>
+    <!-- diagonal sheen across the top-left -->
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.45" stop-color="#ffffff" stop-opacity="0.03"/>
+      <stop offset="0.7" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- accent glow rising from the lower right, ties the body to the app accent #2a6fc4 -->
+    <radialGradient id="glow" cx="0.78" cy="1.05" r="0.9">
+      <stop offset="0" stop-color="#2a6fc4" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#2a6fc4" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#2a6fc4" stop-opacity="0"/>
+    </radialGradient>
+    <!-- inner top highlight: a hairline that fades out down the sides -->
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.42"/>
+      <stop offset="0.18" stop-color="#ffffff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <!-- glyph: white with a faint cool tint at the foot so it is not a dead flat white -->
+    <linearGradient id="ink" gradientUnits="userSpaceOnUse" x1="0" y1="283" x2="0" y2="742">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e6eefb"/>
+    </linearGradient>
+    <clipPath id="square">
+      <rect x="100" y="100" width="824" height="824" rx="185" ry="185"/>
+    </clipPath>
+    <!-- soft drop shadow, blur ~24px -->
+    <filter id="shadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+    <!-- subtle lift for the glyph so it separates from the body at large sizes -->
+    <filter id="glyphShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+
+  <!-- drop shadow (offset y 12, ~30% black) -->
+  <rect x="100" y="112" width="824" height="824" rx="185" ry="185" fill="#000000" fill-opacity="0.30" filter="url(#shadow)"/>
+
+  <!-- body -->
+  <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="url(#body)"/>
+  <g clip-path="url(#square)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <rect x="100" y="100" width="824" height="824" fill="url(#sheen)"/>
+    <!-- inner rim: 4px stroke, half of it clipped away, so a 2px highlight hugs the top edge -->
+    <rect x="100" y="100" width="824" height="824" rx="185" ry="185" fill="none" stroke="url(#rim)" stroke-width="4"/>
+  </g>
+  <!-- hairline edge so the square keeps its outline on light backgrounds -->
+  <rect x="100.5" y="100.5" width="823" height="823" rx="184.5" ry="184.5" fill="none" stroke="#000000" stroke-opacity="0.22" stroke-width="1"/>
+
+  <!-- signal arcs: a remote connection radiating from the prompt, accent blue, low opacity -->
+  <g fill="none" stroke="#5aa0ef" stroke-linecap="round" stroke-width="30" opacity="0.62">
+    <path d="M 600 330 A 110 110 0 0 1 710 440"/>
+    <path d="M 600 254 A 186 186 0 0 1 786 440"/>
+  </g>
+
+  <!-- prompt glyph: ">" chevron + "_" cursor bar, stroke 95, round caps -->
+  <g fill="none" stroke="#000000" stroke-opacity="0.28" stroke-linecap="round" stroke-linejoin="round" stroke-width="95" filter="url(#glyphShadow)" transform="translate(0 10)">
+    <path d="M 300 330 L 490 512 L 300 694"/>
+    <path d="M 620 694 L 740 694"/>
+  </g>
+  <g fill="none" stroke="url(#ink)" stroke-linecap="round" stroke-linejoin="round" stroke-width="95">
+    <path d="M 300 330 L 490 512 L 300 694"/>
+    <path d="M 620 694 L 740 694"/>
+  </g>
+</svg>

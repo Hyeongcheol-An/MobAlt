@@ -604,6 +604,12 @@ process.on('uncaughtException', (e) => {
 });
 nativeTheme.themeSource = 'dark';
 app.whenReady().then(() => {
+  // `npm start` runs the bare Electron binary, which shows Electron's own icon in the Dock; the packaged
+  // app gets build/icon.icns from electron-builder. Point the dev Dock tile at the rendered PNG.
+  if (process.platform === 'darwin' && !app.isPackaged && app.dock) {
+    const devIcon = path.join(__dirname, '..', '..', 'build', 'icon.png');
+    if (fs.existsSync(devIcon)) app.dock.setIcon(devIcon);
+  }
   registerIpc();
   buildMenu();
   createWindow();
