@@ -7,7 +7,7 @@ terminals in the middle, and an SFTP browser, network tools and macros in side p
 
 ![MobAlt with two remote shells side by side](images/hero.png)
 
-Contents: [Install](#install) · [Sessions](#sessions) · [Connecting](#connecting) ·
+Contents: [Install](#install) · [Updating](#updating) · [Sessions](#sessions) · [Connecting](#connecting) ·
 [Terminal](#terminal) · [Files (SFTP / FTP)](#files-sftp--ftp) · [Tunnels](#tunnels-port-forwarding) ·
 [X11, Mosh, Serial, RDP/VNC](#x11-mosh-serial-rdpvnc) · [Tools and macros](#tools-and-macros) ·
 [Workspace and settings](#workspace-and-settings) · [Keyboard shortcuts](#keyboard-shortcuts) ·
@@ -25,8 +25,28 @@ Releases are signed and notarized. Requirements: macOS 13 or later. Optional hel
 Windows App for RDP.
 
 MobAlt checks GitHub Releases for a newer version at startup and offers it in a dialog; nothing is
-downloaded or installed without your confirmation. Turn the check off in Settings → Updates, or run
-it by hand with Help → Check for Updates….
+downloaded or installed without your confirmation. See [Updating](#updating).
+
+## Updating
+
+Three paths lead to a new release; all of them end with the new bundle at `/Applications/MobAlt.app`:
+
+- **In-app updater**: MobAlt checks GitHub Releases at startup (turn this off in Settings → Updates) and
+  Help → Check for Updates… or the "Check now" button in Settings runs the check by hand. A newer
+  version is offered in a dialog, downloaded only when you say so and installed when you quit, or right
+  away with "Restart now".
+- **Homebrew**: `brew upgrade --cask mobalt` replaces the app in Applications.
+- **DMG**: download the new DMG from [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) and
+  drag MobAlt to Applications, replacing the old one.
+
+Upgrading while MobAlt is running is fine — even from one of MobAlt's own terminals. The running app keeps
+executing the old version from memory, notices the new bundle on disk (within a minute, or as soon as the
+window is focused again) and shows a banner above the tabs: *MobAlt 0.11.0 is installed on disk — you are
+running 0.10.1. Relaunch to use it.* **Relaunch** asks about open SSH/FTP connections first (as ⌘Q does),
+saves the workspace and starts the new version; your tabs come back through workspace restore. **Later**
+hides the banner until yet another version appears. If the new bundle is already on disk when the updater
+runs, nothing is downloaded again: the check reports "0.11.0 is already installed on disk; relaunch to use
+it" and offers the same relaunch.
 
 ## Sessions
 
@@ -217,3 +237,6 @@ on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
   session).
 - **Gatekeeper warning on a self-built app**: right-click → Open once, or
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
+- **`hdiutil: attach failed – Resource busy` from `brew upgrade --cask mobalt`**: another Homebrew process
+  (for example `brew audit` or `brew fetch`) had the same DMG mounted at that moment. Just run the command
+  again.

@@ -72,6 +72,9 @@ brew install --cask mobalt
 
 Later updates: `brew upgrade --cask mobalt`. The cask is also kept in this repository (`Casks/mobalt.rb`).
 
+**Updating**: the in-app updater, `brew upgrade --cask mobalt` or a new DMG all work while MobAlt is running —
+the app then shows a relaunch banner. See [Updating](docs/USER_GUIDE.md#updating) in the user guide.
+
 ### DMG
 
 1. Download `MobAlt-<version>-arm64.dmg` (Apple Silicon) or `MobAlt-<version>-x64.dmg` (Intel) from

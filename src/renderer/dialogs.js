@@ -498,6 +498,17 @@ export function settingsDialog(app) {
   const logPlain = check('Strip colours and control sequences from session logs (plain text)', !!s.logPlainText);
   const keepAlive = num(s.keepAliveInterval, { min: 0, max: 3600 });
   const autoUpdate = check('Check for updates at startup', s.autoUpdate !== false);
+  // "Check now" reports on its own line, e.g. "0.11.0 is already installed on disk; relaunch to use it"
+  const updStatus = h('span', { class: 'upd-status', 'aria-live': 'polite' });
+  const checkNow = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+    updStatus.textContent = 'Checking…';
+    try {
+      const r = await window.api.app.checkUpdates();
+      updStatus.textContent = (r && r.message) || '';
+    } catch (e) {
+      updStatus.textContent = e.message;
+    }
+  } }, 'Check now');
   const m = showModal({
     title: 'Settings',
     width: 'wide',
@@ -511,7 +522,7 @@ export function settingsDialog(app) {
       ...field('Download folder', downloadDir), ...field('Log folder', logDir), ...field('SSH keep-alive (s)', keepAlive),
       h('label', {}, 'Logging'), h('div', { class: 'checks' }, logPlain.el),
       h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
-      h('label', {}, 'Updates'), h('div', { class: 'checks' }, autoUpdate.el, h('button', { class: 'btn small', type: 'button', onclick: () => window.api.app.checkUpdates() }, 'Check now')),
+      h('label', {}, 'Updates'), h('div', { class: 'checks' }, autoUpdate.el, checkNow, updStatus),
       h('label', {}, 'Data'), h('div', {}, h('button', { class: 'btn small', onclick: () => window.api.shell.openPath(app.info.userData) }, 'Open config folder'))
     ),
     buttons: [

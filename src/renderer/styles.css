@@ -467,3 +467,15 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 .pane .pane-placeholder.ftp-info.failed, .pane .pane-placeholder.ftp-info.disconnected { color: var(--fg-dim); }
 .pane .pane-placeholder.ftp-info.failed .big, .pane .pane-placeholder.ftp-info.disconnected .big { opacity: .75; }
 .pane .pane-placeholder.ftp-info .ftp-err { max-width: 70%; padding: 6px 10px; border: 1px solid var(--red); border-radius: var(--radius); color: var(--red); font-size: 12px; text-align: center; word-break: break-word; }
+
+/* ---- on-disk update ---- */
+/* A different MobAlt.app was written over the running one (brew upgrade, a dragged DMG): a persistent bar above the
+   tabs, in the same column as the MultiExec banner, offers a relaunch; app.js re-fits the terminals around it. */
+#update-banner { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 10px; background: #203a5a; color: #dbe9ff; font-size: 12px; border-bottom: 1px solid var(--accent-2); flex: none; }
+#update-banner[hidden] { display: none; }
+#update-banner b { font-weight: 600; color: #fff; }
+#update-banner .btn.small { height: 22px; padding: 0 9px; font-size: 11.5px; }
+#update-banner .btn.small:not(.primary) { background: transparent; border-color: #4f6f94; color: #dbe9ff; }
+#update-banner .btn.small:not(.primary):hover { background: rgba(255, 255, 255, .08); }
+#update-banner .btn:focus-visible { outline: 2px solid #fff; outline-offset: 1px; } /* the accent ring would sink into the blue bar */
+.form-grid .checks .upd-status { align-self: center; font-size: 12px; color: var(--fg-dim); } /* "Check now" outcome in Settings → Updates */

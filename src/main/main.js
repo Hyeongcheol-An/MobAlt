@@ -16,6 +16,7 @@ const tools = require('./tools');
 const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
 const { liveConnections, quitQuestion } = require('./live');
+const { startBundleWatch } = require('./bundlewatch');
 
 const pkg = require('../../package.json');
 app.setName('MobAlt');
@@ -23,7 +24,9 @@ if (process.env.MOBALT_USER_DATA) app.setPath('userData', process.env.MOBALT_USE
 const store = new Store();
 const registry = new TerminalRegistry();
 let win = null;
-let quitting = false; // a quit is under way (confirmed, test hook or update install): no more questions, tear down
+let quitting = false; // a quit is under way (confirmed, test hook, update install or relaunch): no more questions, tear down
+let bundleWatch = null; // notices a different MobAlt.app written over the running one (brew upgrade / dragged DMG)
+let relaunchRequested = false; // test mode: app:relaunch records the request instead of restarting the test run
 
 /**
  * Ask before the app goes away with live connections (SSH / Mosh / SFTP companions / FTP). Shared by the
@@ -44,6 +47,26 @@ function confirmQuit() {
     message: quitQuestion(live),
   });
   return r === 0;
+}
+
+/**
+ * Restart into the bundle now on disk (the relaunch banner, or the updater finding that version already
+ * installed). The quit question is asked here, once, when connections are live; `quitting` keeps the
+ * before-quit handler from asking again. app.quit() rather than app.exit() so that the window's beforeunload
+ * saves the workspace and before-quit tears the connections down, exactly like ⌘Q. Returns true when the
+ * restart is under way (in test mode: recorded, not performed).
+ */
+function relaunch() {
+  if (!confirmQuit()) return false;
+  if (process.env.MOBALT_TEST_SCRIPT) {
+    relaunchRequested = true;
+    return true;
+  }
+  quitting = true;
+  if (win && !win.isDestroyed() && !win.isFullScreen()) store.setSettings({ windowBounds: win.getBounds() }); // what the debounced resize/move save may still owe
+  app.relaunch();
+  app.quit();
+  return true;
 }
 
 // ---------- renderer prompts (host key / password / keyboard-interactive) ----------
@@ -340,6 +363,7 @@ function registerIpc() {
     electron: process.versions.electron,
   }));
   ipcMain.on('app:quit', () => app.quit());
+  ipcMain.handle('app:relaunch', () => relaunch());
   // Test-only: perform a REAL drag-and-drop through the Chrome DevTools Protocol so that the
   // browser's own drop rules (effectAllowed/dropEffect, dragover preventDefault) are exercised.
   ipcMain.handle('test:resize', (_e, w, h) => {
@@ -393,12 +417,19 @@ function registerIpc() {
       await send('Input.setInterceptDrags', { enabled: false }).catch(() => {});
     }
   });
-  // Test-only: what the quit confirmation would do right now, without showing the native dialog.
+  // Test-only: what the quit confirmation would do right now, without showing the native dialog, and whether
+  // app:relaunch was asked for (test mode records it instead of restarting).
   ipcMain.handle('test:quit-check', () => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const live = liveConnections(registry, ftp);
     const wouldAsk = !quitting && live.total > 0 && !!store.getSettings().confirmClose;
-    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live) : null };
+    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live) : null, relaunchRequested };
+  });
+  // Test-only: pretend that MobAlt `version` is now on disk — the same renderer event the bundle watch sends
+  // (no de-duplication here, so the renderer's own "Later" logic is what gets exercised).
+  ipcMain.handle('test:bundle-updated', (_e, version) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    return bundleWatch ? bundleWatch.send(String(version)) : false;
   });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
@@ -607,7 +638,14 @@ app.whenReady().then(() => {
   registerIpc();
   buildMenu();
   createWindow();
-  updater = setupUpdater(store, () => win, { beforeInstall: () => { quitting = true; } }); // "Restart now" never asks again
+  bundleWatch = startBundleWatch({ getWin: () => win });
+  updater = setupUpdater(store, () => win, {
+    beforeInstall: () => { quitting = true; }, // "Restart now" never asks again
+    diskVersion: () => bundleWatch.diskVersion(), // a release already on disk is not downloaded again…
+    bundleOnDisk: (v) => bundleWatch.announce(v), // …the relaunch banner is shown instead
+    afterCheck: () => bundleWatch.check(),
+    relaunch: () => relaunch(),
+  });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

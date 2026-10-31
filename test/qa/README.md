@@ -22,6 +22,8 @@ const app = window.app;                     // controller
 await window.api.app.screenshot('name');    // → <out-dir>/shots/name.png (window capture)
 await window.api.app.testResize(1000, 650); // resize the window (test mode only)
 await window.api.app.testKey('F19');        // one real key press: raises the window, enables :focus-visible rings (test mode only)
+await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
+(await window.api.app.testQuitCheck()).relaunchRequested; // true once the banner's Relaunch ran (test mode records, never restarts)
 app.action('new-session' | 'new-local' | 'quick-connect' | 'duplicate' | 'reconnect' | 'disconnect' |
            'rename-tab' | 'close' | 'close-pane' | 'split' | 'split-menu' | 'layout' | 'unsplit' |
            'next-pane' | 'next-tab' | 'prev-tab' | 'zoom' | 'find' | 'find-close' | 'clear' |

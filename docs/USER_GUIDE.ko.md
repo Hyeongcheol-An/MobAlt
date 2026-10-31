@@ -7,7 +7,7 @@ MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트�
 
 ![원격 셸 두 개를 나란히 띄운 MobAlt](images/hero.png)
 
-목차: [설치](#설치) · [세션](#세션) · [접속](#접속) · [터미널](#터미널) · [파일 (SFTP / FTP)](#파일-sftp--ftp) ·
+목차: [설치](#설치) · [업데이트](#업데이트) · [세션](#세션) · [접속](#접속) · [터미널](#터미널) · [파일 (SFTP / FTP)](#파일-sftp--ftp) ·
 [터널 (포트 포워딩)](#터널-포트-포워딩) · [X11, Mosh, 시리얼, RDP/VNC](#x11-mosh-시리얼-rdpvnc) ·
 [도구와 매크로](#도구와-매크로) · [작업대와 설정](#작업대와-설정) · [단축키](#단축키) ·
 [데이터와 개인정보](#데이터와-개인정보) · [문제 해결](#문제-해결)
@@ -23,8 +23,26 @@ MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트�
 [XQuartz](https://www.xquartz.org/), Mosh 세션용 `brew install mosh`, RDP용 Windows App.
 
 시작할 때 GitHub Releases에서 새 버전을 확인해 대화상자로 알려 주며, 동의하기 전에는 아무것도
-내려받거나 설치하지 않습니다. Settings → Updates에서 끌 수 있고, Help → Check for Updates…로 직접
-확인할 수도 있습니다.
+내려받거나 설치하지 않습니다. [업데이트](#업데이트)를 보세요.
+
+## 업데이트
+
+새 버전을 받는 길은 셋이고, 어느 쪽이든 `/Applications/MobAlt.app`이 새 번들로 바뀝니다.
+
+- **앱 내 업데이트**: 시작할 때 GitHub Releases를 확인하고(Settings → Updates에서 끌 수 있음), Help → Check
+  for Updates… 또는 Settings의 "Check now" 버튼으로 직접 확인합니다. 새 버전은 대화상자로 제안되고, 동의할
+  때만 내려받아 종료할 때(또는 "Restart now"를 고르면 바로) 설치합니다.
+- **Homebrew**: `brew upgrade --cask mobalt`가 Applications의 앱을 교체합니다.
+- **DMG**: [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases)에서 새 DMG를 받아 MobAlt를
+  Applications로 끌어다 놓아 기존 앱을 바꿉니다.
+
+MobAlt가 실행 중인 채로 업그레이드해도 괜찮습니다 — MobAlt의 터미널 안에서 실행해도 마찬가지입니다.
+실행 중인 앱은 메모리에 있는 옛 버전을 계속 돌리다가 디스크의 새 번들을 알아차리고(1분 안에, 또는 창에
+다시 포커스가 오는 즉시) 탭 위에 배너를 띄웁니다: *MobAlt 0.11.0 is installed on disk — you are running
+0.10.1. Relaunch to use it.* **Relaunch**는 ⌘Q처럼 열린 SSH/FTP 연결을 먼저 묻고, 작업대를 저장한 뒤 새
+버전으로 다시 시작합니다. 탭은 작업대 복원으로 돌아옵니다. **Later**는 또 다른 버전이 나타날 때까지 배너를
+숨깁니다. 업데이트 확인이 돌 때 새 번들이 이미 디스크에 있으면 다시 내려받지 않고 "0.11.0 is already
+installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제안합니다.
 
 ## 세션
 
@@ -207,3 +225,5 @@ macOS Keychain 기반 암호화), `settings.json`, `known_hosts`, `workspace.jso
   호스트에 없거나 PATH에 없는 것입니다(세션에 경로 지정).
 - **직접 빌드한 앱의 Gatekeeper 경고**: 한 번 우클릭 → 열기, 또는
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
+- **`brew upgrade --cask mobalt`에서 `hdiutil: attach failed – Resource busy`**: 그 순간 다른 Homebrew
+  프로세스(예: `brew audit`, `brew fetch`)가 같은 DMG를 마운트하고 있던 것입니다. 명령을 다시 실행하면 됩니다.

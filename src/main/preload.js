@@ -6,16 +6,17 @@ const send = (ch, ...args) => ipcRenderer.send(ch, ...args);
 
 const EVENT_CHANNELS = [
   'term:data', 'term:exit', 'ssh:status', 'sftp:transfer', 'sftp:edit-synced', 'tunnels:changed',
-  'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'app:notice',
+  'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'app:notice', 'app:bundle-updated',
 ];
+const on = (channel, fn) => {
+  if (!EVENT_CHANNELS.includes(channel)) throw new Error('Unknown channel ' + channel);
+  const wrapped = (_e, ...args) => fn(...args);
+  ipcRenderer.on(channel, wrapped);
+  return () => ipcRenderer.removeListener(channel, wrapped);
+};
 
 contextBridge.exposeInMainWorld('api', {
-  on(channel, fn) {
-    if (!EVENT_CHANNELS.includes(channel)) throw new Error('Unknown channel ' + channel);
-    const wrapped = (_e, ...args) => fn(...args);
-    ipcRenderer.on(channel, wrapped);
-    return () => ipcRenderer.removeListener(channel, wrapped);
-  },
+  on,
   promptReply: (reqId, result) => send('prompt:reply', { reqId, result }),
 
   app: {
@@ -26,7 +27,11 @@ contextBridge.exposeInMainWorld('api', {
     testResize: (w, h) => invoke('test:resize', w, h),
     testKey: (keyCode) => invoke('test:key', keyCode),
     testQuitCheck: () => invoke('test:quit-check'),
+    testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     checkUpdates: () => invoke('app:check-updates'),
+    // a different MobAlt.app is on disk (brew upgrade / dragged DMG): { version, current }; relaunch() restarts into it
+    onBundleUpdated: (fn) => on('app:bundle-updated', fn),
+    relaunch: () => invoke('app:relaunch'),
   },
   term: {
     spawnLocal: (opts) => invoke('term:spawn-local', opts),
