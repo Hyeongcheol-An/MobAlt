@@ -8,9 +8,9 @@ const path = require('path');
 
 const root = path.join(__dirname, '..', '..');
 const i18n = require('../../src/main/i18n');
-// Until every dictionary and guide is written, the checks that need all ten languages are skipped; I18N_STRICT=1
-// (and CI once they are in) makes them fail instead.
-const strict = !!process.env.I18N_STRICT;
+// Every shipped language has its dictionary and guide: the checks that need all of them are strict (I18N_STRICT=0
+// relaxes them while a new language is being written).
+const strict = process.env.I18N_STRICT !== '0';
 const extractor = require('../../scripts/i18n-extract');
 
 test('resolveLocale: the setting wins, then the macOS language list, by tag and by language, else English', () => {

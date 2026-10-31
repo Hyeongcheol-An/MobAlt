@@ -11,6 +11,7 @@
   const lang = document.documentElement.lang || '?';
   const shot = (n) => window.api.app.screenshot(`${lang}-${n}`);
   const overflows = [];
+  window.addEventListener('error', (e) => log('UNCAUGHT', e.message, String(e.error && e.error.stack).split('\n').slice(0, 12).join(' | ')));
   const latin = new Set();
   const nonLatin = /^(ko|ja|zh|hi|ar)/.test(lang);
   const KEEP = /^(MobAlt|MobaXterm|SSH|SFTP|FTP|FTPS|Mosh|Telnet|RDP|VNC|X11|XQuartz|Zmodem|rz|sz|Wake-on-LAN|MultiExec|Finder|Homebrew|GitHub|JSON|CIDR|MAC|UDP|TCP|DNS|rDNS|URL|IP|CPU|RTT|Ping|Aa|OK|ms|s|Go|Rec|zsh|bash|\d+|[^A-Za-z]+)$/;
@@ -49,7 +50,7 @@
   };
   const closeAll = async () => { for (let i = 0; i < 6 && document.querySelector('.modal'); i++) await closeModal(); };
   const ui = await import('./ui.js');
-  const closeMenu = async () => { ui.closeContextMenu(); document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); await closeMenu(); };
+  const closeMenu = async () => { ui.closeContextMenu(); document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); document.body.click(); await sleep(150); };
   const tabTo = async (i) => { const b = document.querySelectorAll('.modal .mtabs button')[i]; if (b) { b.click(); await sleep(200); } };
   try {
     await app.saveSettings({ confirmClose: false });
@@ -88,10 +89,16 @@
     if (tree) { tree.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 200 })); await sleep(250); check('tree-menu'); await shot('52-tree-menu'); await closeMenu(); }
     const pane = app.activePane && app.activePane();
     if (pane && pane.termEl) { pane.termEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 500, clientY: 300, shiftKey: true })); await sleep(250); check('pane-menu'); await shot('53-pane-menu'); await closeMenu(); }
-    // split + multiexec banner + find bar
-    app.applyLayout('2x2'); await sleep(600); app.action('multiexec'); await sleep(200); app.action('find'); await sleep(200);
+    // split + multiexec banner (with the per-pane exclude strips) + find bar; the mode's bulk menu; the pane menu while it is on
+    app.applyLayout('2x2'); await sleep(600); app.action('multiexec'); await sleep(300); app.action('find'); await sleep(200);
     check('split-multiexec-find'); await shot('60-split-multiexec-find');
-    app.action('find-close'); app.action('multiexec'); await sleep(150);
+    app.action('find-close'); await sleep(100);
+    if (typeof app.multiexecMenu === 'function') { app.multiexecMenu(400, 300); await sleep(250); check('multiexec-menu'); await shot('63-multiexec-menu'); await closeMenu(); }
+    const p2 = app.activePane && app.activePane();
+    if (p2 && p2.termEl) { p2.termEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 200, shiftKey: true })); await sleep(250); check('pane-menu-multiexec'); await shot('64-pane-menu-multiexec'); await closeMenu(); }
+    app.action('multiexec'); await sleep(150);
+    // the Pane Settings dialog (the pane menu's Pane Settings…)
+    if (p2 && typeof app.paneSettings === 'function') { app.paneSettings(p2); await sleep(500); check('pane-settings'); await shot('65-pane-settings'); await closeAll(); }
     // the relaunch banner
     await window.api.app.testBundleUpdated('9.9.9'); await sleep(400); check('update-banner'); await shot('61-update-banner');
     // toasts

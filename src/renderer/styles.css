@@ -584,7 +584,7 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .theme-field { align-items: center; }
 .workspace-empty .hint, .pane .pane-placeholder .hint { opacity: 1; }   /* the card's hint is the terminal foreground itself: Solarized's dim text has no 10% to spare */
 /* Settings → Theme: a sample line painted in the chosen theme's own colours (inline styles from dialogs.js, never the chrome's) */
-.theme-preview { display: inline-block; height: 28px; padding: 0 10px; border: 1px solid; border-radius: var(--radius); font: 11.5px/26px var(--font-mono); white-space: pre; flex: 0 0 auto; user-select: none; }
+.theme-preview { display: inline-block; height: 28px; padding: 0 10px; border: 1px solid; border-radius: var(--radius); font: 11.5px/26px var(--font-mono); white-space: pre; flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; /* shrinks before the row overflows (long theme names / translations) */ user-select: none; }
 /* ---- qa4 a11y ---- */
 /* Find bar and Tools panel boxes: the border turns --accent on focus like every other text field (A11Y4-01/02). While
    the find bar reports no match / an invalid pattern its status colour stays on the border and the focus doubles it. */
