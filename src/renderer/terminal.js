@@ -3,7 +3,10 @@ import { h, contextMenu, toast, icon } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
-import { TermHighlighter, DEFAULT_RULES } from './highlight.js';
+import { TermHighlighter, DEFAULT_RULES, highlightPalette } from './highlight.js';
+
+/** The marker the main process puts in front of its status lines (terminals.js STATUS_DIM / STATUS_FAIL): painted in _paint, where the pane's palette is known. */
+const STATUS_RE = /\x1b\]7704;(dim|fail)\x07/g;
 
 /** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
 const startErrorText = (e) => errMsg(e);
@@ -466,7 +469,7 @@ export class TermPane {
   }
 
   _onInput(d) {
-    if (this.dead || this.kind === 'empty') return;
+    if (this.dead || this.kind === 'empty' || this._replaying) return; // a replay's answers to terminal queries are not keystrokes
     if (this.app.macroRecorder) this.app.macroRecorder.text += d;
     if (this.app.multiexec) this.app.broadcast(d, this);
     else this.write(d);
@@ -482,7 +485,23 @@ export class TermPane {
       this._startupOnData = false;
       setTimeout(() => this._sendStartup(), 800);
     }
-    this.term.write(data);
+    this.term.write(this._paint(data));
+  }
+
+  /**
+   * Colour the status lines main writes (Zmodem progress, "Connecting to…", failures): their OSC 7704 marker becomes a
+   * true-colour SGR from this pane's theme — the dim text and the red of highlight.js's palette, both pushed until they
+   * read at 4.5:1 on the terminal background (SGR 90 was invisible on Solarized Dark, SGR 31 under 4.5:1 on most).
+   */
+  _paint(data) {
+    if (data.indexOf('\x1b]7704;') < 0) return data;
+    if (!this._statusSgr) {
+      const p = highlightPalette(this.themeFor());
+      const sgr = (hex) => `\x1b[38;2;${parseInt(hex.slice(1, 3), 16)};${parseInt(hex.slice(3, 5), 16)};${parseInt(hex.slice(5, 7), 16)}m`;
+      this._statusSgr = { dim: sgr(p.dim), fail: sgr(p.red) };
+    }
+    const c = this._statusSgr;
+    return data.replace(STATUS_RE, (_, k) => c[k] || '');
   }
 
   /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'). */
@@ -868,6 +887,7 @@ export class TermPane {
   applyTheme(s = this.app.settings) {
     if (this.disposed) return;
     const theme = this.themeFor(s);
+    this._statusSgr = null; // the status-line colours follow the palette (_paint)
     this.term.options.theme = terminalTheme(theme); // always a fresh object (see above); the selection band is derived per palette
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e');
     this.el.style.setProperty('--term-fg', theme.foreground || '#ececec');
@@ -973,7 +993,15 @@ export class TermPane {
       try { r = await window.api.detach.attach(d.termId); } catch (e) { console.warn('attach failed', e); }
     }
     if (this.disposed) return;
-    if (r.replay) this.term.write(r.replay);
+    if (r.replay) {
+      // the replay is drawn through a fresh xterm, whose answers to any terminal query left in it (DA, DSR, OSC colour
+      // queries…) would go to the shell as keystrokes — the ring strips the known ones (terminals.js), and input is
+      // muted until the replay is parsed for whatever else answers
+      this._replaying = true;
+      const done = () => { this._replaying = false; };
+      const guard = setTimeout(done, 3000);
+      this.term.write(this._paint(r.replay), () => { clearTimeout(guard); done(); });
+    }
     this.updateTitle();
     if (!r.ok) {
       this.setStatus(d.status === 'failed' ? 'failed' : 'disconnected');
