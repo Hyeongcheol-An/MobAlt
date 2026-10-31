@@ -29,7 +29,8 @@ class App {
 
   async init() {
     applyIcons(); // static toolbar / panel buttons carry data-icon hooks
-    [this.settings, this.sessions, this.info] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info()]);
+    // algorithms: ssh2's defaults / supported names / legacy additions for the session editor's Advanced SSH lists
+    [this.settings, this.sessions, this.info, this.algorithms] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info(), window.api.ssh.algorithms().catch(() => null)]);
     this._applyTheme();
     document.documentElement.style.setProperty('--sidebar-w', (this.settings.sidebarWidth || 280) + 'px');
     this.workspace = new Workspace(this);

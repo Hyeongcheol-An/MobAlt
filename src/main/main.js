@@ -16,6 +16,7 @@ const tools = require('./tools');
 const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
 const keygen = require('./keygen');
+const algorithms = require('./algorithms');
 const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
@@ -522,6 +523,8 @@ function registerIpc() {
   ipcMain.handle('ssh:connect-sftp', async (_e, cfg) => ssh.openSftpOnly(await mergeSecrets(cfg)));
   ipcMain.handle('ssh:disconnect', (_e, id) => ssh.disconnect(id));
   ipcMain.handle('ssh:exec', (_e, id, cmd) => ssh.exec(id, cmd));
+  // Advanced SSH → Algorithms: ssh2's defaults, every name it supports, the legacy preset's additions.
+  ipcMain.handle('ssh:algorithms', () => algorithms.describe());
 
   // ---------- SSH key generator (Session → Generate SSH Key…, the editor's Generate… button) ----------
   // The next free ~/.ssh/id_<type> (id_ed25519, id_ed25519_2, …), shown with ~ for the dialog.

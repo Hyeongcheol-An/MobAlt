@@ -250,6 +250,49 @@ export function sessionEditor(app, initial = {}) {
   const ftpsInsecure = check('Accept untrusted / self-signed certificate', s.ftpsInsecure);
   const keepAlive = num(s.keepAliveInterval ?? app.settings.keepAliveInterval ?? 30, { min: 0, max: 3600 });
 
+  // --- algorithms (Advanced SSH): what this session offers for key exchange, host key, cipher and MAC, pre-filled
+  // from ssh2's defaults; "Legacy algorithms" is a preset that adds (or takes out) the SHA-1 / CBC / DSA ones; every
+  // name is checked against what ssh2 supports (an unknown one is an inline error and never saved). Only lists that
+  // differ from the preset are stored, as `algorithms: { kex, serverHostKey, cipher, hmac }`.
+  const algo = app.algorithms; // { defaults, supported, legacy } from the main process; null when it could not be read
+  const ALGO_CATS = [['kex', 'Key exchange'], ['serverHostKey', 'Host key'], ['cipher', 'Ciphers'], ['hmac', 'MACs']];
+  const uniq = (l) => [...new Set(l)];
+  const parseAlgos = (t) => uniq(String(t || '').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean));
+  const algoPreset = (cat, legacyOn) => (legacyOn ? uniq([...algo.defaults[cat], ...algo.legacy[cat]]) : [...algo.defaults[cat]]);
+  const algoArea = {}, algoErr = {};
+  const checkAlgos = (cat) => {
+    const unknown = parseAlgos(algoArea[cat].value).filter((a) => !algo.supported[cat].includes(a));
+    const label = ALGO_CATS.find((c) => c[0] === cat)[1].toLowerCase().replace(/s$/, '');
+    algoErr[cat].textContent = unknown.length ? `Unknown ${label} algorithm${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}` : '';
+    algoErr[cat].hidden = !unknown.length;
+    algoArea[cat].classList.toggle('invalid', !!unknown.length);
+    algoArea[cat].setAttribute('aria-invalid', unknown.length ? 'true' : 'false');
+    return !unknown.length;
+  };
+  if (algo) {
+    for (const [cat, label] of ALGO_CATS) {
+      const ta = h('textarea', { class: 'algo-list', spellcheck: false, rows: 2, 'aria-label': `${label} algorithms` });
+      const own = s.algorithms && Array.isArray(s.algorithms[cat]) && s.algorithms[cat].length ? s.algorithms[cat] : null;
+      ta.value = (own || algoPreset(cat, !!s.legacyAlgorithms)).join(', ');
+      ta.addEventListener('input', () => checkAlgos(cat));
+      algoArea[cat] = ta;
+      algoErr[cat] = h('div', { class: 'form-error', role: 'alert', hidden: true });
+    }
+    // the preset adds its algorithms to the lists, or takes them out again (never one that is also a default)
+    legacy.cb.addEventListener('change', () => {
+      for (const [cat] of ALGO_CATS) {
+        const cur = parseAlgos(algoArea[cat].value);
+        const next = legacy.cb.checked ? uniq([...cur, ...algo.legacy[cat]]) : cur.filter((a) => !(algo.legacy[cat].includes(a) && !algo.defaults[cat].includes(a)));
+        algoArea[cat].value = next.join(', ');
+        checkAlgos(cat);
+      }
+    });
+  }
+  const algoReset = h('button', { class: 'btn small', type: 'button', onclick: () => {
+    for (const [cat] of ALGO_CATS) { algoArea[cat].value = algoPreset(cat, legacy.cb.checked).join(', '); checkAlgos(cat); }
+    markDirty();
+  } }, 'Reset to defaults');
+
   // --- terminal / behaviour
   const startup = h('textarea', { spellcheck: false, placeholder: 'One command per line, typed once the terminal is ready\ne.g. cd /var/log' });
   startup.value = s.startupCommand || '';
@@ -374,7 +417,12 @@ export function sessionEditor(app, initial = {}) {
   pages.advanced.append(
     ...field('Jump host', h('div', { class: 'inline', style: { flexDirection: 'column', alignItems: 'stretch' } }, jumpSel, jumpHost), 'ProxyJump: connect through a bastion'),
     h('label', {}, 'Options'), h('div', { class: 'checks' }, x11.el, agentFwd.el, compression.el, legacy.el),
-    ...field('Keep-alive (s)', keepAlive)
+    ...field('Keep-alive (s)', keepAlive),
+    ...(algo ? [
+      h('label', { class: 'algo-title' }, 'Algorithms'), h('div', { class: 'algo-head' }, algoReset),
+      h('div', { class: 'form-help' }, 'What this session offers the server, most preferred first (comma or newline separated). "Legacy algorithms" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.'),
+      ...ALGO_CATS.flatMap(([cat, label]) => [...field(label, algoArea[cat]), algoErr[cat]]),
+    ] : [])
   );
   pages.terminal.append(
     ...field('Startup commands', startup),
@@ -479,6 +527,22 @@ export function sessionEditor(app, initial = {}) {
       tunnels,
     };
     delete out._connect;
+    if (algo && type === 'ssh') {
+      for (const [cat] of ALGO_CATS) {
+        if (checkAlgos(cat)) continue;
+        showPage('advanced');
+        algoArea[cat].focus();
+        toast(algoErr[cat].textContent, 'warn');
+        return null;
+      }
+      const lists = {};
+      for (const [cat] of ALGO_CATS) {
+        const list = parseAlgos(algoArea[cat].value);
+        if (list.length && list.join('\n') !== algoPreset(cat, legacy.cb.checked).join('\n')) lists[cat] = list;
+      }
+      if (Object.keys(lists).length) out.algorithms = lists;
+      else delete out.algorithms;
+    }
     // secrets: undefined = keep stored, '' = clear, string = set
     if (clearPw.cb.checked) out.password = '';
     else if (password.value) out.password = password.value;

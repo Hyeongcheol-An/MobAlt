@@ -8,6 +8,7 @@ const path = require('path');
 const { StringDecoder } = require('string_decoder');
 const knownhosts = require('./knownhosts');
 const x11 = require('./x11');
+const algorithms = require('./algorithms');
 const keygen = require('./keygen');
 
 const { execFile } = require('child_process');
@@ -261,13 +262,20 @@ class SshManager {
     };
   }
 
-  /** Extra (legacy) algorithms for ssh2 when the session asks for them. */
+  /**
+   * ssh2's `algorithms` option for a session: the explicit lists of Advanced SSH → Algorithms when set, else the
+   * "Legacy algorithms" additions, else nothing (ssh2's defaults). See algorithms.js.
+   */
   _algorithms(cfg) {
-    return cfg.legacyAlgorithms
-      ? { kex: { append: ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha1'] },
-          serverHostKey: { append: ['ssh-rsa', 'ssh-dss'] },
-          cipher: { append: ['aes128-cbc', 'aes256-cbc', '3des-cbc'] } }
-      : undefined;
+    return algorithms.connectOption(cfg);
+  }
+
+  /**
+   * ssh2's debug hook, used for one thing: remembering what the server offered in its KEXINIT (key exchanges, host
+   * key formats, ciphers, MACs), so a handshake that finds nothing in common can say what the server does speak.
+   */
+  _debugHook(ctx) {
+    return (line) => { ctx.remoteAlgorithms = algorithms.noteRemote(ctx.remoteAlgorithms, line); };
   }
 
   /**
@@ -288,8 +296,9 @@ class SshManager {
         try { client.end(); } catch {}
         resolve(ok ? { ok: true } : { ok: false, error: error || 'host key check failed' });
       };
-      const verifier = this._hostVerifier(cfg, {});
-      client.on('error', (e) => finish(false, this._explainError(e, {}, cfg)));
+      const ctx = {};
+      const verifier = this._hostVerifier(cfg, ctx);
+      client.on('error', (e) => finish(false, this._explainError(e, ctx, cfg)));
       client.on('close', () => finish(false, 'connection closed during the host key check'));
       client.on('ready', () => finish(true));
       try {
@@ -307,6 +316,7 @@ class SshManager {
           authHandler: (_methods, _partial, cb) => cb(false), // never reached: the check ends with the key exchange
           readyTimeout: settings.readyTimeout || 20000,
           algorithms: this._algorithms(cfg),
+          debug: this._debugHook(ctx),
         });
       } catch (e) {
         finish(false, e.message);
@@ -400,6 +410,7 @@ class SshManager {
         agent: cfg.agentForward ? process.env.SSH_AUTH_SOCK : undefined,
         tryKeyboard: true,
         algorithms: this._algorithms(cfg),
+        debug: this._debugHook(ctx),
       };
       if (sock) connectCfg.sock = sock;
       try {
@@ -544,6 +555,11 @@ class SshManager {
       msg += ' — the host is reachable but nothing listens on that port.';
     } else if (/Too many authentication failures/i.test(msg)) {
       msg += ' — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.';
+    } else if (/^Handshake failed: no matching/.test(msg)) {
+      // nothing in common with the server's KEXINIT: say which side offers what (algorithms.js knows both lists)
+      msg = algorithms.explainHandshake(msg, cfg, ctx.remoteAlgorithms) || msg;
+    } else if (/^Unsupported algorithm: /.test(msg)) {
+      msg += ' — Advanced SSH → Algorithms names an algorithm this version of MobAlt cannot do; Reset to defaults there.';
     }
     if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
     return msg;

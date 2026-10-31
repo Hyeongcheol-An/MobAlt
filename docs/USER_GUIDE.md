@@ -117,6 +117,11 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   "Add to ssh-agent" runs `ssh-add --apple-use-keychain`; "Install on a server…" connects to a saved
   session with its usual authentication and appends the public key to its `~/.ssh/authorized_keys`
   like `ssh-copy-id` (never twice). From the editor, *Use in this session* fills the key field.
+- **Algorithms**: Advanced SSH → Algorithms lists what the session offers for key exchange, host
+  key, ciphers and MACs, pre-filled with the built-in defaults; edit a list to restrict or reorder
+  it (unknown names are refused inline), *Reset to defaults* puts the lists back, and "Legacy
+  algorithms (old devices)" is a preset that adds the SHA-1 key exchanges, CBC ciphers and DSA host
+  keys old appliances still need. Only lists that differ from the defaults are stored.
 - **Jump hosts**: Advanced SSH → Jump host picks another saved session as the bastion (ProxyJump).
 - **When it fails**: the terminal prints what happened, for example
   `authentication failed — server accepts: publickey; tried: ~/.ssh/id_ed25519`, or a hint that
@@ -279,6 +284,10 @@ on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
   offered. Compare the "accepts" list with your session's authentication method; for key-only
   servers pick the right key file. Repeated failures can get your IP banned by fail2ban or sshd's
   per-source penalties for a while.
+- **"no matching key exchange / host key / cipher / MAC: this session offers …; the server offers …"**:
+  the two sides have no algorithm in common. The message lists what the server does speak: add one
+  of those in Advanced SSH → Algorithms (or *Reset to defaults*); for an old appliance that only
+  offers SHA-1 / CBC, tick "Legacy algorithms (old devices)".
 - **Host key changed**: the server was reinstalled, or something is intercepting the connection.
   Only accept if you know why; the old key can be removed from `known_hosts` in the config folder.
 - **X11 app does not appear**: install XQuartz, and make sure the remote shell does not override
