@@ -258,7 +258,11 @@ export class TermPane {
     this.app.onPaneTitle(this);
   }
 
-  /** Head state while this pane fills its tab (layout.js setZoom): badge, pressed ⤢/⤡ button, `.zoomed` on the pane. */
+  /**
+   * Head state while this pane fills its tab (layout.js setZoom): badge, pressed ⤢/⤡ button, `.zoomed` on the pane.
+   * The button is an ARIA toggle: its accessible name stays "Zoom pane" and aria-pressed carries the state (a changing
+   * name would be read as "Restore panes, pressed"); only the tooltip says what the next press does.
+   */
   setZoomed(on) {
     on = !!on;
     if (this.zoomed === on) return;
@@ -267,7 +271,6 @@ export class TermPane {
     this.zoomBadge.hidden = !on;
     this.zoomBtn.replaceChildren(icon(on ? 'unzoom' : 'zoom'));
     this.zoomBtn.title = on ? 'Restore panes (⇧⌘⏎)' : 'Zoom pane (⇧⌘⏎)';
-    this.zoomBtn.setAttribute('aria-label', on ? 'Restore panes' : 'Zoom pane');
     this.zoomBtn.setAttribute('aria-pressed', String(on));
   }
 
