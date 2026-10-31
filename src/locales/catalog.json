@@ -720,6 +720,11 @@
         "src/main/main.js"
       ]
     },
+    "About MobAlt": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Accent": {
       "refs": [
         "src/renderer/dialogs.js",
@@ -927,6 +932,11 @@
     "Bold": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Bring All to Front": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Broadcast address": {
@@ -1424,7 +1434,8 @@
     "Copy": {
       "refs": [
         "src/renderer/dialogs.js",
-        "src/renderer/terminal.js"
+        "src/renderer/terminal.js",
+        "src/main/main.js"
       ]
     },
     "Copy / Paste": {
@@ -1525,6 +1536,11 @@
     "Custom…": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Cut": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Cyan": {
@@ -2376,9 +2392,24 @@
         "src/main/main.js"
       ]
     },
+    "Help": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Hide Hidden Files": {
       "refs": [
         "src/renderer/sftp.js"
+      ]
+    },
+    "Hide MobAlt": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
+    "Hide Others": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Hide remote monitoring bar": {
@@ -2937,7 +2968,8 @@
     "Local": {
       "refs": [
         "src/renderer/app.js",
-        "src/renderer/terminal.js"
+        "src/renderer/terminal.js",
+        "src/renderer/ui.js"
       ]
     },
     "Local (-L)": {
@@ -3126,6 +3158,11 @@
     "Menus, panels and dialogs switch at once; terminal output is not translated": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Minimize": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "MobAlt {version} is already installed on disk; relaunch to use it": {
@@ -4053,7 +4090,8 @@
     "Paste": {
       "refs": [
         "src/renderer/dialogs.js",
-        "src/renderer/terminal.js"
+        "src/renderer/terminal.js",
+        "src/main/main.js"
       ]
     },
     "Paste (terminal)": {
@@ -4326,6 +4364,11 @@
         "src/renderer/index.html"
       ]
     },
+    "Quit MobAlt": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Range too large: {n} addresses; the limit is a /16 ({max})": {
       "refs": [
         "src/main/netscan.js"
@@ -4367,6 +4410,11 @@
       "refs": [
         "src/renderer/dialogs.js",
         "src/renderer/highlight.js"
+      ]
+    },
+    "Redo": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Refresh": {
@@ -4801,7 +4849,8 @@
     },
     "Select All": {
       "refs": [
-        "src/renderer/terminal.js"
+        "src/renderer/terminal.js",
+        "src/main/main.js"
       ]
     },
     "Select files to delete": {
@@ -4849,6 +4898,11 @@
         "src/main/wol.js"
       ]
     },
+    "Serial": {
+      "refs": [
+        "src/renderer/ui.js"
+      ]
+    },
     "Serial device path is required": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -4878,6 +4932,11 @@
       "refs": [
         "src/renderer/sftp.js",
         "src/main/ftp.js"
+      ]
+    },
+    "Services": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Session": {
@@ -5030,6 +5089,11 @@
     "Shell exited.": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Show All": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Show hidden": {
@@ -5640,6 +5704,16 @@
         "src/renderer/index.html"
       ]
     },
+    "Toggle Developer Tools": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
+    "Toggle Full Screen": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Toggle sidebar": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -5738,6 +5812,11 @@
     "Underline": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Undo": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "unexpected ZMODEM header ({header})": {
@@ -6003,6 +6082,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Window": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Windows App / Remote Desktop": {
       "refs": [
         "src/renderer/app.js"
@@ -6146,7 +6230,8 @@
     },
     "Zoom": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/main/main.js"
       ]
     },
     "Zoom In": {

@@ -393,15 +393,16 @@ function buildMenu() {
     {
       label: app.name,
       submenu: [
-        { role: 'about' },
+        // role items carry their own English labels: each gets the translated one (Electron does not localise roles)
+        { role: 'about', label: t('About MobAlt') },
         { type: 'separator' },
         { label: t('Settings…'), accelerator: 'Cmd+,', click: () => sendAction('settings') },
         { type: 'separator' },
-        { role: 'services' },
+        { role: 'services', label: t('Services') },
         { type: 'separator' },
-        { role: 'hide' }, { role: 'hideOthers' }, { role: 'unhide' },
+        { role: 'hide', label: t('Hide MobAlt') }, { role: 'hideOthers', label: t('Hide Others') }, { role: 'unhide', label: t('Show All') },
         { type: 'separator' },
-        { role: 'quit' },
+        { role: 'quit', label: t('Quit MobAlt') },
       ],
     },
     {
@@ -435,8 +436,8 @@ function buildMenu() {
     {
       label: t('Edit'),
       submenu: [
-        { role: 'undo' }, { role: 'redo' }, { type: 'separator' },
-        { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' },
+        { role: 'undo', label: t('Undo') }, { role: 'redo', label: t('Redo') }, { type: 'separator' },
+        { role: 'cut', label: t('Cut') }, { role: 'copy', label: t('Copy') }, { role: 'paste', label: t('Paste') }, { role: 'selectAll', label: t('Select All') },
         { type: 'separator' },
         { label: t('Find…'), accelerator: 'Cmd+F', click: () => sendAction('find') },
         { label: t('Clear Terminal'), accelerator: 'Cmd+K', click: () => sendAction('clear') },
@@ -473,8 +474,8 @@ function buildMenu() {
         { label: t('Zoom Out'), accelerator: 'Cmd+-', click: () => sendAction('zoom', -1) },
         { label: t('Reset Zoom'), accelerator: 'Cmd+0', click: () => sendAction('zoom', 0) },
         { type: 'separator' },
-        { role: 'togglefullscreen' },
-        { role: 'toggleDevTools' },
+        { role: 'togglefullscreen', label: t('Toggle Full Screen') },
+        { role: 'toggleDevTools', label: t('Toggle Developer Tools') },
       ],
     },
     {
@@ -488,9 +489,19 @@ function buildMenu() {
         { label: t('Previous Tab'), accelerator: 'Ctrl+Shift+Tab', click: () => sendAction('prev-tab') },
       ],
     },
-    { role: 'windowMenu' },
+    { // the Window menu spelled out so that its items are translated (role: 'windowMenu' would generate English ones)
+      role: 'window',
+      label: t('Window'),
+      submenu: [
+        { role: 'minimize', label: t('Minimize') },
+        { role: 'zoom', label: t('Zoom') },
+        { type: 'separator' },
+        { role: 'front', label: t('Bring All to Front') },
+      ],
+    },
     {
       role: 'help',
+      label: t('Help'),
       submenu: [
         { label: t('Check for Updates…'), click: () => updater && updater.check(true) },
         { type: 'separator' },
