@@ -126,7 +126,7 @@
       const m = document.querySelector('.modal'), body = m.querySelector('.modal-body');
       const tabs = [...m.querySelectorAll('.mtabs button')];
       results.settingsTabNames = tabs.map((b) => b.textContent).join('|') === 'General|Terminal|Features|Logging|Updates';
-      results.settingsFirstFieldFocused = document.activeElement === m.querySelector('.mpage.active input:not([type=checkbox]), .mpage.active select') && // the first control of General: the Language list m.querySelector('.mpage.active') === m.querySelector('.mpage') && tabs[0].classList.contains('active');
+      results.settingsFirstFieldFocused = document.activeElement === m.querySelector('.mpage.active input:not([type=checkbox]), .mpage.active select') && m.querySelector('.mpage.active') === m.querySelector('.mpage') && tabs[0].classList.contains('active'); // the first control of General: the Language list
       const fit = {}, heights900 = new Set();
       for (const b of tabs) {
         b.click();
