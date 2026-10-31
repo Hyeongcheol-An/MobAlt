@@ -465,6 +465,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "⌥⌘1 on a split tab: the other panes keep their terminals as tabs right after this one, or close": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "── {what} Press Enter to reconnect, ⌘W to close. ──": {
       "refs": [
         "src/renderer/terminal.js"
@@ -658,6 +663,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Ask every time": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Authentication": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -778,6 +788,7 @@
     "Cancel": {
       "refs": [
         "src/renderer/dialogs.js",
+        "src/renderer/layout.js",
         "src/renderer/ui.js",
         "src/main/main.js"
       ]
@@ -1014,6 +1025,12 @@
       "refs": [
         "src/renderer/layout.js",
         "src/main/main.js"
+      ]
+    },
+    "Closing drops {n} live connection.": {
+      "plural": "Closing drops {n} live connections.",
+      "refs": [
+        "src/renderer/layout.js"
       ]
     },
     "Colour": {
@@ -2082,6 +2099,16 @@
         "src/main/ssh.js"
       ]
     },
+    "Keep only this pane": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
+    "Keep the active pane, close the others": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Keep-alive (s)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2499,6 +2526,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Move panes to tabs": {
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
     "Move terminal down": {
       "refs": [
         "src/renderer/terminal.js"
@@ -2527,6 +2559,11 @@
     "Move terminal up": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Move the other panes to tabs of their own": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "MultiExec": {
@@ -4146,6 +4183,12 @@
         "src/main/ftp.js"
       ]
     },
+    "The other pane can become a tab of its own right after this one, its terminal as it is — or close.": {
+      "plural": "The {n} other panes can become tabs of their own right after this one, their terminals as they are — or close.",
+      "refs": [
+        "src/renderer/layout.js"
+      ]
+    },
     "The passphrases do not match": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -4420,13 +4463,14 @@
     },
     "Unsplit": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/app.js",
+        "src/renderer/dialogs.js",
+        "src/main/main.js"
       ]
     },
-    "Unsplit (keep active pane)": {
+    "Unsplit this tab": {
       "refs": [
-        "src/renderer/app.js",
-        "src/main/main.js"
+        "src/renderer/layout.js"
       ]
     },
     "unsupported session type #{num}": {

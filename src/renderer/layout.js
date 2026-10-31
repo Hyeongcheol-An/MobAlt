@@ -1,6 +1,6 @@
 // Tabs and split-pane layout. Each tab owns a tree: {type:'pane', pane} | {type:'split', dir, children:[a,b], ratio}
-import { h, contextMenu, promptDialog, icon } from './ui.js';
-import { t, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { h, contextMenu, promptDialog, showModal, icon } from './ui.js';
+import { t, tn, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 let tabSeq = 0;
 
@@ -652,6 +652,92 @@ export class Workspace {
     this.activate(dstTab);
     this.app.focusPane(pane, true);
     this.app.onPaneTitle(pane); // the moved pane is the target tab's active pane now: an auto-titled target takes its name
+  }
+
+  // ---------- unsplit (⌥⌘1, View → Unsplit, Split ▾ → Unsplit): what becomes of the other panes ----------
+  /**
+   * The verb an unsplit applies, from Settings → Terminal → Unsplit or a caller's explicit choice: 'tabs' or 'active'
+   * as given; 'ask' puts the question for `tab` — "Move panes to tabs" / "Keep only this pane" / Cancel — and
+   * resolves 'tabs' | 'active', or null when cancelled (the split stays). The question names the live connections
+   * that closing would drop, so it is the confirmation too (app.js unsplit asks nothing more). Anything else (an
+   * older settings file) is the default, 'tabs'.
+   */
+  async resolveUnsplitMode(mode, tab) {
+    if (mode === 'tabs' || mode === 'active') return mode;
+    if (mode !== 'ask') return 'tabs';
+    const others = tab ? tab.panes().filter((p) => p !== tab.activePane) : [];
+    const n = Math.max(1, others.length);
+    const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead).length;
+    const m = showModal({
+      title: t('Unsplit this tab'),
+      width: 'narrow',
+      body: h('div', {},
+        tn('The other pane can become a tab of its own right after this one, its terminal as it is — or close.', 'The {n} other panes can become tabs of their own right after this one, their terminals as they are — or close.', n),
+        live ? ' ' + tn('Closing drops {n} live connection.', 'Closing drops {n} live connections.', live) : ''),
+      buttons: [
+        { label: t('Cancel'), value: null },
+        { label: t('Keep only this pane'), value: 'active', danger: live > 0 },
+        { label: t('Move panes to tabs'), primary: true, value: 'tabs' },
+      ],
+    });
+    const r = await m.promise;
+    return r === 'tabs' || r === 'active' ? r : null;
+  }
+
+  /**
+   * Unsplit → tabs: every pane of `tab` but `keep` (the active pane) leaves for a tab of its own, placed right after
+   * `tab` in pane order — behind the pinned block when `tab` is pinned, as the new tabs are not — with its terminal,
+   * title, status and monitoring bar as they are: nothing restarts or reconnects. The zoom is cleared, `keep` stays
+   * the active pane and gets the focus. Returns the new tabs (none for a tab with a single pane).
+   */
+  unsplitToTabs(tab, keep) {
+    const panes = tab.panes();
+    keep = keep && panes.includes(keep) ? keep : tab.activePane || panes[0];
+    const others = panes.filter((p) => p !== keep);
+    if (!others.length) return [];
+    tab.activePane = keep; // removePane never has to pick a replacement: the pane staying is the active one
+    const made = [];
+    let at = this.tabs.indexOf(tab) + 1;
+    for (const p of others) {
+      const nt = this.paneToTab(p, at);
+      if (!nt) continue;
+      made.push(nt);
+      at = this.tabs.indexOf(nt) + 1; // the next one goes right after it (the pinned block may have pushed it)
+    }
+    this.app.focusPane(keep, true);
+    this.app.updateMultiexec?.(); // the broadcast set is the one pane on screen now
+    return made;
+  }
+
+  /**
+   * Move a live pane out of its tab into a new tab of its own at strip index `idx` (never inside the pinned block:
+   * the new tab is not pinned), the way a tab dragged onto a pane moves one between tabs: the pane's element, xterm
+   * and backend travel with it. The tab is titled like one opened for the pane (its session's name, icon and colour,
+   * else the pane's title) and is not activated. Returns the new tab; null for a pane that is alone in its tab.
+   */
+  paneToTab(pane, idx) {
+    const src = pane.tab;
+    if (!src || src.panes().length < 2 || !this._nodeOf(src, pane)) return null;
+    pane.el.remove();
+    this.removePane(src, pane); // never empties src: another pane stays there
+    const tab = new Tab(pane.session ? pane.session.name : pane.title);
+    tab.root = { type: 'pane', pane };
+    pane.tab = tab;
+    tab.activePane = pane;
+    tab.color = pane.session?.color || null;
+    tab.icon = pane.session?.icon || null;
+    tab.tabEl = this._buildTabEl(tab);
+    idx = Math.max(this.pinnedCount(), Math.min(idx, this.tabs.length));
+    this.tabs.splice(idx, 0, tab);
+    const next = this.tabs[idx + 1];
+    if (next && next.tabEl) next.tabEl.before(tab.tabEl);
+    else this.tabsEl.append(tab.tabEl);
+    this.contentEl.append(tab.pageEl);
+    this.render(tab); // the pane is mounted already: it is only placed; it fits when the tab is shown
+    this.app.deriveTabTitle?.(tab);
+    this.updateTab(tab);
+    this.app.onTabsChanged?.();
+    return tab;
   }
 
   render(tab) {
