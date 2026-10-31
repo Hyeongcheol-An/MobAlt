@@ -30,20 +30,20 @@ last column says which parts are missing.
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
 | 2. SSH specifics | 18 | 9 | 8 | 2 | 37 |
-| 3. Terminal | 9 | 13 | 8 | 1 | 31 |
+| 3. Terminal | 10 | 13 | 7 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
 | 5. Network and admin tools, embedded servers, Moba* utilities | 7 | 2 | 7 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **50** | **40** | **34** | **59** | **183** |
+| **Sections 1–7 (each feature once)** | **51** | **40** | **33** | **59** | **183** |
 | 8. Recent additions (24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
 | 9. UX details power users rely on | 8 | 10 | 1 | 1 | 20 |
-| **All tables** | **62** | **66** | **42** | **63** | **233** |
+| **All tables** | **63** | **66** | **41** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 50 in full, 40 in a narrower or different form and lacks 34.
+MobAlt has 51 in full, 40 in a narrower or different form and lacks 33.
 
 ## 1. Session types
 
@@ -125,7 +125,7 @@ MobAlt has 50 in full, 40 in a narrower or different form and lacks 34.
 | Graphical macros (mouse + keyboard) | ❌ | not implemented |
 | Colour schemes | 🟡 | 6 built-in themes (Settings → Terminal → Theme) and a per-session override; no custom or imported themes |
 | Fonts (bundled fonts, ligatures, fixed size) | 🟡 | any installed font, size and line height (Settings → Terminal), ⌘= / ⌘- / ⌘0, per-session font size; no ligatures, no fixed rows/cols |
-| Syntax highlighting of keywords | ❌ | not implemented (URLs are underlined) |
+| Syntax highlighting of keywords | ✅ | Settings → Terminal → Keyword highlighting: an editable rule table (plain text or regex, colour, background, bold, underline) with defaults for errors, warnings, success, IP addresses, URLs and sizes, coloured from the terminal theme; per-session on / off |
 | Search in terminal | ✅ | ⌘F incremental search with case and regex toggles and a match counter |
 | Logging / save / print | 🟡 | session log to a folder; no "Save terminal text" or print (Select All + copy instead) |
 | Scrollback | ✅ | Settings → Terminal → Scrollback lines (100 – 1,000,000; default 10,000); ⌘K clears |
@@ -357,7 +357,7 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 |---|---|---|
 | Zmodem (rz/sz) transfers in the terminal | the classic way to move files through serial consoles and jump hosts where SFTP is unavailable | M |
 | Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
-| Keyword syntax highlighting in the terminal | readable logs on colour-less servers; xterm.js decorations API | M |
+| Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
 | SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
 | Expert SSH algorithm / KEX / cipher / MAC settings | one legacy toggle is too coarse; ssh2's `algorithms` option takes explicit lists (ML-KEM waits on ssh2) | S |
 
