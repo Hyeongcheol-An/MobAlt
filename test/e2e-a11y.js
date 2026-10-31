@@ -1,5 +1,5 @@
 // Keyboard accessibility checks: tab strip (arrows, overflow), session tree, context menus, dialog focus trap and
-// focus return, icon/colour pickers, macros list, toolbar, quick connect. Everything is driven with dispatched
+// focus return, icon/colour pickers, macros list, toolbar, quick connect, panel switching. Everything is driven with dispatched
 // KeyboardEvents (plus a few real key presses); the SFTP list section runs only when the local test sshd
 // (test/start-sshd.sh, 127.0.0.1:2222) is up and is skipped otherwise.
 //   test/qa/run.sh test/e2e-a11y.js <out-dir>
@@ -209,6 +209,21 @@
       filter.value = '';
       filter.dispatchEvent(new Event('input'));
       await sleep(100);
+      // an EMPTY filter: Enter opens nothing — not even the DOM-first session hidden in a collapsed folder (KB-05)
+      app.sessionTree.toggleFolder('Production', rowOf('Production').parentElement);
+      filter.focus();
+      const n2 = app.workspace.tabs.length;
+      key(filter, 'Enter');
+      await sleep(600);
+      results.filterEnterEmptyOpensNothing = app.workspace.tabs.length === n2 && !rowOf('db-01');
+      app.sessionTree.toggleFolder('Production', rowOf('Production').parentElement);
+      // Esc clears the filter and leaves to the terminal, like the quick-connect box (KB-13)
+      filter.focus();
+      filter.value = 'zeta';
+      filter.dispatchEvent(new Event('input'));
+      await sleep(100);
+      await press('Escape');
+      results.filterEscClearsAndLeaves = filter.value === '' && inTerminal() && !!rowOf('db-01');
     }
     // Delete asks first (session and folder); Cancel keeps it, Delete removes it, the keyboard stays in the tree
     rowOf('db-01').focus();
@@ -247,12 +262,40 @@
     rowOf('web-01').focus();
     app.sessionTree.render();
     results.treeRenderKeepsFocus = active() === rowOf('web-01') && rowOf('web-01').tabIndex === 0;
+    // switching panels (⌘1-4) with the keyboard on a row: the shown panel's Tab stop gets the focus, coming back
+    // restores the row, a real Tab then continues from it (KB-04); Enter on a strip button goes into its panel (KB-12)
+    {
+      app.showPanel('macros');
+      await sleep(100);
+      results.panelSwitchFocusesShownPanel = active() === document.getElementById('macro-record'); // no macros yet: ● Rec
+      app.showPanel('sessions');
+      await sleep(100);
+      results.panelSwitchBackRestoresRow = active() === rowOf('web-01') && focusVisible(rowOf('web-01'));
+      await realKey('Tab');
+      results.panelSwitchTabContinues = !!active()?.closest('#panel-sessions') && active() !== rowOf('web-01');
+      const stripMacros = document.querySelector('.strip-btn[data-panel="macros"]'), stripSessions = document.querySelector('.strip-btn[data-panel="sessions"]');
+      stripMacros.focus();
+      stripMacros.click(); // Enter on the focused button (detail 0)
+      await sleep(100);
+      results.stripEnterFocusesPanel = active() === document.getElementById('macro-record');
+      stripSessions.focus();
+      stripSessions.click();
+      await sleep(100);
+      results.stripEnterRestoresRow = active() === rowOf('web-01');
+      app.showPanel('tools'); // from the tree: the tools host box
+      await sleep(100);
+      results.panelSwitchTools = active() === document.getElementById('tool-host');
+      app.showPanel('sessions');
+      await sleep(100);
+      results.panelSwitchBackAgain = active() === rowOf('web-01');
+      await shot('77-panel-switch-back');
+    }
     // type-ahead: letters typed on a row jump to the next row whose name starts with them (folders and sessions alike)
     {
-      for (const name of ['alpha', 'beta', 'bravo']) await app.saveSession({ name, type: 'local', cwd: '/tmp' });
+      for (const name of ['alpha', 'beta', 'bravo', 'Project web']) await app.saveSession({ name, type: 'local', cwd: '/tmp' });
       app.sessionTree.render();
       await sleep(100);
-      results.treeTypeAheadOrder = labels() === 'Production|web-01|alpha|beta|bravo|Project shell|Zeta shell';
+      results.treeTypeAheadOrder = labels() === 'Production|web-01|alpha|beta|bravo|Project shell|Project web|Zeta shell';
       rowOf('Production').focus();
       await press('b');
       results.treeTypeAheadLetter = active() === rowOf('beta') && app.sessionTree.selected === rowOf('beta').dataset.session && rowOf('beta').tabIndex === 0;
@@ -270,6 +313,18 @@
       await sleep(750);
       await press('a', { metaKey: true }); // a modifier makes it a shortcut, never type-ahead
       results.treeTypeAheadIgnoresModifiers = active() === rowOf('Project shell');
+      await sleep(750);
+      // a space inside the prefix is part of it ("project w" → Project web), Space on its own still toggles / selects (KB-06)
+      rowOf('Production').focus();
+      for (const c of 'project ') await press(c);
+      results.treeTypeAheadSpaceKept = active() === rowOf('Project shell'); // "project " still matches the first one
+      await press('w');
+      results.treeTypeAheadSpaceInPrefix = active() === rowOf('Project web');
+      await sleep(750);
+      rowOf('Production').focus();
+      await press(' ');
+      results.treeSpaceAloneToggles = rowOf('Production').parentElement.classList.contains('collapsed');
+      await press(' ');
       const filter = document.getElementById('session-filter');
       filter.focus();
       key(filter, 'b'); // typing in the filter box filters, it never jumps
@@ -287,6 +342,10 @@
       results.modalInitialFocus = active() === closeBtn; // never the ✕
       results.modalRoles = m.getAttribute('role') === 'dialog' && m.getAttribute('aria-modal') === 'true' && closeX.getAttribute('aria-label') === 'Close';
       results.modalListsNewKeys = /⇧F10/.test(m.textContent) && /Focused session row/.test(m.textContent);
+      const srows = [...m.querySelectorAll('.shortcuts > div')].map((d) => [...d.children].map((c) => c.textContent));
+      const keysOf = (re) => srows.filter(([a]) => re.test(a)).map(([, b]) => b).join(' ');
+      results.modalListsMenuKeyAndSelectAll = /Menu/.test(keysOf(/SFTP list/)) && /⌘A/.test(keysOf(/SFTP list/)) && /⇧↑/.test(keysOf(/SFTP list/))
+        && /F10/.test(keysOf(/macro/i)) && /↑/.test(keysOf(/Icon/)) && /Space/.test(keysOf(/Icon/)); // KB-11
       await press('Tab');
       results.modalTabWraps = active() === closeX;
       results.modalCloseRing = focusVisible(closeX);
@@ -302,6 +361,37 @@
       await press('Escape');
       await sleep(200);
       results.modalEscReturnsToOpener = !modal() && active() === rowOf('web-01');
+    }
+    // the Keyboard shortcuts dialog is wide, two columns, and nothing overflows sideways even at the smallest window;
+    // at 1400×900 the whole list is visible without scrolling (VIS-004)
+    {
+      const fits = () => {
+        const m = modal(), body = m.querySelector('.modal-body'), grid = m.querySelector('.shortcuts');
+        return body.scrollWidth <= body.clientWidth && grid.scrollWidth <= grid.clientWidth && [...grid.children].every((d) => d.scrollWidth <= d.clientWidth + 1);
+      };
+      const lines = (el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
+      await window.api.app.testResize(900, 560);
+      await sleep(300);
+      app.activePane().focus();
+      app.action('shortcuts');
+      await sleep(300);
+      results.shortcutsWideTwoColumns = modal().classList.contains('wide') && getComputedStyle(modal().querySelector('.shortcuts')).gridTemplateColumns.trim().split(/\s+/).length === 2;
+      results.shortcutsNoHorizontalOverflowSmall = fits();
+      results.shortcutsLabelsWrapAtMostOnce = [...modal().querySelectorAll('.shortcuts > div > span:first-child')].every((el) => lines(el) <= 2);
+      await shot('82-shortcuts-900x560');
+      await press('Escape');
+      await sleep(200);
+      await window.api.app.testResize(1400, 900);
+      await sleep(300);
+      app.action('shortcuts');
+      await sleep(300);
+      const body = modal().querySelector('.modal-body');
+      results.shortcutsFitTallWindow = fits() && body.scrollHeight <= body.clientHeight;
+      await shot('83-shortcuts-1400x900');
+      await press('Escape');
+      await sleep(200);
+      await window.api.app.testResize(1200, 760);
+      await sleep(300);
     }
     app.activePane().focus();
     app.action('shortcuts'); // opened from the terminal: closing goes back to the terminal
@@ -433,6 +523,54 @@
       await press('Enter');
       await sleep(400);
       results.renameFolderOkKeepsTree = !modal() && !!rowOf('Prod') && active()?.classList.contains('tree-row');
+    }
+
+    // ---------- a session saved from the keyboard becomes the cursor; folders have a keyboard "Move to Folder…" ----------
+    {
+      const fill = (m, name) => {
+        const nameIn = m.querySelector('.modal-body input[type=text], .modal-body input:not([type])');
+        nameIn.value = name; nameIn.dispatchEvent(new Event('input'));
+        const hostIn = [...m.querySelectorAll('input')].find((i) => i.placeholder === 'hostname or IP');
+        hostIn.value = name + '.example.com'; hostIn.dispatchEvent(new Event('input'));
+        [...m.querySelectorAll('.modal-foot .btn')].find((b) => b.textContent === 'Save').click();
+      };
+      rowOf('web-01').focus();
+      app.action('new-session'); // ⌘N while the keyboard is on a row
+      await sleep(350);
+      fill(modal(), 'charlie');
+      await waitFor(() => !modal() && !!rowOf('charlie'), 5000, 'charlie saved');
+      await sleep(150);
+      results.newSessionFromRowIsCursor = active() === rowOf('charlie') && app.sessionTree.selected === rowOf('charlie').dataset.session && rowOf('charlie').tabIndex === 0; // KB-08
+      const nb = document.querySelector('#panel-sessions [data-action="new-session"]');
+      nb.focus();
+      nb.click(); // Enter on the ＋ button: the focus comes back to it, the new row is the selection and the Tab stop
+      await sleep(350);
+      fill(modal(), 'delta');
+      await waitFor(() => !modal() && !!rowOf('delta'), 5000, 'delta saved');
+      await sleep(150);
+      results.newSessionFromButtonSelectsRow = active() === nb && app.sessionTree.selected === rowOf('delta').dataset.session && rowOf('delta').tabIndex === 0;
+      for (const n of ['charlie', 'delta']) await app.deleteSession(app.sessions.sessions.find((x) => x.name === n).id);
+      // folder row ⇧F10 → Move to Folder… (not into itself) → Move: the folder is re-parented, the keyboard stays on it (KB-09)
+      await app.saveAllSessions({ sessions: app.sessions.sessions, folders: [...(app.sessions.folders || []), 'Archive'] });
+      await sleep(100);
+      rowOf('Prod').focus();
+      await press('F10', { shiftKey: true });
+      const mv = items().find((i) => i.textContent.startsWith('Move to Folder'));
+      results.folderMenuHasMove = !!mv;
+      mv.click();
+      await sleep(250);
+      const sel = modal()?.querySelector('select');
+      results.folderMoveExcludesSelf = !!sel && ![...sel.options].some((o) => o.value === 'Prod') && [...sel.options].some((o) => o.value === 'Archive');
+      sel.value = 'Archive';
+      modal().querySelector('.modal-foot .btn.primary').click();
+      await waitFor(() => rowOf('Prod')?._folder?.path === 'Archive/Prod', 5000, 'folder moved');
+      await sleep(150);
+      results.folderMoveKeepsFocus = active() === rowOf('Prod') && rowOf('Prod').tabIndex === 0 && !!rowOf('web-01');
+      await shot('78-folder-moved-from-keyboard');
+      await app.sessionTree.moveFolder('Archive/Prod', '');
+      await app.saveAllSessions({ sessions: app.sessions.sessions, folders: (app.sessions.folders || []).filter((f) => f !== 'Archive') });
+      await sleep(100);
+      results.folderMovedBack = !!rowOf('Prod') && rowOf('Prod')._folder.path === 'Prod' && !rowOf('Archive');
     }
 
     // ---------- session editor: icon / colour pickers are one Tab stop each ----------
@@ -776,6 +914,137 @@
         await press('Escape');
         await sleep(200);
         results.sftpDeleteCancelBackToRow = !modal() && active() === frow('gamma.txt');
+        // ---- more entries: names with a space, a hidden file
+        for (const f of ['my file.txt', 'my fish.txt', '.hid1']) await window.api.sftp.write(connId, `${base}/${f}`, f + '\n');
+        await app.sftpPanel.navigate(dir);
+        await sleep(100);
+        const hid = $('#sftp-hidden');
+        const showHidden = async (on) => { hid.checked = on; hid.dispatchEvent(new Event('change')); await sleep(60); };
+        // PgDn from the list itself (no cursor yet) starts at the first row, like ↓ (KB-14)
+        app.sftpPanel.clearSelection();
+        list.focus();
+        await press('PageDown');
+        results.sftpPageDownFromList = active() === frow('docs') && frow('docs').classList.contains('selected');
+        // type-ahead takes a space inside the prefix: "my fis" → my fish.txt; the Space never scrolls the list (KB-06)
+        const scroll0 = list.scrollTop;
+        let spacePrevented = true;
+        for (const c of 'my fis') { if (key(active(), c) && c === ' ') spacePrevented = false; await sleep(60); } // dispatchEvent is false once preventDefault ran
+        results.sftpTypeAheadSpace = active() === frow('my fish.txt') && spacePrevented && list.scrollTop === scroll0;
+        await sleep(750);
+        // Space on its own toggles the focused row in the selection (and is swallowed, no page scroll)
+        const d1 = key(active(), ' ');
+        await sleep(60);
+        results.sftpSpaceToggles = !d1 && active() === frow('my fish.txt') && !frow('my fish.txt').classList.contains('selected') && app.sftpPanel.selectedEntries().length === 0;
+        key(active(), ' ');
+        await sleep(60);
+        results.sftpSpaceTogglesBack = frow('my fish.txt').classList.contains('selected') && app.sftpPanel.selectedEntries().length === 1;
+        // unticking "Show hidden" drops a selected hidden file from the selection: Enter / Delete act on the row with the ring (KB-01)
+        await showHidden(true);
+        results.sftpHiddenShown = !!frow('.hid1');
+        frow('.hid1').click();
+        await sleep(50);
+        await showHidden(false);
+        results.sftpHidePrunesSelection = !frow('.hid1') && app.sftpPanel.selectedEntries().length === 0 && active() === frow('docs') && stops()[0] === frow('docs');
+        await press('Enter');
+        await waitFor(() => app.sftpPanel.state().path === dir + '/docs', 5000, 'enter docs after hiding');
+        results.sftpHideEnterOpensFocused = app.sftpPanel.state().path === dir + '/docs' && !modal();
+        await press('Backspace');
+        await waitFor(() => app.sftpPanel.state().path === dir, 5000, 'back up');
+        await sleep(100);
+        await showHidden(true);
+        frow('.hid1').click();
+        await sleep(50);
+        await showHidden(false);
+        await press('Delete');
+        await sleep(250);
+        results.sftpHideDeleteAsksFocused = !!modal() && /Delete folder "docs"/.test(modal().textContent) && !/hid1/.test(modal().textContent);
+        await shot('79-sftp-delete-after-hiding');
+        await press('Escape');
+        await sleep(200);
+        // Delete / ⌘⌫ on a focused but unselected row (after Tab-in, Rename, ⌫-up) asks about that row (KB-02)
+        app.sftpPanel.clearSelection();
+        frow('alpha.txt').focus();
+        await press('Delete');
+        await sleep(250);
+        results.sftpDeleteFocusedUnselectedAsks = !!modal() && /Delete "alpha.txt"/.test(modal().textContent);
+        await press('Escape');
+        await sleep(200);
+        results.sftpDeleteFocusedCancelBack = !modal() && active() === frow('alpha.txt');
+        app.sftpPanel.clearSelection();
+        frow('beta.txt').focus();
+        await press('Backspace', { metaKey: true });
+        await sleep(250);
+        results.sftpCmdBackspaceFocused = !!modal() && /Delete "beta.txt"/.test(modal().textContent);
+        await press('Escape');
+        await sleep(200);
+        // built-in editor: ⌘S then Close hands the focus back to the file's row, although the list re-rendered (KB-03)
+        frow('alpha.txt').click();
+        await sleep(50);
+        await press('Enter');
+        await waitFor(() => modal() && modal().querySelector('textarea'), 5000, 'editor');
+        await sleep(100);
+        const ta = modal().querySelector('textarea');
+        results.sftpEditorFocusesText = active() === ta;
+        ta.value += 'edited\n';
+        ta.dispatchEvent(new Event('input'));
+        key(ta, 's', { metaKey: true });
+        await waitFor(() => /Saved alpha.txt/.test($('#toast-root')?.textContent || ''), 5000, 'saved toast');
+        await sleep(300);
+        [...modal().querySelectorAll('.modal-foot .btn')].find((b) => b.textContent === 'Close').click();
+        await sleep(250);
+        results.sftpEditorSaveCloseBackToRow = !modal() && active() === frow('alpha.txt') && stops()[0] === frow('alpha.txt');
+        await shot('80-sftp-editor-save-close');
+        await press('Enter'); // and with Esc after a save
+        await waitFor(() => modal() && modal().querySelector('textarea'), 5000, 'editor again');
+        await sleep(100);
+        key(modal().querySelector('textarea'), 's', { metaKey: true });
+        await sleep(400);
+        await press('Escape');
+        await sleep(250);
+        results.sftpEditorSaveEscBackToRow = !modal() && active() === frow('alpha.txt');
+        // New Folder… from the row menu: the new folder is the cursor and the selection (KB-07)
+        frow('docs').focus();
+        await press('ContextMenu');
+        items().find((i) => i.textContent.startsWith('New Folder')).click();
+        await sleep(250);
+        modal().querySelector('input').value = 'newdir';
+        await press('Enter');
+        await waitFor(() => !!frow('newdir'), 5000, 'mkdir');
+        await sleep(150);
+        results.sftpMkdirCursorOnNew = active() === frow('newdir') && frow('newdir').classList.contains('selected') && stops()[0] === frow('newdir') && app.sftpPanel.selectedEntries().length === 1;
+        // column headers are buttons: Tab reaches them, Enter sorts, aria-sort tells the state; Enter there opens nothing (KB-10)
+        const heads = () => [...list.querySelectorAll('.sftp-head button')];
+        results.sftpSortHeadersFocusable = heads().length === 3 && heads().every((b) => b.tabIndex === 0) && heads()[0].getAttribute('aria-sort') === 'ascending' && heads()[1].getAttribute('aria-sort') === 'none';
+        heads()[1].focus();
+        const pathBefore = app.sftpPanel.state().path;
+        await press('Enter'); // sorts by size — the list's own Enter binding must not open the selected entry
+        results.sftpSortHeaderEnterSorts = app.sftpPanel.state().sort.key === 'size' && heads()[1].getAttribute('aria-sort') === 'ascending' && active() === heads()[1]
+          && app.sftpPanel.state().path === pathBefore && !modal() && focusVisible(heads()[1]);
+        await press(' '); // Space toggles the direction (and never scrolls the list)
+        results.sftpSortHeaderSpaceToggles = app.sftpPanel.state().sort.dir === -1 && heads()[1].getAttribute('aria-sort') === 'descending' && active() === heads()[1];
+        await realKey('Tab'); // Tab from the header goes on to the list's cursor row
+        results.sftpSortHeaderTabToRow = active() === frow('newdir');
+        await shot('81-sftp-sort-header-focus');
+        heads()[0].click();
+        await sleep(100);
+        // panel switching with the keyboard on an SFTP row (KB-04) and Enter on the strip buttons (KB-12)
+        frow('alpha.txt').click();
+        await sleep(50);
+        app.showPanel('sessions');
+        await sleep(100);
+        results.panelSwitchFromSftpFocusesTree = !!active()?.closest('#session-tree');
+        app.showPanel('sftp');
+        await sleep(100);
+        results.panelSwitchBackRestoresSftpRow = active() === frow('alpha.txt');
+        const stripSessions = document.querySelector('.strip-btn[data-panel="sessions"]'), stripSftp = document.querySelector('.strip-btn[data-panel="sftp"]');
+        stripSessions.focus();
+        stripSessions.click();
+        await sleep(100);
+        results.stripEnterIntoSessions = !!active()?.closest('#session-tree');
+        stripSftp.focus();
+        stripSftp.click();
+        await sleep(100);
+        results.stripEnterBackToSftpRow = active() === frow('alpha.txt');
         await window.api.sftp.remove(connId, base, true).catch(() => {});
         app.showPanel('sessions');
         await app.closeTab(app.activePane().tab);

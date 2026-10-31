@@ -1,5 +1,5 @@
 // SFTP browser panel (left sidebar "Sftp" tab) bound to the active SSH pane's connection.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead, repointOpeners } from './ui.js';
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 
@@ -79,6 +79,10 @@ export class SftpPanel {
       const st = this.state();
       if (st) {
         st.hidden = this.els.hidden.checked;
+        // an entry that is no longer displayed must never stay selected (Enter / Delete would act on it unseen)
+        const shown = new Set(this.visibleEntries(st).map((e) => e.name));
+        for (const n of [...st.selected]) if (!shown.has(n)) st.selected.delete(n);
+        if (st.lastSel && !shown.has(st.lastSel)) st.lastSel = null;
         this.renderList();
       }
     });
@@ -249,14 +253,20 @@ export class SftpPanel {
     if (!st) return;
     const list = this.els.list;
     const hadFocus = list.contains(document.activeElement); // keep the keyboard in the list across a re-render
+    const headFocus = document.activeElement?.closest('.sftp-head button')?.dataset.sort; // …or on the header cell that sorted
     list.replaceChildren();
     const entries = this.visibleEntries(st);
+    // sortable header cells are buttons: Tab reaches them, Enter / Space sort (a click re-renders, so a focused
+    // cell is focused again below), aria-sort tells the state
     const headCell = (key, label, cls) => {
       const active = st.sort.key === key;
-      return h('span', { class: cls + (active ? ' sorted' : ''), title: 'Sort by ' + label.toLowerCase(), onclick: () => {
-        st.sort = { key, dir: active ? -st.sort.dir : 1 };
-        this.renderList();
-      } }, label + (active ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''));
+      return h('button', { type: 'button', class: cls + (active ? ' sorted' : ''), dataset: { sort: key }, title: 'Sort by ' + label.toLowerCase(),
+        'aria-sort': active ? (st.sort.dir > 0 ? 'ascending' : 'descending') : 'none',
+        onmousedown: (ev) => ev.preventDefault(), // a mouse click sorts without taking the keyboard from the terminal (like the toolbar)
+        onclick: () => {
+          st.sort = { key, dir: active ? -st.sort.dir : 1 };
+          this.renderList();
+        } }, label + (active ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''));
     };
     list.append(h('div', { class: 'sftp-row sftp-head', role: 'presentation' }, h('span', {}), headCell('name', 'Name', 'name'), headCell('size', 'Size', 'size'), headCell('mtime', 'Modified', 'date')));
     if (st.path !== '/') {
@@ -286,6 +296,10 @@ export class SftpPanel {
       list.append(row);
     }
     this._syncRoving(hadFocus);
+    if (headFocus) list.querySelector(`.sftp-head button[data-sort="${headFocus}"]`)?.focus({ preventScroll: true });
+    // a dialog opened from a row that was just replaced (the built-in editor after ⌘S, a confirm while a transfer
+    // landed…) hands the focus back to the row with the same name when it closes
+    repointOpeners((o) => (o.classList?.contains('sftp-row') && o.dataset.name ? this.rowFor(o.dataset.name) : null));
   }
 
   /** Rows the keyboard cursor moves over, in display order (".." is focusable but outside the sequence). */
@@ -365,6 +379,23 @@ export class SftpPanel {
     return st ? st.entries.filter((e) => st.selected.has(e.name)) : [];
   }
 
+  /**
+   * After a listing refresh, make the entry called `name` the cursor row and the selection (Finder: a new or renamed
+   * item is what you act on next); the focus follows only while the keyboard is in the list — a toolbar button that
+   * opened the dialog keeps it.
+   */
+  _cursorTo(name) {
+    const st = this.state();
+    const row = st && name !== '..' ? this.rowFor(name) : null;
+    if (!row) return;
+    st.lastSel = name;
+    st.selected.clear();
+    st.selected.add(name);
+    this._paintSelection(st);
+    this._rove(row);
+    if (this.els.list.contains(document.activeElement)) this.focusRow(row);
+  }
+
   join(name) {
     const st = this.state();
     return (st.path === '/' ? '' : st.path) + '/' + name;
@@ -372,17 +403,25 @@ export class SftpPanel {
 
   /**
    * Keys on the list or a focused row: ↑/↓, Home/End, PgUp/PgDn move the cursor (⇧ extends the selection), Enter
-   * opens the selected entry (or the focused row; ".." goes up), ⌫ goes up, Delete / ⌘⌫ deletes, ⌘A selects all,
-   * ⇧F10 / Menu key open the row's menu; letters (no modifier) are Finder-style type-ahead over the shown names.
+   * opens the focused row (".." goes up; from the list itself the single selected entry; with several selected
+   * nothing), ⌫ goes up, Delete / ⌘⌫ deletes the selection — or the focused row when nothing is selected —, Space
+   * toggles the focused row's selection, ⌘A selects all, ⇧F10 / Menu key open the row's menu; letters (no modifier)
+   * are Finder-style type-ahead over the shown names (a space inside the prefix included).
    */
   onKey(e) {
     const st = this.state();
     if (!st || e.target.matches('input, textarea, select')) return;
+    const head = e.target.closest('.sftp-head button');
+    if (head) { // a sort header cell: Enter / Space sort (one click: the prevented keydown cancels the button's own activation)
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); head.click(); }
+      return;
+    }
     const sel = this.selectedEntries();
     const rows = this.rows(), names = rows.map((r) => r.dataset.name);
     const focused = e.target.closest('.sftp-row[data-name]');
     const onUp = !!focused && focused.dataset.name === '..';
     const i = focused && !onUp ? rows.indexOf(focused) : -1; // -1: the list itself has the focus, no cursor yet
+    const cur = i >= 0 ? st.entries.find((x) => x.name === names[i]) : null; // the row with the focus ring
     const go = (j, extend) => { // cursor to row j (clamped); ⇧ extends the selection from the last selected entry
       const n = names[Math.max(0, Math.min(names.length - 1, j))];
       if (n !== undefined) this.select(st.entries.find((x) => x.name === n), extend ? e : null);
@@ -391,15 +430,24 @@ export class SftpPanel {
     const page = () => Math.max(1, Math.floor(this.els.list.clientHeight / ((rows[0] && rows[0].offsetHeight) || 24)) - 1);
     if (e.key === 'Enter') {
       if (onUp) this.cmd('up');
-      else if (sel.length === 1) this.open(sel[0]);
-      else if (!sel.length && i >= 0) this.open(st.entries.find((x) => x.name === names[i]));
+      else if (cur && sel.length <= 1) this.open(cur);
+      else if (!cur && sel.length === 1) this.open(sel[0]);
     } else if (e.key === 'Backspace' && !e.metaKey) this.cmd('up');
-    else if ((e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) && sel.length) this.cmd('delete');
-    else if (e.key === 'ArrowDown') go(i + 1, e.shiftKey);
+    else if (e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) {
+      e.preventDefault();
+      if (sel.length) this.cmd('delete');
+      else if (cur) this.remove([cur]);
+    } else if (e.key === ' ') {
+      e.preventDefault(); // never lets the list page-scroll
+      if (this._typeAhead.active()) { // "my f…": the space belongs to the prefix being typed
+        const j = this._typeAhead(e, names, i);
+        if (j >= 0) go(j, false);
+      } else if (cur) this.select(cur, { metaKey: true }); // toggles the focused row in the selection
+    } else if (e.key === 'ArrowDown') go(i + 1, e.shiftKey);
     else if (e.key === 'ArrowUp') go(i < 0 ? names.length - 1 : i - 1, e.shiftKey);
     else if (e.key === 'Home') go(0, e.shiftKey);
     else if (e.key === 'End') go(names.length - 1, e.shiftKey);
-    else if (e.key === 'PageDown') go(i + page(), e.shiftKey);
+    else if (e.key === 'PageDown') go(i < 0 ? 0 : i + page(), e.shiftKey); // from the list itself: the first row, like ↓
     else if (e.key === 'PageUp') go(i < 0 ? names.length - 1 : i - page(), e.shiftKey);
     else if (e.key === 'a' && e.metaKey) {
       this.visibleEntries(st).forEach((x) => st.selected.add(x.name));
@@ -451,6 +499,7 @@ export class SftpPanel {
         try {
           await window.api.sftp.mkdir(this.connId, this.join(n.trim()));
           await this.navigate(st.path);
+          this._cursorTo(n.trim()); // the new folder is what the user acts on next (open, rename…)
         } catch (err) {
           toast(errMsg(err), 'error');
         }
@@ -555,7 +604,8 @@ export class SftpPanel {
       if (this.connId !== connId) return;
       await window.api.sftp.rename(connId, this.join(e.name), this.join(n));
       if (st.lastSel === e.name) st.lastSel = n; // the keyboard cursor follows the renamed entry
-      this.navigate(st.path);
+      await this.navigate(st.path);
+      if (this.connId === connId && st.lastSel === n) this._cursorTo(n); // …and so does the selection
     } catch (err) {
       toast(errMsg(err), 'error');
     }
@@ -604,7 +654,7 @@ export class SftpPanel {
         await window.api.sftp.write(connId, remote, ta.value);
         dirty = false;
         toast(`Saved ${e.name}`, 'success');
-        this.navigate(this.state()?.path);
+        await this.navigate(this.state()?.path); // re-renders the list; renderList re-points this dialog's opener row
       } catch (err) {
         toast(errMsg(err), 'error');
       }

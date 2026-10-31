@@ -26,13 +26,16 @@ export function h(tag, attrs = {}, ...children) {
  * Finder-style type-ahead for a list of names. Printable keys typed within `ms` of each other form a prefix and the
  * cursor moves to the next item whose name starts with it (case-insensitive, wrapping; a prefix that grows refines
  * the current match, the same letter typed again cycles through the items starting with it). Returns the index to
- * move to, or -1 when nothing matches or the key is not type-ahead at all (a modifier is held, Space, a non-printable
- * key, IME composition) — the caller then treats the key as before.
+ * move to, or -1 when nothing matches or the key is not type-ahead at all (a modifier is held, a non-printable key,
+ * IME composition) — the caller then treats the key as before. A space counts only inside a prefix being typed
+ * ("my f…"); on its own it is never type-ahead. `fn.active()` tells whether a prefix is being typed right now, so a
+ * caller can hand Space to the prefix instead of its own Space binding.
  */
 export function typeAhead(ms = 700) {
   let prefix = '', at = 0;
-  return (e, names, cur) => {
-    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || e.key.length !== 1 || e.key === ' ') return -1;
+  const active = () => prefix !== '' && Date.now() - at <= ms;
+  const fn = (e, names, cur) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.isComposing || e.key.length !== 1 || (e.key === ' ' && !active())) return -1;
     const now = Date.now();
     if (now - at > ms) prefix = '';
     at = now;
@@ -48,6 +51,8 @@ export function typeAhead(ms = 700) {
     }
     return -1;
   };
+  fn.active = active;
+  return fn;
 }
 
 export function escapeHtml(s) {
@@ -238,8 +243,9 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
       const top = modalStack[modalStack.length - 1];
       // focus goes back to what opened this dialog: a control of the parent dialog (sub-dialogs), a tab, a tree
       // row, a toolbar/panel button…; the parent's first control / the terminal only when that is gone
-      if (top) focusBack(top.el.contains(opener) ? opener : null, () => top.focusFirst());
-      else focusBack(opener, () => document.dispatchEvent(new CustomEvent('modal-closed'))); // app.js hands focus to the terminal
+      // (api.opener, not the captured element: a list that re-rendered while the dialog was open re-points it)
+      if (top) focusBack(top.el.contains(api.opener) ? api.opener : null, () => top.focusFirst());
+      else focusBack(api.opener, () => document.dispatchEvent(new CustomEvent('modal-closed'))); // app.js hands focus to the terminal
     },
     focusFirst() {
       // First visible form control in the body, then the primary button, then any button (never the ✕).
@@ -314,6 +320,20 @@ export function showModal({ title, body, buttons = [], width, onClose, closeOnBa
 
 export function anyModalOpen() {
   return modalStack.length > 0;
+}
+
+/**
+ * A list that re-rendered while a dialog was open (the built-in editor saves and refreshes the listing, a transfer
+ * finishes, a connection comes up…) calls this with a mapper from the stale opener row to its replacement; closing
+ * the dialog then hands the focus to the new row instead of falling through to the terminal.
+ */
+export function repointOpeners(fn) {
+  for (const m of modalStack) {
+    const o = m.opener;
+    if (!o || o.isConnected) continue;
+    const n = fn(o);
+    if (n) m.opener = n;
+  }
 }
 
 export function confirmDialog(message, { title = 'Confirm', okLabel = 'OK', danger = false } = {}) {
