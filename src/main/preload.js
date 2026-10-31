@@ -4,6 +4,39 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron');
 const invoke = (ch, ...args) => ipcRenderer.invoke(ch, ...args);
 const send = (ch, ...args) => ipcRenderer.send(ch, ...args);
 
+// ---------- first paint in the saved theme ----------
+// The chrome the renderer applied last time (main.js remembers it in the settings) goes on <html> as inline custom
+// properties right now, while the document is still empty: styles.css defaults to the moba-dark tokens, and app.js
+// re-applies the selected theme only after the settings arrived over IPC, which is after the first paint. Without
+// this a saved light theme flashed the dark chrome at every launch. Synchronous on purpose: anything async lands
+// after the paint. app.js overwrites every one of these once it runs.
+let bootChrome = null;
+try { bootChrome = ipcRenderer.sendSync('app:boot-chrome'); } catch {}
+const applyBootChrome = () => {
+  const root = document.documentElement;
+  if (!root || !bootChrome || !bootChrome.vars) return false;
+  for (const [k, v] of Object.entries(bootChrome.vars)) root.style.setProperty(k, v);
+  root.style.colorScheme = bootChrome.scheme;
+  if (bootChrome.theme) root.dataset.theme = bootChrome.theme;
+  root.dataset.scheme = bootChrome.scheme;
+  return true;
+};
+if (!applyBootChrome()) {
+  // no <html> element yet: apply the moment the parser creates it (still before anything is painted)
+  const mo = new MutationObserver(() => { if (applyBootChrome()) mo.disconnect(); });
+  mo.observe(document, { childList: true });
+}
+// Test-only: what the first frames showed. A test script runs 500 ms after the load, too late to see them itself.
+const firstFrames = [];
+if (process.env.MOBALT_TEST_SCRIPT) {
+  const rec = () => {
+    const html = document.documentElement, body = document.body;
+    firstFrames.push({ t: Math.round(performance.now()), html: html ? getComputedStyle(html).backgroundColor : null, body: body ? getComputedStyle(body).backgroundColor : null, scheme: html ? getComputedStyle(html).colorScheme : null });
+    if (firstFrames.length < 12) requestAnimationFrame(rec);
+  };
+  requestAnimationFrame(rec);
+}
+
 const EVENT_CHANNELS = [
   'term:data', 'term:exit', 'ssh:status', 'sftp:transfer', 'sftp:edit-synced', 'tunnels:changed',
   'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'app:notice', 'app:bundle-updated',
@@ -38,7 +71,10 @@ contextBridge.exposeInMainWorld('api', {
     relaunch: () => invoke('app:relaunch'),
     // the chrome palette the renderer applied ({ background: '#rrggbb', scheme: 'dark'|'light' }): window background + native theme
     chrome: (chrome) => send('app:chrome', chrome),
+    // the chrome the preload put on <html> before the first paint (null on a first launch)
+    bootChrome: () => bootChrome,
     testChrome: () => invoke('test:chrome'),
+    testFirstFrames: () => firstFrames.slice(),
   },
   term: {
     spawnLocal: (opts) => invoke('term:spawn-local', opts),

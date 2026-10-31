@@ -922,24 +922,25 @@ class App {
   /**
    * The selected theme colours the whole program: its chrome palette (theme.js) goes on <html> as the CSS custom
    * properties styles.css reads, `color-scheme` makes the native widgets (selects, checkboxes, scrollbars) follow,
-   * and the main process gets the window background so the title-bar strip matches (and the next launch starts in
-   * it). The active tab, the content area and the empty-state cards take the terminal theme's own colours
-   * (`--term-bg/--term-fg`); a session's own theme stays with its pane (TermPane.applyTheme).
+   * and the main process gets the window background so the title-bar strip matches, plus the whole token set, which
+   * the preload puts on <html> before the first paint of the next launch (no dark flash behind a saved light theme).
+   * The active tab, the content area and the empty-state cards take the terminal theme's own colours
+   * (`--term-bg/--term-fg`); a session's own theme stays with its pane (TermPane.applyTheme) and its tab (layout.js).
    */
   _applyTheme() {
     const name = THEMES[this.settings.theme] ? this.settings.theme : 'moba-dark';
     const t = THEMES[name], palette = chromePalette(t, name);
     const root = document.documentElement;
-    for (const [k, v] of Object.entries(cssVars(palette))) root.style.setProperty(k, v);
-    root.style.setProperty('--term-bg', t.background || '#1e1e1e');
-    root.style.setProperty('--term-fg', t.foreground || '#ececec'); // empty-state text stays readable on light themes
+    const vars = { ...cssVars(palette), '--term-bg': t.background || '#1e1e1e', '--term-fg': t.foreground || '#ececec' }; // empty-state text stays readable on light themes
+    for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
     root.style.colorScheme = palette.scheme;
     root.dataset.theme = name;
     root.dataset.scheme = palette.scheme;
     this.palette = palette;
-    const chrome = { background: palette.bg, scheme: palette.scheme };
-    if (this._chrome && this._chrome.background === chrome.background && this._chrome.scheme === chrome.scheme) return;
-    this._chrome = chrome;
+    const chrome = { background: palette.bg, scheme: palette.scheme, theme: name, vars };
+    const key = JSON.stringify(chrome);
+    if (this._chromeKey === key) return;
+    this._chromeKey = key;
     window.api.app.chrome(chrome);
   }
 

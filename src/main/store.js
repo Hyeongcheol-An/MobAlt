@@ -222,4 +222,24 @@ class Store {
   }
 }
 
-module.exports = { Store, DEFAULT_SETTINGS, encrypt, decrypt, userDataFile };
+/**
+ * The chrome the renderer applied (app:chrome), as it is remembered in the settings and handed to the next launch:
+ * `{ background: '#rrggbb', scheme: 'dark'|'light', theme?: name, vars?: { '--bg': '#rrggbb', … } }`. `vars` are the
+ * palette's CSS custom properties (colours, or the two alphas like '.4'); the preload puts them on <html> before the
+ * first paint. Anything that is not a chrome is null; a `vars` map keeps only well-formed entries.
+ */
+function validChrome(c) {
+  if (!c || typeof c !== 'object' || !/^#[0-9a-f]{6}$/i.test(String(c.background)) || (c.scheme !== 'dark' && c.scheme !== 'light')) return null;
+  const out = { background: String(c.background).toLowerCase(), scheme: c.scheme };
+  if (typeof c.theme === 'string' && /^[a-z0-9-]{1,40}$/.test(c.theme)) out.theme = c.theme;
+  if (c.vars && typeof c.vars === 'object' && !Array.isArray(c.vars)) {
+    const vars = {};
+    for (const [k, v] of Object.entries(c.vars)) {
+      if (/^--[a-z][a-z0-9-]{0,40}$/.test(k) && /^(#[0-9a-f]{6}|0?\.\d{1,3}|[01])$/i.test(String(v))) vars[k] = String(v).toLowerCase();
+    }
+    if (Object.keys(vars).length) out.vars = vars;
+  }
+  return out;
+}
+
+module.exports = { Store, DEFAULT_SETTINGS, encrypt, decrypt, userDataFile, validChrome };
