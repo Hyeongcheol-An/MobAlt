@@ -30,20 +30,20 @@ last column says which parts are missing.
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
 | 2. SSH specifics | 19 | 9 | 7 | 2 | 37 |
-| 3. Terminal | 10 | 13 | 7 | 1 | 31 |
+| 3. Terminal | 11 | 12 | 7 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
 | 5. Network and admin tools, embedded servers, Moba* utilities | 7 | 2 | 7 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **52** | **40** | **32** | **59** | **183** |
-| 8. Recent additions (24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
-| 9. UX details power users rely on | 8 | 10 | 1 | 1 | 20 |
-| **All tables** | **64** | **66** | **40** | **63** | **233** |
+| **Sections 1–7 (each feature once)** | **53** | **39** | **32** | **59** | **183** |
+| 8. Recent additions (24.3 → 26.6) | 4 | 17 | 6 | 3 | 30 |
+| 9. UX details power users rely on | 9 | 9 | 1 | 1 | 20 |
+| **All tables** | **66** | **65** | **39** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 52 in full, 40 in a narrower or different form and lacks 32.
+MobAlt has 53 in full, 39 in a narrower or different form and lacks 32.
 
 ## 1. Session types
 
@@ -119,7 +119,7 @@ MobAlt has 52 in full, 40 in a narrower or different form and lacks 32.
 |---|---|---|
 | Tabbed terminal | ✅ | tabs: drag to reorder, double-click rename, middle-click close, ⌃Tab / ⌃⇧Tab, ⌃⌘1-9, tab list menu; no hard limit |
 | Split modes (1 / 2 / 4) | ✅ | Split ▾: right (⌘D), down (⇧⌘D), grids 1×2 … 2×4 = 8 panes (⌥⌘2/4/6/8), unsplit ⌥⌘1, drop sessions on pane edges |
-| MultiExec | 🟡 | ⇧⌘M broadcasts to every visible pane of the active tab; no per-pane Exclude or synchronised scrolling |
+| MultiExec | ✅ | ⇧⌘M broadcasts to every visible pane of the active tab; MobaXterm's *Exclude "name" from MultiExec mode* box under each terminal, the right-click menu's Activate all / Activate none / Invert selection and Synchronize mouse wheel scrolling |
 | Detach / reattach / fullscreen / stay on top | 🟡 | Detach to New Window (tab menu, ⌥⌘N) moves a tab into a window of its own with its terminals alive, closing that window reattaches it, and the workspace reopens such windows; macOS full screen through the window's green button; no always-on-top |
 | Macros (keyboard) | 🟡 | Macros panel (⌘4): ● Rec records keystrokes, text macros with `\n` / `\x1b[A` escapes, play into the active or all terminals; no wait-for, folders, nesting or in-terminal picker |
 | Graphical macros (mouse + keyboard) | ❌ | not implemented |
@@ -294,7 +294,7 @@ MobAlt has 52 in full, 40 in a narrower or different form and lacks 32.
 | 25.0 — PuTTY engine + Unicode 16, dark-mode dialogs, CVE-2025-0714 | 🟡 | Unicode 11 width tables; dialogs follow the chosen theme (dark or light) |
 | 24.4 — SFTP multi-block transfers, close tabs left/right, rename-tab shortcut, Pro X11 lockdown, PNG logos | 🟡 | concurrent SFTP reads/writes; Close Tabs to the Left / Right in the tab menu; Rename Tab (double-click / menu, no shortcut); no X11 lockdown or logo options |
 | 24.3 — graphical macros, macro folders, encrypted macros, VNC IPv6, 64-bit default, close inactive tabs | ❌ | none (macros are stored in `settings.json`) |
-| 24.2 — Expert RDP settings, fullscreen across monitors, MultiExec sync-scroll, `X11MCAuth` | ❌ | RDP is Windows App's; no synchronised scrolling |
+| 24.2 — Expert RDP settings, fullscreen across monitors, MultiExec sync-scroll, `X11MCAuth` | 🟡 | MultiExec's Synchronize mouse wheel scrolling (right-click menu); RDP is Windows App's; no `X11MCAuth` |
 | 24.0 — Expert terminal settings, host-key prompt in the SFTP browser | 🟡 | a subset of terminal settings; the host key is checked for every connection |
 | 23.x — Edge browser engine, editable shared sessions, NTRU Prime + AES-GCM, Telnet keepalive, tab pinning, Terrapin fixes | 🟡 | strict KEX (Terrapin) through ssh2; AES-GCM in ssh2's defaults; tab pinning (⇧⌘P); no browser, shared sessions or telnet keepalive |
 
@@ -309,7 +309,7 @@ MobAlt has 52 in full, 40 in a narrower or different form and lacks 32.
 | Right-click paste as a global toggle | ✅ | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", on by default |
 | Copy-on-select, Alt-drag rectangle, tunable delimiters | ✅ | Copy on select (toggle), ⌥-drag column selection; delimiters not tunable |
 | Multi-line paste guard with preview and malware checks | ✅ | "Paste N lines into …?" with an editable preview and the suspicious-content findings; both toggles in Settings → Features → Paste guard |
-| MultiExec and split views (Exclude, sync scroll) | 🟡 | splits and grids up to 8 panes; MultiExec without Exclude or synchronised scrolling |
+| MultiExec and split views (Exclude, sync scroll) | ✅ | splits and grids up to 8 panes; MultiExec with the Exclude box under each terminal, Activate all / none / Invert selection and synchronised wheel scrolling |
 | Macros as first-class objects (WaitFor, nesting, folders, encryption) | 🟡 | recorded and text macros, play to one or all terminals; none of the extras |
 | Jump hosts as a dropdown | ✅ | Advanced SSH → Jump host dropdown of saved sessions (or manual), chained through the jump session's own jump host; Sftp and X11 routed through; SSH sessions only |
 | Credentials vs passwords (named credentials, master password, Hello) | 🟡 | per-session passwords in the Keychain; no named credentials |
@@ -383,9 +383,9 @@ CA, GSSAPI, per-session SOCKS/HTTP proxy, adapt locales, terminal type per sessi
 graphical macros, Save terminal text / print, bell, backspace mode, separation line, "live terminal"
 settings, packet capture, open-ports list, MobaDiff / MobaFoldersDiff, command-line parameters,
 shell scripting commands, toolbar customisation, keyboard-shortcut editor, config bundle export.
-Smaller gaps inside 🟡 rows: MultiExec Exclude and synchronised scrolling, tunnel auto-reconnect /
-duplicate / reorder, telnet keepalive and auto-login, custom colour themes, activity marker on
-tabs, side-by-side docking of the file panel, right-hand sidebar.
+Smaller gaps inside 🟡 rows: tunnel auto-reconnect / duplicate / reorder, telnet keepalive and
+auto-login, custom colour themes, activity marker on tabs, side-by-side docking of the file panel,
+right-hand sidebar.
 
 ## Out of scope on macOS
 

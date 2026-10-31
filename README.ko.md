@@ -45,7 +45,7 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | 드래그 앤 드롭 업로드 | ✅ | Finder 항목을 SFTP 목록이나 터미널에 드롭 |
 | 내장 X 서버 | ✅ XQuartz 연동 | 필요할 때 XQuartz를 띄우고 X11 채널을 쿠키 교체 프록시로 중계 |
 | MobaSSHTunnel | ✅ Tunneling | Local(-L), Remote(-R), Dynamic SOCKS5(-D). 세션별 자동 시작 또는 독립 터널 |
-| MultiExec | ✅ | 모든 터미널에 동시 입력 (⇧⌘M) |
+| MultiExec | ✅ | 모든 터미널에 동시 입력 (⇧⌘M). 터미널마다 아래에 *Exclude "이름" from MultiExec mode* 체크 상자, 우클릭 메뉴에 Activate all / none / Invert selection과 휠 스크롤 동기화 |
 | 붙여넣기 보호(여러 줄 확인, 악성 붙여넣기 검사) | ✅ | 여러 줄·긴 붙여넣기는 편집 가능한 미리보기로 먼저 확인. 모든 붙여넣기에서 폭 없는 문자·bidi·제어 문자, 마지막 줄바꿈, `curl \| sh`, 프로필 쓰기, `rm -rf /`, 동형 문자를 찾아 표시하고 "Paste cleaned" 제공 |
 | 분할 터미널 | ✅ | 오른쪽/아래 분할과 최대 2×4(8개) 격자. 빈 페인이나 페인 가장자리에 세션 드롭, 탭을 페인으로 드래그. ⌥⌘1 분할 해제 — 나머지 페인은 각각 탭이 됨(또는 닫기·매번 묻기: 설정) |
 | Macros | ✅ | 키 입력 녹화/재생, 텍스트 매크로, 모든 터미널에 재생 |
@@ -130,7 +130,7 @@ brew install --cask mobalt
 - **시작 명령**(MobaXterm의 *Execute command*): 세션 편집기 Terminal 탭의 Startup commands는 터미널이 준비되면
   모든 세션 종류에서 자동 입력됩니다. 예: 로컬 세션의 Start folder를 프로젝트 폴더로, 시작 명령을
   `claude --resume <id>`로 두면 열 때마다 Claude Code가 이어집니다.
-- **MultiExec**: 툴바 버튼 또는 ⇧⌘M. 켜져 있는 동안 입력이 모든 터미널로 갑니다.
+- **MultiExec**: 툴바 버튼 또는 ⇧⌘M. 켜져 있는 동안 입력이 모든 터미널로 갑니다. 터미널 아래의 체크 상자를 켜면 그 페인은 제외됩니다(접속은 유지되고, 직접 친 키는 그 페인에만 들어감). 체크 상자 줄이나 배너를 우클릭하면 Activate all / none, Invert selection, 휠 스크롤 동기화.
 - **키보드**: Help → Keyboard Shortcuts. 우클릭은 붙여넣기(⇧+우클릭은 메뉴), 선택하면 복사됩니다.
   Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈으로 동작합니다.
 

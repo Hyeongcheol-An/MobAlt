@@ -297,6 +297,12 @@
         "src/renderer/app.js"
       ]
     },
+    "{n} excluded": {
+      "plural": "{n} excluded",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "{n} file": {
       "plural": "{n} files",
       "refs": [
@@ -752,6 +758,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Activate all": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "Activate none": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "active": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -939,7 +955,7 @@
         "src/renderer/index.html"
       ]
     },
-    "Broadcast keystrokes to every visible terminal in this tab (⇧⌘M)": {
+    "Broadcast keystrokes to every visible terminal in this tab — a box under each terminal excludes it (⇧⌘M)": {
       "refs": [
         "src/renderer/index.html"
       ]
@@ -2057,6 +2073,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Exclude \"{title}\" from MultiExec mode": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Exclude from MultiExec": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "exit status {code}": {
       "refs": [
         "src/main/ssh.js"
@@ -2666,6 +2692,11 @@
     "Invalid private key {key}: {error}": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "Invert selection": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "invisible character": {
@@ -3319,6 +3350,11 @@
         "src/renderer/app.js"
       ]
     },
+    "MultiExec is ON — every visible terminal is excluded — untick \"Exclude … from MultiExec mode\" under a pane": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab": {
       "refs": [
         "src/renderer/app.js"
@@ -3352,6 +3388,11 @@
     "MultiExec ON: only the zoomed pane is visible — restore the panes (⇧⌘⏎) to broadcast": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "MultiExec: {title}": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "name": {
@@ -5331,6 +5372,11 @@
     "Switch to tab 1-9": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Synchronize mouse wheel scrolling": {
+      "refs": [
+        "src/renderer/app.js"
       ]
     },
     "System default ({name})": {
