@@ -48,6 +48,8 @@
     if (document.querySelectorAll('.modal').length > before) { document.querySelector('.modal.narrow .btn.primary, .modal.narrow .modal-foot .primary, .modal.narrow .modal-foot button:last-child')?.click(); await sleep(250); }
   };
   const closeAll = async () => { for (let i = 0; i < 6 && document.querySelector('.modal'); i++) await closeModal(); };
+  const ui = await import('./ui.js');
+  const closeMenu = async () => { ui.closeContextMenu(); document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })); await closeMenu(); };
   const tabTo = async (i) => { const b = document.querySelectorAll('.modal .mtabs button')[i]; if (b) { b.click(); await sleep(200); } };
   try {
     await app.saveSettings({ confirmClose: false });
@@ -80,12 +82,12 @@
     }
     // context menus: a tab, the split menu, the tree root
     const tab = document.querySelector('#tabs .tab');
-    if (tab) { tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 60 })); await sleep(250); check('tab-menu'); await shot('50-tab-menu'); document.body.click(); await sleep(150); }
-    app.action('split-menu'); await sleep(250); check('split-menu'); await shot('51-split-menu'); document.body.click(); await sleep(150);
+    if (tab) { tab.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 300, clientY: 60 })); await sleep(250); check('tab-menu'); await shot('50-tab-menu'); await closeMenu(); }
+    app.action('split-menu'); await sleep(250); check('split-menu'); await shot('51-split-menu'); await closeMenu();
     const tree = document.querySelector('#session-tree');
-    if (tree) { tree.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 200 })); await sleep(250); check('tree-menu'); await shot('52-tree-menu'); document.body.click(); await sleep(150); }
+    if (tree) { tree.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 200 })); await sleep(250); check('tree-menu'); await shot('52-tree-menu'); await closeMenu(); }
     const pane = app.activePane && app.activePane();
-    if (pane && pane.termEl) { pane.termEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 500, clientY: 300, shiftKey: true })); await sleep(250); check('pane-menu'); await shot('53-pane-menu'); document.body.click(); await sleep(150); }
+    if (pane && pane.termEl) { pane.termEl.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 500, clientY: 300, shiftKey: true })); await sleep(250); check('pane-menu'); await shot('53-pane-menu'); await closeMenu(); }
     // split + multiexec banner + find bar
     app.applyLayout('2x2'); await sleep(600); app.action('multiexec'); await sleep(200); app.action('find'); await sleep(200);
     check('split-multiexec-find'); await shot('60-split-multiexec-find');
@@ -93,7 +95,7 @@
     // the relaunch banner
     await window.api.app.testBundleUpdated('9.9.9'); await sleep(400); check('update-banner'); await shot('61-update-banner');
     // toasts
-    const ui = await import('./ui.js'); ui.toast('Toast sample', 'info'); ui.toast('Error sample', 'error'); await sleep(200); await shot('62-toasts');
+    ui.toast('Toast sample', 'info'); ui.toast('Error sample', 'error'); await sleep(200); await shot('62-toasts');
     // at the large size
     await window.api.app.testResize(1400, 900); await sleep(500); check('large'); await shot('70-large');
     log('RESULT', JSON.stringify({ lang, overflows: overflows.length, latin: latin.size }));
