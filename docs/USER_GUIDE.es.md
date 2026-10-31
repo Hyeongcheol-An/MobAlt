@@ -176,10 +176,41 @@ carpetas y deja el campo como estaba si cancelas.
   cabecera) para recuperar la disposición. Dividir, cerrar un panel, una disposición en cuadrícula o dar el foco a un
   panel oculto (⌘]) restauran la disposición primero. Cada pestaña conserva su propio estado de maximizado, también
   tras un reinicio.
+- **Menú del panel** (clic derecho sobre un terminal; ⇧-clic derecho o ⌃-clic derecho mientras *El clic derecho pega*
+  está activado): además de copiar, pegar, buscar, borrar, dividir y maximizar, tiene las opciones por terminal del menú
+  de terminal de MobaXterm. *Renombrar panel…* (el *Rename Terminal* de MobaXterm) da nombre al propio panel: la cabecera
+  del panel muestra el nombre, la pestaña lo adopta cuando es el panel el que le da título, y las secuencias de título
+  del shell ya no lo cambian; un nombre vacío vuelve al título automático. *Ajustes del panel…* es el «reconfigurar el
+  terminal actual» de MobaXterm: tema, tipo y tamaño de letra, estilo y parpadeo del cursor, historial, resaltado de
+  palabras clave, la barra de monitoreo (SSH / Mosh), solo lectura y la etiqueta de fondo de este panel, por encima de
+  los valores de la sesión y de Ajustes (un campo vacío los sigue). *Aplicar a este panel* cambia solo este panel (los
+  valores lo acompañan al maximizar, al separarlo y en el espacio de trabajo) y *Guardar en la sesión* (solo en una
+  sesión guardada) escribe además los campos que tiene la sesión (tema, tamaño de letra, resaltado de palabras clave,
+  monitoreo, etiqueta de fondo), de modo que todos los paneles que se abran después desde esa sesión los siguen.
+  *Tamaño de letra ▸* cambia la letra de este panel paso a paso (⌘= / ⌘- / ⌘0 hacen lo mismo en el panel con el foco;
+  *Tamaño real* vuelve al tamaño propio del panel). *Solo lectura* descarta las pulsaciones y lo que se pegue en el panel
+  mientras su salida sigue llegando: una etiqueta *solo lectura* en la cabecera lo indica, y MultiExec deja fuera el panel.
+- **Etiqueta de fondo**: un nombre grande y tenue dibujado detrás del texto de un panel (por omisión, el nombre de la
+  sesión) para reconocer el servidor de un vistazo, como el badge de iTerm2 (MobaXterm solo nombra un panel en su barra
+  de pestañas). *Etiqueta de fondo ▸* en el menú del panel la muestra u oculta, define su texto (*Definir texto…*; vacío
+  = la etiqueta de la sesión o, si no hay, su nombre o el título del panel) y la coloca en el centro o arriba a la
+  derecha; la pestaña Terminal del editor de sesiones (*Etiqueta de fondo*: visible, texto, posición) la activa para
+  todos los paneles de una sesión, y el ajuste propio de un panel prevalece sobre el de la sesión. La etiqueta se escala
+  con el panel, se oculta en celdas diminutas, toma el color de primer plano del panel con un 16 % de opacidad y nunca
+  forma parte del búfer del terminal, de una selección, de una copia ni de un registro de sesión.
 - **MultiExec** (⇧⌘M): mientras está activado, cada pulsación va a todos los terminales visibles en pantalla: los
   paneles activos de la pestaña actual, o solo el panel maximizado mientras uno ocupa la pestaña. Las demás pestañas
   nunca la reciben, así que divide la pestaña (o usa una cuadrícula) para poner lado a lado los servidores que quieres
   manejar. El aviso indica cuántos terminales visibles escuchan y sigue a la pestaña a la que cambies.
+  Para dejar fuera un panel, marca la casilla bajo su terminal (*Excluir «nombre» del modo MultiExec*, como en
+  MobaXterm) o usa *Excluir de MultiExec* en el menú contextual del panel: el panel sigue en pantalla y conectado, lo que
+  se escribe en otros terminales ya no le llega y lo que escribes en él va solo a él (útil para ejecutar una orden en un
+  único servidor sin salir del modo). El aviso añade entonces *, N excluidos*, o indica que todos los terminales
+  visibles están excluidos. Un clic derecho en la franja de una casilla o en el aviso (⇧F10 sobre una casilla con el
+  foco) abre el menú del modo: *Activar todos*, *Desactivar todos*, *Invertir selección* y *Sincronizar el
+  desplazamiento con la rueda del ratón*, que desplaza los demás terminales que escuchan el mismo número de líneas
+  cuando giras la rueda sobre uno. Las casillas se desmarcan cada vez que se desactiva MultiExec; no se guarda nada de
+  ellas.
 - **Barra de monitoreo remoto**: cada panel SSH muestra una franja de una línea bajo su cabecera: CPU, memoria usada /
   total, disco raíz usado, tasas de red ↓ / ↑, carga media, tiempo encendido y el nombre del host, actualizada cada 3 s
   (Ajustes → Funciones → Monitoreo, 2–30 s). Un pequeño fragmento de `sh` POSIX se ejecuta por la propia conexión de la
@@ -225,8 +256,15 @@ carpetas y deja el campo como estaba si cancelas.
   ocultos y el salto de línea final, *Pegar tal cual* envía el texto sin cambios. Ambas comprobaciones son conmutadores
   de Ajustes → Funciones → Protección de pegado (activados por omisión); cubren ⌘V, el clic derecho y el texto soltado
   sobre un panel, no las macros. Con MultiExec activado, una sola confirmación vale para todos los terminales visibles.
-- **Teclas**: Mayús+Intro y Opción+Intro envían ESC+CR (un salto de línea en apps TUI como Claude Code); Opción actúa
-  como Meta por omisión.
+- **Teclas**: Mayús+Intro y Opción+Intro envían ESC+CR (la secuencia que el propio `/terminal-setup` de Claude Code
+  asigna en otros terminales), así que cualquiera de las dos inicia una línea nueva en el editor de Claude Code en vez
+  de enviar el prompt; Opción actúa como Meta por omisión.
+- **Imágenes para Claude Code**: con una imagen y sin texto en el portapapeles (una captura de pantalla, *Copiar
+  imagen*), ⌘V, Edición → Pegar y el pegado con clic derecho envían Ctrl+V al terminal; Claude Code lee por sí mismo el
+  portapapeles del sistema y adjunta la imagen como `[Image #1]`. El texto del portapapeles se pega como siempre (y
+  tiene prioridad cuando hay ambos); un shell no usa esa tecla y no muestra nada. Un archivo de imagen soltado desde el
+  Finder sobre un panel local pega su ruta entre comillas (sobre un panel SSH los archivos se suben; véase
+  *Portapapeles* arriba).
 - **Registro**: Terminal → Iniciar/detener registro de sesión, o la opción de la sesión, escribe la salida en bruto en
   `~/Documents/MobAlt Logs/`. Ajustes → Registro → *Quitar colores y secuencias de control* guarda en su lugar los
   registros como texto sin formato (se eliminan los colores ANSI, los movimientos del cursor y el hook de seguimiento
@@ -339,6 +377,23 @@ uno explícitamente; el cambio se aplica al instante en todas las ventanas (nada
 abiertas) y se recuerda. La salida del terminal nunca se traduce: lo que imprime un host remoto se muestra tal cual. La
 guía del usuario existe en los mismos once idiomas (`docs/USER_GUIDE.<language>.md`); Ayuda → **Guía del usuario** abre la
 del idioma actual.
+
+En árabe toda la ventana se lee de derecha a izquierda: la franja lateral y la barra lateral pasan al borde derecho y
+los terminales a la izquierda, el botón ‹ para ocultar la barra lateral apunta al otro lado, y la barra de herramientas,
+la barra de pestañas (la primera pestaña a la derecha, con sus botones de desplazamiento ‹ › intercambiados), la barra
+de estado, las cabeceras de los paneles laterales, las cabeceras de los paneles y la barra de monitoreo se reflejan; los
+diálogos ponen sus etiquetas a la derecha y la ✕ a la izquierda, los menús se abren hacia la izquierda del puntero y los
+avisos emergentes se apilan abajo a la izquierda. Lo que sigue de izquierda a derecha: los propios terminales y todo
+campo o etiqueta que contenga un host, un puerto, una ruta, una orden, un patrón, una MAC o un CIDR, una clave o una
+función rápida (la conexión rápida, la ruta de SFTP, el cuadro de búsqueda, los cuadros del panel Utilidades, la carpeta
+y el usuario@host de la barra de estado, las etiquetas de teclas, las huellas, la clave pública del generador de
+claves, la vista previa de la protección de pegado); el nombre de una sesión, pestaña o carpeta sigue a su primera
+letra, así que un nombre árabe se lee de derecha a izquierda y `user@host` de izquierda a derecha, y una ruta o un
+nombre de host citado dentro de un mensaje conserva su propio orden. Las divisiones mantienen su sentido físico:
+«Dividir a la derecha» sigue abriendo el panel nuevo a la derecha, y una sesión soltada en el borde derecho de un panel
+cae ahí. Las teclas de flecha siguen el orden de las cosas, no la pantalla: → pasa a la siguiente pestaña, opción o fila
+(que en árabe es la que está a su izquierda) y ← a la anterior, y en el árbol de sesiones → abre una carpeta y ← la
+cierra, como en español.
 
 Para ejecutar MobAlt una sola vez en un idioma sin cambiar el ajuste (capturas de pantalla, una prueba), inícialo con
 `MOBALT_LANG=<code>` en el entorno (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
