@@ -35,6 +35,10 @@ window.api.app.bootChrome();                   // the chrome the preload put on 
 window.api.app.testFirstFrames();              // the first 12 animation frames of this launch: [{ t, html, body, scheme }] (test mode only; see test/e2e-theme-boot.js)
 await window.api.app.testNextDialog({ canceled: false, filePaths: ['/f'] }); // answer the next native file dialog / sheet instead of showing it (test mode only; see below)
 (await window.api.app.testNextDialog()).pending;        // answers still queued (0 once every dialog you triggered has taken one)
+await window.api.app.testWindows();                      // every window: [{ id, main, detached, title, bounds }] (test mode only; a detached tab opens a second one)
+await window.api.app.testEval(id, 'window.app.workspace.tabs.length'); // run code in another window (its own window.app); the resolved value comes back
+await window.api.app.testCloseWindow(id);                // close a window as its close button would (a detached window hands its tabs back first)
+// screenshot() captures the window it is called from: a detached window shoots itself through testEval (see test/e2e-detach.js)
 app.action('new-session' | 'new-local' | 'quick-connect' | 'duplicate' | 'reconnect' | 'disconnect' |
            'rename-tab' | 'close' | 'close-pane' | 'split' | 'split-menu' | 'layout' | 'unsplit' |
            'next-pane' | 'next-tab' | 'prev-tab' | 'zoom' | 'zoom-pane' | 'find' | 'find-close' | 'clear' |

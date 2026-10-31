@@ -624,3 +624,6 @@ input::selection, textarea::selection { background: var(--selection); color: var
 .tab.active .pinico { color: var(--term-fg); opacity: .6; }
 .tab.pinned + .tab:not(.pinned) { box-shadow: inset 2px 0 0 var(--bg-4); }
 .tab-menu-item .pinico { flex: none; display: inline-flex; margin-left: 4px; color: var(--fg-faint); }
+/* A detached window (tab menu → Detach to New Window, ⌥⌘N) is the same page with body.detached: it starts with the
+   sidebar collapsed (⌘B shows it there too) and its brand carries a small marker, so two MobAlt windows tell apart. */
+body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }

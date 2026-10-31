@@ -30,20 +30,20 @@ last column says which parts are missing.
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
 | 2. SSH specifics | 15 | 10 | 10 | 2 | 37 |
-| 3. Terminal | 8 | 12 | 10 | 1 | 31 |
+| 3. Terminal | 8 | 13 | 9 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
 | 5. Network and admin tools, embedded servers, Moba* utilities | 4 | 2 | 10 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **43** | **40** | **41** | **59** | **183** |
+| **Sections 1–7 (each feature once)** | **43** | **41** | **40** | **59** | **183** |
 | 8. Recent additions (24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
-| 9. UX details power users rely on | 5 | 11 | 3 | 1 | 20 |
-| **All tables** | **50** | **67** | **53** | **63** | **233** |
+| 9. UX details power users rely on | 6 | 10 | 3 | 1 | 20 |
+| **All tables** | **51** | **67** | **52** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 43 in full, 40 in a narrower or different form and lacks 41.
+MobAlt has 43 in full, 41 in a narrower or different form and lacks 40.
 
 ## 1. Session types
 
@@ -120,7 +120,7 @@ MobAlt has 43 in full, 40 in a narrower or different form and lacks 41.
 | Tabbed terminal | ✅ | tabs: drag to reorder, double-click rename, middle-click close, ⌃Tab / ⌃⇧Tab, ⌃⌘1-9, tab list menu; no hard limit |
 | Split modes (1 / 2 / 4) | ✅ | Split ▾: right (⌘D), down (⇧⌘D), grids 1×2 … 2×4 = 8 panes (⌥⌘2/4/6/8), unsplit ⌥⌘1, drop sessions on pane edges |
 | MultiExec | 🟡 | ⇧⌘M broadcasts to every visible pane of the active tab; no per-pane Exclude or synchronised scrolling |
-| Detach / reattach / fullscreen / stay on top | ❌ | macOS full screen through the window's green button only; no detach to a window, no always-on-top |
+| Detach / reattach / fullscreen / stay on top | 🟡 | Detach to New Window (tab menu, ⌥⌘N) moves a tab into a window of its own with its terminals alive, closing that window reattaches it, and the workspace reopens such windows; macOS full screen through the window's green button; no always-on-top |
 | Macros (keyboard) | 🟡 | Macros panel (⌘4): ● Rec records keystrokes, text macros with `\n` / `\x1b[A` escapes, play into the active or all terminals; no wait-for, folders, nesting or in-terminal picker |
 | Graphical macros (mouse + keyboard) | ❌ | not implemented |
 | Colour schemes | 🟡 | 6 built-in themes (Settings → Terminal → Theme) and a per-session override; no custom or imported themes |
@@ -313,7 +313,7 @@ MobAlt has 43 in full, 40 in a narrower or different form and lacks 41.
 | Macros as first-class objects (WaitFor, nesting, folders, encryption) | 🟡 | recorded and text macros, play to one or all terminals; none of the extras |
 | Jump hosts as a dropdown | ✅ | Advanced SSH → Jump host dropdown of saved sessions (or manual), chained through the jump session's own jump host; Sftp and X11 routed through; SSH sessions only |
 | Credentials vs passwords (named credentials, master password, Hello) | 🟡 | per-session passwords in the Keychain; no named credentials |
-| Tabs carry state (colour, icon, dots, pin, close-left/right, detach) | 🟡 | colour, icon, status dot, green tree dot, Pin Tab, Close Tabs to the Left / Right; no detach or activity marker |
+| Tabs carry state (colour, icon, dots, pin, close-left/right, detach) | ✅ | colour, icon, status dot, green tree dot, Pin Tab (⇧⌘P), Close Tabs to the Left / Right, Detach to New Window (⌥⌘N); no output-activity marker (see Activity tracking) |
 | Home tab + Quick connect (raw `ssh user@host`) | 🟡 | Quick connect with raw `user@host` and scheme prefixes; no home tab, restore is automatic |
 | Guake-style popup console, hide to tray | ❌ | no popup console; ⌘H hides the app |
 | Local terminal is a real Unix shell | ✅ | natively, with your own dotfiles |

@@ -706,6 +706,66 @@ export class TermPane {
     ]);
   }
 
+  // ---------- moving to another window (app.js detachTab / adoptTabs) ----------
+  /** What another window needs to take this pane over: the terminal id and the state the backend does not know. */
+  transferState() {
+    return {
+      termId: this.termId || null, status: this.status, title: this.title, remoteCwd: this.remoteCwd || null, dead: !!this.dead,
+      logging: !!this.logging, logFile: this.logFile || null, sftpConnId: this.sftpConnId || null, sftpStatus: this.sftpStatus,
+      cwdTitled: !!this._cwdTitled, connectedAt: this.connectedAt || null, fontSize: this.term.options.fontSize,
+    };
+  }
+
+  /** Hand the backend to another window: forget the terminal (and a Mosh companion) without ending it, then dispose the xterm. */
+  release() {
+    this.released = true;
+    const id = this.termId;
+    this.app.unregisterPane(this);
+    this.termId = null;
+    this.sftpConnId = null; // goes with the terminal: closeSftpCompanion (in dispose) finds nothing to end
+    this.dispose();
+    if (id) this.app.sftpPanel.dropConnection(id); // this window's panel state only; the connection lives on
+  }
+
+  /**
+   * Take over a live terminal from another window (d = its transferState): main makes this window its owner and
+   * hands back the last 256 KB of its output, which is drawn before live data streams in. A backend that ended
+   * meanwhile leaves a dead pane with its last screen, like any session that ended.
+   */
+  async attach(d) {
+    this.title = d.title || this.title;
+    this.remoteCwd = d.remoteCwd || null;
+    if (this.kind === 'local' && this.remoteCwd) this.cwd = this.remoteCwd;
+    this._cwdTitled = !!d.cwdTitled;
+    this.logging = !!d.logging;
+    this.logFile = d.logFile || null;
+    this.connectedAt = d.connectedAt || null;
+    if (d.fontSize && d.fontSize !== this.term.options.fontSize) this.term.options.fontSize = d.fontSize; // ⌘= / ⌘- travel with the pane
+    this.dead = false;
+    this.hideOverlay();
+    let r = { ok: false, replay: '' };
+    if (d.termId) {
+      try { r = await window.api.detach.attach(d.termId); } catch (e) { console.warn('attach failed', e); }
+    }
+    if (this.disposed) return;
+    if (r.replay) this.term.write(r.replay);
+    this.updateTitle();
+    if (!r.ok) {
+      this.setStatus(d.status === 'failed' ? 'failed' : 'disconnected');
+      this.markDead(d.dead ? null : 'The session ended while the tab was moved.');
+      return;
+    }
+    this.termId = d.termId;
+    this.app.registerPane(this);
+    if (this.kind === 'mosh') { this._moshScreen = true; this._moshStartedAt = 0; this._killed = false; } // an attached client is up
+    if (d.sftpConnId) { this.sftpConnId = d.sftpConnId; this.sftpStatus = d.sftpStatus === 'connected' ? 'connected' : 'connecting'; }
+    if (this.kind === 'ftp') this.showFtpInfo('connected');
+    this.setStatus(d.status === 'connecting' ? 'connecting' : 'connected');
+    // the terminal was sized for the old window: the backend learns this one's size (xterm's onResize fires on a change only)
+    this.fit();
+    if (this.kind !== 'ftp') window.api.term.resize(this.termId, this.term.cols, this.term.rows);
+  }
+
   dispose() {
     if (this.disposed) return;
     this.disposed = true;

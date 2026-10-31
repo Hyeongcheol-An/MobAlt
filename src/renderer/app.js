@@ -28,11 +28,15 @@ class App {
     this.focused = null;
     this.updateOnDisk = null; // version of the MobAlt.app on disk when it differs from the running one
     this.updateDismissed = null; // "Later" on the banner: that version stays quiet until another shows up
+    this.detached = false; // a window opened for tabs moved out of another one (detachTab): same page, sidebar out of the way
   }
 
   async init() {
     applyIcons(); // static toolbar / panel buttons carry data-icon hooks
     [this.settings, this.sessions, this.info] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info()]);
+    const detachedKey = typeof window.api.app.detachedKey === 'function' ? window.api.app.detachedKey() : null;
+    this.detached = !!detachedKey;
+    if (this.detached) document.body.classList.add('detached');
     this._applyTheme();
     document.documentElement.style.setProperty('--sidebar-w', (this.settings.sidebarWidth || 280) + 'px');
     this.workspace = new Workspace(this);
@@ -49,8 +53,18 @@ class App {
     if (!this.settings.sidebarVisible) $('#sidebar').classList.add('collapsed');
     this._syncSidebarToggle();
     this.showPanel(this.settings.sidebarTab || 'sessions');
+    if (this.detached) { // a detached window starts with the sidebar out of the way (⌘B brings it back, in this window only)
+      $('#sidebar').classList.add('collapsed');
+      this._syncSidebarToggle();
+    }
     let restored = false;
-    if (this.settings.restoreWorkspace !== false) {
+    if (this.detached) {
+      // the tabs this window was opened for: live terminals to take over (detachTab), or saved tabs to start afresh (restore)
+      const payload = await window.api.detach.payload(detachedKey).catch(() => null);
+      if (payload) {
+        try { restored = await this.adoptTabs(payload, { attach: !payload.restore, quiet: true }); } catch (e) { console.error('detached tabs failed', e); }
+      }
+    } else if (this.settings.restoreWorkspace !== false) {
       try { restored = await this.restoreWorkspace(); } catch (e) { console.error('workspace restore failed', e); }
     }
     if (!restored) await this.newLocalTab();
@@ -61,7 +75,12 @@ class App {
   }
 
   // ---------- workspace persistence (tabs + split layout; survives restarts/updates) ----------
-  serializeWorkspace() {
+  /**
+   * A tab as the workspace file describes it (sessions by id, an ad-hoc session inline without its secrets, a local
+   * shell's folder, the split tree, the pin, the zoomed pane). `live` adds what another window needs to take the tab
+   * over (TermPane.transferState: the terminal ids and the state the backend does not know).
+   */
+  serializeTab(t, live = false) {
     const serPane = (p) => {
       const d = { kind: p.kind };
       if (p.session) {
@@ -74,24 +93,30 @@ class App {
         }
       }
       if (p.kind === 'local' && p.cwd) d.cwd = p.cwd;
+      if (live) Object.assign(d, p.transferState());
       return d;
     };
     const ser = (n) => n.type === 'pane'
       ? { t: 'pane', ...serPane(n.pane) }
       : { t: 'split', dir: n.dir, ratio: n.ratio, children: n.children.map(ser) };
     return {
+      title: t.title,
+      autoTitle: t.autoTitle,
+      color: t.color || null,
+      icon: t.icon || null,
+      ...(t.pinned ? { pinned: true } : {}),
+      active: Math.max(0, t.panes().indexOf(t.activePane)),
+      ...(t.zoomed && t.panes().includes(t.zoomed) ? { zoomed: t.panes().indexOf(t.zoomed) } : {}), // the pane filling the tab (⇧⌘⏎)
+      root: ser(t.root),
+    };
+  }
+
+  /** This window's tabs; main merges the main window's part with one entry per detached window (`windows`). */
+  serializeWorkspace() {
+    return {
       v: 1,
       activeTab: Math.max(0, this.workspace.tabs.indexOf(this.workspace.active)),
-      tabs: this.workspace.tabs.filter((t) => t.root).map((t) => ({
-        title: t.title,
-        autoTitle: t.autoTitle,
-        color: t.color || null,
-        icon: t.icon || null,
-        ...(t.pinned ? { pinned: true } : {}),
-        active: Math.max(0, t.panes().indexOf(t.activePane)),
-        ...(t.zoomed && t.panes().includes(t.zoomed) ? { zoomed: t.panes().indexOf(t.zoomed) } : {}), // the pane filling the tab (⇧⌘⏎)
-        root: ser(t.root),
-      })),
+      tabs: this.workspace.tabs.filter((t) => t.root).map((t) => this.serializeTab(t)),
     };
   }
 
@@ -108,25 +133,43 @@ class App {
     try { window.api.workspace.save(this.serializeWorkspace()); } catch {}
   }
 
-  /** Rebuild tabs/panes from the saved workspace. Terminals reconnect (SSH) or start fresh shells (local). */
+  /**
+   * Rebuild tabs/panes from the saved workspace: terminals reconnect (SSH) or start fresh shells (local). Tabs that
+   * were in windows of their own (`windows`) come back as windows, started afresh the same way. True when this
+   * window got a tab.
+   */
   async restoreWorkspace() {
     const saved = await window.api.workspace.get();
-    if (!saved || !Array.isArray(saved.tabs) || !saved.tabs.length) return false;
+    if (!saved) return false;
+    const any = Array.isArray(saved.tabs) && saved.tabs.length ? await this.buildTabs(saved) : false;
+    const windows = Array.isArray(saved.windows) ? saved.windows.filter((w) => w && Array.isArray(w.tabs) && w.tabs.length) : [];
+    for (const w of windows) window.api.detach.open({ tabs: w.tabs, activeTab: w.activeTab || 0, bounds: w.bounds || null, restore: true }).catch((e) => console.error('detached window restore failed', e));
+    return any;
+  }
+
+  /**
+   * Make tabs from their descriptions (serializeTab: the workspace file, or the tabs of a window transfer). Every
+   * pane starts its terminal afresh, unless `attach`: then a pane names a live terminal and takes it over
+   * (TermPane.attach), and a dead one stays dead. Returns true when a tab was made.
+   */
+  async buildTabs(desc, { attach = false } = {}) {
     const makePane = (d) => {
       let session = null;
       if (d.sessionId) session = this.sessions.sessions.find((s) => s.id === d.sessionId) || null;
       else if (d.session) session = d.session;
       let kind = d.kind;
-      if (kind !== 'local' && kind !== 'empty' && !session) kind = 'empty'; // session was deleted
+      if (!attach && kind !== 'local' && kind !== 'empty' && !session) kind = 'empty'; // session was deleted (a live terminal keeps its pane)
       if (kind === 'rdp' || kind === 'vnc') kind = 'empty';
-      return new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined });
+      const pane = new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined });
+      if (attach && kind !== 'empty') pane._transfer = d;
+      return pane;
     };
     const build = (n) => (n.t === 'split' && Array.isArray(n.children) && n.children.length === 2)
       ? { type: 'split', dir: n.dir === 'v' ? 'v' : 'h', ratio: Math.min(0.9, Math.max(0.1, n.ratio || 0.5)), children: n.children.map(build) }
       : { type: 'pane', pane: makePane(n) };
-    let any = false;
+    const made = [];
     const starts = [];
-    for (const td of saved.tabs) {
+    for (const td of desc.tabs) {
       if (!td || !td.root) continue;
       let root;
       try { root = build(td.root); } catch { continue; }
@@ -148,18 +191,79 @@ class App {
       this.workspace.render(tab);
       this.workspace.updateTab(tab);
       if (Number.isInteger(td.zoomed) && panes[td.zoomed]) this.workspace.setZoom(tab, panes[td.zoomed]); // zoomed at the save: zoomed again
-      for (const p of panes) starts.push(p.start().catch(() => {}));
-      any = true;
+      for (const p of panes) starts.push((p._transfer ? p.attach(p._transfer) : p.start()).catch((e) => console.error('pane start failed', e)));
+      made.push(tab);
     }
-    if (!any) return false;
+    if (!made.length) return false;
     this.workspace.sortPinnedFirst(); // pinned tabs are the prefix of the strip, whatever order the file had
-    const at = this.workspace.tabs[saved.activeTab];
+    const at = made[Math.min(desc.activeTab || 0, made.length - 1)];
     if (at) this.workspace.activate(at);
     const ap = this.activePane();
     if (ap) this.focusPane(ap, true);
     this.updateMultiexec();
     Promise.allSettled(starts);
     return true;
+  }
+
+  // ---------- a tab in a window of its own ----------
+  /**
+   * Move a tab into a new window (tab menu, ⌥⌘N). The panes hand their terminals over without ending them: the
+   * new window attaches to the same terminal ids, main switches each terminal's owner to it and replays the last
+   * 256 KB of output there (TermPane.attach). The sidebar, menus and shortcuts work in both windows; MultiExec
+   * is per window. Should the window fail to open, the tab comes back here.
+   */
+  async detachTab(tab) {
+    tab = tab || this.workspace.active;
+    if (!tab || !tab.root) return false;
+    const payload = { tabs: [this.serializeTab(tab, true)], activeTab: 0 };
+    for (const p of tab.panes()) p.release();
+    this.workspace.removeTab(tab);
+    if (this.focused && this.focused.disposed) this.focused = null;
+    this._afterClose();
+    try {
+      await window.api.detach.open(payload);
+      return true;
+    } catch (e) {
+      toast(`Could not open a window: ${ipcMessage(e)}`, 'error');
+      await this.adoptTabs(payload, { quiet: true });
+      return false;
+    }
+  }
+
+  /** Tabs handed to this window (its own on open, or the tabs of a detached window that closed): `attach` takes their live terminals over. */
+  async adoptTabs(payload, { attach = true, quiet = false } = {}) {
+    if (!payload || !Array.isArray(payload.tabs) || !payload.tabs.length) return false;
+    const ok = await this.buildTabs(payload, { attach });
+    if (ok && !quiet) toast(`${plural(payload.tabs.length, 'tab')} back from the closed window`, 'info');
+    return ok;
+  }
+
+  /** This (detached) window is closing: its tabs go back to the main window with their terminals alive, then the window may go. */
+  handOverAndClose() {
+    const tabs = this.workspace.tabs.filter((t) => t.root);
+    const payload = { tabs: tabs.map((t) => this.serializeTab(t, true)), activeTab: Math.max(0, tabs.indexOf(this.workspace.active)) };
+    this._wsReady = false; // nothing more to save from here: the tabs belong to the main window now
+    clearTimeout(this._wsTimer);
+    for (const t of [...this.workspace.tabs]) {
+      for (const p of t.panes()) p.release();
+      this.workspace.removeTab(t);
+    }
+    if (payload.tabs.length) window.api.detach.returned(payload);
+    window.api.detach.closeDone();
+  }
+
+  /** Another window saved settings: take them, repaint the chrome and, when a terminal option changed, every pane. */
+  onSettingsChanged(s) {
+    if (!s || typeof s !== 'object') return;
+    const TERM_KEYS = ['theme', 'fontFamily', 'fontSize', 'lineHeight', 'cursorBlink', 'cursorStyle', 'scrollback', 'macOptionIsMeta'];
+    const termChanged = TERM_KEYS.some((k) => JSON.stringify(s[k]) !== JSON.stringify(this.settings[k]));
+    const local = this.detached ? { sidebarVisible: this.settings.sidebarVisible, sidebarTab: this.settings.sidebarTab } : {}; // this window's own
+    this.settings = { ...s, ...local };
+    this._applyTheme();
+    if (termChanged) {
+      this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
+      if (this._findResearch) this._findResearch();
+    }
   }
 
   // ---------- main-process events ----------
@@ -194,6 +298,11 @@ class App {
     window.api.on('sftp:transfer', (t) => this.sftpPanel.onTransfer(t));
     window.api.on('sftp:edit-synced', (e) => toast(e.ok ? `Uploaded ${e.remote.split('/').pop()}` : `Upload failed: ${e.error}`, e.ok ? 'success' : 'error'));
     window.api.on('menu:action', ({ action, arg }) => this.action(action, arg));
+    // several windows: tabs coming back from a closed detached window, this window being closed, the other window's changes
+    window.api.on('detach:adopt', (payload) => this.adoptTabs(payload).catch((e) => console.error('adopt failed', e)));
+    window.api.on('window:closing', () => this.handOverAndClose());
+    window.api.on('settings:changed', (s) => this.onSettingsChanged(s));
+    window.api.on('sessions:changed', () => this.reloadSessions().catch(() => {}));
     window.api.on('prompt:request', async ({ reqId, kind, payload }) => {
       let result = null;
       try {
@@ -738,7 +847,13 @@ class App {
     } else if (!empty && el) el.remove();
   }
 
+  /** A detached window is titled after its active tab (Mission Control, the Window menu). */
+  onTabUpdated(tab) {
+    if (this.detached && tab === this.workspace.active) document.title = tab ? `${tab.title} — MobAlt` : 'MobAlt';
+  }
+
   onActiveTabChanged(tab) {
+    if (this.detached) document.title = tab ? `${tab.title} — MobAlt` : 'MobAlt';
     this._syncEmptyState();
     this.updateMultiexec(); // the broadcast set is the new tab's panes
     if (this._findResearch) this._findResearch(); // the find counter belongs to the new terminal
@@ -959,6 +1074,11 @@ class App {
   }
 
   async saveSettings(patch, quiet = false) {
+    if (this.detached) { // a detached window's sidebar state is its own: kept here, never written over the main window's
+      patch = { ...patch };
+      for (const k of ['sidebarVisible', 'sidebarTab', 'sidebarWidth', 'windowBounds']) if (k in patch) { this.settings[k] = patch[k]; delete patch[k]; }
+      if (!Object.keys(patch).length) return;
+    }
     this.settings = await window.api.settings.set(patch);
     this._applyTheme();
     if (!quiet) this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
@@ -1012,6 +1132,7 @@ class App {
         return tab ? this.closeTabs(this.workspace.closeTargets(tab, name.slice('close-'.length))) : null;
       }
       case 'pin-tab': return this.togglePin(this.workspace.active);
+      case 'detach-tab': return this.detachTab(ap && ap.tab);
       case 'split': return this.splitActive(arg || 'right', pane);
       case 'split-menu': return this.splitMenu($('#btn-split'));
       case 'layout': return this.applyLayout(arg);

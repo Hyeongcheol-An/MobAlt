@@ -326,6 +326,8 @@ export class Workspace {
       { label: 'Split Right', key: '⌘D', action: () => this.app.action('split', 'right') },
       { label: 'Split Down', key: '⇧⌘D', action: () => this.app.action('split', 'down') },
       '-',
+      { label: 'Detach to New Window', key: '⌥⌘N', action: () => this.app.detachTab(tab) },
+      '-',
       { label: 'Close', key: '⌘W', action: closing(() => this.app.closeTab(tab)) },
       closeItem('Close Others', 'others'),
       closeItem('Close Tabs to the Left', 'left'),
@@ -420,6 +422,7 @@ export class Workspace {
       ico.hidden = !tab.icon;
     }
     this._syncZoomIndicator(tab);
+    this.app.onTabUpdated?.(tab); // a detached window is titled after its active tab
     this.app.saveWorkspaceSoon?.();
   }
 
