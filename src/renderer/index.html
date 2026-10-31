@@ -17,7 +17,7 @@
         <button class="tb-btn" data-action="new-session" title="New session (⌘N)"><span class="ico" data-icon="plus"></span>Session</button>
         <button class="tb-btn" data-action="new-local" title="New local terminal (⌘T)"><span class="ico" data-icon="terminal"></span>Terminal</button>
         <button class="tb-btn" data-action="tunnels" title="SSH tunnels / port forwarding (⇧⌘U)"><span class="ico" data-icon="tunnel"></span>Tunneling</button>
-        <button class="tb-btn toggle" id="btn-multiexec" data-action="multiexec" title="Broadcast keystrokes to all terminals (⇧⌘M)"><span class="ico" data-icon="multiexec"></span>MultiExec</button>
+        <button class="tb-btn toggle" id="btn-multiexec" data-action="multiexec" title="Broadcast keystrokes to every visible terminal in this tab (⇧⌘M)"><span class="ico" data-icon="multiexec"></span>MultiExec</button>
         <div class="tb-split">
           <button class="tb-btn" id="btn-split" data-action="split-menu" title="Split / grid layouts (⌘D right, ⇧⌘D down)"><span class="ico" data-icon="split"></span>Split ▾</button>
         </div>
@@ -119,7 +119,7 @@
 
       <!-- Right: tabs + terminals -->
       <div id="workspace">
-        <div id="multiexec-banner" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> terminal(s)</div>
+        <div id="multiexec-banner" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> visible terminal(s) in this tab</div>
         <div id="tabbar">
           <button id="tab-scroll-left" class="tab-scroll" title="Scroll tabs left" aria-label="Scroll tabs left" hidden>‹</button>
           <div id="tabs"></div>
