@@ -121,6 +121,71 @@
     results.disconnectDropsCompanion = await untilRefused(cid2, 8000);
     results.monitorHiddenAfterDrop = pane2.monitorEl.hidden === true && pane2.monitorOn === false;
     await app.closePane(pane2, true);
+
+    // 5. Advanced SSH for a Mosh session: the tab is there with the legacy preset, the algorithm lists and the
+    //    monitoring bar (not the jump host, X11, agent forwarding, compression or keep-alive, which mosh's own ssh does
+    //    not take); a bogus name blocks Save; a saved list is stored AND applied — a key exchange the test sshd does
+    //    not offer fails the host-key check before mosh starts, with the "no matching key exchange" sentence; a
+    //    restricted-but-valid list starts mosh and connects the SFTP companion (the same lists travel with it)
+    const fieldOf = (root, label) => { const el = [...root.querySelectorAll('.form-grid > label')].find((l) => l.textContent === label)?.nextElementSibling; return el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) ? el : el?.querySelector('input,select,textarea'); };
+    const cbOf = (root, txt) => [...root.querySelectorAll('.checks label')].find((l) => l.textContent.includes(txt))?.querySelector('input[type=checkbox]');
+    const btnOf = (root, txt) => [...root.querySelectorAll('button')].find((b) => b.textContent.trim() === txt);
+    const setVal = (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); };
+    const visible = (el) => !!el && !el.hidden && el.offsetParent !== null;
+    const errorsShown = (root) => [...root.querySelectorAll('.form-error')].filter(visible).map((e) => e.textContent);
+    const session = (id) => app.sessions.sessions.find((x) => x.id === id);
+    const s3 = await app.saveSession({ ...base, name: 'mosh algos', sftpAuto: false });
+    const openAdvanced = async (sess) => {
+      app.editSession(sess);
+      const m = await waitFor(() => document.querySelector('.modal'), 5000, 'session editor');
+      await sleep(300);
+      const tab = [...m.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Advanced SSH');
+      results.moshAdvancedTab = !!tab && !tab.hidden && visible(tab);
+      tab.click();
+      await sleep(100);
+      return m;
+    };
+    let ed = await openAdvanced(s3);
+    const kexTa = fieldOf(ed, 'Key exchange');
+    results.moshAdvancedRows = visible(kexTa) && visible(cbOf(ed, 'Legacy algorithms')) && visible(cbOf(ed, 'Show remote monitoring bar')) && visible(btnOf(ed, 'Reset to defaults'))
+      && !visible(cbOf(ed, 'X11 forwarding')) && !visible(cbOf(ed, 'Agent forwarding')) && !visible(cbOf(ed, 'Compression')) && !visible(fieldOf(ed, 'Jump host')) && !visible(fieldOf(ed, 'Keep-alive (s)'))
+      && /Mosh: the preset and these lists apply to the host-key check before mosh starts and to the SFTP companion connection/.test(ed.querySelector('.mpage.active').textContent);
+    await shot('53-mosh-advanced-ssh');
+    setVal(kexTa, 'bogus-kex');
+    ed.querySelector('.modal-foot .btn.primary').click();
+    await sleep(300);
+    results.moshBogusBlocksSave = document.querySelector('.modal') === ed && errorsShown(ed).includes('Unknown key exchange algorithm: bogus-kex') && document.activeElement === kexTa;
+    setVal(kexTa, 'diffie-hellman-group14-sha256'); // valid, but the test sshd (OpenSSH 10) does not offer it
+    ed.querySelector('.modal-foot .btn.primary').click();
+    await waitFor(() => !document.querySelector('.modal'), 3000, 'editor saved');
+    await sleep(200);
+    results.moshAlgosStored = JSON.stringify(session(s3.id).algorithms) === JSON.stringify({ kex: ['diffie-hellman-group14-sha256'] });
+    const p3 = await app.openSession(session(s3.id));
+    await waitFor(() => p3.status === 'failed', 20000, 'the host-key check refused the kex');
+    await sleep(300);
+    const flat = text(p3).replace(/\n/g, ''); // the long sentence wraps over several terminal rows
+    results.moshAlgosApplied = /Failed to start: no matching key exchange: this session offers diffie-hellman-group14-sha256; the server offers .*curve25519-sha256.*Advanced SSH → Algorithms: add .*curve25519-sha256/.test(flat) && p3.dead;
+    log('mosh with an impossible kex:', text(p3).trim().split('\n').slice(-4).join(' / '));
+    await shot('54-mosh-algos-applied');
+    await app.closePane(p3, true);
+    // a restricted-but-valid list (and the legacy preset) still starts mosh, and the companion comes up with it
+    ed = await openAdvanced(session(s3.id));
+    cbOf(ed, 'Legacy algorithms').click(); // first: the preset appends its names to the lists
+    await sleep(50);
+    setVal(fieldOf(ed, 'Key exchange'), 'curve25519-sha256');
+    ed.querySelector('.modal-foot .btn.primary').click();
+    await waitFor(() => !document.querySelector('.modal'), 3000, 'editor saved (restricted)');
+    await sleep(200);
+    results.moshRestrictedStored = session(s3.id).legacyAlgorithms === true && JSON.stringify(session(s3.id).algorithms) === JSON.stringify({ kex: ['curve25519-sha256'] });
+    const p4 = await app.openSession(session(s3.id));
+    await waitFor(() => p4.status === 'connected', 10000, 'mosh spawned with the restricted list');
+    await waitFor(() => /\S/.test(text(p4)), 20000, 'mosh drew the remote shell (restricted list)');
+    p4.openSftpCompanion();
+    await waitFor(() => p4.sftpStatus === 'connected' && p4.sftpConnId, 15000, 'companion with the restricted list');
+    await waitFor(() => app.sftpPanel.connId === p4.sftpConnId && app.sftpPanel.state()?.path, 10000, 'panel on the restricted companion');
+    results.moshRestrictedCompanion = p4.sftpStatus === 'connected' && app.sftpPanel.state().entries.length > 0;
+    await shot('55-mosh-restricted-companion');
+    await app.closePane(p4, true);
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-mosh-sftp] FAIL', e.message, e.stack);

@@ -665,7 +665,8 @@ function registerIpc() {
   // Mosh bootstraps over an external ssh: the host key goes through the app's own prompt first and the
   // bootstrap then runs strictly against the app's known_hosts file (never ~/.ssh/known_hosts).
   ipcMain.handle('term:spawn-mosh', async (e, opts) => {
-    const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms });
+    // the session's Advanced SSH algorithm settings apply to this check (and to the SFTP companion), not to mosh's own ssh
+    const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms, algorithms: opts.algorithms });
     if (!v.ok) throw new Error(v.error || 'host key not accepted');
     return own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
   });
