@@ -350,10 +350,30 @@
       results.modalTabWraps = active() === closeX;
       results.modalCloseRing = focusVisible(closeX);
       await shot('64-modal-close-focus-ring');
+      // the four section tabs sit between ✕ and Close in the Tab order (each one a Tab stop, like the session
+      // editor's); from a tab, ←/→ wrap through the sections and Home/End jump, showing one panel at a time
+      const stabs = [...m.querySelectorAll('.mtabs button')];
+      const showing = (b) => b.classList.contains('active') && b.getAttribute('aria-selected') === 'true' && m.querySelectorAll('.mpage.active').length === 1
+        && m.querySelector('.mpage.active').id === b.getAttribute('aria-controls') && m.querySelector('.mpage.active').offsetParent !== null;
       await press('Tab');
-      results.modalTabCycles = active() === closeBtn;
+      results.modalTabCycles = active() === stabs[0] && stabs.length === 4 && showing(stabs[0]);
+      results.modalTabRoles = m.querySelector('.mtabs').getAttribute('role') === 'tablist' && stabs.every((b) => b.getAttribute('role') === 'tab' && b.tabIndex === 0);
+      await press('ArrowRight');
+      results.modalTabArrowRight = active() === stabs[1] && showing(stabs[1]);
+      await press('End');
+      results.modalTabEnd = active() === stabs[3] && showing(stabs[3]);
+      await press('ArrowRight');
+      results.modalTabArrowWraps = active() === stabs[0] && showing(stabs[0]);
+      await press('ArrowLeft');
+      results.modalTabArrowLeftWraps = active() === stabs[3] && showing(stabs[3]);
+      await press('Home');
+      results.modalTabHome = active() === stabs[0] && showing(stabs[0]);
+      await press('End');
+      await press('Tab');
+      results.modalTabAfterStrip = active() === closeBtn; // the last section tab → Close
       await press('Tab', { shiftKey: true });
-      results.modalShiftTab = active() === closeX;
+      results.modalShiftTab = active() === stabs[3];
+      stabs[0].click();
       app.activePane().focus(); // focus wandered outside the dialog
       await sleep(30);
       await press('Tab');
@@ -362,23 +382,40 @@
       await sleep(200);
       results.modalEscReturnsToOpener = !modal() && active() === rowOf('web-01');
     }
-    // the Keyboard shortcuts dialog is wide, two columns, and nothing overflows sideways even at the smallest window;
-    // at 1400×900 the whole list is visible without scrolling (VIS-004)
+    // the Keyboard shortcuts dialog is wide, one section tab per area with two columns each, and nothing overflows
+    // sideways even at the smallest window, where every section is visible without scrolling (VIS-004);
+    // at 1400×900 as well
     {
+      const grid = () => modal().querySelector('.mpage.active .shortcuts'); // the section in front
       const fits = () => {
-        const m = modal(), body = m.querySelector('.modal-body'), grid = m.querySelector('.shortcuts');
-        return body.scrollWidth <= body.clientWidth && grid.scrollWidth <= grid.clientWidth && [...grid.children].every((d) => d.scrollWidth <= d.clientWidth + 1);
+        const m = modal(), body = m.querySelector('.modal-body'), g = grid();
+        return body.scrollWidth <= body.clientWidth && g.scrollWidth <= g.clientWidth && [...g.children].every((d) => d.scrollWidth <= d.clientWidth + 1);
       };
       const lines = (el) => Math.round(el.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight));
+      const twoColumns = () => getComputedStyle(grid()).gridTemplateColumns.trim().split(/\s+/).length === 2;
+      const labelsWrapAtMostOnce = () => [...grid().querySelectorAll(':scope > div > span:first-child')].every((el) => lines(el) <= 2);
+      const sections = () => [...modal().querySelectorAll('.mtabs button')];
       await window.api.app.testResize(900, 560);
       await sleep(300);
       app.activePane().focus();
       app.action('shortcuts');
       await sleep(300);
-      results.shortcutsWideTwoColumns = modal().classList.contains('wide') && getComputedStyle(modal().querySelector('.shortcuts')).gridTemplateColumns.trim().split(/\s+/).length === 2;
+      results.shortcutsWideTwoColumns = modal().classList.contains('wide') && twoColumns();
       results.shortcutsNoHorizontalOverflowSmall = fits();
-      results.shortcutsLabelsWrapAtMostOnce = [...modal().querySelectorAll('.shortcuts > div > span:first-child')].every((el) => lines(el) <= 2);
+      results.shortcutsLabelsWrapAtMostOnce = labelsWrapAtMostOnce();
       await shot('82-shortcuts-900x560');
+      {
+        const body = modal().querySelector('.modal-body'), fit = {};
+        for (const b of sections()) {
+          b.click();
+          await sleep(60);
+          fit[b.textContent] = b.classList.contains('active') && fits() && twoColumns() && labelsWrapAtMostOnce() && body.scrollHeight <= body.clientHeight
+            && modal().getBoundingClientRect().bottom <= window.innerHeight && modal().getBoundingClientRect().right <= window.innerWidth;
+        }
+        log('shortcuts sections at 900×560', JSON.stringify(fit));
+        results.shortcutsFitSmallWindow = Object.keys(fit).join('|') === 'Sessions & tabs|Panes & terminal|Sidebar, SFTP & lists|Dialogs' && Object.values(fit).every(Boolean);
+        sections()[0].click();
+      }
       await press('Escape');
       await sleep(200);
       await window.api.app.testResize(1400, 900);

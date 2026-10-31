@@ -32,7 +32,7 @@ downloaded or installed without your confirmation. See [Updating](#updating).
 Three paths lead to a new release; all of them end with the new bundle at `/Applications/MobAlt.app`:
 
 - **In-app updater**: MobAlt checks GitHub Releases at startup (turn this off in Settings → Updates) and
-  Help → Check for Updates… or the "Check now" button in Settings runs the check by hand. A newer
+  Help → Check for Updates… or "Check now" in Settings → Updates runs the check by hand. A newer
   version is offered in a dialog, downloaded only when you say so and installed when you quit, or right
   away with "Restart now".
 - **Homebrew**: `brew upgrade --cask mobalt` replaces the app in Applications.
@@ -110,7 +110,7 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   the servers you want to drive side by side. The banner shows how many visible terminals listen and
   follows the tab you switch to.
 - **Find** (⌘F): incremental search with case and regex toggles and a match counter.
-- **Clipboard**: selecting copies (Settings → Copy on select); right-click pastes
+- **Clipboard**: selecting copies (Settings → Terminal → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
   on a local terminal it pastes the paths.
 - **Keys**: Shift+Enter and Option+Enter send ESC+CR (a newline in TUI apps such as Claude Code);
@@ -118,7 +118,7 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 - **Logging**: Terminal → Start/Stop Session Log, or the session option, writes the raw output to
   `~/Documents/MobAlt Logs/`. Settings → Logging → *Strip colours and control sequences* keeps the
   logs as plain text instead (ANSI colours, cursor movement and the folder-tracking hook are removed).
-- **Themes and fonts**: Settings → Theme/Font apply to all terminals; a session can override them in
+- **Themes and fonts**: Settings → Terminal → Theme / Font apply to all terminals; a session can override them in
   its Terminal tab.
 
 ## Files (SFTP / FTP)
@@ -126,7 +126,7 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 ![SFTP panel](images/sftp-panel.png)
 
 The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on connect
-(Settings → "Switch to SFTP panel when SSH connects").
+(Settings → General → "Switch to SFTP panel when SSH connects").
 
 - Navigate by double-clicking folders, typing a path (`~` works) or using ⬆ / 🏠 / ⟳.
   "Follow terminal folder" keeps the panel on the shell's current directory (needs the session
@@ -134,7 +134,7 @@ The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on
 - Toolbar and context menu: new folder, rename, permissions, delete, download, upload. Multi-select
   with ⌘ / ⇧. Drag files from Finder onto the list to upload; existing names ask before overwriting.
 - Double-click a text file to edit it in the built-in editor (⌘S saves back). "Edit in external
-  editor" opens it in your editor (Settings → External editor) and re-uploads on every save.
+  editor" opens it in your editor (Settings → General → External editor) and re-uploads on every save.
 - Transfers show progress, speed and a cancel button; "Show in Finder" after a download.
 - Column headers sort by name, size or date. When the sidebar is narrow the date column hides.
 
@@ -163,7 +163,7 @@ connects, and you are told if one fails to bind.
 - **Mosh + SFTP**: mosh carries no SFTP channel, so the Sftp panel browses a Mosh host through a
   separate shell-less SSH connection to the same host (same key, agent and prompts). It opens
   automatically when "Open SFTP browser automatically" is on for the session (and "Switch to SFTP
-  panel" in Settings), otherwise from the panel's "Open SFTP for this host (via SSH)" button or the
+  panel" in Settings → General), otherwise from the panel's "Open SFTP for this host (via SSH)" button or the
   pane menu's "Open SFTP Browser"; it is dropped together with the pane.
 - **Serial**: the editor lists USB-serial devices; set baud, data/stop bits, parity, flow control,
   local echo and what Enter sends (CR, LF, CRLF).
@@ -181,13 +181,16 @@ connects, and you are told if one fails to bind.
 ## Workspace and settings
 
 MobAlt restores your tabs, splits and sessions on the next launch and reconnects SSH sessions
-(local shells reopen in their last folder). Turn this off in Settings → Behaviour.
+(local shells reopen in their last folder). Turn this off in Settings → General → Behaviour.
 
 ![Settings](images/settings.png)
 
-Settings cover fonts, cursor, scrollback, theme, mouse/keys, the local shell and its folder
-integration, the external editor, download and log folders, SSH keep-alive, close confirmation,
-workspace restore and the update check. "Open config folder" shows where everything is stored.
+Settings has four tabs, each of which fits the smallest window without scrolling: **General**
+(quit confirmation, the SFTP panel switch, workspace restore, the local shell and its folder
+integration, the external editor, the download folder, SSH keep-alive, and "Open config folder",
+which shows where everything is stored), **Terminal** (font, line height, cursor, scrollback, theme,
+mouse/keys), **Logging** (log folder, plain-text session logs) and **Updates** (the startup check
+and "Check now").
 
 ## Keyboard shortcuts
 

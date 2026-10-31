@@ -30,7 +30,7 @@ MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트�
 새 버전을 받는 길은 셋이고, 어느 쪽이든 `/Applications/MobAlt.app`이 새 번들로 바뀝니다.
 
 - **앱 내 업데이트**: 시작할 때 GitHub Releases를 확인하고(Settings → Updates에서 끌 수 있음), Help → Check
-  for Updates… 또는 Settings의 "Check now" 버튼으로 직접 확인합니다. 새 버전은 대화상자로 제안되고, 동의할
+  for Updates… 또는 Settings → Updates의 "Check now" 버튼으로 직접 확인합니다. 새 버전은 대화상자로 제안되고, 동의할
   때만 내려받아 종료할 때(또는 "Restart now"를 고르면 바로) 설치합니다.
 - **Homebrew**: `brew upgrade --cask mobalt`가 Applications의 앱을 교체합니다.
 - **DMG**: [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases)에서 새 DMG를 받아 MobAlt를
@@ -104,21 +104,21 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   입력이 들어갑니다. 다른 탭에는 전달되지 않으므로, 함께 다룰 서버들은 탭을 분할(또는 그리드)해서
   나란히 띄우세요. 배너에 보이는 수신 터미널 수가 표시되고 탭을 바꾸면 그에 맞춰 바뀝니다.
 - **찾기**(⌘F): 대소문자·정규식 토글과 일치 수 표시가 있는 증분 검색.
-- **클립보드**: 선택하면 복사(Settings → Copy on select), 우클릭은 붙여넣기(⇧+우클릭은 메뉴). Finder
+- **클립보드**: 선택하면 복사(Settings → Terminal → Copy on select), 우클릭은 붙여넣기(⇧+우클릭은 메뉴). Finder
   파일을 SSH 터미널에 놓으면 업로드, 로컬 터미널에 놓으면 경로가 붙여넣어집니다.
 - **키**: Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈이 됩니다.
   Option은 기본적으로 Meta로 동작합니다.
 - **로그**: Terminal → Start/Stop Session Log 또는 세션 옵션으로 출력을 `~/Documents/MobAlt Logs/`에
   기록합니다. Settings → Logging의 *Strip colours and control sequences*를 켜면 ANSI 색상·제어
   시퀀스·폴더 추적 훅을 걷어낸 일반 텍스트로 저장합니다.
-- **테마·글꼴**: Settings의 Theme/Font가 모든 터미널에 적용되고, 세션별로 Terminal 탭에서 덮어쓸 수
+- **테마·글꼴**: Settings → Terminal의 Theme/Font가 모든 터미널에 적용되고, 세션별로 세션 편집기의 Terminal 탭에서 덮어쓸 수
   있습니다.
 
 ## 파일 (SFTP / FTP)
 
 ![SFTP 패널](images/sftp-panel.png)
 
-**Sftp** 패널은 활성 SSH 또는 FTP 페인을 따라갑니다. 접속하면 자동으로 열립니다(Settings → "Switch
+**Sftp** 패널은 활성 SSH 또는 FTP 페인을 따라갑니다. 접속하면 자동으로 열립니다(Settings → General → "Switch
 to SFTP panel when SSH connects").
 
 - 폴더 더블클릭, 경로 입력(`~` 가능), ⬆ / 🏠 / ⟳ 버튼으로 이동합니다. "Follow terminal folder"는
@@ -127,7 +127,7 @@ to SFTP panel when SSH connects").
 - 툴바와 우클릭 메뉴: 새 폴더, 이름 변경, 권한, 삭제, 다운로드, 업로드. ⌘ / ⇧로 여러 개 선택. Finder에서
   목록으로 끌어 업로드하며, 같은 이름이 있으면 덮어쓸지 묻습니다.
 - 텍스트 파일을 더블클릭하면 내장 편집기에서 열립니다(⌘S로 저장). "Edit in external editor"는 외부
-  편집기(Settings → External editor)로 열고 저장할 때마다 다시 업로드합니다.
+  편집기(Settings → General → External editor)로 열고 저장할 때마다 다시 업로드합니다.
 - 전송 목록에 진행률·속도·취소 버튼이 있고, 다운로드 후 "Show in Finder"를 누를 수 있습니다.
 - 열 머리글로 이름·크기·날짜 정렬. 사이드바가 좁으면 날짜 열이 숨겨집니다.
 
@@ -154,7 +154,7 @@ to SFTP panel when SSH connects").
   `mosh-server` 경로를 지정하세요.
 - **Mosh + SFTP**: mosh에는 SFTP 채널이 없으므로 Sftp 패널은 같은 호스트로 셸 없는 별도 SSH 연결을 열어
   파일을 봅니다(키·에이전트·프롬프트는 SSH 세션과 동일). 세션의 "Open SFTP browser automatically"(그리고
-  Settings의 "Switch to SFTP panel")가 켜져 있으면 자동으로, 아니면 패널의 "Open SFTP for this host (via SSH)"
+  Settings → General의 "Switch to SFTP panel")가 켜져 있으면 자동으로, 아니면 패널의 "Open SFTP for this host (via SSH)"
   버튼이나 페인 메뉴의 "Open SFTP Browser"로 엽니다. 페인을 닫으면 함께 끊깁니다.
 - **시리얼**: 편집기가 USB-시리얼 장치를 나열합니다. baud, 데이터/정지 비트, 패리티, 흐름 제어, 로컬
   에코, Enter가 보내는 문자(CR, LF, CRLF)를 설정합니다.
@@ -172,13 +172,14 @@ to SFTP panel when SSH connects").
 ## 작업대와 설정
 
 다음 실행 때 탭·분할·세션을 되살리고 SSH 세션은 자동 재접속합니다(로컬 셸은 마지막 폴더에서 다시
-열림). Settings → Behaviour에서 끌 수 있습니다.
+열림). Settings → General → Behaviour에서 끌 수 있습니다.
 
 ![설정](images/settings.png)
 
-설정에는 글꼴, 커서, 스크롤백, 테마, 마우스/키, 로컬 셸과 폴더 통합, 외부 편집기, 다운로드·로그 폴더,
-SSH keep-alive, 종료 확인, 작업대 복원, 업데이트 확인이 있습니다. "Open config folder"가 저장 위치를
-보여 줍니다.
+설정은 네 개의 탭으로 나뉘고 어느 탭이든 최소 창 크기에서 스크롤 없이 들어갑니다. **General**(종료 확인,
+SFTP 패널 전환, 작업대 복원, 로컬 셸과 폴더 통합, 외부 편집기, 다운로드 폴더, SSH keep-alive, 저장 위치를
+보여 주는 "Open config folder"), **Terminal**(글꼴, 줄 간격, 커서, 스크롤백, 테마, 마우스/키), **Logging**(로그
+폴더, 일반 텍스트 세션 로그), **Updates**(시작 시 확인과 "Check now").
 
 ## 단축키
 
