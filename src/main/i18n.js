@@ -19,7 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 
-/** The languages the interface ships in, in the order the Language list shows them. `guide` is the user guide in docs/. */
+/** The languages the interface ships in, in the order the Language list shows them. `guide` is the user guide in docs/; `dir` is 'rtl' for a right-to-left script (default ltr). */
 const LANGUAGES = [
   { code: 'en', name: 'English', guide: 'USER_GUIDE.md' },
   { code: 'ko', name: '한국어', guide: 'USER_GUIDE.ko.md' },
@@ -31,6 +31,7 @@ const LANGUAGES = [
   { code: 'fr', name: 'Français', guide: 'USER_GUIDE.fr.md' },
   { code: 'es', name: 'Español', guide: 'USER_GUIDE.es.md' },
   { code: 'pt', name: 'Português', guide: 'USER_GUIDE.pt.md' },
+  { code: 'ar', name: 'العربية', guide: 'USER_GUIDE.ar.md', dir: 'rtl' }, // right-to-left: the renderer mirrors the chrome (src/renderer/i18n.js, styles.css)
 ];
 const GUIDE_BASE = 'https://github.com/Hyeongcheol-An/MobAlt/blob/main/docs/';
 const LOCALES_DIR = path.join(__dirname, '..', 'locales');
