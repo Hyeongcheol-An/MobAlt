@@ -25,7 +25,7 @@ test('resolveLocale: the setting wins, then the macOS language list, by tag and 
   assert.equal(i18n.resolveLocale(undefined, []), 'en');
   assert.equal(i18n.resolveLocale('klingon', ['de-DE']), 'de'); // an unknown setting falls back to the system list
   process.env.MOBALT_LANG = 'es';
-  assert.equal(i18n.resolveLocale('ko', ['ja']), 'es'); // the environment (tests, screenshots) overrides everything
+  assert.equal(i18n.resolveLocale('ko', ['ja']), 'ko'); // pure: main.js feeds MOBALT_LANG in as the preferred list instead
   delete process.env.MOBALT_LANG;
 });
 
