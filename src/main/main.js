@@ -18,6 +18,7 @@ const knownhosts = require('./knownhosts');
 const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
+const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 
 const pkg = require('../../package.json');
 app.setName('MobAlt');
@@ -105,6 +106,7 @@ const prompter = {
 };
 
 const ssh = new SshManager(registry, store, prompter);
+const monitor = new RemoteMonitor(ssh); // the monitoring bar's polls; keeps the previous sample per connection for the rates
 const sftp = new SftpManager(ssh, store);
 const ftp = new FtpManager(store, prompter);
 let updater = null;
@@ -135,6 +137,7 @@ registry.on('exit', (id, code, reason, detail) => {
   flush();
   tunnels.stopForConnection(id);
   sftp.stopEdits(id);
+  monitor.forget(id); // the next connection starts its rates afresh
   if (win && !win.isDestroyed()) win.webContents.send('term:exit', id, { code, reason, detail });
 });
 sftp.on('transfer', (t) => win && !win.isDestroyed() && win.webContents.send('sftp:transfer', t));
@@ -307,6 +310,7 @@ function buildMenu() {
         { label: 'Close Pane', accelerator: 'Cmd+Shift+W', click: () => sendAction('close-pane') },
         { label: 'Focus Next Pane', accelerator: 'Cmd+]', click: () => sendAction('next-pane') },
         { label: 'Zoom Pane (fill the tab / restore)', accelerator: 'Cmd+Shift+Return', click: () => sendAction('zoom-pane') },
+        { label: 'Remote Monitoring Bar', click: () => sendAction('toggle-monitor') },
         { type: 'separator' },
         { label: 'Zoom In', accelerator: 'Cmd+=', click: () => sendAction('zoom', 1) },
         { label: 'Zoom Out', accelerator: 'Cmd+-', click: () => sendAction('zoom', -1) },
@@ -371,6 +375,7 @@ function registerIpc() {
     display: x11.findDisplay(),
     agent: !!process.env.SSH_AUTH_SOCK,
     electron: process.versions.electron,
+    hostname: os.hostname(), // what the monitoring bar shows for a session to this Mac (test/e2e-monitor.js)
   }));
   ipcMain.on('app:quit', () => app.quit());
   ipcMain.handle('app:relaunch', () => relaunch());
@@ -476,6 +481,16 @@ function registerIpc() {
     if (result === undefined || result === null) return { pending: dialogs.pending() };
     return { pending: dialogs.enqueue(result) };
   });
+  // the monitoring bar's polling, counted (does it stop off screen?) and made to fail (the "unavailable" path)
+  ipcMain.handle('test:monitor-stats', () => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    return { execCount: ssh.execCount, samples: monitor.samples };
+  });
+  ipcMain.handle('test:monitor-command', (_e, cmd) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    monitor.setCommand(cmd);
+    return true;
+  });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
@@ -519,6 +534,8 @@ function registerIpc() {
   ipcMain.handle('ssh:connect-sftp', async (_e, cfg) => ssh.openSftpOnly(await mergeSecrets(cfg)));
   ipcMain.handle('ssh:disconnect', (_e, id) => ssh.disconnect(id));
   ipcMain.handle('ssh:exec', (_e, id, cmd) => ssh.exec(id, cmd));
+  // one poll of the remote monitoring bar (src/main/monitor.js): { sample } or { error, fatal }
+  ipcMain.handle('ssh:monitor', (_e, id) => monitor.sample(id));
 
   // FTP sessions share the sftp:* API; the connection id decides which backend serves it.
   const files = (id) => (ftp.has(id) ? ftp : sftp);

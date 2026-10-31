@@ -318,6 +318,8 @@ class App {
       else this.action('find-close');
     });
     window.addEventListener('resize', () => this.workspace.allPanes().forEach((p) => p.fit()));
+    // the window shown again (un-minimised, un-hidden, no longer covered): the monitoring bars that paused off screen poll again
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') this.workspace.allPanes().forEach((p) => p.monitorResume()); });
     document.addEventListener('modal-closed', () => this.activePane()?.focus());
     document.addEventListener('ctx-closed', () => { if (document.activeElement === document.body) this.activePane()?.focus(); }); // menu opened from a non-focusable spot
     // keyboard shortcuts not covered by the menu
@@ -977,6 +979,7 @@ class App {
       case 'prev-tab': return this.workspace.nextTab(-1);
       case 'zoom': return ap && ap.zoom(arg === 0 ? 0 : arg > 0 ? 1 : -1);
       case 'zoom-pane': return this.toggleZoom(pane); // ⇧⌘⏎: the pane fills its tab / the layout comes back
+      case 'toggle-monitor': return ap && ap.toggleMonitor(arg === undefined ? undefined : !!arg); // View menu / pane head: the remote monitoring bar of this pane
       case 'find': {
         if (!ap) return;
         $('#find-bar').hidden = false;
