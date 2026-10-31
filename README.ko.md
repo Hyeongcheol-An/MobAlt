@@ -35,6 +35,8 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | SSH (비밀번호/키/에이전트) | ✅ | 키 → 에이전트 → 비밀번호 자동 순서, keyboard-interactive(2FA), 패스프레이즈 프롬프트, `~/.ssh/config`·ProxyJump |
 | 비밀번호 저장(마스터 암호) | ✅ | Electron `safeStorage`(macOS Keychain)로 암호화 |
 | Host key 확인 | ✅ | `~/.ssh/known_hosts` + 앱 자체 목록, 키 변경 시 경고 |
+| MobaKeyGen(SSH 키 생성) | ✅ Generate SSH Key… | `ssh-keygen`으로 Ed25519 / RSA 4096 / ECDSA 생성, 패스프레이즈, 공개 키 + 지문, ssh-agent 등록, `ssh-copy-id`처럼 서버에 설치. 세션 편집기의 *Generate…*가 키 칸을 채움 |
+| 전문가 SSH 설정(KEX / 호스트 키 / 암호 / MAC) | ✅ | Advanced SSH의 세션별 알고리즘 목록(ssh2 기준 검증), "Legacy algorithms"는 프리셋. 불일치 시 양쪽이 제시한 목록을 보여 줌(ML-KEM은 ssh2 대기) |
 | 접속 시 SFTP 브라우저 | ✅ Sftp 패널 | 업로드/다운로드(폴더 재귀, 진행률, 취소), 새 폴더, 이름 변경, 권한, 삭제, 숨김 파일 |
 | Follow terminal folder | ✅ | bash/zsh용 OSC 7 셸 훅, 세션별 설정 |
 | 원격 파일 편집 | ✅ | 내장 편집기(⌘S 저장) 또는 외부 편집기(저장 시 자동 업로드) |

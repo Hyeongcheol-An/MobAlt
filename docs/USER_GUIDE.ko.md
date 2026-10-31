@@ -103,6 +103,18 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   패스프레이즈가 있는 키는 한 번 묻고, "Save in session"을 켜면 저장합니다.
 - **호스트 키**: 첫 접속 때 지문(SHA256·MD5)을 보여 줍니다. 수락하면 저장되고, 키가 바뀌면 크게
   경고하며 조용히 받아들이지 않습니다.
+- **SSH 키 생성**: Session → Generate SSH Key…(Tools 패널에도 있고, 세션 편집기의 개인 키 칸 옆
+  *Generate…* 버튼으로도 엽니다)이 macOS의 `ssh-keygen`을 대신 실행합니다. Ed25519(기본), RSA 4096,
+  ECDSA 중 고르고, 주석과 선택적 패스프레이즈(강도 안내 포함), 저장 위치(기본 `~/.ssh/id_<종류>`,
+  이미 있으면 번호가 붙음. `~/.ssh`가 없으면 비공개 권한으로 만들고 파일은 0600 / 0644)를 정합니다.
+  생성 뒤 공개 키를 Copy 버튼과 함께, 지문도 보여 줍니다. "Add to ssh-agent"는
+  `ssh-add --apple-use-keychain`을, "Install on a server…"는 저장된 세션에 평소 인증 방식으로 접속해
+  `~/.ssh/authorized_keys`에 공개 키를 `ssh-copy-id`처럼 덧붙입니다(두 번 넣지 않음). 편집기에서 열었다면
+  *Use in this session*이 키 칸을 채웁니다.
+- **알고리즘**: Advanced SSH → Algorithms에 이 세션이 제시하는 키 교환·호스트 키·암호·MAC 목록이
+  기본값으로 채워져 있습니다. 목록을 고쳐 제한하거나 순서를 바꿀 수 있고(모르는 이름은 바로 거부),
+  *Reset to defaults*가 되돌리며, "Legacy algorithms (old devices)"는 오래된 장비가 아직 요구하는
+  SHA-1 키 교환·CBC 암호·DSA 호스트 키를 더해 주는 프리셋입니다. 기본값과 다른 목록만 저장됩니다.
 - **점프 호스트**: Advanced SSH → Jump host에서 다른 저장 세션을 bastion으로 지정합니다(ProxyJump).
 - **실패했을 때**: 터미널에 원인이 출력됩니다. 예: `authentication failed — server accepts:
   publickey; tried: ~/.ssh/id_ed25519`, 또는 포트에 응답이 없다는 안내. [문제 해결](#문제-해결) 참고.
@@ -275,6 +287,10 @@ macOS Keychain 기반 암호화), `settings.json`, `known_hosts`, `workspace.jso
 - **"authentication failed — server accepts: …; tried: …"**: 서버가 MobAlt가 제시한 방법을 받지
   않았습니다. "accepts" 목록과 세션의 인증 방법을 비교하고, 키 전용 서버라면 알맞은 키 파일을 지정하세요.
   실패가 반복되면 fail2ban이나 sshd의 per-source 패널티로 IP가 잠시 차단될 수 있습니다.
+- **"no matching key exchange / host key / cipher / MAC: this session offers …; the server offers …"**:
+  양쪽에 공통 알고리즘이 없습니다. 메시지에 서버가 쓰는 알고리즘이 나오니 그중 하나를 Advanced SSH →
+  Algorithms에 더하거나 *Reset to defaults*를 누르세요. SHA-1 / CBC만 되는 오래된 장비라면
+  "Legacy algorithms (old devices)"를 켭니다.
 - **호스트 키 변경**: 서버가 재설치됐거나 누군가 연결을 가로채고 있습니다. 이유를 알 때만 수락하고, 옛
   키는 설정 폴더의 `known_hosts`에서 지울 수 있습니다.
 - **X11 앱이 안 뜸**: XQuartz를 설치하고, 원격 셸의 시작 파일이 `DISPLAY`를 덮어쓰지 않는지 확인하세요.

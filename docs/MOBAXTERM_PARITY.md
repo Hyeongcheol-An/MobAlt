@@ -29,21 +29,21 @@ last column says which parts are missing.
 | Category | ✅ | 🟡 | ❌ | ➖ | Rows |
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
-| 2. SSH specifics | 15 | 10 | 10 | 2 | 37 |
-| 3. Terminal | 8 | 13 | 9 | 1 | 31 |
+| 2. SSH specifics | 17 | 9 | 9 | 2 | 37 |
+| 3. Terminal | 7 | 13 | 10 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
-| 5. Network and admin tools, embedded servers, Moba* utilities | 6 | 2 | 8 | 19 | 35 |
+| 5. Network and admin tools, embedded servers, Moba* utilities | 5 | 2 | 9 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **45** | **41** | **38** | **59** | **183** |
-| 8. Recent additions (24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
-| 9. UX details power users rely on | 6 | 11 | 2 | 1 | 20 |
-| **All tables** | **55** | **68** | **47** | **63** | **233** |
+| **Sections 1–7 (each feature once)** | **45** | **40** | **39** | **59** | **183** |
+| 8. Recent additions (24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
+| 9. UX details power users rely on | 5 | 11 | 3 | 1 | 20 |
+| **All tables** | **52** | **67** | **51** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 45 in full, 41 in a narrower or different form and lacks 38.
+MobAlt has 45 in full, 40 in a narrower or different form and lacks 39.
 
 ## 1. Session types
 
@@ -100,13 +100,13 @@ MobAlt has 45 in full, 41 in a narrower or different form and lacks 38.
 | Follow terminal folder | ✅ | "SFTP follows terminal folder" session option (OSC 7 hook for bash/zsh) plus the panel's Follow checkbox; off by default |
 | Zmodem (rz/sz) | ❌ | not implemented |
 | Adapt locales | ❌ | no locale push to the remote shell |
-| Expert SSH settings (ciphers, KEX, MAC, post-quantum) | 🟡 | one "Legacy algorithms" toggle appends SHA-1 KEX / CBC ciphers; no per-algorithm picker; ssh2 1.17 has strict KEX (Terrapin) but no ML-KEM |
+| Expert SSH settings (ciphers, KEX, MAC, post-quantum) | ✅ | Advanced SSH → Algorithms: per-session key exchange, host key, cipher and MAC lists pre-filled from ssh2's defaults, validated against what ssh2 supports, "Legacy algorithms" as a preset; a mismatch names what both sides offer; ssh2 1.17 has strict KEX (Terrapin) but no ML-KEM (post-quantum waits on ssh2) |
 | Terminal type per session | ❌ | fixed `xterm-256color` |
 | SSH tunnels (MobaSSHTunnel) | 🟡 | Tunneling dialog (⇧⌘U): -L, -R and -D SOCKS5, over an open connection or a dedicated one to a saved session, per-session Tunnels tab auto-starts; no auto-reconnect, reorder or duplicate; no limit |
 | Credentials manager (shared credentials) | ❌ | passwords are per session |
 | Master password | 🟡 | no master password: secrets are encrypted with Electron `safeStorage` (macOS Keychain, unlocked by your login); JSON export never contains them |
 | Windows Hello | ➖ | Windows-only; the login Keychain protects MobAlt's secrets |
-| MobaKeyGen | ❌ | no key generator UI; `ssh-keygen` in a Local terminal |
+| MobaKeyGen | ✅ | Session → Generate SSH Key… (Tools panel, editor's Generate… button): Ed25519 / RSA 4096 / ECDSA via `ssh-keygen`, passphrase with strength hint, public key + fingerprint, add to ssh-agent, install on a server like `ssh-copy-id` |
 | Known hosts | ✅ | `~/.ssh/known_hosts` plus the app's own list; first-connection fingerprint (SHA256 and MD5); a changed key is flagged and never accepted silently |
 | Session logging | ✅ | "Log session output to file" per session or Terminal → Start/Stop Session Log; raw or plain text (Settings → Logging); start/stop stamps, no per-line timestamps |
 | IPv6 | ✅ | IPv6 addresses in the host field and `[addr]:port` in Quick connect |
@@ -204,7 +204,7 @@ MobAlt has 45 in full, 41 in a narrower or different form and lacks 38.
 | MobaTextEditor | 🟡 | built-in plain-text editor for remote files (⌘S saves back) or your external editor with auto-upload; no syntax highlighting or search |
 | MobaDiff / MobaTextDiff | ❌ | FileMerge (`opendiff`), `diff`, your editor |
 | MobaFoldersDiff | ❌ | `diff -r`, FileMerge |
-| MobaKeyGen | ❌ | `ssh-keygen` in a Local terminal (see §2) |
+| MobaKeyGen | ✅ | Generate SSH Key… dialog (see §2) |
 | MobaPictureViewer | ➖ | Quick Look / Preview after "Show in Finder" |
 | MobaMonitor | ➖ | the inventory found no MobaXterm tool by this name; the nearest feature is the remote monitoring bar (§2, ❌) |
 | List hardware / processes | ➖ | System Information, Activity Monitor, `ps` |
@@ -286,7 +286,7 @@ MobAlt has 45 in full, 41 in a narrower or different form and lacks 38.
 | 26.0 — import from Remote Desktop Manager and CSV | ❌ | not implemented |
 | 26.0 — MAC-vendor lookup, DirectDraw, tunnel reorder, bracketed paste default, apt X fonts | 🟡 | bracketed paste honoured by xterm.js; the rest missing or Windows-only |
 | 25.4 — Windows SSH agent, other PuTTY agents, Windows Hello | ✅ | any agent behind `SSH_AUTH_SOCK`; Hello is Windows-only |
-| 25.4 — macro include, ms log timestamps, "chokes on full KEXINIT", Cisco KEX autodetect, floating popup console | ❌ | none of these ("Legacy algorithms" is the only old-device knob) |
+| 25.4 — macro include, ms log timestamps, "chokes on full KEXINIT", Cisco KEX autodetect, floating popup console | ❌ | none of these (old devices: the "Legacy algorithms" preset or the per-session algorithm lists) |
 | 25.3 — MobaTextEditor / MobaDiff overhaul | 🟡 | plain built-in editor or external editor only |
 | 25.2 — ML-KEM post-quantum KEX, PuTTY engine update | ❌ | ssh2 1.17 has no ML-KEM |
 | 25.2 — RDP redirection options, tunnel reconnect, 64 icons, follow-path and monitoring on by default, export password | 🟡 | icons ✅; RDP options live in Windows App; no tunnel reconnect; following is opt-in |
@@ -319,8 +319,8 @@ MobAlt has 45 in full, 41 in a narrower or different form and lacks 38.
 | Local terminal is a real Unix shell | ✅ | natively, with your own dotfiles |
 | X11 "just works" (auto-start, DISPLAY, WMs, XDMCP) | 🟡 | XQuartz started on demand and the cookie swapped; forwarding is a per-session option; no window managers or XDMCP |
 | Games and penguins | ➖ | none |
-| Tools menu as a Swiss-army drawer | 🟡 | Tools panel (ping, traceroute, DNS, port scan, network info, Wake-on-LAN, network scanner) and Tunneling; the rest through macOS or Homebrew |
-| Expert settings everywhere (terminal, SSH, RDP) | 🟡 | "Legacy algorithms" and a few terminal knobs; no expert SSH / RDP dialogs |
+| Tools menu as a Swiss-army drawer | 🟡 | Tools panel (ping, traceroute, DNS, port scan, network info) and Tunneling; the rest through macOS or Homebrew |
+| Expert settings everywhere (terminal, SSH, RDP) | 🟡 | expert SSH: the per-session algorithm lists in Advanced SSH; a few terminal knobs; no expert RDP dialog (Windows App owns RDP) |
 | No telemetry, no auto-update, no admin rights | 🟡 | no telemetry; the startup update check is optional and only installs with consent; no admin rights (drag to Applications or Homebrew) |
 
 ## What MobAlt has that MobaXterm does not
@@ -359,8 +359,6 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 | Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
 | Keyword syntax highlighting in the terminal | readable logs on colour-less servers; xterm.js decorations API | M |
 | Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
-| SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |
-| Expert SSH algorithm / KEX / cipher / MAC settings | one legacy toggle is too coarse; ssh2's `algorithms` option takes explicit lists (ML-KEM waits on ssh2) | S |
 
 **P2**
 

@@ -8,6 +8,8 @@ const path = require('path');
 const { StringDecoder } = require('string_decoder');
 const knownhosts = require('./knownhosts');
 const x11 = require('./x11');
+const algorithms = require('./algorithms');
+const keygen = require('./keygen');
 
 const { execFile } = require('child_process');
 
@@ -260,13 +262,20 @@ class SshManager {
     };
   }
 
-  /** Extra (legacy) algorithms for ssh2 when the session asks for them. */
+  /**
+   * ssh2's `algorithms` option for a session: the explicit lists of Advanced SSH → Algorithms when set, else the
+   * "Legacy algorithms" additions, else nothing (ssh2's defaults). See algorithms.js.
+   */
   _algorithms(cfg) {
-    return cfg.legacyAlgorithms
-      ? { kex: { append: ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1', 'diffie-hellman-group-exchange-sha1'] },
-          serverHostKey: { append: ['ssh-rsa', 'ssh-dss'] },
-          cipher: { append: ['aes128-cbc', 'aes256-cbc', '3des-cbc'] } }
-      : undefined;
+    return algorithms.connectOption(cfg);
+  }
+
+  /**
+   * ssh2's debug hook, used for one thing: remembering what the server offered in its KEXINIT (key exchanges, host
+   * key formats, ciphers, MACs), so a handshake that finds nothing in common can say what the server does speak.
+   */
+  _debugHook(ctx) {
+    return (line) => { ctx.remoteAlgorithms = algorithms.noteRemote(ctx.remoteAlgorithms, line); };
   }
 
   /**
@@ -287,8 +296,9 @@ class SshManager {
         try { client.end(); } catch {}
         resolve(ok ? { ok: true } : { ok: false, error: error || 'host key check failed' });
       };
-      const verifier = this._hostVerifier(cfg, {});
-      client.on('error', (e) => finish(false, this._explainError(e, {}, cfg)));
+      const ctx = {};
+      const verifier = this._hostVerifier(cfg, ctx);
+      client.on('error', (e) => finish(false, this._explainError(e, ctx, cfg)));
       client.on('close', () => finish(false, 'connection closed during the host key check'));
       client.on('ready', () => finish(true));
       try {
@@ -306,6 +316,7 @@ class SshManager {
           authHandler: (_methods, _partial, cb) => cb(false), // never reached: the check ends with the key exchange
           readyTimeout: settings.readyTimeout || 20000,
           algorithms: this._algorithms(cfg),
+          debug: this._debugHook(ctx),
         });
       } catch (e) {
         finish(false, e.message);
@@ -399,6 +410,7 @@ class SshManager {
         agent: cfg.agentForward ? process.env.SSH_AUTH_SOCK : undefined,
         tryKeyboard: true,
         algorithms: this._algorithms(cfg),
+        debug: this._debugHook(ctx),
       };
       if (sock) connectCfg.sock = sock;
       try {
@@ -543,9 +555,62 @@ class SshManager {
       msg += ' — the host is reachable but nothing listens on that port.';
     } else if (/Too many authentication failures/i.test(msg)) {
       msg += ' — the server cut the connection after too many key attempts; pick a specific key file or "Password" auth in the session.';
+    } else if (/^Handshake failed: no matching/.test(msg)) {
+      // nothing in common with the server's KEXINIT: say which side offers what (algorithms.js knows both lists)
+      msg = algorithms.explainHandshake(msg, cfg, ctx.remoteAlgorithms) || msg;
+    } else if (/^Unsupported algorithm: /.test(msg)) {
+      msg += ' — Advanced SSH → Algorithms names an algorithm this version of MobAlt cannot do; Reset to defaults there.';
     }
     if (/Host denied \(verification failed\)/i.test(msg)) msg = 'host key not accepted';
     return msg;
+  }
+
+  /**
+   * Put a public key on a server the way ssh-copy-id does: connect to `cfg` with its usual authentication (prompts
+   * included), then append `publicKey` (one authorized_keys line) to `remoteFile` (default ~/.ssh/authorized_keys),
+   * creating the folder 0700 and the file 0600 when missing; a line already there is left alone. Resolves
+   * { ok: true, added: bool, remoteFile, host } or { ok: false, error }. The connection is closed right after.
+   */
+  async installPublicKey(cfg, publicKey, remoteFile = '~/.ssh/authorized_keys') {
+    const line = String(publicKey || '').trim().split('\n')[0];
+    const cols = line.split(/\s+/);
+    if (cols.length < 2 || !/^[A-Za-z0-9+/=]+$/.test(cols[1])) return { ok: false, error: 'Not a public key line (expected "ssh-ed25519 AAAA… comment")' };
+    let cmd;
+    try {
+      cmd = keygen.installCommand(remoteFile, cols[1]);
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+    const where = `${cfg.username || os.userInfo().username}@${cfg.host}:${cfg.port || 22}`;
+    const ctx = { log: '', out: (t) => { ctx.log = (ctx.log + t).slice(-4000); } };
+    let client = null, jump = null;
+    try {
+      ({ client, jump } = await this.connectClient({ ...cfg }, ctx));
+    } catch (e) {
+      return { ok: false, error: `Could not connect to ${where}: ${this._explainError(e, ctx, cfg)}` };
+    }
+    try {
+      const r = await new Promise((resolve, reject) => {
+        client.exec(cmd, (err, stream) => {
+          if (err) return reject(err);
+          let out = '', errOut = '';
+          stream.on('data', (d) => (out += d));
+          stream.stderr.on('data', (d) => (errOut += d));
+          stream.on('close', (code) => resolve({ code, out, errOut }));
+          stream.on('error', reject);
+          stream.end(line + '\n');
+        });
+      });
+      if (/MOBALT_KEY_ADDED/.test(r.out)) return { ok: true, added: true, remoteFile, host: where };
+      if (/MOBALT_KEY_PRESENT/.test(r.out)) return { ok: true, added: false, remoteFile, host: where };
+      const why = (r.errOut.trim() || r.out.trim()).split('\n').pop() || `exit status ${r.code}`;
+      return { ok: false, error: `Could not write ${remoteFile} on ${where}: ${why}` };
+    } catch (e) {
+      return { ok: false, error: `Installing the key on ${where} failed: ${e.message}` };
+    } finally {
+      try { client.end(); } catch {}
+      if (jump) try { jump.end(); } catch {}
+    }
   }
 
   /**

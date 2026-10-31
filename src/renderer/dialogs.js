@@ -1,5 +1,5 @@
 // Modal dialogs: session editor, settings, tunnels, host key / password / keyboard-interactive prompts.
-import { h, showModal, toast, confirmDialog, TYPE_LABEL, icon } from './ui.js';
+import { h, showModal, toast, confirmDialog, TYPE_LABEL, icon, ipcMessage } from './ui.js';
 import { THEMES } from './terminal.js';
 import { mix, contrast } from './theme.js';
 import { analysePaste, KIND_LABEL, DANGER_KINDS, PASTE_CONFIRM_CHARS } from './pasteguard.js';
@@ -213,11 +213,20 @@ export function sessionEditor(app, initial = {}) {
     const r = await window.api.dialog.open({ title: 'Select private key', defaultPath: app.info.home + '/.ssh', properties: ['openFile', 'showHiddenFiles'] });
     if (!r.canceled && r.filePaths[0]) keyPath.value = r.filePaths[0].replace(app.info.home, '~');
   } }, 'Browse…');
+  // Generate… opens the key generator on top of the editor; "Use in this session" there fills the key field
+  const keyGen = h('button', { class: 'btn small', type: 'button', title: 'Generate a new key pair (ssh-keygen)', onclick: async () => {
+    const r = await keygenDialog(app, { forSession: true });
+    if (r && r.privateKeyPath) {
+      keyPath.value = r.privateKeyPath.replace(app.info.home, '~');
+      if (authMethod.value === 'password' || authMethod.value === 'agent') { authMethod.value = 'auto'; applyAuth(); }
+      markDirty();
+    }
+  } }, 'Generate…');
   const passphrase = h('input', { type: 'password', placeholder: s.hasPassphrase ? '•••••••• (saved)' : 'optional', autocomplete: 'new-password' });
   // rows whose relevance depends on the authentication method
   const pwRow = field('Password', password);
   const clearRow = [h('div', {}), h('div', { class: 'checks' }, clearPw.el)];
-  const keyRow = field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse));
+  const keyRow = field('Private key', h('div', { class: 'inline' }, keyPath, keyBrowse, keyGen));
   const ppRow = field('Key passphrase', passphrase);
   const applyAuth = () => {
     const m = authMethod.value;
@@ -241,6 +250,49 @@ export function sessionEditor(app, initial = {}) {
   const ftps = check('FTPS: explicit TLS (AUTH TLS)', s.ftps);
   const ftpsInsecure = check('Accept untrusted / self-signed certificate', s.ftpsInsecure);
   const keepAlive = num(s.keepAliveInterval ?? app.settings.keepAliveInterval ?? 30, { min: 0, max: 3600 });
+
+  // --- algorithms (Advanced SSH): what this session offers for key exchange, host key, cipher and MAC, pre-filled
+  // from ssh2's defaults; "Legacy algorithms" is a preset that adds (or takes out) the SHA-1 / CBC / DSA ones; every
+  // name is checked against what ssh2 supports (an unknown one is an inline error and never saved). Only lists that
+  // differ from the preset are stored, as `algorithms: { kex, serverHostKey, cipher, hmac }`.
+  const algo = app.algorithms; // { defaults, supported, legacy } from the main process; null when it could not be read
+  const ALGO_CATS = [['kex', 'Key exchange'], ['serverHostKey', 'Host key'], ['cipher', 'Ciphers'], ['hmac', 'MACs']];
+  const uniq = (l) => [...new Set(l)];
+  const parseAlgos = (t) => uniq(String(t || '').split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean));
+  const algoPreset = (cat, legacyOn) => (legacyOn ? uniq([...algo.defaults[cat], ...algo.legacy[cat]]) : [...algo.defaults[cat]]);
+  const algoArea = {}, algoErr = {};
+  const checkAlgos = (cat) => {
+    const unknown = parseAlgos(algoArea[cat].value).filter((a) => !algo.supported[cat].includes(a));
+    const label = ALGO_CATS.find((c) => c[0] === cat)[1].toLowerCase().replace(/s$/, '');
+    algoErr[cat].textContent = unknown.length ? `Unknown ${label} algorithm${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}` : '';
+    algoErr[cat].hidden = !unknown.length;
+    algoArea[cat].classList.toggle('invalid', !!unknown.length);
+    algoArea[cat].setAttribute('aria-invalid', unknown.length ? 'true' : 'false');
+    return !unknown.length;
+  };
+  if (algo) {
+    for (const [cat, label] of ALGO_CATS) {
+      const ta = h('textarea', { class: 'algo-list', spellcheck: false, rows: 2, 'aria-label': `${label} algorithms` });
+      const own = s.algorithms && Array.isArray(s.algorithms[cat]) && s.algorithms[cat].length ? s.algorithms[cat] : null;
+      ta.value = (own || algoPreset(cat, !!s.legacyAlgorithms)).join(', ');
+      ta.addEventListener('input', () => checkAlgos(cat));
+      algoArea[cat] = ta;
+      algoErr[cat] = h('div', { class: 'form-error', role: 'alert', hidden: true });
+    }
+    // the preset adds its algorithms to the lists, or takes them out again (never one that is also a default)
+    legacy.cb.addEventListener('change', () => {
+      for (const [cat] of ALGO_CATS) {
+        const cur = parseAlgos(algoArea[cat].value);
+        const next = legacy.cb.checked ? uniq([...cur, ...algo.legacy[cat]]) : cur.filter((a) => !(algo.legacy[cat].includes(a) && !algo.defaults[cat].includes(a)));
+        algoArea[cat].value = next.join(', ');
+        checkAlgos(cat);
+      }
+    });
+  }
+  const algoReset = h('button', { class: 'btn small', type: 'button', onclick: () => {
+    for (const [cat] of ALGO_CATS) { algoArea[cat].value = algoPreset(cat, legacy.cb.checked).join(', '); checkAlgos(cat); }
+    markDirty();
+  } }, 'Reset to defaults');
 
   // --- terminal / behaviour
   const startup = h('textarea', { spellcheck: false, placeholder: 'One command per line, typed once the terminal is ready\ne.g. cd /var/log' });
@@ -366,7 +418,12 @@ export function sessionEditor(app, initial = {}) {
   pages.advanced.append(
     ...field('Jump host', h('div', { class: 'inline', style: { flexDirection: 'column', alignItems: 'stretch' } }, jumpSel, jumpHost), 'ProxyJump: connect through a bastion'),
     h('label', {}, 'Options'), h('div', { class: 'checks' }, x11.el, agentFwd.el, compression.el, legacy.el),
-    ...field('Keep-alive (s)', keepAlive)
+    ...field('Keep-alive (s)', keepAlive),
+    ...(algo ? [
+      h('label', { class: 'algo-title' }, 'Algorithms'), h('div', { class: 'algo-head' }, algoReset),
+      h('div', { class: 'form-help' }, 'What this session offers the server, most preferred first (comma or newline separated). "Legacy algorithms" adds the SHA-1 key exchanges, CBC ciphers and DSA host keys for old devices.'),
+      ...ALGO_CATS.flatMap(([cat, label]) => [...field(label, algoArea[cat]), algoErr[cat]]),
+    ] : [])
   );
   pages.terminal.append(
     ...field('Startup commands', startup),
@@ -471,6 +528,22 @@ export function sessionEditor(app, initial = {}) {
       tunnels,
     };
     delete out._connect;
+    if (algo && type === 'ssh') {
+      for (const [cat] of ALGO_CATS) {
+        if (checkAlgos(cat)) continue;
+        showPage('advanced');
+        algoArea[cat].focus();
+        toast(algoErr[cat].textContent, 'warn');
+        return null;
+      }
+      const lists = {};
+      for (const [cat] of ALGO_CATS) {
+        const list = parseAlgos(algoArea[cat].value);
+        if (list.length && list.join('\n') !== algoPreset(cat, legacy.cb.checked).join('\n')) lists[cat] = list;
+      }
+      if (Object.keys(lists).length) out.algorithms = lists;
+      else delete out.algorithms;
+    }
     // secrets: undefined = keep stored, '' = clear, string = set
     if (clearPw.cb.checked) out.password = '';
     else if (password.value) out.password = password.value;
@@ -818,4 +891,183 @@ export function shortcutsDialog(app) {
   const body = h('div', { class: 'shortcuts-tabs' }, tabs.strip, ...Object.values(tabs.pages));
   showModal({ title: 'Keyboard shortcuts', width: 'wide', body, buttons: [{ label: 'Close', value: null }] });
   holdTallest(body, tabs, sections[0][0]);
+}
+
+/** ~ for the home folder in what the key generator shows. */
+const tildeHome = (p, home) => (home && p.startsWith(home + '/') ? '~' + p.slice(home.length) : p);
+/** A rough passphrase strength for the hint under the field: ['none' | 'weak' | 'fair' | 'strong', text]. */
+export function passphraseStrength(p) {
+  if (!p) return ['none', 'No passphrase: anyone who copies the private key file can use it'];
+  let score = 0;
+  if (p.length >= 8) score++;
+  if (p.length >= 12) score++;
+  if (p.length >= 20) score++;
+  if (/[a-z]/.test(p) && /[A-Z]/.test(p)) score++;
+  if (/\d/.test(p)) score++;
+  if (/[^A-Za-z0-9\s]/.test(p)) score++;
+  if (p.trim().split(/\s+/).length >= 4) score += 2; // a few words make a good passphrase
+  return score <= 2 ? ['weak', 'Weak passphrase: use 12 characters or more with mixed case, digits or symbols, or a few words']
+    : score <= 4 ? ['fair', 'Fair passphrase'] : ['strong', 'Strong passphrase'];
+}
+
+/**
+ * SSH key generator (the MobaKeyGen counterpart): key type, comment, passphrase, output file, "add to ssh-agent" and
+ * "install on a server" (ssh-copy-id over a saved session), then the public key with Copy and the fingerprint.
+ * Resolves { privateKeyPath, publicKeyPath, publicKey } when a key was generated and "Use in this session" chosen
+ * (the editor's Generate… button, `forSession`), null otherwise.
+ */
+export async function keygenDialog(app, { forSession = false } = {}) {
+  const KINDS = [['ed25519', 'Ed25519 (recommended)'], ['rsa', 'RSA 4096'], ['ecdsa-256', 'ECDSA P-256'], ['ecdsa-384', 'ECDSA P-384']];
+  const kindOf = (v) => v.split('-')[0];
+  const bitsOf = (v) => (v === 'rsa' ? 4096 : v.startsWith('ecdsa') ? parseInt(v.split('-')[1], 10) : undefined);
+  const home = app.info.home || '';
+  const user = home.split('/').pop() || 'user';
+  const type = select(KINDS, 'ed25519');
+  const comment = text(`${user}@mobalt`, { placeholder: 'comment (who / what this key is for)' });
+  const pass = h('input', { type: 'password', placeholder: 'optional: protects the private key file', autocomplete: 'new-password' });
+  const pass2 = h('input', { type: 'password', placeholder: 'repeat the passphrase', autocomplete: 'new-password' });
+  const strength = h('div', { class: 'form-help keygen-strength', 'aria-live': 'polite' });
+  const passErr = h('div', { class: 'form-error', role: 'alert', hidden: true });
+  const outPath = text('', { placeholder: '~/.ssh/id_ed25519' });
+  const pathErr = h('div', { class: 'form-error', role: 'alert', hidden: true });
+  let suggested = '';
+  const suggest = async () => {
+    try { suggested = await window.api.keygen.suggest(kindOf(type.value)); } catch { suggested = `~/.ssh/id_${kindOf(type.value)}`; }
+    return suggested;
+  };
+  outPath.value = await suggest(); // the next free ~/.ssh/id_<type> (a counter when that name is taken)
+  type.addEventListener('change', async () => {
+    const was = suggested;
+    const next = await suggest();
+    if (!outPath.value.trim() || outPath.value === was) outPath.value = next; // a path typed by hand stays
+  });
+  const browse = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+    const cur = outPath.value.trim() || suggested;
+    const r = await window.api.dialog.save({ title: 'Save private key as', defaultPath: cur.startsWith('~') ? home + cur.slice(1) : cur, properties: ['showHiddenFiles', 'createDirectory'] });
+    if (!r.canceled && r.filePath) { outPath.value = tildeHome(r.filePath, home); pathErr.hidden = true; }
+  } }, 'Browse…');
+  const agent = check('Add to ssh-agent (ssh-add --apple-use-keychain)', false);
+  const install = check('Install on a server…', false);
+  const sshSessions = app.sessions.sessions.filter((x) => x.type === 'ssh');
+  const target = select(sshSessions.length
+    ? sshSessions.map((x) => [x.id, `${x.name} (${x.username ? x.username + '@' : ''}${x.host}${x.port && x.port !== 22 ? ':' + x.port : ''})`])
+    : [['', '(no saved SSH session yet)']], sshSessions[0] ? sshSessions[0].id : '');
+  if (!sshSessions.length) target.disabled = true;
+  const remoteFile = text('~/.ssh/authorized_keys');
+  const installRows = [
+    ...field('Server', target, 'A saved SSH session; it connects with its usual authentication (you may be asked for its password) and appends the public key like ssh-copy-id'),
+    ...field('Remote file', remoteFile),
+  ];
+  const applyInstall = () => { for (const el of installRows) el.hidden = !install.cb.checked; };
+  install.cb.addEventListener('change', applyInstall);
+  applyInstall();
+  const updateStrength = () => {
+    const [level, msg] = passphraseStrength(pass.value);
+    strength.textContent = msg;
+    strength.dataset.level = level;
+  };
+  pass.addEventListener('input', () => { updateStrength(); passErr.hidden = true; });
+  pass2.addEventListener('input', () => { passErr.hidden = true; });
+  outPath.addEventListener('input', () => { pathErr.hidden = true; });
+  updateStrength();
+  const status = h('div', { class: 'keygen-status', 'aria-live': 'polite' });
+  const form = h('div', { class: 'form-grid keygen-form' },
+    ...field('Key type', type), ...field('Comment', comment),
+    ...field('Passphrase', pass), strength, ...field('Confirm', pass2), passErr,
+    ...field('Save as', h('div', { class: 'inline' }, outPath, browse), 'The public key goes next to it with .pub; ~/.ssh is created private when missing'), pathErr,
+    h('label', {}, 'Options'), h('div', { class: 'checks' }, agent.el, install.el),
+    ...installRows
+  );
+  const result = h('div', { class: 'keygen-result', hidden: true });
+  const body = h('div', { class: 'keygen' }, form, result, status);
+  let done = null; // { privateKeyPath, publicKeyPath, publicKey } once generated
+  const m = showModal({
+    title: 'Generate SSH key',
+    width: 'wide',
+    closeOnBackdrop: false,
+    body,
+    buttons: [
+      { label: 'Cancel', value: null },
+      { label: 'Use in this session', action: (api) => api.close(done) },
+      { label: 'Generate', primary: true, action: (api) => (done ? api.close(forSession ? done : null) : generate(api)) },
+    ],
+  });
+  const [cancelBtn, useBtn, genBtn] = m.el.querySelectorAll('.modal-foot .btn');
+  useBtn.hidden = true;
+  const controls = () => [...form.querySelectorAll('input, select, button')];
+  const busy = (on) => { for (const el of controls()) el.disabled = on || (el === target && !sshSessions.length); genBtn.disabled = on; };
+
+  async function generate() {
+    passErr.hidden = pathErr.hidden = true;
+    if (pass.value !== pass2.value) {
+      passErr.textContent = 'The passphrases do not match';
+      passErr.hidden = false;
+      pass2.focus();
+      pass2.select();
+      return;
+    }
+    const where = outPath.value.trim();
+    if (!where) {
+      pathErr.textContent = 'Choose where to save the key';
+      pathErr.hidden = false;
+      outPath.focus();
+      return;
+    }
+    if (install.cb.checked && !target.value) return toast('Save an SSH session first to install the key on it', 'warn');
+    busy(true);
+    status.textContent = `Generating ${KINDS.find((k) => k[0] === type.value)[1]} key…`;
+    let r;
+    try {
+      r = await window.api.keygen.generate({ type: kindOf(type.value), bits: bitsOf(type.value), comment: comment.value.trim(), passphrase: pass.value, path: where });
+    } catch (e) {
+      busy(false);
+      status.textContent = '';
+      pathErr.textContent = ipcMessage(e); // "~/.ssh/id_ed25519 already exists — choose another file name", "ssh-keygen was not found…"
+      pathErr.hidden = false;
+      outPath.focus();
+      return;
+    }
+    done = { privateKeyPath: r.privateKeyPath, publicKeyPath: r.publicKeyPath, publicKey: r.publicKey };
+    const steps = [];
+    if (agent.cb.checked) {
+      status.textContent = 'Adding the key to ssh-agent…';
+      const a = await window.api.keygen.addToAgent(r.privateKeyPath, pass.value).catch((e) => ({ ok: false, error: ipcMessage(e) }));
+      steps.push({ ok: a.ok, text: a.ok ? `Added to ssh-agent (${a.message})` : `ssh-agent: ${a.error}` });
+    }
+    if (install.cb.checked && target.value) {
+      const sess = sshSessions.find((x) => x.id === target.value);
+      status.textContent = `Installing the public key on ${sess ? sess.name : 'the server'}…`;
+      const i = await window.api.keygen.install(target.value, r.publicKey, remoteFile.value.trim() || '~/.ssh/authorized_keys').catch((e) => ({ ok: false, error: ipcMessage(e) }));
+      steps.push({ ok: i.ok, text: i.ok ? (i.added ? `Installed on ${i.host} in ${i.remoteFile}` : `Already present on ${i.host} in ${i.remoteFile}`) : i.error });
+    }
+    status.textContent = '';
+    showResult(r, steps);
+  }
+
+  function showResult(r, steps) {
+    const pub = h('textarea', { class: 'keygen-pub', readOnly: true, rows: 3, spellcheck: false });
+    pub.value = r.publicKey;
+    pub.addEventListener('focus', () => pub.select());
+    const copy = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+      await window.api.clipboard.write(r.publicKey);
+      toast('Public key copied', 'success');
+    } }, 'Copy');
+    const fp = r.fingerprint || {};
+    result.replaceChildren(
+      h('div', { class: 'keygen-ok' }, 'Key pair saved: ', h('span', { class: 'mono' }, tildeHome(r.privateKeyPath, home)), ' (private, 0600) and ', h('span', { class: 'mono' }, tildeHome(r.publicKeyPath, home)), ' (public, 0644)'),
+      h('div', { class: 'form-grid' },
+        ...field('Public key', h('div', { class: 'inline keygen-pubrow' }, pub, copy), 'One line for ~/.ssh/authorized_keys on the servers this key should open'),
+        ...field('Fingerprint', h('div', { class: 'hostkey-fp keygen-fp' }, fp.hash ? `${fp.hash} (${fp.type} ${fp.bits})` : fp.line || '')),
+        ...(steps.length ? [h('label', {}, 'Steps'), h('div', { class: 'keygen-steps' }, steps.map((st) => h('div', { class: 'keygen-step ' + (st.ok ? 'ok' : 'err') }, st.text)))] : [])
+      )
+    );
+    form.hidden = true;
+    result.hidden = false;
+    m.el.querySelector('.modal-title-text').textContent = 'SSH key generated';
+    genBtn.hidden = true;
+    cancelBtn.textContent = 'Close';
+    if (forSession) { useBtn.hidden = false; useBtn.classList.add('primary'); useBtn.focus(); }
+    else copy.focus();
+  }
+  return m.promise;
 }

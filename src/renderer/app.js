@@ -1,12 +1,12 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, plural } from './ui.js';
+import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, plural, ipcMessage } from './ui.js';
 import { TermPane, THEMES, searchDecorations } from './terminal.js';
 import { chromePalette, cssVars } from './theme.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
-import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog } from './dialogs.js';
+import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
 
 /** Long paths keep their tail (the leaf folder is what matters in a status bar). */
@@ -14,9 +14,6 @@ const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
 
 /** Pane kind for a session type (rdp/vnc never get a pane). */
 const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh');
-
-/** The message of an error thrown by a main-process handler, without Electron's "Error invoking remote method" wrapper. */
-const ipcMessage = (e) => String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
 
 class App {
   constructor() {
@@ -33,7 +30,8 @@ class App {
 
   async init() {
     applyIcons(); // static toolbar / panel buttons carry data-icon hooks
-    [this.settings, this.sessions, this.info] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info()]);
+    // algorithms: ssh2's defaults / supported names / legacy additions for the session editor's Advanced SSH lists
+    [this.settings, this.sessions, this.info, this.algorithms] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info(), window.api.ssh.algorithms().catch(() => null)]);
     this._applyTheme();
     document.documentElement.style.setProperty('--sidebar-w', (this.settings.sidebarWidth || 280) + 'px');
     this.workspace = new Workspace(this);
@@ -1072,6 +1070,7 @@ class App {
         return;
       }
       case 'shortcuts': return shortcutsDialog(this);
+      case 'keygen': return keygenDialog(this); // Session → Generate SSH Key…, the Tools panel button
       default:
         console.warn('unknown action', name);
     }

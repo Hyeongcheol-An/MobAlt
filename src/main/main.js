@@ -18,6 +18,8 @@ const wol = require('./wol');
 const netscan = require('./netscan');
 const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
+const keygen = require('./keygen');
+const algorithms = require('./algorithms');
 const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
@@ -275,6 +277,8 @@ function buildMenu() {
         { label: 'Import from MobaXterm.ini…', click: () => sendAction('import-moba') },
         { label: 'Import Sessions (JSON)…', click: () => sendAction('import-json') },
         { label: 'Export Sessions (JSON)…', click: () => sendAction('export-json') },
+        { type: 'separator' },
+        { label: 'Generate SSH Key…', click: () => sendAction('keygen') },
       ],
     },
     {
@@ -544,6 +548,25 @@ function registerIpc() {
   ipcMain.handle('ssh:connect-sftp', async (_e, cfg) => ssh.openSftpOnly(await mergeSecrets(cfg)));
   ipcMain.handle('ssh:disconnect', (_e, id) => ssh.disconnect(id));
   ipcMain.handle('ssh:exec', (_e, id, cmd) => ssh.exec(id, cmd));
+  // Advanced SSH → Algorithms: ssh2's defaults, every name it supports, the legacy preset's additions.
+  ipcMain.handle('ssh:algorithms', () => algorithms.describe());
+
+  // ---------- SSH key generator (Session → Generate SSH Key…, the editor's Generate… button) ----------
+  // The next free ~/.ssh/id_<type> (id_ed25519, id_ed25519_2, …), shown with ~ for the dialog.
+  ipcMain.handle('keygen:suggest', (_e, type) => {
+    const name = `id_${{ ed25519: 'ed25519', rsa: 'rsa', ecdsa: 'ecdsa' }[type] || 'ed25519'}`;
+    return keygen.shortHome(keygen.nextFreePath(path.join(os.homedir(), '.ssh', name)));
+  });
+  // { type, bits?, comment?, passphrase?, path } → { privateKeyPath, publicKeyPath, publicKey, fingerprint }; errors are readable
+  ipcMain.handle('keygen:generate', (_e, opts) => keygen.generate(opts || {}));
+  ipcMain.handle('keygen:add-agent', (_e, keyPath, passphrase) => keygen.addToAgent(keyPath, passphrase));
+  // Install on a server: the saved session's own authentication (prompts included); { ok, added } or { ok: false, error }
+  ipcMain.handle('keygen:install', async (_e, sessionId, publicKey, remoteFile) => {
+    const s = await store.getSession(sessionId);
+    if (!s) return { ok: false, error: 'That session no longer exists' };
+    if (s.type !== 'ssh') return { ok: false, error: `${s.name} is not an SSH session` };
+    return ssh.installPublicKey(s, publicKey, remoteFile);
+  });
 
   // FTP sessions share the sftp:* API; the connection id decides which backend serves it.
   const files = (id) => (ftp.has(id) ? ftp : sftp);

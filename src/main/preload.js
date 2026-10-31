@@ -99,6 +99,14 @@ contextBridge.exposeInMainWorld('api', {
     connectSftp: (cfg) => invoke('ssh:connect-sftp', cfg),
     disconnect: (id) => invoke('ssh:disconnect', id),
     exec: (id, cmd) => invoke('ssh:exec', id, cmd),
+    // { categories, labels, defaults, supported, legacy } for Advanced SSH → Algorithms
+    algorithms: () => invoke('ssh:algorithms'),
+  },
+  keygen: {
+    suggest: (type) => invoke('keygen:suggest', type), // next free ~/.ssh/id_<type>
+    generate: (opts) => invoke('keygen:generate', opts), // { type, bits?, comment, passphrase, path }
+    addToAgent: (keyPath, passphrase) => invoke('keygen:add-agent', keyPath, passphrase),
+    install: (sessionId, publicKey, remoteFile) => invoke('keygen:install', sessionId, publicKey, remoteFile),
   },
   sftp: {
     list: (id, dir) => invoke('sftp:list', id, dir),

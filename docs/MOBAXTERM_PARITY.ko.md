@@ -28,20 +28,20 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 분류 | ✅ | 🟡 | ❌ | ➖ | 행 수 |
 |---|---|---|---|---|---|
 | 1. 세션 종류 | 7 | 6 | 4 | 4 | 21 |
-| 2. SSH 세부 기능 | 15 | 10 | 10 | 2 | 37 |
-| 3. 터미널 | 8 | 13 | 9 | 1 | 31 |
+| 2. SSH 세부 기능 | 17 | 9 | 9 | 2 | 37 |
+| 3. 터미널 | 7 | 13 | 10 | 1 | 31 |
 | 4. X 서버와 내장 Unix 도구 | 2 | 1 | 1 | 17 | 21 |
-| 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 6 | 2 | 8 | 19 | 35 |
+| 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 5 | 2 | 9 | 19 | 35 |
 | 6. 작업대 기능 | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional 전용 항목과 Home 에디션 제한 | 0 | 0 | 0 | 13 | 13 |
-| **1–7절 합계(기능당 한 번)** | **45** | **41** | **38** | **59** | **183** |
-| 8. 최근 추가 기능(24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
-| 9. 파워 유저가 기대는 UX | 6 | 11 | 2 | 1 | 20 |
-| **전체 표 합계** | **55** | **68** | **47** | **63** | **233** |
+| **1–7절 합계(기능당 한 번)** | **45** | **40** | **39** | **59** | **183** |
+| 8. 최근 추가 기능(24.3 → 26.6) | 2 | 16 | 9 | 3 | 30 |
+| 9. 파워 유저가 기대는 UX | 5 | 11 | 3 | 1 | 20 |
+| **전체 표 합계** | **52** | **67** | **51** | **63** | **233** |
 
 8절과 9절은 원본 목록의 구성을 그대로 따른 것이라 1–7절에 이미 나온 기능을 다시 세므로, "전체 표 합계"에는
 같은 기능이 두 번 들어갑니다. 인용할 때는 1–7절 합계를 쓰세요. 다르게 읽으면, macOS에서 의미가 있는 기능
-124개(1–7절에서 ➖ 제외) 가운데 MobAlt는 45개를 그대로, 41개를 더 좁거나 다른 형태로 갖고 있고, 38개는
+124개(1–7절에서 ➖ 제외) 가운데 MobAlt는 45개를 그대로, 40개를 더 좁거나 다른 형태로 갖고 있고, 39개는
 없습니다.
 
 ## 1. 세션 종류
@@ -99,13 +99,13 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 터미널 폴더 추종 | ✅ | 세션 옵션 "SFTP follows terminal folder"(bash/zsh용 OSC 7 훅)와 패널의 Follow 체크박스. 기본 꺼짐 |
 | Zmodem(rz/sz) | ❌ | 미구현 |
 | 로케일 맞추기 | ❌ | 원격 셸에 로케일을 넘기지 않음 |
-| 전문가 SSH 설정(암호, KEX, MAC, 양자내성) | 🟡 | "Legacy algorithms" 토글 하나가 SHA-1 KEX / CBC 암호를 추가할 뿐, 알고리즘별 선택은 없음. ssh2 1.17은 strict KEX(Terrapin)는 되고 ML-KEM은 안 됨 |
+| 전문가 SSH 설정(암호, KEX, MAC, 양자내성) | ✅ | Advanced SSH → Algorithms: 세션별 키 교환·호스트 키·암호·MAC 목록(ssh2 기본값으로 채워지고 ssh2가 지원하는 이름만 허용), "Legacy algorithms"는 프리셋. 불일치 시 양쪽이 제시한 목록을 보여 줌. ssh2 1.17은 strict KEX(Terrapin)는 되고 ML-KEM(양자내성)은 ssh2를 기다려야 함 |
 | 세션별 터미널 종류 | ❌ | `xterm-256color` 고정 |
 | SSH 터널(MobaSSHTunnel) | 🟡 | Tunneling 대화상자(⇧⌘U): -L, -R, -D SOCKS5를 열린 연결 또는 저장된 세션의 전용 연결로, 세션별 Tunnels 탭은 자동 시작. 자동 재연결, 순서 바꾸기, 복제는 없음. 개수 제한 없음 |
 | 자격 증명 관리자(공유 자격 증명) | ❌ | 비밀번호는 세션마다 따로 |
 | 마스터 비밀번호 | 🟡 | 마스터 비밀번호 없음. 비밀 정보는 Electron `safeStorage`(macOS Keychain, 로그인으로 잠금 해제)로 암호화. JSON 내보내기에는 절대 들어가지 않음 |
 | Windows Hello | ➖ | Windows 전용. MobAlt의 비밀 정보는 로그인 Keychain이 지킴 |
-| MobaKeyGen | ❌ | 키 생성 UI 없음. Local 터미널에서 `ssh-keygen` |
+| MobaKeyGen | ✅ | Session → Generate SSH Key…(Tools 패널, 편집기의 Generate… 버튼): `ssh-keygen`으로 Ed25519 / RSA 4096 / ECDSA, 강도 안내가 있는 패스프레이즈, 공개 키 + 지문, ssh-agent 등록, `ssh-copy-id`처럼 서버에 설치 |
 | Known hosts | ✅ | `~/.ssh/known_hosts`와 앱 자체 목록. 첫 접속에 지문(SHA256, MD5) 표시, 바뀐 키는 경고하고 조용히 받아들이지 않음 |
 | 세션 로그 | ✅ | 세션별 "Log session output to file" 또는 Terminal → Start/Stop Session Log. 원본 또는 일반 텍스트(Settings → Logging). 시작/종료 시각만 기록, 줄별 타임스탬프 없음 |
 | IPv6 | ✅ | 호스트 칸에 IPv6 주소, Quick connect에는 `[addr]:port` |
@@ -203,7 +203,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | MobaTextEditor | 🟡 | 원격 파일용 내장 일반 텍스트 편집기(⌘S로 저장) 또는 자동 업로드되는 외부 편집기. 구문 강조와 검색은 없음 |
 | MobaDiff / MobaTextDiff | ❌ | FileMerge(`opendiff`), `diff`, 쓰는 편집기 |
 | MobaFoldersDiff | ❌ | `diff -r`, FileMerge |
-| MobaKeyGen | ❌ | Local 터미널에서 `ssh-keygen`(2절 참고) |
+| MobaKeyGen | ✅ | Generate SSH Key… 대화상자(2절 참고) |
 | MobaPictureViewer | ➖ | "Show in Finder" 뒤 훑어보기 / 미리보기 |
 | MobaMonitor | ➖ | 원본 목록에서 이 이름의 MobaXterm 도구를 찾지 못함. 가장 가까운 기능은 원격 모니터링 바(2절, ❌) |
 | 하드웨어 / 프로세스 목록 | ➖ | 시스템 정보, 활성 상태 보기, `ps` |
@@ -285,7 +285,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 26.0 — Remote Desktop Manager와 CSV 가져오기 | ❌ | 미구현 |
 | 26.0 — MAC 제조사 조회, DirectDraw, 터널 순서 변경, 브래킷 붙여넣기 기본, apt X 글꼴 | 🟡 | 브래킷 붙여넣기는 xterm.js가 지원. 나머지는 없거나 Windows 전용 |
 | 25.4 — Windows SSH 에이전트, 다른 PuTTY 에이전트, Windows Hello | ✅ | `SSH_AUTH_SOCK` 뒤의 아무 에이전트나. Hello는 Windows 전용 |
-| 25.4 — 매크로 포함, ms 단위 로그 타임스탬프, "full KEXINIT에 막힘", Cisco KEX 자동 감지, 떠 있는 팝업 콘솔 | ❌ | 모두 없음("Legacy algorithms"가 유일한 구형 장비 손잡이) |
+| 25.4 — 매크로 포함, ms 단위 로그 타임스탬프, "full KEXINIT에 막힘", Cisco KEX 자동 감지, 떠 있는 팝업 콘솔 | ❌ | 모두 없음(구형 장비는 "Legacy algorithms" 프리셋이나 세션별 알고리즘 목록으로) |
 | 25.3 — MobaTextEditor / MobaDiff 개편 | 🟡 | 일반 텍스트 내장 편집기 또는 외부 편집기만 |
 | 25.2 — ML-KEM 양자내성 KEX, PuTTY 엔진 갱신 | ❌ | ssh2 1.17에 ML-KEM 없음 |
 | 25.2 — RDP 리디렉션 옵션, 터널 재연결, 아이콘 64개, 경로 추종·모니터링 기본 켜짐, 내보내기 비밀번호 | 🟡 | 아이콘 ✅. RDP 옵션은 Windows App에. 터널 재연결 없음. 추종은 선택 사항 |
@@ -318,8 +318,8 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 로컬 터미널이 진짜 Unix 셸 | ✅ | 원래 그렇고, 내 dotfile이 그대로 적용 |
 | X11이 "그냥 됨"(자동 시작, DISPLAY, WM, XDMCP) | 🟡 | XQuartz를 필요 시 띄우고 쿠키 교체. 포워딩은 세션별 옵션. 윈도 매니저나 XDMCP는 없음 |
 | 게임과 펭귄 | ➖ | 없음 |
-| 만능 서랍 같은 Tools 메뉴 | 🟡 | Tools 패널(ping, traceroute, DNS, 포트 스캔, 네트워크 정보, Wake-on-LAN, 네트워크 스캐너)과 Tunneling. 나머지는 macOS나 Homebrew로 |
-| 어디에나 있는 전문가 설정(터미널, SSH, RDP) | 🟡 | "Legacy algorithms"와 터미널 설정 몇 가지. 전문가 SSH / RDP 대화상자는 없음 |
+| 만능 서랍 같은 Tools 메뉴 | 🟡 | Tools 패널(ping, traceroute, DNS, 포트 스캔, 네트워크 정보)과 Tunneling. 나머지는 macOS나 Homebrew로 |
+| 어디에나 있는 전문가 설정(터미널, SSH, RDP) | 🟡 | 전문가 SSH: Advanced SSH의 세션별 알고리즘 목록. 터미널 설정 몇 가지. 전문가 RDP 대화상자는 없음(RDP는 Windows App 몫) |
 | 텔레메트리 없음, 자동 업데이트 없음, 관리자 권한 불필요 | 🟡 | 텔레메트리 없음. 시작 시 업데이트 확인은 끌 수 있고 동의해야만 설치. 관리자 권한 불필요(Applications로 드래그 또는 Homebrew) |
 
 ## MobAlt에는 있고 MobaXterm에는 없는 것
@@ -358,8 +358,6 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | SSH 연결의 exec 채널을 주기적으로 돌리는 원격 모니터링 바(CPU / RAM / 디스크 / 네트워크) | MobaXterm은 25.2부터 기본 켜짐. ssh2 연결은 이미 있음 | M |
 | 터미널 키워드 구문 강조 | 색이 없는 서버에서도 읽기 좋은 로그. xterm.js decorations API | M |
 | 탭 고정, 왼쪽/오른쪽 닫기, 창으로 분리 | 탭 색상은 이미 있음. 분리는 터미널 레지스트리를 공유하는 두 번째 BrowserWindow가 필요 | M |
-| SSH 키 생성 UI(`ssh-keygen` 래퍼) | 가장 흔한 "SSH 첫걸음" 작업. MobaKeyGen 공백도 메움 | S |
-| 전문가 SSH 알고리즘 / KEX / 암호 / MAC 설정 | 레거시 토글 하나로는 너무 거칠다. ssh2의 `algorithms` 옵션이 명시적 목록을 받음(ML-KEM은 ssh2를 기다려야 함) | S |
 
 **P2**
 

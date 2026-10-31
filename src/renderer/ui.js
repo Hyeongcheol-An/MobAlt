@@ -55,6 +55,9 @@ export function typeAhead(ms = 700) {
   return fn;
 }
 
+/** The message of an error thrown by an ipcMain.handle handler, without Electron's "Error invoking remote method" wrapper. */
+export const ipcMessage = (e) => String((e && e.message) || e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
