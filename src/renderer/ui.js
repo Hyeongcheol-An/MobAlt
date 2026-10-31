@@ -161,7 +161,15 @@ export function applyIcons(root = document) {
 }
 
 export const TYPE_ICON = { ssh: '●', local: '●', telnet: '●', rdp: '●', vnc: '●', serial: '●' };
-export const TYPE_LABEL = { ssh: 'SSH', mosh: 'Mosh', local: 'Local', telnet: 'Telnet', serial: 'Serial', ftp: 'FTP', rdp: 'RDP', vnc: 'VNC' };
+// Protocol names stay as they are; "Local" and "Serial" are words and follow the interface language — looked up at
+// read time (a Proxy), so TYPE_LABEL[kind], `in`, Object.keys and spreads keep working everywhere it is used.
+const TYPE_SRC = { ssh: () => 'SSH', mosh: () => 'Mosh', local: () => t('Local'), telnet: () => 'Telnet', serial: () => t('Serial'), ftp: () => 'FTP', rdp: () => 'RDP', vnc: () => 'VNC' };
+export const TYPE_LABEL = new Proxy({}, {
+  get: (_, k) => (typeof k === 'string' && TYPE_SRC[k] ? TYPE_SRC[k]() : undefined),
+  has: (_, k) => k in TYPE_SRC,
+  ownKeys: () => Object.keys(TYPE_SRC),
+  getOwnPropertyDescriptor: (_, k) => (TYPE_SRC[k] ? { enumerable: true, configurable: true, value: TYPE_SRC[k]() } : undefined),
+});
 
 // ---------- context menu ----------
 let ctxOpen = null;

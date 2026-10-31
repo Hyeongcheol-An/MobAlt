@@ -129,10 +129,13 @@ for (const lang of i18n.LANGUAGES) {
       if (!forms.length || forms.some((f) => typeof f !== 'string' || !f.trim())) { problems.push(`empty: ${JSON.stringify(k)}`); continue; }
       if (Array.isArray(v) && !spec.plural) problems.push(`plural forms for a string without tn(): ${JSON.stringify(k)}`);
       if (Array.isArray(v) && v.length !== 2) problems.push(`plural forms must be [one, other]: ${JSON.stringify(k)}`);
-      const want = placeholders(k + ' ' + (spec.plural || ''));
+      // every placeholder of the source must be there; a tn() pair whose English forms differ (the singular without
+      // {n}, say) lets a translated form drop what only one English form has
+      const one = placeholders(k), other = spec.plural ? placeholders(spec.plural) : one;
+      const allowed = new Set([...one, ...other]), required = one.filter((x) => other.includes(x));
       for (const f of forms) {
         const got = placeholders(f);
-        if (JSON.stringify(got) !== JSON.stringify(want)) problems.push(`placeholders differ: ${JSON.stringify(k)} → ${JSON.stringify(f)} (want {${want.join('} {')}})`);
+        if (!required.every((x) => got.includes(x)) || !got.every((x) => allowed.has(x))) problems.push(`placeholders differ: ${JSON.stringify(k)} → ${JSON.stringify(f)} (want {${required.join('} {')}}${allowed.size > required.length ? ', may also use {' + [...allowed].filter((x) => !required.includes(x)).join('} {') + '}' : ''})`);
       }
       if (words(k) >= 3 && forms.every((f) => f === k) && !keep.has(k)) problems.push(`left in English: ${JSON.stringify(k)}`);
     }

@@ -1,5 +1,5 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, ipcMessage, fillNodes } from './ui.js';
+import { TYPE_LABEL, $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, ipcMessage, fillNodes } from './ui.js';
 import { TermPane, THEMES, searchDecorations } from './terminal.js';
 import { chromePalette, cssVars } from './theme.js';
 import { Workspace } from './layout.js';
@@ -1004,7 +1004,7 @@ class App {
         : pane.kind === 'serial' ? `${s?.serialPath} @ ${s?.baudRate}`
         : pane.kind === 'ftp' ? `${s?.username ? s.username + '@' : 'anonymous@'}${s?.host}${s?.port && s.port !== 21 ? ':' + s.port : ''}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
-      el.textContent = `${pane.kind.toUpperCase()} · ${where} · ${stateLabel(pane.status)}${msg ? ' (' + msg + ')' : ''}`;
+      el.textContent = `${(TYPE_LABEL[pane.kind] || pane.kind).toUpperCase()} · ${where} · ${stateLabel(pane.status)}${msg ? ' (' + msg + ')' : ''}`; // the kind's label follows the interface language (LOCAL / SERIAL)
       if (pane.kind === 'mosh' && pane.sftpStatus && pane.sftpStatus !== 'idle') el.textContent += ' · ' + t('SFTP: {state}', { state: stateLabel(pane.sftpStatus) });
       const browsing = this.sftpPanel.states.get(pane.kind === 'mosh' ? pane.sftpConnId : pane.termId);
       $('#st-cwd').textContent = pane.dead ? '' : shortPath(pane.remoteCwd || pane.cwd || (browsing && browsing.path) || '');
