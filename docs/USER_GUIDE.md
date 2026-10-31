@@ -5,6 +5,8 @@
 MobAlt is a MobaXterm-style workbench for macOS: a session tree on the left, tabbed and split
 terminals in the middle, and an SFTP browser, network tools and macros in side panels.
 
+See also: [MobaXterm 26.6 feature parity](MOBAXTERM_PARITY.md) — what MobAlt has, lacks and does differently, with the roadmap.
+
 ![MobAlt with two remote shells side by side](images/hero.png)
 
 Contents: [Install](#install) · [Updating](#updating) · [Sessions](#sessions) · [Connecting](#connecting) ·
