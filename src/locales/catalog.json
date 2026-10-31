@@ -1,10 +1,468 @@
 {
   "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
   "strings": {
+    "(line {n})": {
+      "refs": [
+        "src/renderer/dialogs.js:985"
+      ]
+    },
+    "(login shell)": {
+      "refs": [
+        "src/renderer/dialogs.js:776"
+      ]
+    },
+    "(no saved SSH session yet)": {
+      "refs": [
+        "src/renderer/dialogs.js:1118"
+      ]
+    },
+    "{file} is replaced by the temp file path; omit it to append the path": {
+      "refs": [
+        "src/renderer/dialogs.js:809"
+      ]
+    },
+    "{n} character": {
+      "plural": "{n} characters",
+      "refs": [
+        "src/renderer/dialogs.js:989"
+      ]
+    },
+    "{n} line": {
+      "plural": "{n} lines",
+      "refs": [
+        "src/renderer/dialogs.js:989"
+      ]
+    },
+    "← → ↑ ↓ / ⏎ or Space": {
+      "refs": [
+        "src/renderer/dialogs.js:1049"
+      ]
+    },
+    "⇧F10 / Menu key": {
+      "refs": [
+        "src/renderer/dialogs.js:1043"
+      ]
+    },
+    "⇧F10 or Menu / Del or ⌘⌫ / ⌫": {
+      "refs": [
+        "src/renderer/dialogs.js:1044"
+      ]
+    },
+    "⇧Right-click": {
+      "refs": [
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "⌘⏎ or ⇧⏎ / ⌫": {
+      "refs": [
+        "src/renderer/dialogs.js:1042"
+      ]
+    },
+    "⌘⏎ pastes, Esc cancels": {
+      "refs": [
+        "src/renderer/dialogs.js:989"
+      ]
+    },
+    "⚠️ Host key changed!": {
+      "refs": [
+        "src/renderer/dialogs.js:874"
+      ]
+    },
+    "⚠️ Host key changed! — {name}": {
+      "refs": [
+        "src/renderer/dialogs.js:874"
+      ]
+    },
+    "A paste with more than one line, or over {n} characters, asks first and can be edited": {
+      "refs": [
+        "src/renderer/dialogs.js:762"
+      ]
+    },
+    "A saved SSH session; it connects with its usual authentication (you may be asked for its password) and appends the public key like ssh-copy-id": {
+      "refs": [
+        "src/renderer/dialogs.js:1122"
+      ]
+    },
+    "Accept": {
+      "refs": [
+        "src/renderer/dialogs.js:885"
+      ]
+    },
+    "Accept new key": {
+      "refs": [
+        "src/renderer/dialogs.js:885"
+      ]
+    },
+    "Accept to continue and remember this key.": {
+      "refs": [
+        "src/renderer/dialogs.js:881"
+      ]
+    },
+    "Add to ssh-agent (ssh-add --apple-use-keychain)": {
+      "refs": [
+        "src/renderer/dialogs.js:1113"
+      ]
+    },
+    "Added to ssh-agent ({message})": {
+      "refs": [
+        "src/renderer/dialogs.js:1211"
+      ]
+    },
+    "Adding the key to ssh-agent…": {
+      "refs": [
+        "src/renderer/dialogs.js:1209"
+      ]
+    },
+    "Already present on {host} in {file}": {
+      "refs": [
+        "src/renderer/dialogs.js:1217"
+      ]
+    },
+    "Authentication": {
+      "refs": [
+        "src/renderer/dialogs.js:912"
+      ]
+    },
+    "Bar": {
+      "refs": [
+        "src/renderer/dialogs.js:752"
+      ]
+    },
+    "Behaviour": {
+      "refs": [
+        "src/renderer/dialogs.js:807"
+      ]
+    },
+    "Blink cursor": {
+      "refs": [
+        "src/renderer/dialogs.js:753"
+      ]
+    },
+    "Block": {
+      "refs": [
+        "src/renderer/dialogs.js:752"
+      ]
+    },
+    "Browse…": {
+      "refs": [
+        "src/renderer/dialogs.js:1112"
+      ]
+    },
+    "Cancel": {
+      "refs": [
+        "src/renderer/dialogs.js:842",
+        "src/renderer/dialogs.js:884",
+        "src/renderer/dialogs.js:901",
+        "src/renderer/dialogs.js:918",
+        "src/renderer/dialogs.js:1007",
+        "src/renderer/dialogs.js:1158"
+      ]
+    },
+    "Check for updates at startup": {
+      "refs": [
+        "src/renderer/dialogs.js:786"
+      ]
+    },
+    "Check now": {
+      "refs": [
+        "src/renderer/dialogs.js:801"
+      ]
+    },
+    "Checking…": {
+      "refs": [
+        "src/renderer/dialogs.js:794"
+      ]
+    },
+    "Choose where to save the key": {
+      "refs": [
+        "src/renderer/dialogs.js:1187"
+      ]
+    },
+    "Clear terminal": {
+      "refs": [
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "Close": {
+      "refs": [
+        "src/renderer/dialogs.js:1056",
+        "src/renderer/dialogs.js:1245"
+      ]
+    },
+    "Close (Esc)": {
+      "refs": [
+        "src/renderer/dialogs.js:1173"
+      ]
+    },
+    "Close pane": {
+      "refs": [
+        "src/renderer/dialogs.js:1036"
+      ]
+    },
+    "Close tab": {
+      "refs": [
+        "src/renderer/dialogs.js:1031"
+      ]
+    },
+    "Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme": {
+      "refs": [
+        "src/renderer/dialogs.js:817"
+      ]
+    },
+    "Comment": {
+      "refs": [
+        "src/renderer/dialogs.js:1139"
+      ]
+    },
+    "comment (who / what this key is for)": {
+      "refs": [
+        "src/renderer/dialogs.js:1090"
+      ]
+    },
+    "Confirm": {
+      "refs": [
+        "src/renderer/dialogs.js:1140"
+      ]
+    },
+    "Confirm multi-line pastes": {
+      "refs": [
+        "src/renderer/dialogs.js:762"
+      ]
+    },
+    "Confirm quit with open connections (SSH, Mosh, SFTP, FTP)": {
+      "refs": [
+        "src/renderer/dialogs.js:779"
+      ]
+    },
+    "Context menu: focused tab, row, macro, SFTP entry": {
+      "refs": [
+        "src/renderer/dialogs.js:1043"
+      ]
+    },
+    "Copy": {
+      "refs": [
+        "src/renderer/dialogs.js:1231"
+      ]
+    },
+    "Copy / Paste": {
+      "refs": [
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "Copy on select": {
+      "refs": [
+        "src/renderer/dialogs.js:759"
+      ]
+    },
+    "CPU, memory, disk, network, load and uptime under each SSH terminal, polled over the session's own connection; a session (Advanced SSH) or a pane (its head, the View menu) can differ": {
+      "refs": [
+        "src/renderer/dialogs.js:765"
+      ]
+    },
+    "Cursor": {
+      "refs": [
+        "src/renderer/dialogs.js:815"
+      ]
+    },
+    "Data": {
+      "refs": [
+        "src/renderer/dialogs.js:811"
+      ]
+    },
+    "Dialog tabs: previous / next, first / last section": {
+      "refs": [
+        "src/renderer/dialogs.js:1050"
+      ]
+    },
+    "Dialog: confirm / close": {
+      "refs": [
+        "src/renderer/dialogs.js:1050"
+      ]
+    },
+    "Dialog: next / previous control": {
+      "refs": [
+        "src/renderer/dialogs.js:1050"
+      ]
+    },
+    "Dialogs": {
+      "refs": [
+        "src/renderer/dialogs.js:1048"
+      ]
+    },
+    "Download folder": {
+      "refs": [
+        "src/renderer/dialogs.js:810"
+      ]
+    },
+    "Duplicate session": {
+      "refs": [
+        "src/renderer/dialogs.js:1031"
+      ]
+    },
+    "e.g. code --wait {file}   (blank = TextEdit)": {
+      "refs": [
+        "src/renderer/dialogs.js:778"
+      ]
+    },
+    "Ed25519 (recommended)": {
+      "refs": [
+        "src/renderer/dialogs.js:1084"
+      ]
+    },
+    "every {n} s": {
+      "refs": [
+        "src/renderer/dialogs.js:822"
+      ]
+    },
+    "External editor": {
+      "refs": [
+        "src/renderer/dialogs.js:809"
+      ]
+    },
+    "Fair passphrase": {
+      "refs": [
+        "src/renderer/dialogs.js:1074"
+      ]
+    },
+    "Features": {
+      "refs": [
+        "src/renderer/dialogs.js:820"
+      ]
+    },
+    "Find": {
+      "refs": [
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "Fingerprint": {
+      "refs": [
+        "src/renderer/dialogs.js:1237"
+      ]
+    },
+    "Focused macro: play / delete, context menu": {
+      "refs": [
+        "src/renderer/dialogs.js:1043"
+      ]
+    },
+    "Focused session row: move / fold / open": {
+      "refs": [
+        "src/renderer/dialogs.js:1042"
+      ]
+    },
+    "Focused session row: open in split / delete": {
+      "refs": [
+        "src/renderer/dialogs.js:1042"
+      ]
+    },
+    "Focused tab: move / activate / close": {
+      "refs": [
+        "src/renderer/dialogs.js:1032"
+      ]
+    },
+    "Font family": {
+      "refs": [
+        "src/renderer/dialogs.js:814"
+      ]
+    },
+    "Font size": {
+      "refs": [
+        "src/renderer/dialogs.js:814"
+      ]
+    },
+    "General": {
+      "refs": [
+        "src/renderer/dialogs.js:805"
+      ]
+    },
+    "Generate": {
+      "refs": [
+        "src/renderer/dialogs.js:1160"
+      ]
+    },
+    "Generate SSH key": {
+      "refs": [
+        "src/renderer/dialogs.js:1152"
+      ]
+    },
+    "Generating {type} key…": {
+      "refs": [
+        "src/renderer/dialogs.js:1194"
+      ]
+    },
+    "Grid 2 / 4 / 6 / 8 panes": {
+      "refs": [
+        "src/renderer/dialogs.js:1036"
+      ]
+    },
+    "Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes": {
+      "refs": [
+        "src/renderer/dialogs.js:769"
+      ]
+    },
+    "Icon & colour picks: move / choose": {
+      "refs": [
+        "src/renderer/dialogs.js:1049"
+      ]
+    },
+    "Install on a server…": {
+      "refs": [
+        "src/renderer/dialogs.js:1114"
+      ]
+    },
+    "Installed on {host} in {file}": {
+      "refs": [
+        "src/renderer/dialogs.js:1217"
+      ]
+    },
+    "Installing the public key on {name}…": {
+      "refs": [
+        "src/renderer/dialogs.js:1215"
+      ]
+    },
+    "Installing the public key on the server…": {
+      "refs": [
+        "src/renderer/dialogs.js:1215"
+      ]
+    },
+    "Invisible or control characters, a trailing newline, curl | sh, writes to shell profiles, rm -rf / and look-alike letters are listed, with a \"Paste cleaned\" option": {
+      "refs": [
+        "src/renderer/dialogs.js:763"
+      ]
+    },
+    "Key pair saved: {private} (private, 0600) and {public} (public, 0644)": {
+      "refs": [
+        "src/renderer/dialogs.js:1234"
+      ]
+    },
+    "Key type": {
+      "refs": [
+        "src/renderer/dialogs.js:1139"
+      ]
+    },
+    "Keyboard shortcuts": {
+      "refs": [
+        "src/renderer/dialogs.js:1056"
+      ]
+    },
+    "Keyword highlighting": {
+      "refs": [
+        "src/renderer/dialogs.js:823"
+      ]
+    },
     "Language": {
       "refs": [
         "src/renderer/dialogs.js:790",
         "src/renderer/dialogs.js:806"
+      ]
+    },
+    "Line height": {
+      "refs": [
+        "src/renderer/dialogs.js:814"
+      ]
+    },
+    "Local shell": {
+      "refs": [
+        "src/renderer/dialogs.js:808"
       ]
     },
     "Local X server: {display}": {
@@ -13,9 +471,74 @@
         "src/renderer/app.js:1198"
       ]
     },
+    "Log folder": {
+      "refs": [
+        "src/renderer/dialogs.js:827"
+      ]
+    },
+    "Logging": {
+      "refs": [
+        "src/renderer/dialogs.js:826"
+      ]
+    },
+    "marks on the first {painted} of {total} places": {
+      "refs": [
+        "src/renderer/dialogs.js:991"
+      ]
+    },
     "Menus, panels and dialogs switch at once; terminal output is not translated": {
       "refs": [
         "src/renderer/dialogs.js:806"
+      ]
+    },
+    "Monitoring": {
+      "refs": [
+        "src/renderer/dialogs.js:822"
+      ]
+    },
+    "Monitoring bar refresh, seconds": {
+      "refs": [
+        "src/renderer/dialogs.js:766"
+      ]
+    },
+    "Mouse / keys": {
+      "refs": [
+        "src/renderer/dialogs.js:818"
+      ]
+    },
+    "MultiExec": {
+      "refs": [
+        "src/renderer/dialogs.js:1038"
+      ]
+    },
+    "New local terminal": {
+      "refs": [
+        "src/renderer/dialogs.js:1031"
+      ]
+    },
+    "New session": {
+      "refs": [
+        "src/renderer/dialogs.js:1031"
+      ]
+    },
+    "Newline in TUI apps (ESC+CR)": {
+      "refs": [
+        "src/renderer/dialogs.js:1038"
+      ]
+    },
+    "Next / previous tab": {
+      "refs": [
+        "src/renderer/dialogs.js:1032"
+      ]
+    },
+    "Next pane": {
+      "refs": [
+        "src/renderer/dialogs.js:1036"
+      ]
+    },
+    "No passphrase: anyone who copies the private key file can use it": {
+      "refs": [
+        "src/renderer/dialogs.js:1064"
       ]
     },
     "No X server found (install XQuartz for X11 forwarding)": {
@@ -24,9 +547,436 @@
         "src/renderer/app.js:1198"
       ]
     },
+    "OK": {
+      "refs": [
+        "src/renderer/dialogs.js:902",
+        "src/renderer/dialogs.js:919"
+      ]
+    },
+    "One line for ~/.ssh/authorized_keys on the servers this key should open": {
+      "refs": [
+        "src/renderer/dialogs.js:1236"
+      ]
+    },
+    "Open config folder": {
+      "refs": [
+        "src/renderer/dialogs.js:811"
+      ]
+    },
+    "Option key acts as Meta/Alt": {
+      "refs": [
+        "src/renderer/dialogs.js:760"
+      ]
+    },
+    "optional: protects the private key file": {
+      "refs": [
+        "src/renderer/dialogs.js:1091"
+      ]
+    },
+    "Options": {
+      "refs": [
+        "src/renderer/dialogs.js:1142"
+      ]
+    },
+    "Panes & terminal": {
+      "refs": [
+        "src/renderer/dialogs.js:1035"
+      ]
+    },
+    "Passphrase": {
+      "refs": [
+        "src/renderer/dialogs.js:1140"
+      ]
+    },
+    "Password": {
+      "refs": [
+        "src/renderer/dialogs.js:892",
+        "src/renderer/dialogs.js:895"
+      ]
+    },
+    "Paste": {
+      "refs": [
+        "src/renderer/dialogs.js:994",
+        "src/renderer/dialogs.js:1009"
+      ]
+    },
+    "Paste (terminal)": {
+      "refs": [
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "Paste {n} line into {where}?": {
+      "plural": "Paste {n} lines into {where}?",
+      "refs": [
+        "src/renderer/dialogs.js:976"
+      ]
+    },
+    "Paste as is": {
+      "refs": [
+        "src/renderer/dialogs.js:994"
+      ]
+    },
+    "Paste cleaned": {
+      "refs": [
+        "src/renderer/dialogs.js:1008"
+      ]
+    },
+    "Paste cleaned removes the hidden characters and the trailing newline": {
+      "refs": [
+        "src/renderer/dialogs.js:990"
+      ]
+    },
+    "Paste guard": {
+      "refs": [
+        "src/renderer/dialogs.js:821"
+      ]
+    },
+    "Paste guard (multi-line or suspicious paste): paste / cancel": {
+      "refs": [
+        "src/renderer/dialogs.js:1051"
+      ]
+    },
+    "Pin / unpin tab, detach tab to its own window": {
+      "refs": [
+        "src/renderer/dialogs.js:1033"
+      ]
+    },
+    "Public key": {
+      "refs": [
+        "src/renderer/dialogs.js:1236"
+      ]
+    },
+    "Public key copied": {
+      "refs": [
+        "src/renderer/dialogs.js:1230"
+      ]
+    },
+    "Quick connect": {
+      "refs": [
+        "src/renderer/dialogs.js:1031"
+      ]
+    },
+    "Reconnect": {
+      "refs": [
+        "src/renderer/dialogs.js:1031"
+      ]
+    },
+    "Releases on GitHub; a newer version is offered in a dialog and installed only when you agree": {
+      "refs": [
+        "src/renderer/dialogs.js:832"
+      ]
+    },
+    "Remote file": {
+      "refs": [
+        "src/renderer/dialogs.js:1123"
+      ]
+    },
+    "Remote monitoring bar on SSH sessions": {
+      "refs": [
+        "src/renderer/dialogs.js:765"
+      ]
+    },
+    "repeat the passphrase": {
+      "refs": [
+        "src/renderer/dialogs.js:1092"
+      ]
+    },
+    "Restore tabs & split layout at startup": {
+      "refs": [
+        "src/renderer/dialogs.js:780"
+      ]
+    },
+    "Right-click": {
+      "refs": [
+        "src/renderer/dialogs.js:1037",
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "Right-click pastes (⇧-right-click for menu)": {
+      "refs": [
+        "src/renderer/dialogs.js:758"
+      ]
+    },
+    "Rules…": {
+      "refs": [
+        "src/renderer/dialogs.js:774"
+      ]
+    },
+    "Save": {
+      "refs": [
+        "src/renderer/dialogs.js:843"
+      ]
+    },
+    "Save an SSH session first to install the key on it": {
+      "refs": [
+        "src/renderer/dialogs.js:1192"
+      ]
+    },
+    "Save as": {
+      "refs": [
+        "src/renderer/dialogs.js:1141"
+      ]
+    },
+    "Save in session \"{name}\" (Keychain-encrypted)": {
+      "refs": [
+        "src/renderer/dialogs.js:899"
+      ]
+    },
+    "Save private key as": {
+      "refs": [
+        "src/renderer/dialogs.js:1110"
+      ]
+    },
+    "Scrollback lines": {
+      "refs": [
+        "src/renderer/dialogs.js:816"
+      ]
+    },
+    "Seconds between two polls (2–30)": {
+      "refs": [
+        "src/renderer/dialogs.js:766"
+      ]
+    },
+    "Server": {
+      "refs": [
+        "src/renderer/dialogs.js:1122"
+      ]
+    },
+    "Session logs": {
+      "refs": [
+        "src/renderer/dialogs.js:828"
+      ]
+    },
+    "Session tree, SFTP list: jump to a name": {
+      "refs": [
+        "src/renderer/dialogs.js:1046"
+      ]
+    },
+    "Sessions / SFTP / Tools / Macros": {
+      "refs": [
+        "src/renderer/dialogs.js:1041"
+      ]
+    },
+    "Sessions & tabs": {
+      "refs": [
+        "src/renderer/dialogs.js:1030"
+      ]
+    },
+    "Settings": {
+      "refs": [
+        "src/renderer/dialogs.js:838",
+        "src/renderer/dialogs.js:1049"
+      ]
+    },
+    "SFTP list: context menu / delete / parent folder": {
+      "refs": [
+        "src/renderer/dialogs.js:1044"
+      ]
+    },
+    "SFTP list: extend selection / toggle row / select all": {
+      "refs": [
+        "src/renderer/dialogs.js:1045"
+      ]
+    },
+    "SFTP list: move / open": {
+      "refs": [
+        "src/renderer/dialogs.js:1044"
+      ]
+    },
+    "SFTP list: sort by a column": {
+      "refs": [
+        "src/renderer/dialogs.js:1045"
+      ]
+    },
+    "Sidebar, SFTP & lists": {
+      "refs": [
+        "src/renderer/dialogs.js:1040"
+      ]
+    },
+    "Split right / down": {
+      "refs": [
+        "src/renderer/dialogs.js:1036"
+      ]
+    },
+    "SSH keep-alive (s)": {
+      "refs": [
+        "src/renderer/dialogs.js:810"
+      ]
+    },
+    "SSH key generated": {
+      "refs": [
+        "src/renderer/dialogs.js:1243"
+      ]
+    },
+    "ssh-agent: {error}": {
+      "refs": [
+        "src/renderer/dialogs.js:1211"
+      ]
+    },
+    "Steps": {
+      "refs": [
+        "src/renderer/dialogs.js:1238"
+      ]
+    },
+    "Strip colours and control sequences from session logs (plain text)": {
+      "refs": [
+        "src/renderer/dialogs.js:784"
+      ]
+    },
+    "Strong passphrase": {
+      "refs": [
+        "src/renderer/dialogs.js:1074"
+      ]
+    },
+    "Switch to SFTP panel when SSH connects": {
+      "refs": [
+        "src/renderer/dialogs.js:781"
+      ]
+    },
+    "Switch to tab 1-9": {
+      "refs": [
+        "src/renderer/dialogs.js:1032"
+      ]
+    },
     "System default ({name})": {
       "refs": [
         "src/renderer/dialogs.js:790"
+      ]
+    },
+    "Tab to a header, ⏎ or Space": {
+      "refs": [
+        "src/renderer/dialogs.js:1045"
+      ]
+    },
+    "Terminal": {
+      "refs": [
+        "src/renderer/dialogs.js:813"
+      ]
+    },
+    "Terminal → Start Session Log, or a session's Logging option, writes here": {
+      "refs": [
+        "src/renderer/dialogs.js:827"
+      ]
+    },
+    "Terminal menu": {
+      "refs": [
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "Text to paste (editable)": {
+      "refs": [
+        "src/renderer/dialogs.js:967"
+      ]
+    },
+    "The authenticity of host {host}:{port} can't be established.": {
+      "refs": [
+        "src/renderer/dialogs.js:878"
+      ]
+    },
+    "The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.": {
+      "refs": [
+        "src/renderer/dialogs.js:878"
+      ]
+    },
+    "The passphrases do not match": {
+      "refs": [
+        "src/renderer/dialogs.js:1179"
+      ]
+    },
+    "The public key goes next to it with .pub; ~/.ssh is created private when missing": {
+      "refs": [
+        "src/renderer/dialogs.js:1141"
+      ]
+    },
+    "Theme": {
+      "refs": [
+        "src/renderer/dialogs.js:817"
+      ]
+    },
+    "Toggle sidebar": {
+      "refs": [
+        "src/renderer/dialogs.js:1041"
+      ]
+    },
+    "Transfers": {
+      "refs": [
+        "src/renderer/dialogs.js:824"
+      ]
+    },
+    "Tunnels": {
+      "refs": [
+        "src/renderer/dialogs.js:1049"
+      ]
+    },
+    "type its first letters": {
+      "refs": [
+        "src/renderer/dialogs.js:1046"
+      ]
+    },
+    "Underline": {
+      "refs": [
+        "src/renderer/dialogs.js:752"
+      ]
+    },
+    "Unknown host key": {
+      "refs": [
+        "src/renderer/dialogs.js:875"
+      ]
+    },
+    "Unknown host key — {name}": {
+      "refs": [
+        "src/renderer/dialogs.js:875"
+      ]
+    },
+    "Unsplit": {
+      "refs": [
+        "src/renderer/dialogs.js:1036"
+      ]
+    },
+    "Updates": {
+      "refs": [
+        "src/renderer/dialogs.js:830",
+        "src/renderer/dialogs.js:831"
+      ]
+    },
+    "Use in this session": {
+      "refs": [
+        "src/renderer/dialogs.js:1159"
+      ]
+    },
+    "Wait for the key to be generated and installed": {
+      "refs": [
+        "src/renderer/dialogs.js:1173"
+      ]
+    },
+    "Warn about suspicious pastes": {
+      "refs": [
+        "src/renderer/dialogs.js:763"
+      ]
+    },
+    "Weak passphrase: use 12 characters or more with mixed case, digits or symbols, or a few words": {
+      "refs": [
+        "src/renderer/dialogs.js:1073"
+      ]
+    },
+    "Zmodem transfers (rz/sz)": {
+      "refs": [
+        "src/renderer/dialogs.js:775"
+      ]
+    },
+    "Zoom": {
+      "refs": [
+        "src/renderer/dialogs.js:1037"
+      ]
+    },
+    "Zoom pane (fill the tab) / restore": {
+      "refs": [
+        "src/renderer/dialogs.js:1036"
+      ]
+    },
+    "zsh/bash integration (folder following)": {
+      "refs": [
+        "src/renderer/dialogs.js:777"
       ]
     }
   }
