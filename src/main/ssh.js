@@ -61,6 +61,7 @@ class SshManager {
     this.store = store;
     this.prompter = prompter;
     this.conns = new Map();
+    this.execCount = 0; // exec channels opened so far (the monitoring bar's polls among them; a test hook reads it)
   }
 
   get(id) {
@@ -647,16 +648,33 @@ class SshManager {
     return info.sftpPromise;
   }
 
-  exec(id, cmd) {
+  /**
+   * Run `cmd` on connection `id` over an exec channel (no pty: nothing reaches the terminal) and collect its output:
+   * { code, stdout, stderr }. With `timeout` (ms) a command that has not finished by then is abandoned — the channel
+   * is closed and the promise rejects — so a stuck host cannot pile up channels (the monitoring bar polls this way).
+   */
+  exec(id, cmd, { timeout = 0 } = {}) {
     const info = this.conns.get(id);
     if (!info || !info.client) return Promise.reject(new Error('Not connected'));
+    this.execCount++;
     return new Promise((resolve, reject) => {
       info.client.exec(cmd, (err, stream) => {
         if (err) return reject(err);
-        let out = '', errOut = '';
+        let out = '', errOut = '', done = false;
+        const timer = timeout > 0 ? setTimeout(() => {
+          if (done) return;
+          done = true;
+          try { stream.close(); } catch {}
+          reject(new Error(`timed out after ${Math.round(timeout / 1000)} s`));
+        }, timeout) : null;
         stream.on('data', (d) => (out += d));
         stream.stderr.on('data', (d) => (errOut += d));
-        stream.on('close', (code) => resolve({ code, stdout: out, stderr: errOut }));
+        stream.on('close', (code) => {
+          if (done) return;
+          done = true;
+          if (timer) clearTimeout(timer);
+          resolve({ code, stdout: out, stderr: errOut });
+        });
       });
     });
   }

@@ -608,3 +608,28 @@ input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: defaul
 /* Text selection in fields and selectable text follows the theme, not the OS highlight colour. */
 ::selection { background: var(--selection); color: var(--selection-fg); }
 input::selection, textarea::selection { background: var(--selection); color: var(--selection-fg); }
+
+/* ---- remote monitor ---- */
+/* The remote monitoring bar of an SSH / Mosh pane (terminal.js): one line between the pane head and the terminal in the
+   chrome's panel colours — values in --fg, labels in --fg-dim (both ≥ 4.5:1 on --bg-panel in every theme, see
+   test/unit/theme.test.js), never an opacity. The meters are tiny tracks in the active surface with an accent fill that
+   turns --warn from 80 % and --danger from 95 % (text carries the number: the colour is a second cue). Hidden while the
+   pane is disconnected or the bar is off; `.unavailable` is the dim "monitor unavailable" note, as a colour. */
+.pane-monitor { display: flex; align-items: center; gap: 14px; height: 20px; padding: 0 8px; background: var(--bg-2); border-bottom: 1px solid var(--divider); font-size: 11px; line-height: 20px; color: var(--fg); white-space: nowrap; overflow: hidden; flex: none; }
+.pane-monitor[hidden] { display: none; }
+.pane-monitor .mon-item { display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.pane-monitor .mon-label { color: var(--fg-dim); }
+.pane-monitor .mon-val { font-variant-numeric: tabular-nums; }
+.pane-monitor .mon-bar { width: 44px; height: 6px; border-radius: 3px; background: var(--bg-4); overflow: hidden; flex: none; }
+.pane-monitor .mon-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.pane-monitor .mon-bar.warn i { background: var(--warn); }
+.pane-monitor .mon-bar.danger i { background: var(--danger); }
+.pane-monitor .mon-host { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg-dim); }
+.pane-monitor .mon-note, .pane-monitor.unavailable { color: var(--fg-dim); }
+@media (prefers-reduced-motion: reduce) { .pane-monitor .mon-bar i { transition: none; } }
+/* The pane-head toggle shows its pressed state in the accent, like the zoom button of a zoomed pane. */
+.pane-head button.monitor[aria-pressed="true"] { color: var(--accent); }
+.pane-head button.monitor[aria-pressed="true"]:hover { color: var(--fg-strong); }
+/* Settings → Terminal → Monitoring: the refresh field sits in the checkbox row ("every [3] s"). */
+.form-grid .checks label.mon-every { color: var(--fg-dim); }
+.form-grid .checks input[type=number].mon-interval { width: 56px; flex: none; }

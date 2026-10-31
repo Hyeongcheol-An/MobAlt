@@ -63,6 +63,8 @@ contextBridge.exposeInMainWorld('api', {
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testNotice: (text) => invoke('test:notice', text),
     testNextDialog: (result) => invoke('test:next-dialog', result),
+    testMonitorStats: () => invoke('test:monitor-stats'), // { execCount, samples }: exec channels opened, monitor polls started (test mode only)
+    testMonitorCommand: (cmd) => invoke('test:monitor-command', cmd), // run this instead of the monitoring snippet (null = the snippet; test mode only)
     checkUpdates: () => invoke('app:check-updates'),
     // main-process notices ({ level, text }): internal errors that would otherwise be lost in the console
     onNotice: (fn) => on('app:notice', fn),
@@ -97,6 +99,8 @@ contextBridge.exposeInMainWorld('api', {
     connectSftp: (cfg) => invoke('ssh:connect-sftp', cfg),
     disconnect: (id) => invoke('ssh:disconnect', id),
     exec: (id, cmd) => invoke('ssh:exec', id, cmd),
+    // one poll of the remote monitoring bar on connection id: { sample } or { error, fatal } (src/main/monitor.js)
+    monitor: (id) => invoke('ssh:monitor', id),
   },
   sftp: {
     list: (id, dir) => invoke('sftp:list', id, dir),

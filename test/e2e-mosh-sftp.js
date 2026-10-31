@@ -58,6 +58,7 @@
     await waitFor(() => /MOSH_STARTUP_42/.test(text(pane)), 20000, 'remote shell + startup command');
     results.moshShell = true;
     results.noAutoCompanion = pane.sftpConnId === null && pane.sftpStatus === 'idle';
+    results.monitorHiddenWithoutCompanion = pane.monitorEl.hidden === true && pane.monitorAllowed() && pane.monitorEnabled(); // the bar needs the companion SSH connection
     app.showPanel('sftp');
     const btn = document.querySelector('#sftp-empty .sftp-mosh button');
     results.emptyStateButton = !!btn && /Open SFTP for this host \(via SSH\)/.test(btn.textContent);
@@ -67,6 +68,9 @@
     await waitFor(() => pane.sftpStatus === 'connected' && pane.sftpConnId, 15000, 'companion connected');
     const cid = pane.sftpConnId;
     results.companionConnected = true;
+    // the remote monitoring bar of a Mosh pane polls the companion connection once it is up
+    await waitFor(() => !pane.monitorEl.hidden && pane.monitorSample, 8000, 'monitoring bar via the companion');
+    results.monitorViaCompanion = pane.monitorSample.host === app.info.hostname && pane.monitorConnId() === cid;
     await waitFor(() => app.sftpPanel.connId === cid && app.sftpPanel.state()?.path, 10000, 'panel lists the home folder');
     const st = app.sftpPanel.state();
     results.panelBoundToCompanion = app.sftpPanel.connId === cid && panelActive();
@@ -115,6 +119,7 @@
     await waitFor(() => pane2.dead, 8000, 'mosh closed');
     await waitFor(() => !app.sftpPanel.states.has(cid2) && pane2.sftpConnId === null && pane2.sftpStatus === 'idle', 8000, 'auto companion dropped');
     results.disconnectDropsCompanion = await untilRefused(cid2, 8000);
+    results.monitorHiddenAfterDrop = pane2.monitorEl.hidden === true && pane2.monitorOn === false;
     await app.closePane(pane2, true);
   } catch (e) {
     results.error = e.message;
