@@ -1,12 +1,18 @@
-# MobAlt
+<p align="center">
+  <img src="docs/images/icon.png" width="128" height="128" alt="MobAlt app icon">
+</p>
 
-**A MobaXterm-style SSH / SFTP / terminal workbench for macOS.**
+<h1 align="center">MobAlt</h1>
 
-[![Release](https://img.shields.io/github/v/release/Hyeongcheol-An/MobAlt?display_name=tag)](https://github.com/Hyeongcheol-An/MobAlt/releases)
-[![Release workflow](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml/badge.svg)](https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center"><strong>A MobaXterm-style SSH / SFTP / terminal workbench for macOS.</strong></p>
 
-[한국어 README](README.ko.md) · [User guide](docs/USER_GUIDE.md)
+<p align="center">
+  <a href="https://github.com/Hyeongcheol-An/MobAlt/releases"><img src="https://img.shields.io/github/v/release/Hyeongcheol-An/MobAlt?display_name=tag" alt="Release"></a>
+  <a href="https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml"><img src="https://github.com/Hyeongcheol-An/MobAlt/actions/workflows/release.yml/badge.svg" alt="Release workflow"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center"><a href="README.ko.md">한국어 README</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
 
 ![MobAlt: session tree, two remote shells side by side](docs/images/hero.png)
 
