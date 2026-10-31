@@ -171,10 +171,40 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   masqués ; l'en-tête du volet affiche une pastille *agrandi* et l'onglet un petit ⤢. Recommencez (ou ⤡ dans l'en-tête)
   pour rétablir la disposition. Diviser, fermer un volet, choisir une disposition en grille ou activer un volet masqué (⌘])
   rétablit d'abord la disposition. Chaque onglet garde son propre agrandissement, y compris après un redémarrage.
+- **Menu du volet** (clic droit sur un terminal ; ⇧ ou ⌃ clic droit quand *Le clic droit colle* est activé) : en plus de
+  copier, coller, rechercher, effacer, diviser et agrandir, il reprend les éléments propres au terminal du menu de MobaXterm.
+  *Renommer le volet…* (le *Rename Terminal* de MobaXterm) nomme le volet lui-même : l'en-tête du volet affiche ce nom,
+  l'onglet le reprend quand c'est ce volet qui donne son titre à l'onglet, et les séquences de titre du shell ne le modifient
+  plus ; un nom vide revient au titre automatique. *Réglages du volet…* correspond au « reconfigurer le terminal courant » de
+  MobaXterm : thème, police et taille, style et clignotement du curseur, historique, surlignage des mots-clés, barre de
+  surveillance (SSH / Mosh), lecture seule et étiquette d'arrière-plan de ce volet, par-dessus les valeurs de la session et des
+  Réglages (un champ vide les suit). *Appliquer à ce volet* ne modifie que ce volet — les valeurs le suivent lors d'un
+  agrandissement, d'un détachement et dans l'espace de travail — et *Enregistrer dans la session* (session enregistrée
+  uniquement) écrit en plus les champs que possède la session (thème, taille de police, surlignage des mots-clés,
+  surveillance, étiquette d'arrière-plan), si bien que tout volet ouvert ensuite depuis cette session les reprend.
+  *Taille de police ▸* ajuste la police de ce volet (⌘= / ⌘- / ⌘0 font de même pour le volet actif ; *Réinitialiser*
+  revient à la taille propre au volet). *Lecture seule* ignore les frappes et les collages vers le volet tandis que sa sortie
+  continue de s'afficher — une pastille *lecture seule* dans l'en-tête l'indique, et MultiExec laisse ce volet de côté.
+- **Étiquette d'arrière-plan** : un grand nom estompé dessiné derrière le texte d'un volet — par défaut le nom de la
+  session — pour reconnaître le serveur d'un coup d'œil, comme le badge d'iTerm2 (MobaXterm ne nomme un volet que dans sa
+  barre d'onglets). *Étiquette d'arrière-plan ▸* dans le menu du volet l'affiche ou la masque, définit son texte
+  (*Définir le texte…* ; vide = l'étiquette de la session, sinon son nom ou le titre du volet) et la place au *Centre* ou
+  *En haut à droite* ; l'onglet Terminal de l'éditeur de session (*Étiquette d'arrière-plan* : affichage, texte, position)
+  l'active pour tous les volets d'une session, et le réglage propre à un volet l'emporte sur celui de la session.
+  L'étiquette suit la taille du volet, disparaît dans les toutes petites cellules, prend la couleur de premier plan du volet
+  à 16 % d'opacité et ne fait jamais partie du tampon du terminal, d'une sélection, d'une copie ni d'un journal de session.
 - **MultiExec** (⇧⌘M) : tant qu'il est activé, chaque frappe va à tous les terminaux visibles à l'écran — les
   volets actifs de l'onglet actif, ou seulement le volet agrandi quand l'un d'eux remplit l'onglet. Les autres onglets ne
   la reçoivent jamais : divisez donc l'onglet (ou utilisez une grille) pour placer côte à côte les serveurs à piloter.
   Le bandeau indique combien de terminaux visibles écoutent et suit l'onglet vers lequel vous basculez.
+  Pour laisser un volet de côté, cochez la case sous son terminal — *Exclure « nom » du mode MultiExec*, comme dans
+  MobaXterm — ou utilisez *Exclure de MultiExec* dans le menu contextuel du volet : le volet reste à l'écran et connecté,
+  les frappes saisies ailleurs ne l'atteignent plus, et ce que vous y tapez ne va qu'à lui (pratique pour lancer une
+  commande sur un seul serveur sans quitter le mode). Le bandeau ajoute alors *, N exclus*, ou indique que tous les
+  terminaux visibles sont exclus. Un clic droit sur la bande d'une case ou sur le bandeau (⇧F10 sur une case active) ouvre
+  le menu du mode : *Tout activer*, *Tout désactiver*, *Inverser la sélection* et *Synchroniser le défilement à la molette*,
+  qui fait défiler les autres terminaux à l'écoute du même nombre de lignes quand vous faites défiler l'un d'eux à la
+  molette. Les cases sont décochées dès que MultiExec est désactivé ; rien n'en est enregistré.
 - **Barre de surveillance distante** : chaque volet SSH affiche une bande d'une ligne sous son en-tête — CPU, mémoire utilisée / totale,
   disque racine utilisé, débits réseau ↓ / ↑, charge moyenne, durée d'activité et nom d'hôte — actualisée toutes les 3 s (Réglages →
   Fonctions → Surveillance, 2 à 30 s). Un petit extrait POSIX `sh` s'exécute via la connexion de la session elle-même : il
@@ -219,8 +249,15 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   sans changement. Les deux vérifications sont des cases de Réglages → Fonctions → Garde-collage (activées par défaut) ; elles couvrent ⌘V,
   le clic droit et le texte déposé sur un volet, pas les macros. Avec MultiExec activé, une seule confirmation vaut pour tous les
   terminaux visibles.
-- **Touches** : Maj+Entrée et Option+Entrée envoient ESC+CR (un saut de ligne dans les apps TUI comme Claude Code) ;
-  Option sert de Meta par défaut.
+- **Touches** : Maj+Entrée et Option+Entrée envoient ESC+CR — la séquence que le `/terminal-setup` de Claude Code
+  associe à ces touches dans les autres terminaux — si bien que l'une ou l'autre commence une nouvelle ligne dans la zone
+  de saisie de Claude Code au lieu d'envoyer le prompt ; Option sert de Meta par défaut.
+- **Images pour Claude Code** : quand le presse-papiers contient une image et pas de texte (une capture d'écran,
+  *Copier l'image*), ⌘V, Modifier → Coller et le collage par clic droit envoient Ctrl+V au terminal ; Claude Code lit
+  lui-même le presse-papiers du système et joint l'image sous la forme `[Image #1]`. Du texte dans le presse-papiers est
+  collé comme d'habitude (et l'emporte quand les deux sont présents) ; un shell n'a que faire de cette touche et n'affiche
+  rien. Un fichier image déposé depuis le Finder sur un volet local colle son chemin entre guillemets (sur un volet SSH, les
+  fichiers sont envoyés, voir *Presse-papiers* ci-dessus).
 - **Journalisation** : Terminal → Démarrer/Arrêter le journal de session, ou l'option de session, écrit la sortie brute dans
   `~/Documents/MobAlt Logs/`. Réglages → Journaux → *Retirer les couleurs et séquences de contrôle* garde plutôt les
   journaux en texte brut (couleurs ANSI, déplacements du curseur et hook de suivi de dossier retirés).
@@ -328,6 +365,21 @@ MobAlt propose l'emporte, l'anglais si aucune ne convient. Réglages → Génér
 s'applique immédiatement dans toutes les fenêtres — rien ne redémarre, les connexions restent ouvertes — et il est mémorisé. La sortie des terminaux n'est jamais
 traduite : ce qu'affiche un hôte distant est montré tel quel. Le guide de l'utilisateur existe dans les mêmes onze langues
 (`docs/USER_GUIDE.<language>.md`) ; Aide → **Guide de l'utilisateur** ouvre celui de la langue actuelle.
+
+En arabe, toute la fenêtre se lit de droite à gauche : la bande latérale et la barre latérale passent sur le bord droit
+et les terminaux à gauche, le bouton ‹ de masquage de la barre latérale pointe dans l'autre sens, la barre d'outils, la
+barre d'onglets (le premier onglet à droite, ses boutons de défilement ‹ › inversés), la barre d'état, les en-têtes de
+panneau, les en-têtes de volet et la barre de surveillance sont inversés, les dialogues placent leurs libellés à droite et
+le ✕ à gauche, les menus s'ouvrent vers la gauche du pointeur et les notifications s'empilent en bas à gauche. Ce qui reste
+de gauche à droite : les terminaux eux-mêmes, et tout champ ou libellé contenant un hôte, un port, un chemin, une commande,
+un motif, une adresse MAC ou CIDR, une clé ou un raccourci (connexion rapide, chemin SFTP, champ de recherche, champs du
+panneau Outils, dossier et user@host de la barre d'état, pastilles de touches, empreintes, clé publique du générateur de
+clés, aperçu du garde-collage) ; un nom de session, d'onglet ou de dossier suit sa propre première lettre, si bien qu'un nom
+arabe se lit de droite à gauche et `user@host` de gauche à droite, et un chemin ou un nom d'hôte cité dans un message garde
+son propre ordre. Les divisions gardent leur sens physique — « Diviser à droite » ouvre toujours le nouveau volet à droite,
+et une session déposée sur le bord droit d'un volet y arrive. Les flèches suivent l'ordre des éléments, pas l'écran : →
+passe à l'onglet, au choix ou à la ligne suivants (celui de gauche en arabe) et ← au précédent, et dans l'arborescence des
+sessions → ouvre un dossier et ← le referme, comme en anglais.
 
 Pour lancer MobAlt une seule fois dans une langue sans modifier le réglage (captures d'écran, test), démarrez-le avec `MOBALT_LANG=<code>`
 dans l'environnement (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
