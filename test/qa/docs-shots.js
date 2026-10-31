@@ -8,7 +8,7 @@
   const app = window.app;
   const log = (...a) => console.log('[docs-shots]', ...a);
   const closeModal = () => document.querySelector('.modal .close')?.click();
-  const PROMPT = (host) => `export PS1='demo@${host}:%~$ '; export PROMPT='demo@${host}:%~$ '; clear`;
+  const PROMPT = (host) => `cd /Users/Shared 2>/dev/null && export HOME=/Users/Shared || cd /tmp; export PS1='demo@${host}:%~$ '; export PROMPT='demo@${host}:%~$ '; clear`; // a neutral cwd: the status bar shows the active pane's folder
   try {
     await window.api.app.testResize(1360, 860);
     await app.saveSettings({ confirmClose: false, restoreWorkspace: false, sftpAutoOpen: true });
