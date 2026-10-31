@@ -458,7 +458,7 @@ function buildMenu() {
             { label: '2 × 4 (8 panes)', accelerator: 'Cmd+Alt+8', click: () => sendAction('layout', '2x4') },
           ],
         },
-        { label: 'Unsplit (keep active pane)', accelerator: 'Cmd+Alt+1', click: () => sendAction('unsplit') },
+        { label: 'Unsplit', accelerator: 'Cmd+Alt+1', click: () => sendAction('unsplit') },
         { label: 'Close Pane', accelerator: 'Cmd+Shift+W', click: () => sendAction('close-pane') },
         { label: 'Focus Next Pane', accelerator: 'Cmd+]', click: () => sendAction('next-pane') },
         { label: 'Zoom Pane (fill the tab / restore)', accelerator: 'Cmd+Shift+Return', click: () => sendAction('zoom-pane') },

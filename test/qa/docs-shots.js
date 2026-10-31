@@ -38,7 +38,7 @@
     app.applyLayout('2x2');
     await sleep(500);
     await shot('split-grid');
-    app.unsplit();
+    app.unsplit('active'); // the empty panes close (the default would keep them as tabs, in every later shot)
     await sleep(300);
 
     // --- FTP session → file browser panel (looks exactly like the SFTP panel)

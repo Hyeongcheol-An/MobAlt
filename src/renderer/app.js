@@ -753,13 +753,24 @@ class App {
     this.focusPane(first, true);
   }
 
-  /** Close every other pane in the active tab. */
-  async unsplit() {
+  /**
+   * ⌥⌘1, View → Unsplit, Split ▾ → Unsplit: what becomes of the other panes of the active tab follows Settings →
+   * Terminal → Unsplit, or `mode` ('tabs' | 'active' | 'ask') when the caller names one. 'tabs' moves each of them
+   * into a tab of its own right after this one, terminals and all (layout.js unsplitToTabs: nothing reconnects);
+   * 'active' closes them, asking first when live connections would drop; 'ask' puts the question each time and
+   * Cancel keeps the split. A tab with a single pane: nothing happens, no question.
+   */
+  async unsplit(mode) {
     const ap = this.activePane();
     if (!ap || !ap.tab) return;
+    if (ap.tab.panes().length < 2) return;
+    const asked = (mode || this.settings.unsplitMode) === 'ask'; // the question names the connections that would drop: no second one
+    mode = await this.workspace.resolveUnsplitMode(mode || this.settings.unsplitMode, ap.tab);
+    if (!mode || ap.tab.panes().length < 2) return;
+    if (mode === 'tabs') return this.workspace.unsplitToTabs(ap.tab, ap);
     const others = ap.tab.panes().filter((p) => p !== ap);
     const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead);
-    if (live.length && this.settings.confirmClose && !(await confirmDialog(`Close ${plural(others.length, 'other pane')}? ${plural(live.length, 'live connection')} will be dropped.`, { okLabel: 'Close panes', danger: true }))) return;
+    if (live.length && this.settings.confirmClose && !asked && !(await confirmDialog(`Close ${plural(others.length, 'other pane')}? ${plural(live.length, 'live connection')} will be dropped.`, { okLabel: 'Close panes', danger: true }))) return;
     for (const p of others) await this.closePane(p, true);
     this.focusPane(ap, true);
   }
@@ -800,7 +811,7 @@ class App {
       { label: 'Layout 2 × 4  (8 panes)', action: () => this.applyLayout('2x4') },
       '-',
       { label: 'Re-arrange current panes as grid', action: () => this.applyLayout(`2x${Math.max(1, Math.ceil(n / 2))}`), disabled: n < 2 },
-      { label: 'Unsplit (keep active pane)', action: () => this.unsplit(), disabled: n < 2 },
+      { label: 'Unsplit', key: '⌥⌘1', action: () => this.unsplit(), disabled: n < 2 }, // the other panes go to tabs of their own, or close: Settings → Terminal → Unsplit
     ]);
   }
 
@@ -1250,7 +1261,7 @@ class App {
       case 'split': return this.splitActive(arg || 'right', pane);
       case 'split-menu': return this.splitMenu($('#btn-split'));
       case 'layout': return this.applyLayout(arg);
-      case 'unsplit': return this.unsplit();
+      case 'unsplit': return this.unsplit(arg); // arg: 'tabs' | 'active' | 'ask' overrides Settings → Terminal → Unsplit
       case 'next-pane': {
         if (!ap || !ap.tab) return;
         const panes = ap.tab.panes();

@@ -157,7 +157,13 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 - **Splits and grids**: `Split ▾` (⌘D right, ⇧⌘D down) adds an empty pane; the grid entries make
   1×2 … 2×4 layouts (⌥⌘2/4/6/8). Drop a session from the tree onto an empty pane to connect there,
   onto a pane's edge to split in that direction, or onto its centre to replace it. Drag a tab onto
-  a pane to move that terminal into the split. ⌥⌘1 unsplits (keeps the focused pane).
+  a pane to move that terminal into the split. ⌥⌘1 (View → Unsplit, `Split ▾` → Unsplit) unsplits the
+  tab: by default every other pane becomes a tab of its own, placed right after the current tab in
+  pane order, with its terminal, title and status as they are — nothing reconnects, no output is lost;
+  the focused pane keeps the tab. Settings → Terminal → **Unsplit** picks what happens instead: *Keep the
+  active pane, close the others* (the other panes close, with the usual question when live connections
+  would drop) or *Ask every time* (a small dialog offers *Move panes to tabs*, *Keep only this pane* or
+  Cancel, which keeps the split). A tab with a single pane is left alone, and a zoomed pane is restored first.
 - **Zoom a pane** (⇧⌘⏎, the ⤢ button in the pane head, or `Split ▾` → Zoom Pane): the focused
   pane fills the tab, like tmux's zoom or iTerm2's maximize. The other panes stay connected but
   hidden; the pane head shows a *zoomed* chip and the tab a small ⤢. Press again (or ⤡ in the head)
@@ -305,7 +311,8 @@ Settings has five tabs, each of which fits the smallest window without scrolling
 (the interface language, quit confirmation, the SFTP panel switch, workspace restore, the local shell and its folder
 integration, the external editor, the download folder, SSH keep-alive, and "Open config folder",
 which shows where everything is stored), **Terminal** (font, line height, cursor, scrollback, theme — the look of the whole
-window, see *Themes and appearance* — mouse/keys), **Features** (the paste guard, the remote monitoring bar and its refresh
+window, see *Themes and appearance* — mouse/keys, and what *Unsplit* does with the other panes of a split tab: move them
+to tabs of their own, close them, or ask every time), **Features** (the paste guard, the remote monitoring bar and its refresh
 interval, keyword highlighting and its rule table, and Zmodem transfers), **Logging** (log folder, plain-text session logs) and **Updates** (the startup check
 and "Check now").
 
