@@ -410,7 +410,7 @@
     await window.api.app.testResize(1000, 650);
     await sleep(300);
     const sb = document.getElementById('sidebar').getBoundingClientRect();
-    const toolBtns = [...document.querySelectorAll('.tools-form button')];
+    const toolBtns = [...document.querySelectorAll('.tools-form button')].filter((b) => b.offsetParent !== null); // visible ones (the scan table's sort buttons exist while hidden)
     results.toolsFitNarrow = toolBtns.every((b) => { const r = b.getBoundingClientRect(); return r.right <= sb.right + 0.5 && r.width > 20 && b.scrollWidth <= b.clientWidth + 1; });
     await shot('67-narrow-tools');
     app.showPanel('macros'); await sleep(150);

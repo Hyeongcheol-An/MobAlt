@@ -139,9 +139,11 @@
                 <input id="scan-ports" value="22,80,443,3389,5900" aria-label="TCP ports" title="TCP ports to try (comma-separated, ranges allowed)" spellcheck="false" />
                 <label class="chk" title="Look up the host name of every hit"><input type="checkbox" id="scan-rdns" checked /> rDNS</label>
               </div>
-              <div class="row">
+              <div class="row"><!-- two rows: one would wrap at the 180px sidebar width -->
                 <label class="lbl" for="scan-concurrency">Workers</label>
                 <input id="scan-concurrency" type="number" value="64" min="1" max="512" title="Hosts probed at the same time" />
+              </div>
+              <div class="row">
                 <label class="lbl" for="scan-timeout">Timeout</label>
                 <input id="scan-timeout" type="number" value="600" min="50" max="10000" step="50" title="Per probe, in milliseconds" />
                 <span class="lbl">ms</span>
