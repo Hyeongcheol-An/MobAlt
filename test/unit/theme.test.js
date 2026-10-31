@@ -11,10 +11,12 @@ const load = () => import('../../src/renderer/theme.js');
 
 const HEX = /^#[0-9a-f]{6}$/;
 // where each kind of token sits (styles.css): text on every surface, dim text never on the pressed/active fill,
-// the accent (links, brand, folder names) and the control outlines on the main surfaces
+// the accent (links, brand, folder names, the ZOOMED chip) and the control outlines on the main surfaces and on the
+// hover surface (the focused pane head, hovered rows)
 const SURFACES = ['bg', 'bg-panel', 'bg-elev', 'bg-dialog', 'bg-control', 'bg-input', 'bg-hover', 'bg-active'];
 const TEXT_SURFACES = SURFACES.filter((s) => s !== 'bg-active');
 const LINE_SURFACES = ['bg', 'bg-panel', 'bg-elev', 'bg-dialog'];
+const ACCENT_SURFACES = [...LINE_SURFACES, 'bg-hover'];
 const ICONS = ['danger', 'warn', 'ok', 'ico-ssh', 'ico-local', 'ico-telnet', 'ico-rdp', 'ico-vnc'];
 
 test('colour maths: hex, mix, luminance, contrast, ensureContrast, fillFor', async () => {
@@ -67,10 +69,12 @@ test('every theme has a chrome palette that reads: text 4.5:1, outlines / status
     assert.equal(p.scheme, isLightTheme(t) ? 'light' : 'dark');
     for (const bg of SURFACES) { at('fg', bg, 4.5); at('fg-strong', bg, 4.5); }
     for (const bg of TEXT_SURFACES) { at('fg-dim', bg, 4.5); at('fg-faint', bg, 4.5); }
-    for (const bg of LINE_SURFACES) { at('accent', bg, 4.5); at('border', bg, 3); }
+    for (const bg of ACCENT_SURFACES) { at('accent', bg, 4.5); at('border', bg, 3); }
+    at('accent', 'bg-active', 3); // the ZOOMED chip's border and the accent on a pressed row stay visible
     for (const bg of ['bg', 'bg-panel']) for (const c of ICONS) at(c, bg, 3);
     for (const fill of ['selection', 'accent-2', 'selection-hover']) { at('selection-fg', fill, 4.5); at('selection-fg-dim', fill, 4.5); }
     at('selection-fg', 'danger-fill', 4.5);
+    at('selection-fg-dim', 'danger-fill', 4.5); // the shortcut hint of a focused danger menu item
     for (const s of ['danger', 'warn', 'ok']) for (const bg of [...TEXT_SURFACES, s + '-bg']) at(s + '-fg', bg, 4.5);
     at('info-fg', 'info-bg', 4.5);
     at('fg-strong', 'info-bg', 4.5);
@@ -112,6 +116,26 @@ test('the chromes differ from theme to theme, and a palette that is not in THEME
   assert.ok(contrast(p.accent, p['bg-panel']) >= 4.5 && contrast(p['selection-fg'], p.selection) >= 4.5);
   const vars = cssVars(p);
   assert.ok(Object.keys(vars).every((k) => k.startsWith('--')) && !('--scheme' in vars) && vars['--bg'] === p.bg);
+});
+
+test('the terminal selection band is visible on every theme and the selected text stays readable', async () => {
+  const { THEMES, terminalTheme, contrast } = await load();
+  for (const [name, t] of Object.entries(THEMES)) {
+    const x = terminalTheme(t);
+    assert.match(x.selectionBackground, HEX, `${name}: selectionBackground`);
+    assert.equal(x.selectionInactiveBackground, x.selectionBackground, `${name}: the unfocused terminal keeps the band`);
+    const band = contrast(x.selectionBackground, t.background);
+    assert.ok(band >= 2, `${name}: band ${x.selectionBackground} is ${band.toFixed(2)}:1 on ${t.background}, wanted 2:1`);
+    if (x.selectionForeground) {
+      assert.match(x.selectionForeground, HEX);
+      assert.ok(contrast(x.selectionForeground, x.selectionBackground) >= 4.5, `${name}: selection text ${x.selectionForeground} on ${x.selectionBackground}`);
+      assert.ok(contrast(t.foreground, x.selectionBackground) < 3, `${name}: the text colour is replaced only when the theme text would not read on the band`);
+    } else assert.ok(contrast(t.foreground, x.selectionBackground) >= 3, `${name}: text ${t.foreground} on the band ${x.selectionBackground}`);
+    for (const k of Object.keys(t)) if (!k.startsWith('selection')) assert.equal(x[k], t[k], `${name}: ${k} untouched`);
+  }
+  assert.ok(!terminalTheme(THEMES['moba-dark']).selectionForeground, 'moba-dark keeps the cell colours inside a selection');
+  assert.ok(terminalTheme(THEMES['solarized-dark']).selectionForeground, 'Solarized: its dim text gets the strong selection foreground');
+  assert.equal(terminalTheme().selectionBackground, terminalTheme(THEMES['moba-dark']).selectionBackground, 'no theme: moba-dark');
 });
 
 test('find highlights follow the palette and stay readable under the theme text', async () => {

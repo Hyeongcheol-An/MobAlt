@@ -225,10 +225,14 @@ export class SessionTree {
     const sub = s.type === 'local' ? 'local'
       : s.type === 'serial' ? `${(s.serialPath || '').replace('/dev/', '')} @ ${s.baudRate || ''}`
       : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
+    // the session's colour is never a text colour (a yellow pick is unreadable on the light chrome): a coloured session
+    // without an icon shows a dot in that colour inside a --border ring (styles.css .ico.swatch); an emoji keeps its own colours
+    const ico = s.icon ? h('span', { class: 'ico emoji' }, s.icon)
+      : s.color ? h('span', { class: 'ico swatch', 'aria-hidden': 'true' })
+      : h('span', { class: 'ico ' + (ICON[s.type] || '') }, '●');
+    if (s.color && !s.icon) ico.style.setProperty('--session-color', s.color);
     const row = h('div', { class: 'tree-row' + (this.selected === s.id ? ' selected' : ''), dataset: { session: s.id }, draggable: true, title: `${s.name}\n${sub}`, role: 'treeitem', tabindex: -1 },
-      s.icon
-        ? h('span', { class: 'ico emoji', style: s.color ? { color: s.color } : null }, s.icon)
-        : h('span', { class: 'ico ' + (ICON[s.type] || ''), style: s.color ? { color: s.color } : null }, '●'),
+      ico,
       h('span', { class: 'label' }, s.name),
       open ? h('span', { class: 'dot', title: 'connected' }) : null,
       h('span', { class: 'sub' }, sub)

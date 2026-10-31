@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
-const { Store } = require('./store');
+const { Store, validChrome } = require('./store');
 const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, spawnMosh } = require('./terminals');
 const { SshManager } = require('./ssh');
 const { SftpManager } = require('./sftp');
@@ -144,12 +144,7 @@ ftp.on('edit-synced', (e) => win && !win.isDestroyed() && win.webContents.send('
 tunnels.on('changed', (list) => win && !win.isDestroyed() && win.webContents.send('tunnels:changed', list));
 
 // ---------- window ----------
-/** `{ background: '#rrggbb', scheme: 'dark'|'light' }` from the renderer (app:chrome), or null when it is not one. */
-function validChrome(c) {
-  if (!c || typeof c !== 'object' || !/^#[0-9a-f]{6}$/i.test(String(c.background)) || (c.scheme !== 'dark' && c.scheme !== 'light')) return null;
-  return { background: String(c.background).toLowerCase(), scheme: c.scheme };
-}
-/** The chrome palette the renderer last applied, remembered in the settings, so a new window and the native theme start in it. */
+/** The chrome palette the renderer last applied (store.validChrome), remembered in the settings, so a new window, the native theme and the first paint start in it. */
 const chromeOf = (settings) => validChrome(settings && settings.chrome) || { background: '#1e1f22', scheme: 'dark' };
 
 function createWindow() {
@@ -381,15 +376,18 @@ function registerIpc() {
   ipcMain.handle('app:relaunch', () => relaunch());
   // The renderer applied a theme (Settings → Theme, or at startup): the window background (the title-bar strip, what
   // shows through while resizing) and the native theme (menus, sheets, prefers-color-scheme) follow its chrome
-  // palette, and the pair is remembered so the next launch starts in it (createWindow, app.whenReady).
+  // palette, and the whole chrome (background, scheme, theme name, CSS tokens) is remembered so the next launch starts
+  // in it: createWindow, app.whenReady, and the preload, which puts the tokens on <html> before the first paint.
   ipcMain.on('app:chrome', (_e, c) => {
     const chrome = validChrome(c);
     if (!chrome) return;
     if (win && !win.isDestroyed()) win.setBackgroundColor(chrome.background);
     nativeTheme.themeSource = chrome.scheme;
     const cur = store.getSettings().chrome;
-    if (!cur || cur.background !== chrome.background || cur.scheme !== chrome.scheme) store.setSettings({ chrome });
+    if (JSON.stringify(validChrome(cur)) !== JSON.stringify(chrome)) store.setSettings({ chrome });
   });
+  // The preload asks for the remembered chrome synchronously while the page is still empty (see preload.js).
+  ipcMain.on('app:boot-chrome', (e) => { e.returnValue = chromeOf(store.getSettings()); });
   // Test-only: what the window and the native theme were last told, and what the next launch would start in.
   ipcMain.handle('test:chrome', () => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;

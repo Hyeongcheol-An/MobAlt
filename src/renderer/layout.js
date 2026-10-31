@@ -166,6 +166,25 @@ export class Workspace {
   /** Every pane of the tab repaints with its own palette (a re-mounted terminal must never keep a stale one). */
   syncThemes(tab) {
     for (const p of tab.panes()) if (typeof p.applyTheme === 'function') p.applyTheme(this.app.settings);
+    this.syncTabTheme(tab);
+  }
+
+  /**
+   * The active tab is painted in its terminal's colours (.tab.active reads --term-bg / --term-fg): a pane with its own
+   * theme hands them to its tab, so the tab blends into the pane below it instead of keeping the global theme's colours
+   * (a white tab over a Dracula pane on the light chrome); a pane on the global theme leaves the tab on the root tokens.
+   */
+  syncTabTheme(tab) {
+    if (!tab.tabEl) return;
+    const pane = tab.activePane;
+    const own = pane && pane.session && pane.session.theme && typeof pane.themeFor === 'function' ? pane.themeFor() : null;
+    if (own) {
+      tab.tabEl.style.setProperty('--term-bg', own.background || '#1e1e1e');
+      tab.tabEl.style.setProperty('--term-fg', own.foreground || '#ececec');
+    } else {
+      tab.tabEl.style.removeProperty('--term-bg');
+      tab.tabEl.style.removeProperty('--term-fg');
+    }
   }
 
   // ---------- tabs ----------
@@ -327,6 +346,7 @@ export class Workspace {
     dot.className = 'dot ' + (pane ? pane.status : '');
     if (tab.color) tab.tabEl.style.setProperty('--tab-color', tab.color);
     else tab.tabEl.style.removeProperty('--tab-color');
+    this.syncTabTheme(tab);
     const ico = tab.tabEl.querySelector('.tabico');
     if (ico) {
       ico.textContent = tab.icon || '';

@@ -97,7 +97,8 @@ export const CHROME_OVERRIDES = {
  * The chrome palette for a terminal theme: a map of token name → '#rrggbb' (plus `scheme` and two alpha values) that
  * styles.css reads as `--<name>`. Dark themes get a chrome a step lighter than the terminal background in the
  * theme's own hue; a light theme (luminance > .4) gets near-white panels and dark text. Guarantees, asserted in
- * test/unit/theme.test.js for every theme: text tokens read at ≥ 4.5:1 on every surface they sit on, borders and
+ * test/unit/theme.test.js for every theme: text tokens read at ≥ 4.5:1 on every surface they sit on, the accent at
+ * ≥ 4.5:1 and borders at ≥ 3:1 on the main surfaces and on the hover surface (focused pane head, hovered rows),
  * status/icon colours at ≥ 3:1, and the text on accent fills (selection, primary button, danger button) at ≥ 4.5:1.
  */
 export function chromePalette(theme, name) {
@@ -123,9 +124,10 @@ export function chromePalette(theme, name) {
   const surfaces = [bg, bgPanel, bgElev, bgDialog, bgControl, bgInput, bgHover, bgActive];
   const textSurfaces = surfaces.filter((s) => s !== bgActive); // dim text never sits on the pressed/active fill
   const lineSurfaces = [bg, bgPanel, bgElev, bgDialog];
+  const accentSurfaces = [...lineSurfaces, bgHover]; // the accent and the outlines also sit on hovered rows and the focused pane head
 
   // lines and text: `border` outlines controls (inputs, buttons, chips: 3:1), `divider` is the hairline between surfaces
-  const border = ensureContrastAll(pick('border', mix(fg0, bg, 0.45)), lineSurfaces, 3, strong);
+  const border = ensureContrastAll(pick('border', mix(fg0, bg, 0.45)), accentSurfaces, 3, strong);
   const fg = ensureContrastAll(pick('fg', fg0), surfaces, 4.5, strong);
   const fgDim = ensureContrastAll(pick('fg-dim', mix(fg, bg, 0.72)), textSurfaces, 4.5, strong);
   const fgFaint = ensureContrastAll(pick('fg-faint', mix(fg, bg, 0.62)), textSurfaces, 4.5, strong);
@@ -133,13 +135,14 @@ export function chromePalette(theme, name) {
 
   // accent: the theme's blue as text/ring colour (4.5:1), and as a fill that carries white text
   const blue = theme.blue || '#2472c8';
-  const accentBase = o.accent || [blue, theme.brightBlue].filter(Boolean).find((c) => lineSurfaces.every((s) => contrast(c, s) >= 4.5)) || blue;
-  const accent = ensureContrastAll(accentBase, lineSurfaces, 4.5, strong);
+  const accentBase = o.accent || [blue, theme.brightBlue].filter(Boolean).find((c) => accentSurfaces.every((s) => contrast(c, s) >= 4.5)) || blue;
+  const accent = ensureContrastAll(accentBase, accentSurfaces, 4.5, strong);
   const selectionFg = pick('selection-fg', '#ffffff');
   const selection = fillFor(pick('selection', o['accent-2'] || blue), selectionFg, 4.5);
   const accent2 = fillFor(pick('accent-2', selection), selectionFg, 4.5);
   const selectionHover = fillFor(pick('selection-hover', light ? darken(selection, 0.12) : lighten(selection, 0.12)), selectionFg, 4.5);
-  const selectionFgDim = ensureContrastAll(pick('selection-fg-dim', mix(selectionFg, selection, 0.85)), [selection, selectionHover, accent2], 4.5, selectionFg);
+  const dangerFill = fillFor(pick('danger-fill', theme.red || '#e5534b'), selectionFg, 4.5); // the danger button and a hovered / focused danger menu item
+  const selectionFgDim = ensureContrastAll(pick('selection-fg-dim', mix(selectionFg, selection, 0.85)), [selection, selectionHover, accent2, dangerFill], 4.5, selectionFg);
 
   // status colours: dot/icon level (3:1 on the panels), a tinted fill, and a text level (4.5:1 on the panels and the fill)
   // (the text level is seeded from the colour itself, not the theme's "bright" slot: Solarized keeps greys there)
@@ -152,7 +155,6 @@ export function chromePalette(theme, name) {
   const [danger, dangerFg, dangerBg] = status('danger', theme.red || '#e5534b');
   const [warn, warnFg, warnBg] = status('warn', theme.yellow || '#e6b422');
   const [ok, okFg, okBg] = status('ok', theme.green || '#4caf50');
-  const dangerFill = fillFor(pick('danger-fill', theme.red || danger), selectionFg, 4.5);
   const infoBg = pick('info-bg', mix(selection, bgPanel, light ? 0.14 : 0.45));
   const infoFg = ensureContrastAll(pick('info-fg', light ? accent : selectionFgDim), [infoBg], 4.5, strong);
   const infoBorder = ensureContrastAll(pick('info-border', mix(accent, infoBg, 0.5)), [infoBg], 3, strong);
@@ -173,6 +175,24 @@ export function chromePalette(theme, name) {
     'ico-ssh': icon('ico-ssh', accent), 'ico-local': icon('ico-local', ok), 'ico-telnet': icon('ico-telnet', warn),
     'ico-rdp': icon('ico-rdp', accent), 'ico-vnc': icon('ico-vnc', theme.magenta || accent),
   };
+}
+
+/**
+ * The xterm theme a pane paints with: the palette plus a text-selection band derived from it. The band is the theme's
+ * blue mixed into the terminal background and pushed until it reads at ≥ 2:1 against it (Solarized's own selection
+ * was 1.14:1: invisible). The theme's text stays on the band where it still reads at ≥ 3:1; where it would not (One
+ * Dark, Solarized: dim foregrounds), the selected text is drawn in white / black instead (`selectionForeground`,
+ * ≥ 4.5:1 on the band). The same band is used while the terminal is unfocused.
+ */
+export function terminalTheme(theme) {
+  theme = theme || THEMES['moba-dark'];
+  const bg = theme.background || '#1e1e1e', fg = theme.foreground || '#ececec', light = isLightTheme(theme);
+  const strong = light ? '#000000' : '#ffffff';
+  const band = ensureContrast(mix(theme.blue || '#2472c8', bg, 0.45), bg, 2, strong);
+  const t = { ...theme, selectionBackground: band, selectionInactiveBackground: band };
+  if (contrast(fg, band) >= 3) delete t.selectionForeground;
+  else t.selectionForeground = ensureContrast(strong, band, 4.5, strong);
+  return t;
 }
 
 /** The palette as CSS custom properties: { '--bg': '#1e1f22', … } (everything but `scheme`). */
