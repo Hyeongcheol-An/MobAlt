@@ -508,7 +508,7 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 #update-banner { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 4px 10px; background: var(--info-bg); color: var(--info-fg); font-size: 12px; border-bottom: 1px solid var(--accent-2); flex: none; }
 #update-banner[hidden] { display: none; }
 #update-banner b { font-weight: 600; color: var(--fg-strong); }
-#update-banner .btn.small { height: 22px; padding: 0 9px; font-size: 11.5px; }
+#update-banner .btn.small { height: 22px; padding: 0 9px; font-size: 11.5px; white-space: nowrap; flex-shrink: 0; } /* a translated label never wraps inside the button */
 #update-banner .btn.small:not(.primary) { background: transparent; border-color: var(--info-border); color: var(--info-fg); }
 #update-banner .btn.small:not(.primary):hover { background: color-mix(in srgb, var(--info-fg) 10%, transparent); }
 #update-banner .btn:focus-visible { outline: 2px solid var(--info-fg); outline-offset: 1px; } /* the accent ring would sink into the blue bar */
