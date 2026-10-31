@@ -5,6 +5,8 @@
 MobAlt는 macOS용 MobaXterm 스타일 작업대입니다. 왼쪽에 세션 트리, 가운데에 탭·분할 터미널, 사이드
 패널에 SFTP 브라우저·네트워크 도구·매크로가 있습니다.
 
+함께 보기: [MobaXterm 26.6 기능 대응표](MOBAXTERM_PARITY.ko.md) — MobAlt에 있는 것, 없는 것, 다르게 하는 것과 로드맵.
+
 ![원격 셸 두 개를 나란히 띄운 MobAlt](images/hero.png)
 
 목차: [설치](#설치) · [업데이트](#업데이트) · [세션](#세션) · [접속](#접속) · [터미널](#터미널) · [파일 (SFTP / FTP)](#파일-sftp--ftp) ·

@@ -58,6 +58,8 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
 | FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |
 
+Full feature-by-feature comparison with MobaXterm 26.6: [docs/MOBAXTERM_PARITY.md](docs/MOBAXTERM_PARITY.md).
+
 Workspace restore brings back your tabs, splits and sessions (local shells keep their folder, a
 zoomed pane stays zoomed) on the next launch and reconnects SSH automatically. MobAlt checks GitHub Releases for updates at
 startup (Settings → Updates, or Help → Check for Updates…) and installs them only when you agree.

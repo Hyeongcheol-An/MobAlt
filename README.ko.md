@@ -57,6 +57,8 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩, 동반 SSH 연결로 SFTP |
 | FTP / FTPS | ✅ | 명시적 TLS FTPS, 익명 FTP. Sftp 패널에서 탐색·전송·편집 |
 
+MobaXterm 26.6과의 기능별 전체 비교: [docs/MOBAXTERM_PARITY.ko.md](docs/MOBAXTERM_PARITY.ko.md).
+
 작업대 복원 기능이 탭·분할·세션(로컬 셸은 폴더까지, 확대한 페인은 확대 상태까지)을 다음 실행 때 되살리고 SSH는 자동 재접속합니다. 시작 시
 GitHub Releases에서 새 버전을 확인하며(Settings → Updates, Help → Check for Updates…) 동의할 때만 설치합니다.
 
