@@ -336,7 +336,7 @@
     n = toasts.length;
     await answer({ canceled: false, filePaths: [scratch + '/local/up1.txt', scratch + '/local/up2.txt'] });
     await app.sftpPanel.upload([]);
-    results.uploadToast = toastsSince(n).some((t) => t.text === 'Uploading 2 item(s)' && !t.error);
+    results.uploadToast = toastsSince(n).some((t) => t.text === 'Uploading 2 items' && !t.error); // QA4-09: a real plural, not "item(s)"
     await waitFor(() => ['up1.txt', 'up2.txt'].every((f) => transfers().some((t) => t.name === f && t.status === 'done')), 10000, 'uploads done');
     await app.sftpPanel.navigate(remote);
     await waitFor(() => entries().some((e) => e.name === 'up2.txt'), 5000, 'uploads listed');

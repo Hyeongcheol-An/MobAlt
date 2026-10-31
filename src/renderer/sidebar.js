@@ -1,5 +1,5 @@
 // Sessions tree (left panel): folders, filter, drag to folder, context menus.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead, repointOpeners } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead, repointOpeners, plural } from './ui.js';
 
 const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
 
@@ -471,7 +471,7 @@ export class SessionTree {
 
   async deleteFolder(f) {
     const n = this.countSessions(f);
-    const ok = await confirmDialog(n ? `Delete folder "${f.name}" and its ${n} session(s)?` : `Delete folder "${f.name}"?`, { title: 'Delete folder', okLabel: 'Delete', danger: true });
+    const ok = await confirmDialog(n ? `Delete folder "${f.name}" and its ${plural(n, 'session')}?` : `Delete folder "${f.name}"?`, { title: 'Delete folder', okLabel: 'Delete', danger: true });
     if (!ok) return false;
     const inside = (p) => p === f.path || (p || '').startsWith(f.path + '/');
     const sessions = this.app.sessions.sessions.filter((s) => !inside(s.folder || ''));

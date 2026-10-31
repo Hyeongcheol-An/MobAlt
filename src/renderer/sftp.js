@@ -1,5 +1,5 @@
 // SFTP browser panel (left sidebar "Sftp" tab) bound to the active SSH pane's connection.
-import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead, repointOpeners } from './ui.js';
+import { $, h, contextMenu, confirmDialog, promptDialog, toast, fmtSize, fmtDate, fmtDuration, showModal, icon, typeAhead, repointOpeners, plural } from './ui.js';
 
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|ini|cfg|conf|config|sh|bash|zsh|py|js|ts|jsx|tsx|mjs|cjs|rb|go|rs|java|kt|c|h|cpp|hpp|cc|cs|php|pl|lua|sql|xml|html?|css|scss|less|env|log|csv|tsv|gitignore|dockerfile|service|properties|tf|hcl|nix|vim|el|lisp|r|jl|dart|swift|m|mm|gradle|cmake|mk|makefile)$/i;
 
@@ -529,7 +529,7 @@ export class SftpPanel {
     if (!paths || !paths.length) {
       try {
         const ids = await window.api.sftp.upload(connId, [], dir); // native picker
-        if (ids && ids.length) toast(`Uploading ${ids.length} item(s)`, 'info');
+        if (ids && ids.length) toast(`Uploading ${plural(ids.length, 'item')}`, 'info');
       } catch (e) {
         toast(errMsg(e), 'error');
       }
@@ -549,7 +549,7 @@ export class SftpPanel {
         if (!todo.length) return toast('Nothing to upload: every item already exists', 'info');
       }
       const ids = await window.api.sftp.upload(connId, todo, dir);
-      if (ids && ids.length) toast(`Uploading ${ids.length} item(s)`, 'info');
+      if (ids && ids.length) toast(`Uploading ${plural(ids.length, 'item')}`, 'info');
     } catch (e) {
       toast(errMsg(e), 'error');
     }

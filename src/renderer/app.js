@@ -1,5 +1,5 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
-import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons } from './ui.js';
+import { $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, plural } from './ui.js';
 import { TermPane, THEMES, searchDecorations } from './terminal.js';
 import { chromePalette, cssVars } from './theme.js';
 import { Workspace } from './layout.js';
@@ -508,7 +508,7 @@ class App {
     const panes = tab.panes();
     const live = panes.filter((p) => p.status === 'connected' && p.kind !== 'local');
     if (live.length && this.settings.confirmClose) {
-      if (!(await confirmDialog(`Close tab "${tab.title}" with ${live.length} live connection(s)?`, { okLabel: 'Close', danger: true }))) return;
+      if (!(await confirmDialog(`Close tab "${tab.title}" with ${plural(live.length, 'live connection')}?`, { okLabel: 'Close', danger: true }))) return;
     }
     for (const p of panes) {
       const connId = p.termId;
@@ -549,7 +549,7 @@ class App {
     const ap = tab.activePane || tab.panes()[0];
     if (ap) this.focusPane(ap, true);
     this.updateMultiexec();
-    if (created.length) toast(`${created.length} empty pane(s) added — drag sessions onto them`, 'info');
+    if (created.length) toast(`${plural(created.length, 'empty pane')} added — drag sessions onto them`, 'info');
   }
 
   /** Open several sessions at once in a new tab laid out as a 2-column grid. */
@@ -575,7 +575,7 @@ class App {
     if (!ap || !ap.tab) return;
     const others = ap.tab.panes().filter((p) => p !== ap);
     const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead);
-    if (live.length && this.settings.confirmClose && !(await confirmDialog(`Close ${others.length} other pane(s)? ${live.length} live connection(s) will be dropped.`, { okLabel: 'Close panes', danger: true }))) return;
+    if (live.length && this.settings.confirmClose && !(await confirmDialog(`Close ${plural(others.length, 'other pane')}? ${plural(live.length, 'live connection')} will be dropped.`, { okLabel: 'Close panes', danger: true }))) return;
     for (const p of others) await this.closePane(p, true);
     this.focusPane(ap, true);
   }
@@ -859,8 +859,8 @@ class App {
     const mine = all.filter((x) => ids.includes(x.id));
     const failed = mine.filter((x) => x.status === 'error');
     const ok = mine.length - failed.length;
-    if (failed.length) toast(`${failed.length} of ${mine.length} tunnel(s) failed for ${pane.title}: ${failed.map((x) => `${x.bindPort} (${x.error || 'error'})`).join('; ')}`, 'error', 7000);
-    if (ok) toast(`${ok} tunnel(s) started for ${pane.title}`, 'success');
+    if (failed.length) toast(`${failed.length} of ${plural(mine.length, 'tunnel')} failed for ${pane.title}: ${failed.map((x) => `${x.bindPort} (${x.error || 'error'})`).join('; ')}`, 'error', 7000);
+    if (ok) toast(`${plural(ok, 'tunnel')} started for ${pane.title}`, 'success');
   }
 
   // ---------- sessions / settings persistence ----------
@@ -1017,7 +1017,7 @@ class App {
       case 'import-sshconfig': {
         const r = await window.api.sessions.importSshConfig();
         await this.reloadSessions();
-        toast(`Imported ${r.imported} of ${r.found} host(s) from ~/.ssh/config`, 'success');
+        toast(`Imported ${r.imported} of ${plural(r.found, 'host')} from ~/.ssh/config`, 'success');
         return;
       }
       case 'import-moba': {

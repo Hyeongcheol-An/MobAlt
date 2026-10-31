@@ -369,6 +369,11 @@ export function promptDialog(title, { label = '', value = '', password = false, 
   return m.promise;
 }
 
+/** "1 session" / "2 sessions": a count with its noun, for every toast and question that counts things. */
+export function plural(n, word, words = word + 's') {
+  return `${n} ${n === 1 ? word : words}`;
+}
+
 // ---------- toast ----------
 export function toast(message, type = 'info', ms = 3500) {
   const root = $('#toast-root');

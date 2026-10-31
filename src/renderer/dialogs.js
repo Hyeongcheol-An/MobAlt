@@ -555,7 +555,7 @@ export function settingsDialog(app) {
   const localShell = text(s.localShell, { placeholder: '(login shell)' });
   const shellInt = check('zsh/bash integration (folder following)', s.localShellIntegration !== false);
   const editor = text(s.editorCommand, { placeholder: 'e.g. code --wait {file}   (blank = TextEdit)' });
-  const confirmClose = check('Confirm quit with open SSH sessions', s.confirmClose);
+  const confirmClose = check('Confirm quit with open connections (SSH, Mosh, SFTP, FTP)', s.confirmClose);
   const restoreWs = check('Restore tabs & split layout at startup', s.restoreWorkspace !== false);
   const sftpAutoOpen = check('Switch to SFTP panel when SSH connects', s.sftpAutoOpen !== false);
   const downloadDir = text(s.downloadDir, { placeholder: '~/Downloads' });
