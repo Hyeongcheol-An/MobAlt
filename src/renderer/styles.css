@@ -783,3 +783,9 @@ body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }
 @container (max-width: 219px) { .scan-table th:nth-child(2), .scan-table td:nth-child(2) { display: none; } }
 .scan-table td.act { position: sticky; right: 0; background: var(--bg); }
 .scan-table th:last-child { right: 0; }
+/* Monitoring bar: terminal.js _monitorFit hides items by priority (host → uptime → load → the meters → network) when
+   the pane is too narrow for the whole strip — `hidden` must win over the items' own display — and the full line moves
+   into the strip's tooltip. A stale sample (a failed poll) is dimmed with its age in the warning colour. */
+.pane-monitor [hidden] { display: none !important; }
+.pane-monitor.stale .mon-item:not(.mon-stale), .pane-monitor.stale .mon-host, .pane-monitor.stale .mon-note { opacity: .5; }
+.pane-monitor .mon-stale { color: var(--warn); }
