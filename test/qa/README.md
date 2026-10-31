@@ -14,6 +14,9 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `window.api.app.quit()`; otherwise the app quits after `auto-quit-ms` (default 60 s) and writes
   `shots/final.png`.
 - `console.log` output is echoed to the terminal prefixed with `[renderer:info]`.
+- `test/qa/docs-shots.js` makes the README screenshots and `test/qa/demo-frames.js` the frames of the README demo GIF
+  (`npm run demo` runs it and `scripts/make-demo-gif.sh`); both need the FTP server from their headers, nothing personal
+  appears in the images.
 - `testKey(k)` sends keyDown/keyUp only (no char event), so the native Enter activation of a focused button cannot
   be driven with `testKey('Enter')`; use `testKey('Space')` (buttons activate on Space) or `el.click()`. Widgets with
   their own Enter handling (picker rows, lists, menus) do react to it.

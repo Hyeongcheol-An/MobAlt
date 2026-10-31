@@ -17,7 +17,8 @@
     "test": "node --test \"test/unit/**/*.test.js\"",
     "release": "semantic-release",
     "assets": "bash scripts/make-assets.sh",
-    "install:local": "bash scripts/install-local.sh"
+    "install:local": "bash scripts/install-local.sh",
+    "demo": "bash test/qa/run.sh test/qa/demo-frames.js test/shots/demo 120000 && bash scripts/make-demo-gif.sh test/shots/demo/shots"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
