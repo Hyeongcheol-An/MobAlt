@@ -1,0 +1,33 @@
+{
+  "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
+  "strings": {
+    "Language": {
+      "refs": [
+        "src/renderer/dialogs.js:790",
+        "src/renderer/dialogs.js:806"
+      ]
+    },
+    "Local X server: {display}": {
+      "refs": [
+        "src/renderer/app.js:55",
+        "src/renderer/app.js:1198"
+      ]
+    },
+    "Menus, panels and dialogs switch at once; terminal output is not translated": {
+      "refs": [
+        "src/renderer/dialogs.js:806"
+      ]
+    },
+    "No X server found (install XQuartz for X11 forwarding)": {
+      "refs": [
+        "src/renderer/app.js:55",
+        "src/renderer/app.js:1198"
+      ]
+    },
+    "System default ({name})": {
+      "refs": [
+        "src/renderer/dialogs.js:790"
+      ]
+    }
+  }
+}

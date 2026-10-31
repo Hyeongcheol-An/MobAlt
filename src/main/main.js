@@ -23,6 +23,7 @@ const algorithms = require('./algorithms');
 const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
+const i18n = require('./i18n'); // interface language: t() for every label built here, the dictionary for the windows
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 const { ZmodemManager } = require('./zmodem');
 
@@ -353,6 +354,30 @@ function runTestHooks() {
   }
 }
 
+// ---------- interface language ----------
+// Settings → General → Language, resolved against the macOS language list ('system'). The main process keeps its own
+// copy of the dictionary for the menu, the quit question and every message it composes (src/main/i18n.js); each
+// window fetched the same one at boot (app:boot-i18n) and refetches on a change (i18n:dict).
+function systemLocale() {
+  let preferred = [];
+  try { preferred = app.getPreferredSystemLanguages(); } catch {}
+  if (!preferred.length) { try { preferred = [app.getLocale()]; } catch {} }
+  return i18n.resolveLocale('system', preferred);
+}
+function applyLanguage(settings = store.getSettings()) {
+  let preferred = [];
+  try { preferred = app.getPreferredSystemLanguages(); } catch {}
+  if (!preferred.length) { try { preferred = [app.getLocale()]; } catch {} }
+  const code = i18n.resolveLocale(settings.language, preferred);
+  if (code === i18n.locale() && Menu.getApplicationMenu()) return code;
+  i18n.setLocale(code);
+  if (Menu.getApplicationMenu()) buildMenu(); // labels are read when the template is built
+  return code;
+}
+function i18nBoot() {
+  return { locale: i18n.locale(), system: systemLocale(), dict: i18n.loadDict(i18n.locale()), languages: i18n.LANGUAGES };
+}
+
 // ---------- menu ----------
 function sendAction(action, arg) {
   const w = focusedWindow(); // a menu accelerator acts in the window the user is in (a detached window too)
@@ -464,8 +489,10 @@ function buildMenu() {
       submenu: [
         { label: 'Check for Updates…', click: () => updater && updater.check(true) },
         { type: 'separator' },
-        { label: 'MobAlt on disk', click: () => shell.showItemInFolder(app.getPath('userData')) },
+        { label: 'User Guide', click: () => shell.openExternal(i18n.guideUrl()) }, // the guide in the interface language (docs/)
         { label: 'Keyboard Shortcuts', click: () => sendAction('shortcuts') },
+        { type: 'separator' },
+        { label: 'MobAlt on disk', click: () => shell.showItemInFolder(app.getPath('userData')) },
       ],
     },
   ];
@@ -673,6 +700,13 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const menu = Menu.getApplicationMenu();
     return Object.fromEntries(TAB_MENU_IDS.map((id) => { const it = menu && menu.getMenuItemById(id); return [id, it ? it.enabled : null]; }));
+  });
+  // Test-only: the application menu as the user sees it (labels in the interface language), [{ label, submenu: [...] }]
+  ipcMain.handle('test:menu-labels', () => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const walk = (item) => ({ label: item.label, role: item.role || undefined, type: item.type === 'separator' ? 'separator' : undefined, enabled: item.enabled, submenu: item.submenu ? item.submenu.items.map(walk) : undefined });
+    const menu = Menu.getApplicationMenu();
+    return menu ? menu.items.map(walk) : [];
   });
   // Test-only: a TCP listener on 127.0.0.1:<port> (0 = any free port) that accepts and never sends a byte — an SSH
   // connection to it waits for the banner until the handshake limit (how test/e2e-keygen.js holds the key
@@ -943,7 +977,16 @@ function registerIpc() {
 
   ipcMain.handle('settings:get', () => store.getSettings());
   // the other windows follow a settings change at once (theme, fonts, terminal options): settings:changed carries the result
-  ipcMain.handle('settings:set', (e, patch) => { const s = store.setSettings(patch); peers(e, 'settings:changed', s); return s; });
+  ipcMain.handle('settings:set', (e, patch) => {
+    const s = store.setSettings(patch);
+    if (patch && 'language' in patch) applyLanguage(s); // the menu is rebuilt in the new language; each window switches itself (app.js)
+    peers(e, 'settings:changed', s);
+    return s;
+  });
+  // The preload asks for the interface language synchronously while the page is still empty (src/renderer/i18n.js).
+  ipcMain.on('app:boot-i18n', (e) => { e.returnValue = i18nBoot(); });
+  ipcMain.handle('i18n:dict', (_e, code) => i18n.loadDict(code));
+  ipcMain.handle('i18n:guide-url', (_e, code) => i18n.guideUrl(code || i18n.locale()));
 
   // The workspace file is written here from two kinds of parts: the main window's tabs (v, activeTab, tabs) and one
   // entry per detached window under `windows` (tabs, activeTab, bounds), each sent by its own renderer; the renderer
@@ -1087,6 +1130,7 @@ app.whenReady().then(() => {
     if (fs.existsSync(devIcon)) app.dock.setIcon(devIcon);
   }
   registerIpc();
+  applyLanguage(); // before the menu and the window: both are built in the saved language
   buildMenu();
   createWindow();
   bundleWatch = startBundleWatch({ getWin: () => win });

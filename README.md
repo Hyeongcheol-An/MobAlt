@@ -13,6 +13,7 @@
 </p>
 
 <p align="center"><a href="README.ko.md">한국어 README</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
+<p align="center">User guide in: <a href="docs/USER_GUIDE.md">English</a> · <a href="docs/USER_GUIDE.ko.md">한국어</a> · <a href="docs/USER_GUIDE.zh-CN.md">简体中文</a> · <a href="docs/USER_GUIDE.ja.md">日本語</a> · <a href="docs/USER_GUIDE.vi.md">Tiếng Việt</a> · <a href="docs/USER_GUIDE.hi.md">हिन्दी</a> · <a href="docs/USER_GUIDE.de.md">Deutsch</a> · <a href="docs/USER_GUIDE.fr.md">Français</a> · <a href="docs/USER_GUIDE.es.md">Español</a> · <a href="docs/USER_GUIDE.pt.md">Português</a></p>
 
 ![MobAlt: session tree, two remote shells side by side](docs/images/hero.png)
 
@@ -60,6 +61,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Sessions export / import | ✅ | JSON file of every session and folder, never a password or passphrase (Session menu or the tree's context menu); importing merges by id and adds the rest |
 | Maximise a split pane | ✅ Zoom | ⇧⌘⏎ (or ⤢ in the pane head) fills the tab with the focused pane and brings the layout back; each tab keeps its zoom, also across a restart |
 | Pinned tabs, close tabs left / right, detach to a window | ✅ | ⇧⌘P pins a tab at the left (short title, no ✕, kept across restarts); Close Others / Tabs to the Left / Tabs to the Right / All skip pinned tabs and ask once, counting every live connection; ⌥⌘N moves a tab into its own window with its terminals alive, closing that window brings them back, and the workspace reopens such windows |
+| Interface language | ✅ | English, 한국어, 简体中文, 日本語, Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português — follows the macOS language list or Settings → General → Language, switches at once without a restart; the user guide exists in every one |
 | Colour themes / dark mode | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark and Light colour the whole window (toolbar, sidebar, tabs, dialogs), not only the terminals; a session can override its own terminal theme |
 | Keyword highlighting | ✅ | Errors, warnings, OK, IP addresses, URLs and sizes coloured in every terminal by an editable rule table (plain text or regex, colour / background / bold / underline; Settings → Features), colours from the theme; a session can switch it on or off |
 | Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
