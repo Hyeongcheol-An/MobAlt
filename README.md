@@ -29,7 +29,7 @@ It is a native-feeling Electron app built on xterm.js, ssh2 and node-pty.
 | Drag & drop upload | ✅ | Drop Finder items on the SFTP list or on a terminal |
 | Built-in X server | ✅ via XQuartz | Starts XQuartz on demand and proxies the X11 channel with cookie replacement |
 | MobaSSHTunnel | ✅ Tunneling | Local (-L), remote (-R) and dynamic SOCKS5 (-D); per-session auto-start or standalone |
-| MultiExec | ✅ | Type into every terminal at once (⇧⌘M) |
+| MultiExec | ✅ | Type into every visible terminal of the tab at once (⇧⌘M) |
 | Split terminals | ✅ | Right/down splits and grids up to 2 × 4 (8 panes); drag sessions onto empty panes or pane edges; drag tabs between panes |
 | Macros | ✅ | Record/replay keystrokes, text macros, play to all terminals |
 | Tools | ✅ Tools panel | Ping, traceroute, DNS lookup, port scan, network info |
@@ -103,7 +103,7 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
 - **Startup commands** (MobaXterm's *Execute command*): lines in the session editor's Terminal tab are
   typed into the terminal once it is ready, for every session type. Example: a local session with
   *Start folder* set to a project and `claude --resume <id>` as the startup command.
-- **MultiExec**: toolbar button or ⇧⌘M; while on, keystrokes go to every terminal.
+- **MultiExec**: toolbar button or ⇧⌘M; while on, keystrokes go to every terminal visible in the active tab (its split panes), not to other tabs.
 - **Keyboard**: Help → Keyboard Shortcuts. Right-click pastes (⇧-right-click for the menu), selecting
   copies. Shift+Enter and Option+Enter send ESC+CR, which TUI apps such as Claude Code treat as a newline.
 

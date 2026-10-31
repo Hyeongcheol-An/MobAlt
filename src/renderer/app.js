@@ -597,6 +597,7 @@ class App {
 
   onActiveTabChanged(tab) {
     this._syncEmptyState();
+    this.updateMultiexec(); // the broadcast set is the new tab's panes
     if (this._findResearch) this._findResearch(); // the find counter belongs to the new terminal
     this.updateStatus(tab ? tab.activePane : null);
     if (tab && tab.activePane) this.sftpPanel.setPane(tab.activePane);
@@ -613,6 +614,7 @@ class App {
 
   onPaneStatus(pane, msg) {
     if (pane.tab) this.workspace.updateTab(pane.tab);
+    this.updateMultiexec(); // a shell that connected, died or came back changes the broadcast count
     if (this.activePane() === pane) this.updateStatus(pane, msg);
     this.sessionTree.render(); // connected dot / failure state in the tree
   }
@@ -667,15 +669,29 @@ class App {
   }
 
   // ---------- MultiExec ----------
-  broadcast(data, from) {
-    for (const p of this.workspace.allPanes()) if (!p.dead && p.termId) p.write(data);
+  /**
+   * The terminals MultiExec writes to: the ones on screen, i.e. the live shells of the active tab
+   * (other tabs are never touched; empty placeholders, FTP cards and dead sessions are skipped).
+   */
+  multiexecTargets() {
+    const tab = this.workspace.active;
+    return tab ? tab.panes().filter((p) => !p.dead && p.termId && p.kind !== 'ftp' && p.kind !== 'empty') : [];
   }
 
+  broadcast(data, from) {
+    const targets = this.multiexecTargets();
+    for (const p of targets) p.write(data);
+    if (from && !targets.includes(from)) from.write(data); // input into a terminal that is not on screen still reaches its own shell (once)
+  }
+
+  /** Banner, toolbar state and the visible-terminal count; called whenever the active tab or a pane's life changes. */
   updateMultiexec() {
-    $('#multiexec-banner').hidden = !this.multiexec;
+    const banner = $('#multiexec-banner');
+    const wasHidden = banner.hidden;
+    banner.hidden = !this.multiexec;
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
-    $('#multiexec-count').textContent = String(this.workspace.allPanes().filter((p) => !p.dead && p.termId).length);
-    this.workspace.allPanes().forEach((p) => p.fit());
+    $('#multiexec-count').textContent = String(this.multiexecTargets().length);
+    if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
 
   async startSessionTunnels(pane) {
@@ -790,11 +806,15 @@ class App {
       case 'clear': return ap && ap.clear();
       case 'toggle-sidebar': return this.toggleSidebar();
       case 'sidebar': return this.showPanel(arg);
-      case 'multiexec':
+      case 'multiexec': {
         this.multiexec = !this.multiexec;
         this.updateMultiexec();
-        toast(this.multiexec ? 'MultiExec ON: input goes to all terminals' : 'MultiExec OFF', this.multiexec ? 'warn' : 'info');
+        const n = this.multiexecTargets().length;
+        toast(!this.multiexec ? 'MultiExec OFF'
+          : n < 2 ? `MultiExec ON: only ${n} terminal${n === 1 ? ' is' : 's are'} visible — split the tab to broadcast`
+          : 'MultiExec ON: input goes to every visible terminal in this tab', this.multiexec ? 'warn' : 'info');
         return;
+      }
       case 'tunnels': return tunnelsDialog(this, typeof arg === 'object' ? arg : {});
       case 'toggle-log': return ap && ap.toggleLog();
       case 'settings': {
