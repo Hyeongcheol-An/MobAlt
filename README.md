@@ -46,7 +46,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Drag & drop upload | ✅ | Drop Finder items on the SFTP list or on a terminal |
 | Built-in X server | ✅ via XQuartz | Starts XQuartz on demand and proxies the X11 channel with cookie replacement |
 | MobaSSHTunnel | ✅ Tunneling | Local (-L), remote (-R) and dynamic SOCKS5 (-D); per-session auto-start or standalone |
-| MultiExec | ✅ | Type into every visible terminal of the tab at once (⇧⌘M) |
+| MultiExec | ✅ | Type into every visible terminal of the tab at once (⇧⌘M); an *Exclude "name" from MultiExec mode* box under each terminal, Activate all / none / Invert selection and synchronised wheel scrolling in the right-click menu |
 | Paste guard (multi-line confirmation, malicious-paste checks) | ✅ | A multi-line or long paste asks first with an editable preview; every paste is checked for zero-width / bidi / control characters, a trailing newline, `curl \| sh`, profile writes, `rm -rf /` and look-alike letters, with a "Paste cleaned" option |
 | Split terminals | ✅ | Right/down splits and grids up to 2 × 4 (8 panes); drag sessions onto empty panes or pane edges; drag tabs between panes; ⌥⌘1 unsplits — the other panes become tabs of their own (or close, or ask: Settings) |
 | Macros | ✅ | Record/replay keystrokes, text macros, play to all terminals |
@@ -134,7 +134,7 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
 - **Startup commands** (MobaXterm's *Execute command*): lines in the session editor's Terminal tab are
   typed into the terminal once it is ready, for every session type. Example: a local session with
   *Start folder* set to a project and `claude --resume <id>` as the startup command.
-- **MultiExec**: toolbar button or ⇧⌘M; while on, keystrokes go to every terminal visible in the active tab (its split panes), not to other tabs.
+- **MultiExec**: toolbar button or ⇧⌘M; while on, keystrokes go to every terminal visible in the active tab (its split panes), not to other tabs. Tick the box under a terminal to exclude it (it stays connected; what you type into it goes to it alone); right-click a box's strip or the banner for Activate all / none, Invert selection and synchronised wheel scrolling.
 - **Keyboard**: Help → Keyboard Shortcuts. Right-click pastes (⇧-right-click for the menu), selecting
   copies. Shift+Enter and Option+Enter send ESC+CR, which TUI apps such as Claude Code treat as a newline.
 

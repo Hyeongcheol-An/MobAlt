@@ -191,7 +191,10 @@ export function contextMenu(x, y, items) {
       continue;
     }
     if (!it) continue;
-    const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : ''), role: 'menuitem', tabindex: -1, 'aria-disabled': it.disabled ? 'true' : null, onclick: () => { closeContextMenu(); it.action && it.action(); } }, it.label, it.key ? h('span', { class: 'k' }, it.key) : null);
+    // `checked: true | false` makes a checkable item (a toggle): a menuitemcheckbox with its state, a ✓ in the key slot while on
+    const checkable = typeof it.checked === 'boolean';
+    const mark = it.key || (checkable && it.checked ? '✓' : '');
+    const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : '') + (checkable ? ' checkable' : ''), role: checkable ? 'menuitemcheckbox' : 'menuitem', 'aria-checked': checkable ? String(it.checked) : null, tabindex: -1, 'aria-disabled': it.disabled ? 'true' : null, onclick: () => { closeContextMenu(); it.action && it.action(); } }, it.label, mark ? h('span', { class: 'k' }, mark) : null);
     if (it.danger) row.classList.add('danger'); // styles.css: red text, and the red fill with the selection text while hovered / focused
     menu.append(row);
   }

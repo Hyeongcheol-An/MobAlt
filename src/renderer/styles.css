@@ -813,3 +813,13 @@ body.detached #toolbar .brand::after { color: var(--fg-dim); opacity: 1; }
 .pane-monitor [hidden] { display: none !important; }
 .pane-monitor.stale .mon-item:not(.mon-stale), .pane-monitor.stale .mon-host, .pane-monitor.stale .mon-note { opacity: .5; }
 .pane-monitor .mon-stale { color: var(--warn); }
+/* MultiExec: MobaXterm's per-terminal switch — a thin strip under the terminal (bottom-left, small font) with the one
+   checkbox `Exclude "<title>" from MultiExec mode`, shown only while the mode is on (terminal.js syncMultiexecStrip).
+   The caption is clipped with an ellipsis, never wrapped; the strip's tooltip carries it whole. */
+.pane-mx { display: flex; align-items: center; height: 18px; padding: 0 6px; background: var(--bg-2); border-top: 1px solid var(--divider); font-size: 10px; line-height: 18px; color: var(--fg-dim); white-space: nowrap; overflow: hidden; flex: none; }
+.pane-mx[hidden] { display: none; }
+.pane-mx .mx-label { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 100%; cursor: default; }
+.pane-mx .mx-box { margin: 0; width: 11px; height: 11px; flex: none; accent-color: var(--accent); }
+.pane-mx .mx-caption { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pane.focused .pane-mx { color: var(--fg); }
+.pane-mx .mx-box:focus-visible { outline: 2px solid var(--fg-strong); outline-offset: 1px; }

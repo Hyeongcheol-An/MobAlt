@@ -28,6 +28,7 @@ class App {
     this.info = {};
     this.panesByTerm = new Map();
     this.multiexec = false;
+    this.multiexecSyncScroll = false; // "Synchronize mouse wheel scrolling" (the MultiExec bulk menu): runtime only, like the Exclude boxes
     this.macroRecorder = null;
     this.focused = null;
     this.updateOnDisk = null; // version of the MobAlt.app on disk when it differs from the running one
@@ -386,6 +387,8 @@ class App {
       this.activePane()?.focus();
     });
     for (const b of $$('#update-banner button')) b.addEventListener('mousedown', (e) => e.preventDefault());
+    // the MultiExec banner is the mode's chrome: a right-click on it opens MobaXterm's bulk menu (so does a pane's Exclude strip)
+    $('#multiexec-banner').addEventListener('contextmenu', (e) => { e.preventDefault(); this.multiexecMenu(e.clientX, e.clientY); });
     // empty workspace accepts a dropped session
     const tc = $('#tab-content');
     tc.addEventListener('dragover', (e) => { if (!this.workspace.tabs.length && e.dataTransfer.types.includes('text/x-mobalt-session')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
@@ -1030,21 +1033,58 @@ class App {
 
   // ---------- MultiExec ----------
   /**
-   * The terminals MultiExec writes to: the ones on screen, i.e. the live shells of the active tab — only the
+   * The terminals MultiExec could write to: the ones on screen, i.e. the live shells of the active tab — only the
    * zoomed pane while one fills the tab (other tabs are never touched; empty placeholders, FTP cards and dead
-   * sessions are skipped).
+   * sessions are skipped). Each of them shows the Exclude strip under its terminal while the mode is on.
    */
-  multiexecTargets() {
+  multiexecCandidates() {
     const tab = this.workspace.active;
     if (!tab) return [];
     const shown = tab.zoomed ? [tab.zoomed] : tab.panes();
-    return shown.filter((p) => !p.dead && p.termId && p.kind !== 'ftp' && p.kind !== 'empty');
+    return shown.filter((p) => typeof p.multiexecCandidate === 'function' ? p.multiexecCandidate() : !p.dead && p.termId && p.kind !== 'ftp' && p.kind !== 'empty');
+  }
+
+  /** The terminals MultiExec writes to: the candidates whose Exclude box is not ticked (MobaXterm: the "active" terminals). */
+  multiexecTargets() {
+    return this.multiexecCandidates().filter((p) => !p.multiexecExcluded);
   }
 
   broadcast(data, from) {
+    if (from && from.multiexecExcluded) return from.write(data); // an excluded pane is out of the mode: its own keys reach it alone (run one command there while the others listen to each other)
     const targets = this.multiexecTargets();
     for (const p of targets) p.write(data);
     if (from && !targets.includes(from)) from.write(data); // input into a terminal that is not on screen still reaches its own shell (once)
+  }
+
+  /**
+   * MobaXterm's right-click menu of the mode (v24.2), opened on the banner, on a pane's Exclude strip or with ⇧F10 on
+   * its box: `Activate all` / `Activate none` untick / tick every box on screen, `Invert selection` swaps them, and
+   * `Synchronize mouse wheel scrolling` makes a wheel scroll in one terminal move the others by the same amount.
+   */
+  multiexecMenu(x, y) {
+    if (!this.multiexec) return;
+    const set = (fn) => {
+      for (const p of this.multiexecCandidates()) p.setMultiexecExcluded(fn(p), { update: false });
+      this.updateMultiexec();
+    };
+    contextMenu(x, y, [
+      { label: t('Activate all'), action: () => set(() => false) },
+      { label: t('Activate none'), action: () => set(() => true) },
+      { label: t('Invert selection'), action: () => set((p) => !p.multiexecExcluded) },
+      '-',
+      { label: t('Synchronize mouse wheel scrolling'), checked: this.multiexecSyncScroll, action: () => { this.multiexecSyncScroll = !this.multiexecSyncScroll; } },
+    ]);
+  }
+
+  /** A wheel scroll of `from` by `delta` lines (terminal.js _onScroll) moves the other targets too; an excluded pane neither leads nor follows. */
+  syncScroll(from, delta) {
+    if (this._syncingScroll || !delta || from.multiexecExcluded) return;
+    this._syncingScroll = true; // the followers' onScroll must not come back here
+    try {
+      for (const p of this.multiexecTargets()) if (p !== from) p.scrollBy(delta);
+    } finally {
+      this._syncingScroll = false;
+    }
   }
 
   // ---------- paste guard ----------
@@ -1061,7 +1101,7 @@ class App {
     const mode = pasteGuardMode(analysis, this.settings);
     if (!mode.ask) return text;
     let where = pane.title;
-    if (this.multiexec) {
+    if (this.multiexec && !pane.multiexecExcluded) { // an excluded pane pastes into itself alone (broadcast)
       const targets = this.multiexecTargets();
       const n = targets.length + (targets.includes(pane) ? 0 : 1); // broadcast() also writes to a pane that is not on screen
       if (n > 1) where = t('{n} terminals (MultiExec)', { n });
@@ -1082,16 +1122,20 @@ class App {
     const wasHidden = banner.hidden;
     banner.hidden = !this.multiexec;
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
-    const n = this.multiexecTargets().length;
+    const candidates = this.multiexecCandidates();
+    const n = this.multiexecTargets().length, excluded = candidates.length - n; // n = the panes that receive keystrokes
     // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminal(s)".
     // The banner is rendered here, never through a data-i18n hook on the static element (index.html): one sentence
-    // per case, the count element put where {count} is, so a translation can move it.
+    // per case, the count element put where {count} is, so a translation can move it; ", N excluded" follows when
+    // some boxes are ticked, and with every box ticked the sentence says so instead of the count.
     const count = h('b', { id: 'multiexec-count', hidden: n === 0 }, String(n));
     const zoomed = !!(this.workspace.active && this.workspace.active.zoomed);
-    const text = n === 0 ? t('MultiExec is ON — {reason}', { reason: this.multiexecNoneText() })
+    const text = n === 0 && excluded ? t('MultiExec is ON — every visible terminal is excluded — untick "Exclude … from MultiExec mode" under a pane')
+      : n === 0 ? t('MultiExec is ON — {reason}', { reason: this.multiexecNoneText() })
       : zoomed ? t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab (the zoomed pane only)')
       : t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab');
-    banner.replaceChildren(...fillNodes(text, { count }), ...(n === 0 ? [count] : []));
+    banner.replaceChildren(...fillNodes(text, { count }), ...(n === 0 ? [count] : []), ...(n > 0 && excluded ? [', ' + tn('{n} excluded', '{n} excluded', excluded)] : []));
+    for (const p of this.workspace.allPanes()) p.syncMultiexecStrip?.(); // the Exclude strips under the terminals follow the mode
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
 
@@ -1333,6 +1377,7 @@ class App {
       case 'sidebar': return this.showPanel(arg);
       case 'multiexec': {
         this.multiexec = !this.multiexec;
+        if (!this.multiexec) for (const p of this.workspace.allPanes()) p.setMultiexecExcluded?.(false, { update: false }); // the boxes start unticked on every entry, as in MobaXterm
         this.updateMultiexec();
         const n = this.multiexecTargets().length;
         toast(!this.multiexec ? t('MultiExec OFF')

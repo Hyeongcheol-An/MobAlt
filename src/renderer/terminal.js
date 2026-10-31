@@ -86,6 +86,7 @@ export class TermPane {
     this.logging = false;
     this.tab = null;
     this.zoomed = false; // filling its tab (layout.js setZoom → setZoomed)
+    this.multiexecExcluded = false; // the Exclude box under the terminal (MobaXterm's per-terminal MultiExec switch): runtime only, reset when the mode goes off
     this.dead = false;
     this.disposed = false;
     this.connectedAt = null;
@@ -147,8 +148,16 @@ export class TermPane {
       )),
       // the remote monitoring strip: a status region that is never announced (it changes every few seconds)
       (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': t('Remote monitoring'), hidden: true })),
-      (this.termEl = h('div', { class: 'pane-term' }))
+      (this.termEl = h('div', { class: 'pane-term' })),
+      // MobaXterm's per-terminal MultiExec switch: a strip under the terminal, shown while the mode is on
+      // (syncMultiexecStrip), with the one checkbox `Exclude "<title>" from MultiExec mode` — ticked, the pane stays on
+      // screen and connected but gets no broadcast keystrokes. Right-click / ⇧F10 on it: the mode's bulk menu (app.js).
+      (this.mxEl = h('div', { class: 'pane-mx', role: 'group', hidden: true, oncontextmenu: (e) => this._mxMenu(e), onkeydown: (e) => this._mxKey(e) },
+        h('label', { class: 'mx-label' },
+          (this.mxBox = h('input', { type: 'checkbox', class: 'mx-box', onchange: () => this.setMultiexecExcluded(this.mxBox.checked) })),
+          (this.mxCaption = h('span', { class: 'mx-caption' })))))
     );
+    this._mxRelabel();
     if (this.session?.color) this.el.style.setProperty('--pane-color', this.session.color);
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the palette from the first paint
     this.el.addEventListener('mousedown', () => app.focusPane(this), true);
@@ -157,6 +166,7 @@ export class TermPane {
 
     this.term.onData((d) => this._onInput(d));
     this.term.onBinary((d) => this._onInput(d));
+    this.term.onScroll((y) => this._onScroll(y)); // "Synchronize mouse wheel scrolling" (MultiExec bulk menu)
     this.term.onResize(({ cols, rows }) => {
       if (this.termId) window.api.term.resize(this.termId, cols, rows);
     });
@@ -288,6 +298,7 @@ export class TermPane {
     // canvas is the addon's. Disposing the addon drops its listener, so the wait is never started.
     this.termEl.addEventListener('webglcontextlost', () => this._onWebglLost(), true);
     this.termEl.addEventListener('contextmenu', (e) => this._contextMenu(e));
+    this.termEl.addEventListener('wheel', () => { this._wheelAt = performance.now(); }, { capture: true, passive: true }); // _onScroll tells a wheel scroll from output arriving
     // ⌘V, Edit → Paste and the native context menu all land as a `paste` event on xterm's textarea (or its element);
     // taking it in the capture phase on the pane keeps xterm's own listeners from sending the clipboard straight to
     // the shell, so the paste guard (app.js guardPaste) sees every paste before the terminal does.
@@ -396,6 +407,7 @@ export class TermPane {
 
   updateTitle() {
     this.headTitle.textContent = this.title;
+    this._mxRelabel(); // the Exclude box names the pane (MobaXterm v21.5: the terminal title is written in the checkbox)
     this.app.onPaneTitle(this);
   }
 
@@ -431,6 +443,7 @@ export class TermPane {
       btn.setAttribute('aria-label', label);
     }
     this.monitorEl.setAttribute('aria-label', t('Remote monitoring'));
+    this._mxRelabel();
     if (!this.monitorEl.hidden) {
       if (this._monitorNote) this._monitorRender(null, this._monitorNote.note, this._monitorNote.detail);
       else if (this.monitorSample) this._monitorRender(this.monitorSample);
@@ -456,6 +469,81 @@ export class TermPane {
     this.zoomBtn.replaceChildren(icon(on ? 'unzoom' : 'zoom'));
     this.zoomBtn.title = on ? t('Restore panes (⇧⌘⏎)') : t('Zoom pane (⇧⌘⏎)');
     this.zoomBtn.setAttribute('aria-pressed', String(on));
+  }
+
+  // ---------- MultiExec: the per-terminal switch ----------
+  /** A terminal MultiExec could write to: live, not a placeholder or an FTP card (app.js multiexecCandidates adds "on screen"). */
+  multiexecCandidate() {
+    return !this.disposed && !this.dead && !!this.termId && this.kind !== 'empty' && this.kind !== 'ftp';
+  }
+
+  /** The strip's caption, tooltip and group name follow the title (updateTitle) and the language (_relabel). */
+  _mxRelabel() {
+    const caption = t('Exclude "{title}" from MultiExec mode', { title: this.title });
+    this.mxCaption.textContent = caption;
+    this.mxEl.title = caption; // the caption is clipped to the pane's width, never wrapped: the tooltip carries it whole
+    this.mxEl.setAttribute('aria-label', t('MultiExec: {title}', { title: this.title }));
+  }
+
+  /**
+   * Show the strip while MultiExec is on and this pane is a candidate, hide it otherwise (app.js updateMultiexec calls
+   * this on every change); the terminal re-fits around it like around the monitoring bar. The box always shows the flag.
+   */
+  syncMultiexecStrip() {
+    if (this.disposed) return;
+    const on = !!this.app.multiexec && this.multiexecCandidate();
+    this.mxBox.checked = this.multiexecExcluded;
+    if (this.mxEl.hidden === !on) return;
+    this.mxEl.hidden = !on;
+    this.fit(); // the strip takes a row from the terminal
+  }
+
+  /**
+   * Tick / untick the Exclude box: the pane stays on screen and connected, out of (or back in) the broadcast set at
+   * once — no dialog, no disconnect. Typing into an excluded pane still reaches its own shell (app.js broadcast).
+   * `update: false` lets a bulk action (Activate all / none, Invert) recount the banner once.
+   */
+  setMultiexecExcluded(on, { update = true } = {}) {
+    on = !!on;
+    this.multiexecExcluded = on;
+    this.mxBox.checked = on;
+    this.el.classList.toggle('mx-excluded', on);
+    if (update) this.app.updateMultiexec();
+  }
+
+  /** Right-click on the strip: MobaXterm's bulk menu of the mode (Activate all / none, Invert selection, synchronised scrolling). */
+  _mxMenu(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.app.multiexecMenu(e.clientX, e.clientY);
+  }
+
+  /** ⇧F10 / the Menu key on the focused box: the same menu, under the box; Esc hands the focus back to it (ui.js). */
+  _mxKey(e) {
+    if (!((e.key === 'F10' && e.shiftKey) || e.key === 'ContextMenu')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = this.mxBox.getBoundingClientRect();
+    this.app.multiexecMenu(r.left, r.bottom + 2);
+  }
+
+  /**
+   * The viewport moved (xterm onScroll, y = the new top line). With "Synchronize mouse wheel scrolling" on, a wheel
+   * scroll of this pane moves the other MultiExec terminals by the same number of lines (app.js syncScroll); output
+   * arriving at the bottom, a search hit or a scroll done on another pane's behalf moves this viewport too and is not
+   * passed on — only a scroll right after a wheel event in this pane is.
+   */
+  _onScroll(y) {
+    const prev = this._ydisp ?? y;
+    this._ydisp = y;
+    if (y === prev || !this.app.multiexec || !this.app.multiexecSyncScroll || this.app._syncingScroll) return;
+    if (performance.now() - (this._wheelAt || 0) > 250) return;
+    this.app.syncScroll(this, y - prev);
+  }
+
+  /** Scroll the viewport by `delta` lines on behalf of another pane (clamped by xterm; never fed back: syncScroll guards). */
+  scrollBy(delta) {
+    try { this.term.scrollLines(delta); } catch {}
   }
 
   setStatus(status, msg) {
@@ -1198,6 +1286,8 @@ export class TermPane {
       { label: t('Split Right'), key: '⌘D', action: () => this.app.action('split', 'right', this) },
       { label: t('Split Down'), key: '⇧⌘D', action: () => this.app.action('split', 'down', this) },
       { label: this.zoomed ? t('Restore Panes') : t('Zoom Pane'), key: '⇧⌘⏎', action: () => this.app.action('zoom-pane', undefined, this), disabled: !this.tab || this.tab.panes().length < 2 },
+      // while MultiExec is on: the same switch as the box under the terminal, as a checkable item
+      this.app.multiexec && this.multiexecCandidate() ? { label: t('Exclude from MultiExec'), checked: this.multiexecExcluded, action: () => this.setMultiexecExcluded(!this.multiexecExcluded) } : null,
       '-',
       { label: this.logging ? t('Stop Session Log') : t('Start Session Log…'), action: () => this.toggleLog() },
       this.monitorAllowed() ? { label: this.monitorEnabled() ? t('Hide Remote Monitoring Bar') : t('Show Remote Monitoring Bar'), action: () => this.toggleMonitor() } : null,

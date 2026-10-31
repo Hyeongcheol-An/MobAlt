@@ -175,6 +175,14 @@ folder dialog and leaves the field as it was when you cancel.
   live panes of the active tab, or only the zoomed pane while one fills the tab. Other tabs never
   receive it, so split the tab (or use a grid) to put the servers you want to drive side by side.
   The banner shows how many visible terminals listen and follows the tab you switch to.
+  To leave one pane out, tick the box under its terminal — *Exclude "name" from MultiExec mode*, as in
+  MobaXterm — or use *Exclude from MultiExec* in the pane's right-click menu: the pane stays on screen and
+  connected, keystrokes typed elsewhere no longer reach it, and what you type into it goes to it alone (handy
+  for running one command on a single server without leaving the mode). The banner then adds *, N excluded*,
+  or says that every visible terminal is excluded. A right-click on a box's strip or on the banner (⇧F10 on a
+  focused box) opens the mode's menu: *Activate all*, *Activate none*, *Invert selection* and *Synchronize
+  mouse wheel scrolling*, which scrolls the other listening terminals by the same number of lines when you
+  wheel one. The boxes are cleared whenever MultiExec is switched off; nothing about them is saved.
 - **Remote monitoring bar**: every SSH pane shows a one-line strip under its head — CPU, memory used / total,
   root disk used, network ↓ / ↑ rates, load average, uptime and the host name — refreshed every 3 s (Settings →
   Features → Monitoring, 2–30 s). One small POSIX `sh` snippet runs over the session's own connection, so it
