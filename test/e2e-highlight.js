@@ -131,7 +131,7 @@
     await sleep(400);
     {
       const m = document.querySelector('.modal');
-      m.querySelectorAll('.mtabs button')[1].click(); // Terminal
+      [...m.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Features').click(); // the highlighting row lives on the Features tab
       await sleep(100);
       const row = [...m.querySelectorAll('.mpage.active > label')].find((l) => l.textContent === 'Keyword highlighting')?.nextElementSibling;
       const cb = row?.querySelector('input[type=checkbox]'), btn = [...(row?.querySelectorAll('button') || [])].find((b) => b.textContent === 'Rules…');

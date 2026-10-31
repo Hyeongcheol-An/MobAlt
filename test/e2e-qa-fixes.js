@@ -139,17 +139,17 @@
         await shot(`56-settings-${b.textContent.toLowerCase()}-900x560`);
       }
       log('settings tabs at 900×560', JSON.stringify(fit));
-      results.settingsTabsFit900x560 = Object.keys(fit).length === 4 && Object.values(fit).every(Boolean);
+      results.settingsTabsFit900x560 = Object.keys(fit).length === 5 && Object.values(fit).every(Boolean);
       results.settingsHeightConstant900x560 = heights900.size === 1; // the body holds the tallest section's height: no jump on Terminal
       const upd = m.querySelector('.mpage.active'); // Updates is in front now
-      results.settingsCheckNowOnUpdates = tabs[3].classList.contains('active') && [...upd.querySelectorAll('button')].some((x) => x.textContent === 'Check now') && !!upd.querySelector('.upd-status');
+      results.settingsCheckNowOnUpdates = tabs[4].classList.contains('active') && [...upd.querySelectorAll('button')].some((x) => x.textContent === 'Check now') && !!upd.querySelector('.upd-status');
       const fieldOf = (root, txt) => { const el = [...root.querySelectorAll('.form-grid > label')].find((l) => l.textContent === txt)?.nextElementSibling; return el && /^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName) ? el : el?.querySelector('input,select,textarea'); }; // the Theme select sits in a wrapper with its preview chip
       const cbOf = (root, txt) => [...root.querySelectorAll('.checks label')].find((l) => l.textContent.includes(txt))?.querySelector('input[type=checkbox]');
       results.quitLabelNamesEveryKind = !!cbOf(m, 'Confirm quit with open connections (SSH, Mosh, SFTP, FTP)'); // QA4-11: the question counts Mosh, SFTP and FTP too
       tabs[0].click(); fieldOf(m, 'SSH keep-alive (s)').value = '45'; cbOf(m, 'Confirm quit').checked = true;
       tabs[1].click(); fieldOf(m, 'Font size').value = '15'; fieldOf(m, 'Theme').value = 'dracula'; cbOf(m, 'Copy on select').checked = true;
-      tabs[2].click(); fieldOf(m, 'Log folder').value = '/private/tmp/mobalt-logs-roundtrip'; cbOf(m, 'Strip colours').checked = true;
-      tabs[3].click(); cbOf(m, 'Check for updates').checked = false;
+      tabs[3].click(); fieldOf(m, 'Log folder').value = '/private/tmp/mobalt-logs-roundtrip'; cbOf(m, 'Strip colours').checked = true;
+      tabs[4].click(); cbOf(m, 'Check for updates').checked = false;
       m.querySelector('.modal-foot .btn.primary').click(); // Save
       await sleep(400);
       const s = app.settings;
