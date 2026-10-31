@@ -20,7 +20,7 @@ Mục lục: [Tải về và cài đặt](#tải-về-và-cài-đặt) · [Cập
 - **Homebrew**: `brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
   (Homebrew 7 yêu cầu bạn tin cậy tap của bên thứ ba một lần; về sau `brew upgrade --cask mobalt` sẽ cập nhật)
 - **DMG**: tải DMG cho Apple Silicon (`arm64`) hoặc Intel (`x64`) từ
-  [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) rồi kéo MobAlt vào thư mục Applications.
+  [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) rồi kéo MobAlt vào thư mục Ứng dụng (Applications).
 
 Các bản phát hành đều được ký và công chứng (notarized). Yêu cầu: macOS 13 trở lên. Công cụ hỗ trợ tùy chọn:
 [XQuartz](https://www.xquartz.org/) để chuyển tiếp X11, `brew install mosh` cho phiên Mosh,
@@ -34,7 +34,7 @@ không có gì được tải về hay cài đặt khi bạn chưa xác nhận. 
 Có ba cách để lên bản phát hành mới; cách nào cũng kết thúc bằng gói ứng dụng mới tại `/Applications/MobAlt.app`:
 
 - **Trình cập nhật trong ứng dụng**: MobAlt kiểm tra GitHub Releases khi khởi động (tắt trong Cài đặt → Cập nhật),
-  còn Help → Kiểm tra bản cập nhật… hoặc "Kiểm tra ngay" trong Cài đặt → Cập nhật cho phép kiểm tra thủ công.
+  còn Trợ giúp → Kiểm tra bản cập nhật… hoặc "Kiểm tra ngay" trong Cài đặt → Cập nhật cho phép kiểm tra thủ công.
   Phiên bản mới hơn được đề xuất trong một hộp thoại, chỉ được tải về khi bạn đồng ý và được cài khi bạn thoát,
   hoặc ngay lập tức với "Khởi động lại ngay".
 - **Homebrew**: `brew upgrade --cask mobalt` thay thế ứng dụng trong Applications.
@@ -103,8 +103,8 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
 - **Kết nối nhanh**: gõ `user@host[:port]` vào thanh công cụ rồi nhấn Enter. Tiền tố xác định
   loại phiên: `ssh://`, `mosh://`, `telnet://`, `ftp://`, `ftps://`, `rdp://`, `vnc://`. Nếu có phiên đã lưu
   khớp, phiên đó được dùng.
-- **Xác thực**: *Tự động* lần lượt thử khóa đã cấu hình, mật khẩu đã lưu, SSH agent và các
-  khóa mặc định trong `~/.ssh` trước khi hỏi. Chọn *Mật khẩu*, *Khóa riêng* hoặc *SSH agent* để
+- **Xác thực**: *Tự động* lần lượt thử khóa đã cấu hình, mật khẩu đã lưu, agent SSH và các
+  khóa mặc định trong `~/.ssh` trước khi hỏi. Chọn *Mật khẩu*, *Khóa riêng* hoặc *Agent SSH* để
   giới hạn. Khóa có cụm mật khẩu sẽ hỏi một lần; đánh dấu "Lưu trong phiên" để giữ lại.
 - **Khóa máy chủ**: lần kết nối đầu tiên hiện dấu vân tay (SHA256 và MD5). Chấp nhận sẽ lưu
   khóa; khóa đã thay đổi được cảnh báo rõ ràng và không bao giờ được chấp nhận ngầm.
@@ -156,7 +156,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
 - **Chia ngăn và lưới**: `Chia ▾` (⌘D phải, ⇧⌘D xuống) thêm một ngăn trống; các mục lưới tạo
   bố cục 1×2 … 2×4 (⌥⌘2/4/6/8). Thả một phiên từ cây vào ngăn trống để kết nối tại đó,
   vào cạnh của một ngăn để chia theo hướng đó, hoặc vào giữa ngăn để thay thế nó. Kéo một thẻ vào
-  một ngăn để chuyển terminal đó vào bố cục chia. ⌥⌘1 (Hiển thị → Bỏ chia, `Chia ▾` → Bỏ chia) bỏ chia
+  một ngăn để chuyển terminal đó vào bố cục chia. ⌥⌘1 (Xem → Bỏ chia, `Chia ▾` → Bỏ chia) bỏ chia
   thẻ: theo mặc định, mỗi ngăn còn lại trở thành một thẻ riêng, đặt ngay sau thẻ hiện tại theo
   thứ tự ngăn, giữ nguyên terminal, tiêu đề và trạng thái — không có gì kết nối lại, không mất đầu ra;
   ngăn đang chọn giữ lại thẻ. Cài đặt → Terminal → **Bỏ chia** chọn cách xử lý khác: *Giữ ngăn đang hoạt động,
@@ -180,7 +180,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   không có quyền) hiện chữ mờ *không giám sát được* và không được hỏi lại cho tới khi kết nối lại. Việc lấy mẫu tạm dừng
   khi ngăn không hiện trên màn hình (một thẻ khác ở phía trước, một ngăn cùng thẻ đang phóng to, cửa sổ bị ẩn) và tiếp tục khi
   ngăn hiện lại. Tắt theo từng phiên (SSH nâng cao → *Hiện thanh giám sát từ xa*), theo từng ngăn (nút nhịp tim
-  ở đầu ngăn, Hiển thị → Thanh giám sát từ xa, hoặc menu ngữ cảnh của terminal) hoặc cho mọi phiên trong
+  ở đầu ngăn, Xem → Thanh giám sát từ xa, hoặc menu ngữ cảnh của terminal) hoặc cho mọi phiên trong
   Cài đặt. Ngăn Mosh không có kênh SSH riêng: thanh của nó hiện qua kết nối SFTP đi kèm
   trong lúc kết nối đó đang mở.
 - **Tìm** (⌘F): tìm kiếm tăng dần, có nút bật/tắt phân biệt hoa/thường và regex, kèm bộ đếm kết quả.
@@ -317,16 +317,17 @@ khi khởi động và "Kiểm tra ngay").
 
 ### Ngôn ngữ giao diện
 
-Menu, thanh công cụ, bảng, hộp thoại và thông báo của MobAlt có mười ngôn ngữ: English, 한국어, 简体中文, 日本語,
-Tiếng Việt, हिन्दी, Deutsch, Français, Español và Português. Theo mặc định (**Mặc định hệ thống**), giao diện theo
+Menu, thanh công cụ, bảng, hộp thoại và thông báo của MobAlt có mười một ngôn ngữ: English, 한국어, 简体中文, 日本語,
+Tiếng Việt, हिन्दी, Deutsch, Français, Español, Português và العربية (với tiếng Ả Rập, cửa sổ được lật gương: thanh bên ở bên phải,
+văn bản căn phải; terminal vẫn chạy từ trái sang phải). Theo mặc định (**Mặc định hệ thống**), giao diện theo
 danh sách ngôn ngữ của macOS (Cài đặt hệ thống → Cài đặt chung → Ngôn ngữ & Vùng): ngôn ngữ đầu tiên trong danh sách đó mà
 MobAlt có sẽ được dùng, và tiếng Anh nếu không có ngôn ngữ nào khớp. Cài đặt → Chung → **Ngôn ngữ** chọn một ngôn ngữ cụ thể; thay đổi
 có hiệu lực ngay trong mọi cửa sổ — không có gì khởi động lại, các kết nối vẫn giữ — và được ghi nhớ. Đầu ra terminal không bao giờ
-được dịch: những gì máy chủ từ xa in ra được hiển thị nguyên vẹn. Hướng dẫn sử dụng cũng có đủ mười ngôn ngữ đó
-(`docs/USER_GUIDE.<language>.md`); Help → **Hướng dẫn sử dụng** mở bản cho ngôn ngữ hiện tại.
+được dịch: những gì máy chủ từ xa in ra được hiển thị nguyên vẹn. Hướng dẫn sử dụng cũng có đủ mười một ngôn ngữ đó
+(`docs/USER_GUIDE.<language>.md`); Trợ giúp → **Hướng dẫn sử dụng** mở bản cho ngôn ngữ hiện tại.
 
 Để chạy MobAlt bằng một ngôn ngữ trong một lần mà không đổi cài đặt (chụp màn hình, kiểm thử), hãy khởi động với `MOBALT_LANG=<code>`
-trong biến môi trường (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
+trong biến môi trường (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
 
 ## Phím tắt
 
@@ -357,7 +358,7 @@ trong biến môi trường (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, 
 | Chọn biểu tượng và màu trong trình sửa phiên: di chuyển / chọn | ← → ↑ ↓ / ⏎ hoặc Space |
 | Nút bảng trên dải bên / ⌘1-4 | ⏎ đưa bàn phím vào bảng; khi chuyển bảng, vị trí cũ được ghi nhớ |
 
-Help → Phím tắt hiện cùng danh sách này ngay trong ứng dụng. Phím Tab đi tới thanh công cụ, dải
+Trợ giúp → Phím tắt hiện cùng danh sách này ngay trong ứng dụng. Phím Tab đi tới thanh công cụ, dải
 bên, cây phiên, danh sách macro, danh sách SFTP và dải thẻ (mỗi danh sách là một điểm dừng Tab;
 các phím mũi tên di chuyển bên trong); hộp thoại giữ Tab bên trong và trả tiêu điểm về thẻ,
 hàng hoặc nút đã mở nó khi đóng; menu ngữ cảnh nhận ↑ ↓ / ⏎ / Esc. Esc trong ô
