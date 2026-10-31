@@ -181,10 +181,42 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
   Kopfzeile) stellt das Layout wieder her. Teilen, Schließen eines Bereichs, ein Rasterlayout oder das Fokussieren eines
   verborgenen Bereichs (⌘]) stellt das Layout zuerst wieder her. Jeder Tab behält seine eigene Maximierung, auch über
   einen Neustart hinweg.
+- **Bereichsmenü** (Rechtsklick auf ein Terminal; ⇧- oder ⌃-Rechtsklick, solange *Rechtsklick setzt ein* aktiv ist):
+  Neben Kopieren, Einsetzen, Suchen, Löschen, Teilen und Maximieren enthält es die Einträge des Terminalmenüs von
+  MobaXterm, die nur ein Terminal betreffen. *Bereich umbenennen…* (in MobaXterm *Rename Terminal*) benennt den Bereich
+  selbst: Die Kopfzeile des Bereichs zeigt den Namen, der Tab übernimmt ihn, wenn dieser Bereich den Tab benennt, und
+  Titelsequenzen der Shell ändern ihn nicht mehr; ein leerer Name kehrt zum automatischen Titel zurück.
+  *Bereichseinstellungen…* entspricht „Terminal neu konfigurieren“ in MobaXterm: Thema, Schrift und Schriftgröße,
+  Cursorform und Blinken, Pufferzeilen, Hervorhebung, die Monitoring-Leiste (SSH / Mosh), Schreibschutz und der
+  Hintergrundtext dieses Bereichs, über den Werten der Sitzung und der Einstellungen (ein leeres Feld folgt diesen).
+  *Auf diesen Bereich anwenden* ändert nur diesen Bereich — die Werte wandern mit ihm durch Maximieren, ein neues Fenster
+  und den Arbeitsbereich —, *In Sitzung sichern* (nur bei einer gesicherten Sitzung) schreibt zusätzlich die Felder,
+  die auch die Sitzung kennt (Thema, Schriftgröße, Hervorhebung, Monitoring, Hintergrundtext), sodass jeder später aus
+  dieser Sitzung geöffnete Bereich ihnen folgt. *Schriftgröße ▸* ändert die Schrift dieses Bereichs schrittweise
+  (⌘= / ⌘- / ⌘0 tun dasselbe für den fokussierten Bereich; *Zurücksetzen* kehrt zur eigenen Größe des Bereichs zurück).
+  *Schreibgeschützt* verwirft Tastatureingaben und Einsetzen in diesen Bereich, während seine Ausgabe weiterläuft — ein
+  Chip *schreibgeschützt* in der Kopfzeile zeigt das an, und MultiExec lässt den Bereich aus.
+- **Hintergrundtext**: ein großer, blasser Name hinter dem Text eines Bereichs — standardmäßig der Sitzungsname —, an
+  dem Sie den Server auf einen Blick erkennen, wie das Badge in iTerm2 (MobaXterm benennt einen Bereich nur in seiner
+  Tableiste). *Hintergrundtext ▸* im Bereichsmenü blendet ihn ein oder aus, legt seinen Text fest (*Text festlegen…*;
+  leer = Hintergrundtext der Sitzung, sonst ihr Name oder der Bereichstitel) und setzt ihn in die *Mitte* oder nach
+  *Oben rechts*; der Tab „Terminal“ im Sitzungseditor (*Hintergrundtext*: anzeigen, Text, Position) schaltet ihn für
+  jeden Bereich einer Sitzung ein, und die eigene Einstellung eines Bereichs hat Vorrang vor der der Sitzung. Der Text
+  skaliert mit dem Bereich, verschwindet in sehr kleinen Zellen, nimmt die Vordergrundfarbe des Bereichs mit 16 %
+  Deckkraft an und ist nie Teil des Terminalpuffers, einer Auswahl, einer Kopie oder eines Sitzungsprotokolls.
 - **MultiExec** (⇧⌘M): Solange eingeschaltet, geht jeder Tastendruck an jedes auf dem Bildschirm sichtbare Terminal —
   die aktiven Bereiche des aktiven Tabs bzw. nur den maximierten Bereich, solange einer den Tab füllt. Andere Tabs
   empfangen nie etwas; teilen Sie also den Tab (oder verwenden Sie ein Raster), um die Server, die Sie steuern wollen,
   nebeneinanderzulegen. Das Banner zeigt, wie viele sichtbare Terminals mithören, und folgt dem Tab, zu dem Sie wechseln.
+  Um einen Bereich auszulassen, kreuzen Sie das Kästchen unter seinem Terminal an — *„Name“ vom MultiExec-Modus
+  ausschließen*, wie in MobaXterm — oder wählen *Von MultiExec ausschließen* im Kontextmenü des Bereichs: Der Bereich
+  bleibt sichtbar und verbunden, anderswo getippte Tastatureingaben erreichen ihn nicht mehr, und was Sie in ihn tippen,
+  geht nur an ihn (praktisch, um einen Befehl auf einem einzelnen Server auszuführen, ohne den Modus zu verlassen). Das
+  Banner ergänzt dann *, N ausgeschlossen* oder meldet, dass jedes sichtbare Terminal ausgeschlossen ist. Ein Rechtsklick
+  auf die Kästchenleiste oder auf das Banner (⇧F10 auf einem fokussierten Kästchen) öffnet das Menü des Modus: *Alle
+  aktivieren*, *Keine aktivieren*, *Auswahl umkehren* und *Mausrad-Scrollen synchronisieren*, das die anderen
+  mithörenden Terminals um dieselbe Zeilenzahl mitscrollt, wenn Sie in einem das Mausrad drehen. Die Kästchen werden
+  geleert, sobald MultiExec ausgeschaltet wird; nichts davon wird gesichert.
 - **Monitoring-Leiste**: Jeder SSH-Bereich zeigt unter seiner Kopfzeile eine einzeilige Leiste — CPU, belegter /
   gesamter Speicher, Belegung der Root-Disk, Netzwerkraten ↓ / ↑, Durchschnittslast, Betriebszeit und den Hostnamen —,
   alle 3 s aktualisiert („Einstellungen“ → „Funktionen“ → „Monitoring“, 2–30 s). Ein kleines POSIX-`sh`-Snippet läuft
@@ -234,8 +266,15 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
   sendet den Text wie er ist. Beide Prüfungen sind Schalter unter „Einstellungen“ → „Funktionen“ → „Einsetzschutz“
   (standardmäßig ein); sie gelten für ⌘V, Rechtsklick und auf einem Bereich abgelegten Text, nicht für Makros. Bei
   eingeschaltetem MultiExec deckt eine Bestätigung jedes sichtbare Terminal ab.
-- **Tasten**: Umschalt+Eingabe und Wahltaste+Eingabe senden ESC+CR (ein Zeilenumbruch in TUI-Programmen wie Claude
-  Code); die Wahltaste wirkt standardmäßig als Meta.
+- **Tasten**: Umschalt+Eingabe und Wahltaste+Eingabe senden ESC+CR — die Sequenz, die Claude Codes eigenes
+  `/terminal-setup` in anderen Terminals belegt —, sodass beide Tasten im Eingabefeld von Claude Code eine neue Zeile
+  beginnen, statt den Prompt abzuschicken; die Wahltaste wirkt standardmäßig als Meta.
+- **Bilder für Claude Code**: Liegt ein Bild und kein Text in der Zwischenablage (ein Bildschirmfoto, *Bild kopieren*),
+  senden ⌘V, „Bearbeiten“ → „Einsetzen“ und das Einsetzen per Rechtsklick Ctrl+V an das Terminal; Claude Code liest die
+  Systemzwischenablage selbst und hängt das Bild als `[Image #1]` an. Text in der Zwischenablage wird wie gewohnt
+  eingesetzt (und hat Vorrang, wenn beides vorhanden ist); eine Shell kann mit der Taste nichts anfangen und zeigt
+  nichts an. Eine Bilddatei, die aus dem Finder auf einen lokalen Bereich gezogen wird, setzt ihren Pfad in
+  Anführungszeichen ein (auf einem SSH-Bereich werden Dateien hochgeladen, siehe *Zwischenablage* oben).
 - **Protokollierung**: „Terminal“ → „Sitzungsprotokoll starten/stoppen“ oder die Sitzungsoption schreibt die rohe
   Ausgabe nach `~/Documents/MobAlt Logs/`. „Einstellungen“ → „Protokoll“ → *Farben und Steuersequenzen … entfernen*
   speichert die Protokolle stattdessen als reinen Text (ANSI-Farben, Cursorbewegungen und der Hook zur Ordnerverfolgung
@@ -350,6 +389,22 @@ eine Sprache ausdrücklich; die Änderung gilt sofort in jedem Fenster — nicht
 bestehen — und wird gemerkt. Terminalausgaben werden nie übersetzt: Was ein entfernter Host ausgibt, erscheint
 unverändert. Das Benutzerhandbuch gibt es in denselben elf Sprachen (`docs/USER_GUIDE.<language>.md`); „Hilfe“ →
 **Benutzerhandbuch** öffnet das für die aktuelle Sprache.
+
+Auf Arabisch liest sich das ganze Fenster von rechts nach links: Seitenstreifen und Seitenleiste wandern an den rechten
+Rand und die Terminals nach links, die Taste ‹ zum Ausblenden der Seitenleiste zeigt in die andere Richtung, die
+Symbolleiste, die Tableiste (der erste Tab rechts, ihre Blättertasten ‹ › vertauscht), die Statusleiste, Panelköpfe,
+die Kopfzeilen der Bereiche und die Monitoring-Leiste werden gespiegelt, Dialoge setzen ihre Beschriftungen nach rechts
+und ✕ nach links, Menüs öffnen sich links vom Zeiger, und Mitteilungen stapeln sich unten links. Von links nach rechts
+bleiben: die Terminals selbst sowie jedes Feld und jede Beschriftung mit einem Host, einem Port, einem Pfad, einem
+Befehl, einem Muster, einer MAC oder einem CIDR, einem Schlüssel oder einem Kurzbefehl (Schnellverbindung, der
+SFTP-Pfad, das Suchfeld, die Felder im Panel „Werkzeuge“, Ordner und user@host in der Statusleiste, Tasten-Chips,
+Fingerabdrücke, der öffentliche Schlüssel im Schlüsselgenerator, die Vorschau des Einsetzschutzes); ein Sitzungs-,
+Tab- oder Ordnername richtet sich nach seinem ersten Buchstaben, sodass ein arabischer Name von rechts nach links und
+`user@host` von links nach rechts läuft, und ein in einer Meldung zitierter Pfad oder Hostname behält seine eigene
+Reihenfolge. Teilungen behalten ihren räumlichen Sinn — „Nach rechts teilen“ öffnet den neuen Bereich weiterhin rechts,
+und eine auf den rechten Rand eines Bereichs gezogene Sitzung landet dort. Die Pfeiltasten folgen der Reihenfolge, nicht
+dem Bildschirm: → geht zum nächsten Tab, zur nächsten Auswahl oder Zeile (auf Arabisch die links davon) und ← zur
+vorherigen, und im Sitzungsbaum öffnet → einen Ordner und ← schließt ihn, wie auf Englisch.
 
 Um MobAlt einmalig in einer Sprache zu starten, ohne die Einstellung zu ändern (Bildschirmfotos, ein Test), setzen Sie
 beim Start `MOBALT_LANG=<code>` in der Umgebung (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`).
