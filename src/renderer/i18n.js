@@ -29,7 +29,9 @@ export const SYSTEM_LOCALE = boot.system || 'en';
 
 let current = boot.locale || 'en';
 let dict = boot.dict && typeof boot.dict === 'object' ? boot.dict : {};
-try { document.documentElement.lang = current; } catch {}
+/** 'rtl' for a right-to-left language (Arabic), else 'ltr' — <html dir> follows it, and so does the chrome's layout. */
+export function direction(code = current) { const l = languageOf(code); return l && l.dir === 'rtl' ? 'rtl' : 'ltr'; }
+try { document.documentElement.lang = current; document.documentElement.dir = direction(current); } catch {}
 
 export function locale() { return current; }
 export function languageOf(code) { return LANGUAGES.find((l) => l.code.toLowerCase() === String(code || '').toLowerCase()) || null; }
@@ -96,7 +98,7 @@ export function setLocale(code, newDict) {
   const lang = languageOf(code) || LANGUAGES[0];
   current = lang.code;
   dict = newDict && typeof newDict === 'object' ? newDict : {};
-  try { document.documentElement.lang = current; } catch {}
+  try { document.documentElement.lang = current; document.documentElement.dir = direction(current); } catch {}
   translateDom(document);
   document.dispatchEvent(new CustomEvent('i18n:changed', { detail: { locale: current } }));
   return current;

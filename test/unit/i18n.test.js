@@ -29,13 +29,14 @@ test('resolveLocale: the setting wins, then the macOS language list, by tag and 
   delete process.env.MOBALT_LANG;
 });
 
-test('LANGUAGES: the ten shipped languages, English first, each with a guide in docs/', () => {
-  assert.deepEqual(i18n.LANGUAGES.map((l) => l.code), ['en', 'ko', 'zh-CN', 'ja', 'vi', 'hi', 'de', 'fr', 'es', 'pt']);
+test('LANGUAGES: the eleven shipped languages, English first, each with a guide in docs/; Arabic is right-to-left', () => {
+  assert.deepEqual(i18n.LANGUAGES.map((l) => l.code), ['en', 'ko', 'zh-CN', 'ja', 'vi', 'hi', 'de', 'fr', 'es', 'pt', 'ar']);
   for (const l of i18n.LANGUAGES) {
     assert.ok(l.name && l.guide, l.code);
     if (strict || l.code === 'en' || l.code === 'ko') assert.ok(fs.existsSync(path.join(root, 'docs', l.guide)), `docs/${l.guide} exists (${l.name})`);
   }
   assert.equal(i18n.guideUrl('ko'), 'https://github.com/Hyeongcheol-An/MobAlt/blob/main/docs/USER_GUIDE.ko.md');
+  assert.deepEqual(i18n.LANGUAGES.filter((l) => l.dir === 'rtl').map((l) => l.code), ['ar']);
 });
 
 test('t / tn: the source shows when nothing is translated; placeholders and plural forms', () => {
