@@ -171,10 +171,38 @@ folder dialog and leaves the field as it was when you cancel.
   hidden; the pane head shows a *zoomed* chip and the tab a small ⤢. Press again (or ⤡ in the head)
   to bring the layout back. Splitting, closing a pane, a grid layout or focusing a hidden pane (⌘])
   restores the layout first. Each tab keeps its own zoom, also across a restart.
+- **Pane menu** (right-click a terminal; ⇧- or ⌃-right-click while *Right-click pastes* is on): besides copy,
+  paste, find, clear, split and zoom it has the per-terminal items of MobaXterm's terminal menu. *Rename Pane…*
+  (MobaXterm's *Rename Terminal*) names the pane itself: the pane head shows the name, the tab takes it when the
+  pane names the tab, and the shell's own title sequences no longer change it; an empty name goes back to the
+  automatic title. *Pane Settings…* is MobaXterm's "reconfigure the current terminal": theme, font family and
+  size, cursor style and blink, scrollback, keyword highlighting, the monitoring bar (SSH / Mosh), read-only and
+  the background label for this pane, over the session's and Settings' values (a blank field follows them).
+  *Apply to this pane* changes this pane alone — the values travel with it through zoom, detach and the
+  workspace — and *Save to session* (a saved session only) also writes the fields the session has (theme, font
+  size, keyword highlighting, monitoring, background label), so every pane opened from that session later
+  follows. *Font Size ▸* steps this pane's font (⌘= / ⌘- / ⌘0 do the same for the focused pane; *Reset* returns
+  to the pane's own size). *Read-Only* drops keystrokes and pastes to the pane while its output keeps flowing — a
+  *read-only* chip in the head says so, and MultiExec leaves the pane out.
+- **Background label**: a large, dim name drawn behind a pane's text — the session name by default — so you can tell
+  the server at a glance, like iTerm2's badge (MobaXterm names a pane only on its tab strip). *Background Label ▸*
+  in the pane menu shows or hides it, sets its text (*Set Text…*; empty = the session's label, else its name or the
+  pane title) and puts it in the centre or top right; the session editor's Terminal tab (*Background label*: shown,
+  text, position) turns it on for every pane of a session, and a pane's own setting stays on top of the session's.
+  The label scales with the pane, hides in tiny cells, takes the pane's foreground colour at 16 % opacity, and is
+  never part of the terminal buffer, a selection, a copy or a session log.
 - **MultiExec** (⇧⌘M): while on, every keystroke goes to every terminal visible on screen — the
   live panes of the active tab, or only the zoomed pane while one fills the tab. Other tabs never
   receive it, so split the tab (or use a grid) to put the servers you want to drive side by side.
   The banner shows how many visible terminals listen and follows the tab you switch to.
+  To leave one pane out, tick the box under its terminal — *Exclude "name" from MultiExec mode*, as in
+  MobaXterm — or use *Exclude from MultiExec* in the pane's right-click menu: the pane stays on screen and
+  connected, keystrokes typed elsewhere no longer reach it, and what you type into it goes to it alone (handy
+  for running one command on a single server without leaving the mode). The banner then adds *, N excluded*,
+  or says that every visible terminal is excluded. A right-click on a box's strip or on the banner (⇧F10 on a
+  focused box) opens the mode's menu: *Activate all*, *Activate none*, *Invert selection* and *Synchronize
+  mouse wheel scrolling*, which scrolls the other listening terminals by the same number of lines when you
+  wheel one. The boxes are cleared whenever MultiExec is switched off; nothing about them is saved.
 - **Remote monitoring bar**: every SSH pane shows a one-line strip under its head — CPU, memory used / total,
   root disk used, network ↓ / ↑ rates, load average, uptime and the host name — refreshed every 3 s (Settings →
   Features → Monitoring, 2–30 s). One small POSIX `sh` snippet runs over the session's own connection, so it

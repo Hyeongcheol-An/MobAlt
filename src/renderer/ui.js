@@ -174,12 +174,24 @@ export const TYPE_LABEL = new Proxy({}, {
 // ---------- context menu ----------
 let ctxOpen = null;
 let ctxOpener = null; // element that had focus when the menu opened; focus goes back to it on close
+let ctxSubs = []; // the open sub-menus, outermost first: [{ el, row }] — ctxSubs[n] was opened from a row of level n
+const ctxContains = (el) => !!ctxOpen && (ctxOpen.contains(el) || ctxSubs.some((s) => s.el.contains(el)));
+/** Close the sub-menus from `level` on (0 = every one); `refocus` puts the keyboard back on the row that opened the outermost closed one. */
+function closeSubs(level = 0, refocus = false) {
+  const gone = ctxSubs.splice(level);
+  for (const s of gone) {
+    s.row.setAttribute('aria-expanded', 'false');
+    s.el.remove();
+  }
+  if (refocus && gone[0]) gone[0].row.focus({ preventScroll: true });
+}
 export function closeContextMenu() {
   if (ctxOpen) {
     const menu = ctxOpen;
     ctxOpen = null;
     const a = document.activeElement;
-    const inMenu = !a || a === document.body || menu.contains(a);
+    const inMenu = !a || a === document.body || menu.contains(a) || ctxSubs.some((s) => s.el.contains(a));
+    closeSubs(0);
     menu.remove();
     const back = ctxOpener;
     ctxOpener = null;
@@ -188,44 +200,92 @@ export function closeContextMenu() {
     else document.dispatchEvent(new CustomEvent('ctx-closed')); // app.js hands focus to the terminal
   }
 }
-/** items: [{label, key, action, disabled, danger}] or '-' separators */
-export function contextMenu(x, y, items) {
-  closeContextMenu();
-  const root = $('#ctx-root');
-  const menu = h('div', { class: 'ctx', role: 'menu', tabindex: -1 });
+const enabledOf = (menu) => [...menu.querySelectorAll('.ctx-item:not(.disabled)')];
+/** Put a menu at (x, y), kept inside the window; a menu taller than the window keeps its first items reachable. */
+function placeMenu(menu, x, y) {
+  const r = menu.getBoundingClientRect();
+  menu.style.left = Math.max(6, Math.min(x, window.innerWidth - r.width - 6)) + 'px';
+  menu.style.top = Math.max(6, Math.min(y, window.innerHeight - r.height - 6)) + 'px';
+}
+/** Open `row`'s sub-menu beside it (closing its siblings' and deeper ones first); `focus` puts the keyboard on its first item. */
+function openSub(row, focus) {
+  const level = row._level;
+  const open = ctxSubs[level];
+  if (open && open.row === row) {
+    if (focus) enabledOf(open.el)[0]?.focus({ preventScroll: true });
+    return;
+  }
+  closeSubs(level);
+  const el = buildMenu(row._subItems, level + 1);
+  $('#ctx-root').append(el);
+  ctxSubs.push({ el, row });
+  row.setAttribute('aria-expanded', 'true');
+  const r = row.getBoundingClientRect(), m = el.getBoundingClientRect();
+  placeMenu(el, r.right + m.width + 6 > window.innerWidth ? r.left - m.width + 2 : r.right - 2, r.top - 5); // to the left when there is no room on the right
+  if (focus) enabledOf(el)[0]?.focus({ preventScroll: true });
+}
+/**
+ * One level of a menu: level 0 is the menu itself, 1+ a sub-menu (a sibling element in #ctx-root, placed beside its row).
+ * Keyboard: ↑/↓ cycle through the enabled items, Home/End, Enter/Space activate an item or open its sub-menu, → opens a
+ * sub-menu, ← closes this sub-menu (the keyboard back on its row), Tab closes everything; Esc is handled on the window.
+ */
+function buildMenu(items, level) {
+  const menu = h('div', { class: 'ctx' + (level ? ' ctx-sub' : ''), role: 'menu', tabindex: -1 });
   for (const it of items) {
     if (it === '-') {
       menu.append(h('div', { class: 'ctx-sep', role: 'separator' }));
       continue;
     }
     if (!it) continue;
-    const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : ''), role: 'menuitem', tabindex: -1, 'aria-disabled': it.disabled ? 'true' : null, onclick: () => { closeContextMenu(); it.action && it.action(); } }, it.label, it.key ? h('span', { class: 'k' }, it.key) : null);
+    // `checked: true | false` makes a checkable item (a toggle): a menuitemcheckbox with its state, a ✓ in the key slot
+    // while on; `items` makes a sub-menu (hover, click, → or Enter open it): a › in the key slot
+    const checkable = typeof it.checked === 'boolean', sub = Array.isArray(it.items);
+    const mark = sub ? '›' : it.key || (checkable && it.checked ? '✓' : '');
+    const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : '') + (checkable ? ' checkable' : '') + (sub ? ' has-sub' : ''), role: checkable ? 'menuitemcheckbox' : 'menuitem', 'aria-checked': checkable ? String(it.checked) : null, 'aria-haspopup': sub ? 'menu' : null, 'aria-expanded': sub ? 'false' : null, tabindex: -1, 'aria-disabled': it.disabled ? 'true' : null }, it.label, mark ? h('span', { class: 'k' }, mark) : null);
     if (it.danger) row.classList.add('danger'); // styles.css: red text, and the red fill with the selection text while hovered / focused
+    if (sub) {
+      row._subItems = it.items;
+      row._level = level;
+      row.addEventListener('click', (e) => { e.stopPropagation(); openSub(row, false); });
+      row.addEventListener('mouseenter', () => openSub(row, false));
+    } else {
+      row.addEventListener('click', () => { closeContextMenu(); it.action && it.action(); });
+      row.addEventListener('mouseenter', () => closeSubs(level)); // the pointer is on a plain row of this level: its sub-menus go
+    }
     menu.append(row);
   }
-  root.append(menu);
-  ctxOpen = menu;
-  ctxOpener = document.activeElement;
-  const r = menu.getBoundingClientRect();
-  menu.style.left = Math.min(x, window.innerWidth - r.width - 6) + 'px';
-  menu.style.top = Math.max(6, Math.min(y, window.innerHeight - r.height - 6)) + 'px'; // a menu taller than the window keeps its first items reachable
-  // keyboard: ↑/↓ cycle through enabled items, Home/End, Enter/Space activate, Esc (global) / Tab close
-  const enabled = () => [...menu.querySelectorAll('.ctx-item:not(.disabled)')];
   menu.addEventListener('keydown', (e) => {
-    const list = enabled();
+    const list = enabledOf(menu);
     const i = list.indexOf(document.activeElement);
     const go = (n) => { e.preventDefault(); if (list.length) list[((n % list.length) + list.length) % list.length].focus(); };
+    const cur = i >= 0 ? list[i] : null, hasSub = !!cur && cur.classList.contains('has-sub');
     if (e.key === 'ArrowDown') go(i + 1);
     else if (e.key === 'ArrowUp') go(i < 0 ? -1 : i - 1);
     else if (e.key === 'Home') go(0);
     else if (e.key === 'End') go(-1);
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (i >= 0) list[i].click(); }
+    else if (e.key === 'ArrowRight') { if (hasSub) { e.preventDefault(); e.stopPropagation(); openSub(cur, true); } }
+    else if (e.key === 'ArrowLeft') { if (level) { e.preventDefault(); e.stopPropagation(); closeSubs(level - 1, true); } }
+    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (hasSub) openSub(cur, true); else if (cur) cur.click(); }
     else if (e.key === 'Tab') { e.preventDefault(); closeContextMenu(); }
   });
-  enabled()[0]?.focus({ preventScroll: true });
+  return menu;
+}
+/**
+ * items: [{label, key, action, disabled, danger, checked, items}] or '-' separators. `checked: true | false` makes a
+ * checkable item (menuitemcheckbox, ✓ while on); `items: [...]` makes a sub-menu that opens beside the row (hover,
+ * click, →, Enter) and closes with ← or Esc, the keyboard back on its row.
+ */
+export function contextMenu(x, y, items) {
+  closeContextMenu();
+  const menu = buildMenu(items, 0);
+  $('#ctx-root').append(menu);
+  ctxOpen = menu;
+  ctxOpener = document.activeElement;
+  placeMenu(menu, x, y);
+  enabledOf(menu)[0]?.focus({ preventScroll: true });
   setTimeout(() => {
     const off = (e) => {
-      if (!menu.contains(e.target)) {
+      if (!ctxContains(e.target)) {
         closeContextMenu();
         document.removeEventListener('mousedown', off, true);
       }
@@ -235,12 +295,14 @@ export function contextMenu(x, y, items) {
   return menu;
 }
 window.addEventListener('blur', closeContextMenu);
-// Esc closes an open menu and nothing else (a dialog underneath stays open).
+// Esc closes the sub-menu the keyboard is in (back on its row), else the whole menu — and nothing else (a dialog underneath stays open).
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape' || !ctxOpen) return;
   e.stopPropagation();
   e.preventDefault();
-  closeContextMenu();
+  const deep = ctxSubs[ctxSubs.length - 1];
+  if (deep && deep.el.contains(document.activeElement)) closeSubs(ctxSubs.length - 1, true);
+  else closeContextMenu();
 }, true);
 
 // ---------- modal ----------

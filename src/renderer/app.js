@@ -6,7 +6,7 @@ import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
-import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog } from './dialogs.js';
+import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog, paneSettingsDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
 import { t, tn, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
 
@@ -28,6 +28,7 @@ class App {
     this.info = {};
     this.panesByTerm = new Map();
     this.multiexec = false;
+    this.multiexecSyncScroll = false; // "Synchronize mouse wheel scrolling" (the MultiExec bulk menu): runtime only, like the Exclude boxes
     this.macroRecorder = null;
     this.focused = null;
     this.updateOnDisk = null; // version of the MobAlt.app on disk when it differs from the running one
@@ -99,6 +100,11 @@ class App {
         }
       }
       if (p.kind === 'local' && p.cwd) d.cwd = p.cwd;
+      // the pane menu's per-terminal state: a name of the user's, Pane Settings… overrides, the background label, Read-Only
+      if (p.titleLocked) d.paneTitle = p.title;
+      if (p.overrides && Object.keys(p.overrides).length) d.overrides = { ...p.overrides };
+      if (p.badge) d.badge = { ...p.badge };
+      if (p.readOnly) d.readOnly = true;
       if (live) Object.assign(d, p.transferState());
       return d;
     };
@@ -166,7 +172,9 @@ class App {
       let kind = d.kind;
       if (!attach && kind !== 'local' && kind !== 'empty' && !session) kind = 'empty'; // session was deleted (a live terminal keeps its pane)
       if (kind === 'rdp' || kind === 'vnc') kind = 'empty';
-      const pane = new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined });
+      const pane = new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined,
+        title: typeof d.paneTitle === 'string' && d.paneTitle ? d.paneTitle : null, overrides: d.overrides && typeof d.overrides === 'object' ? d.overrides : null,
+        badge: d.badge && typeof d.badge === 'object' ? d.badge : null, readOnly: d.readOnly === true }); // what the pane menu set, back with the pane
       if (attach && kind !== 'empty') pane._transfer = d;
       return pane;
     };
@@ -386,6 +394,8 @@ class App {
       this.activePane()?.focus();
     });
     for (const b of $$('#update-banner button')) b.addEventListener('mousedown', (e) => e.preventDefault());
+    // the MultiExec banner is the mode's chrome: a right-click on it opens MobaXterm's bulk menu (so does a pane's Exclude strip)
+    $('#multiexec-banner').addEventListener('contextmenu', (e) => { e.preventDefault(); this.multiexecMenu(e.clientX, e.clientY); });
     // empty workspace accepts a dropped session
     const tc = $('#tab-content');
     tc.addEventListener('dragover', (e) => { if (!this.workspace.tabs.length && e.dataTransfer.types.includes('text/x-mobalt-session')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
@@ -798,6 +808,37 @@ class App {
     this.focusPane(ap, true);
   }
 
+  /**
+   * Pane Settings… (the pane menu): MobaXterm's per-running-terminal reconfiguration. The dialog's values become this
+   * pane's own overrides (pane > session > Settings; kept with the pane through zoom, detach and the workspace) and,
+   * with "Save to session", also the saved session's fields that exist there — theme, font size, keyword highlighting,
+   * monitoring bar, background label — so every pane opened from it later follows (saveSession tells the open ones).
+   */
+  async paneSettings(pane) {
+    pane = pane || this.activePane();
+    if (!pane || pane.kind === 'empty' || pane.kind === 'ftp') return toast(t('Pane settings need a terminal pane'), 'info');
+    const r = await paneSettingsDialog(this, pane);
+    if (!r || pane.disposed) return;
+    pane.applyOverrides(r.overrides);
+    pane.setReadOnly(r.readOnly);
+    pane.setBadge(r.badge);
+    if (pane.monitorAllowed() && r.monitor !== pane.monitorOverride) {
+      pane.monitorOverride = r.monitor;
+      pane.monitorFailed = false;
+      pane.syncMonitor();
+    }
+    const stored = r.save && pane.session?.id ? this.sessions.sessions.find((s) => s.id === pane.session.id) : null;
+    if (stored) {
+      const next = { ...stored, theme: r.overrides.theme || '', fontSize: r.overrides.fontSize || undefined, highlight: r.overrides.highlight || '',
+        backgroundName: r.badge.text || '', backgroundShown: !!r.badge.show, backgroundPosition: r.badge.position || 'center' };
+      if (pane.monitorAllowed() && r.monitor !== null) next.monitor = r.monitor;
+      const saved = await this.saveSession(next);
+      pane.session = saved; // the pane's copy of the session follows (an override cleared later falls back to these)
+      toast(t('Pane settings saved to session "{name}"', { name: saved.name }), 'success');
+    } else toast(t('Pane settings applied'), 'success');
+    pane.focus();
+  }
+
   splitMenu(anchor) {
     const r = anchor.getBoundingClientRect();
     const ap = this.activePane();
@@ -955,7 +996,7 @@ class App {
     if (!tab.autoTitle) return false;
     const owner = this.tabTitlePane(tab);
     if (!owner) return false;
-    const title = owner.session ? owner.session.name : owner.title, icon = owner.session?.icon || null;
+    const title = owner.titleLocked ? owner.title : owner.session ? owner.session.name : owner.title, icon = owner.session?.icon || null; // a renamed pane (Rename Pane…) names its tab
     if (tab.title === title && tab.icon === icon) return false;
     tab.title = title;
     tab.icon = icon;
@@ -980,7 +1021,7 @@ class App {
   onPaneCwd(pane) {
     if (this.activePane() === pane) this.setStatusCwd(pane.remoteCwd);
     // local shells: the tab/pane title follows the folder (until the shell or the user sets a title)
-    if (pane.kind === 'local' && !pane.session && pane.remoteCwd && (pane.title === 'Local' || pane.title === t('Local') || pane._cwdTitled)) { // the untitled shell (terminal.js's fallback, in either language)
+    if (pane.kind === 'local' && !pane.session && !pane.titleLocked && pane.remoteCwd && (pane.title === 'Local' || pane.title === t('Local') || pane._cwdTitled)) { // the untitled shell (terminal.js's fallback, in either language); a renamed pane keeps its name
       const cwd = pane.remoteCwd.replace(/\/+$/, '');
       pane.title = cwd === this.info.home ? '~' : cwd.split('/').pop() || '/';
       pane._cwdTitled = true;
@@ -1030,21 +1071,58 @@ class App {
 
   // ---------- MultiExec ----------
   /**
-   * The terminals MultiExec writes to: the ones on screen, i.e. the live shells of the active tab — only the
+   * The terminals MultiExec could write to: the ones on screen, i.e. the live shells of the active tab — only the
    * zoomed pane while one fills the tab (other tabs are never touched; empty placeholders, FTP cards and dead
-   * sessions are skipped).
+   * sessions are skipped). Each of them shows the Exclude strip under its terminal while the mode is on.
    */
-  multiexecTargets() {
+  multiexecCandidates() {
     const tab = this.workspace.active;
     if (!tab) return [];
     const shown = tab.zoomed ? [tab.zoomed] : tab.panes();
-    return shown.filter((p) => !p.dead && p.termId && p.kind !== 'ftp' && p.kind !== 'empty');
+    return shown.filter((p) => typeof p.multiexecCandidate === 'function' ? p.multiexecCandidate() : !p.dead && p.termId && p.kind !== 'ftp' && p.kind !== 'empty');
+  }
+
+  /** The terminals MultiExec writes to: the candidates whose Exclude box is not ticked (MobaXterm: the "active" terminals). */
+  multiexecTargets() {
+    return this.multiexecCandidates().filter((p) => !p.multiexecExcluded);
   }
 
   broadcast(data, from) {
+    if (from && from.multiexecExcluded) return from.write(data); // an excluded pane is out of the mode: its own keys reach it alone (run one command there while the others listen to each other)
     const targets = this.multiexecTargets();
     for (const p of targets) p.write(data);
     if (from && !targets.includes(from)) from.write(data); // input into a terminal that is not on screen still reaches its own shell (once)
+  }
+
+  /**
+   * MobaXterm's right-click menu of the mode (v24.2), opened on the banner, on a pane's Exclude strip or with ⇧F10 on
+   * its box: `Activate all` / `Activate none` untick / tick every box on screen, `Invert selection` swaps them, and
+   * `Synchronize mouse wheel scrolling` makes a wheel scroll in one terminal move the others by the same amount.
+   */
+  multiexecMenu(x, y) {
+    if (!this.multiexec) return;
+    const set = (fn) => {
+      for (const p of this.multiexecCandidates()) p.setMultiexecExcluded(fn(p), { update: false });
+      this.updateMultiexec();
+    };
+    contextMenu(x, y, [
+      { label: t('Activate all'), action: () => set(() => false) },
+      { label: t('Activate none'), action: () => set(() => true) },
+      { label: t('Invert selection'), action: () => set((p) => !p.multiexecExcluded) },
+      '-',
+      { label: t('Synchronize mouse wheel scrolling'), checked: this.multiexecSyncScroll, action: () => { this.multiexecSyncScroll = !this.multiexecSyncScroll; } },
+    ]);
+  }
+
+  /** A wheel scroll of `from` by `delta` lines (terminal.js _onScroll) moves the other targets too; an excluded pane neither leads nor follows. */
+  syncScroll(from, delta) {
+    if (this._syncingScroll || !delta || from.multiexecExcluded) return;
+    this._syncingScroll = true; // the followers' onScroll must not come back here
+    try {
+      for (const p of this.multiexecTargets()) if (p !== from) p.scrollBy(delta);
+    } finally {
+      this._syncingScroll = false;
+    }
   }
 
   // ---------- paste guard ----------
@@ -1061,7 +1139,7 @@ class App {
     const mode = pasteGuardMode(analysis, this.settings);
     if (!mode.ask) return text;
     let where = pane.title;
-    if (this.multiexec) {
+    if (this.multiexec && !pane.multiexecExcluded) { // an excluded pane pastes into itself alone (broadcast)
       const targets = this.multiexecTargets();
       const n = targets.length + (targets.includes(pane) ? 0 : 1); // broadcast() also writes to a pane that is not on screen
       if (n > 1) where = t('{n} terminals (MultiExec)', { n });
@@ -1082,16 +1160,20 @@ class App {
     const wasHidden = banner.hidden;
     banner.hidden = !this.multiexec;
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
-    const n = this.multiexecTargets().length;
+    const candidates = this.multiexecCandidates();
+    const n = this.multiexecTargets().length, excluded = candidates.length - n; // n = the panes that receive keystrokes
     // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminal(s)".
     // The banner is rendered here, never through a data-i18n hook on the static element (index.html): one sentence
-    // per case, the count element put where {count} is, so a translation can move it.
+    // per case, the count element put where {count} is, so a translation can move it; ", N excluded" follows when
+    // some boxes are ticked, and with every box ticked the sentence says so instead of the count.
     const count = h('b', { id: 'multiexec-count', hidden: n === 0 }, String(n));
     const zoomed = !!(this.workspace.active && this.workspace.active.zoomed);
-    const text = n === 0 ? t('MultiExec is ON — {reason}', { reason: this.multiexecNoneText() })
+    const text = n === 0 && excluded ? t('MultiExec is ON — every visible terminal is excluded — untick "Exclude … from MultiExec mode" under a pane')
+      : n === 0 ? t('MultiExec is ON — {reason}', { reason: this.multiexecNoneText() })
       : zoomed ? t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab (the zoomed pane only)')
       : t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab');
-    banner.replaceChildren(...fillNodes(text, { count }), ...(n === 0 ? [count] : []));
+    banner.replaceChildren(...fillNodes(text, { count }), ...(n === 0 ? [count] : []), ...(n > 0 && excluded ? [', ' + tn('{n} excluded', '{n} excluded', excluded)] : []));
+    for (const p of this.workspace.allPanes()) p.syncMultiexecStrip?.(); // the Exclude strips under the terminals follow the mode
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
 
@@ -1168,12 +1250,17 @@ class App {
   async saveSession(s) {
     const saved = await window.api.sessions.save(s);
     await this.reloadSessions();
-    // an open pane of this session takes its new keyword-highlighting override at once (the rest applies on the next connect)
+    // an open pane of this session takes its new keyword-highlighting override and background label at once (the rest applies on the next connect)
     for (const p of this.workspace.allPanes()) {
-      if (p.session && p.session.id === saved.id && (p.session.highlight || '') !== (saved.highlight || '')) {
+      if (!p.session || p.session.id !== saved.id) continue;
+      if ((p.session.highlight || '') !== (saved.highlight || '')) {
         p.session.highlight = saved.highlight;
         p._syncHighlight(this.settings);
       }
+      p.session.backgroundName = saved.backgroundName;
+      p.session.backgroundShown = saved.backgroundShown;
+      p.session.backgroundPosition = saved.backgroundPosition;
+      p.syncBadge?.(); // the pane's own label setting, if any, stays on top
     }
     return saved;
   }
@@ -1334,6 +1421,7 @@ class App {
       case 'sidebar': return this.showPanel(arg);
       case 'multiexec': {
         this.multiexec = !this.multiexec;
+        if (!this.multiexec) for (const p of this.workspace.allPanes()) p.setMultiexecExcluded?.(false, { update: false }); // the boxes start unticked on every entry, as in MobaXterm
         this.updateMultiexec();
         const n = this.multiexecTargets().length;
         toast(!this.multiexec ? t('MultiExec OFF')
