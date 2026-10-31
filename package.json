@@ -18,7 +18,8 @@
     "release": "semantic-release",
     "assets": "bash scripts/make-assets.sh",
     "install:local": "bash scripts/install-local.sh",
-    "demo": "bash test/qa/run.sh test/qa/demo-frames.js test/shots/demo 120000 && bash scripts/make-demo-gif.sh test/shots/demo/shots"
+    "demo": "bash test/qa/run.sh test/qa/demo-frames.js test/shots/demo 120000 && bash scripts/make-demo-gif.sh test/shots/demo/shots",
+    "i18n": "node scripts/i18n-extract.js"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
@@ -41,6 +42,7 @@
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
+    "acorn": "^8.19.0",
     "conventional-changelog-conventionalcommits": "^8.0.0",
     "electron": "^45.1.0",
     "electron-builder": "^26.18.0",

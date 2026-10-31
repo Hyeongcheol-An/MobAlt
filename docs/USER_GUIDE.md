@@ -302,12 +302,25 @@ MobAlt restores your tabs, splits and sessions (tabs detached into their own win
 ![Settings](images/settings.png)
 
 Settings has five tabs, each of which fits the smallest window without scrolling: **General**
-(quit confirmation, the SFTP panel switch, workspace restore, the local shell and its folder
+(the interface language, quit confirmation, the SFTP panel switch, workspace restore, the local shell and its folder
 integration, the external editor, the download folder, SSH keep-alive, and "Open config folder",
 which shows where everything is stored), **Terminal** (font, line height, cursor, scrollback, theme — the look of the whole
 window, see *Themes and appearance* — mouse/keys), **Features** (the paste guard, the remote monitoring bar and its refresh
 interval, keyword highlighting and its rule table, and Zmodem transfers), **Logging** (log folder, plain-text session logs) and **Updates** (the startup check
 and "Check now").
+
+### Interface language
+
+MobAlt's menus, toolbar, panels, dialogs and messages come in ten languages: English, 한국어, 简体中文, 日本語,
+Tiếng Việt, हिन्दी, Deutsch, Français, Español and Português. By default (**System default**) the interface follows
+the language list of macOS (System Settings → General → Language & Region): the first language in that list that
+MobAlt ships wins, English when none does. Settings → General → **Language** picks one explicitly; the change
+applies at once in every window — nothing restarts, connections stay up — and is remembered. Terminal output is never
+translated: what a remote host prints is shown as it is. The user guide exists in the same ten languages
+(`docs/USER_GUIDE.<language>.md`); Help → **User Guide** opens the one for the current language.
+
+To run MobAlt in a language once without changing the setting (screenshots, a test), start it with `MOBALT_LANG=<code>`
+in the environment (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`).
 
 ## Keyboard shortcuts
 

@@ -84,6 +84,7 @@ const DEFAULT_SETTINGS = {
   cursorBlink: true,
   scrollback: 10000,
   theme: 'moba-dark',
+  language: 'system', // interface language: 'system' follows the macOS language list, else a code from src/main/i18n.js LANGUAGES
   rightClickPaste: true,
   copyOnSelect: true,
   macOptionIsMeta: true, // Option key acts as Meta/Alt (xterm macOptionIsMeta); what Settings shows before the first Save

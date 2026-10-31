@@ -326,6 +326,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 
 모두 0.12.0 소스에서 확인한 항목입니다.
 
+- **10개 언어 인터페이스.** 영어·한국어·중국어(간체)·일본어·베트남어·힌디어·독일어·프랑스어·스페인어·포르투갈어. macOS 언어 목록을 따르거나 설정에서 선택하며 재시작 없이 즉시 전환되고, 사용자 안내서도 언어별로 제공(`src/main/i18n.js`, `src/locales/`, `docs/USER_GUIDE.<code>.md`). MobaXterm 인터페이스는 영어뿐.
 - **명암비를 보장하는 창 전체 테마.** 크롬 팔레트는 터미널 테마에서 유도되고(`src/renderer/theme.js`), 모든 텍스트 토큰이 모든 표면에서 4.5:1 이상, 테두리는 3:1 이상을 지킵니다. Light를 포함한 6개 테마 전부를 `test/unit/theme.test.js`가 검증합니다. MobaXterm은 터미널만 테마를 입히고 다크 스킨 하나를 제공합니다.
 - **키보드 접근성.** 세션 트리와 SFTP 목록은 roving tabindex를 쓰는 트리 / 리스트박스이고 Finder 식 타이핑 이동이 되며, 컨텍스트 메뉴는 ⇧F10이나 Menu 키로 열리고, 대화상자는 포커스를 가두었다가 되돌립니다(`src/renderer/sidebar.js`, `src/renderer/sftp.js`, `test/e2e-a11y.js`).
 - **SFTP 동반 연결이 있는 Mosh.** Mosh 페인은 같은 호스트로 셸 없는 SSH 연결을 하나 더 열어 Sftp 패널에 씁니다(`src/main/ssh.js`의 `sftpOnly`).

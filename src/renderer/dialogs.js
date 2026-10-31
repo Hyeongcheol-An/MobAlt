@@ -4,6 +4,7 @@ import { THEMES } from './terminal.js';
 import { mix, contrast } from './theme.js';
 import { analysePaste, KIND_LABEL, DANGER_KINDS, PASTE_CONFIRM_CHARS } from './pasteguard.js';
 import { DEFAULT_RULES, COLOR_KEYS, compileRules, normalizeRule } from './highlight.js';
+import { t, LANGUAGES, SYSTEM_LOCALE, languageOf } from './i18n.js';
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -783,6 +784,10 @@ export function settingsDialog(app) {
   const logPlain = check('Strip colours and control sequences from session logs (plain text)', !!s.logPlainText);
   const keepAlive = num(s.keepAliveInterval, { min: 0, max: 3600 });
   const autoUpdate = check('Check for updates at startup', s.autoUpdate !== false);
+  // Settings → General → Language: 'system' follows the macOS language list (the name shows what that is on this Mac);
+  // a choice applies at once to menus, panels and dialogs of every window (app.js _applyLanguage) — terminals are never touched
+  const sysLang = languageOf(SYSTEM_LOCALE) || LANGUAGES[0];
+  const language = select([['system', t('System default ({name})', { name: sysLang.name })], ...LANGUAGES.map((l) => [l.code, l.name])], languageOf(s.language) ? languageOf(s.language).code : 'system', { 'aria-label': t('Language') });
   // "Check now" reports on its own line, e.g. "0.11.0 is already installed on disk; relaunch to use it"
   const updStatus = h('span', { class: 'upd-status', 'aria-live': 'polite' });
   const checkNow = h('button', { class: 'btn small', type: 'button', onclick: async () => {
@@ -798,6 +803,7 @@ export function settingsDialog(app) {
   // Every field stays in the DOM whichever tab is in front, so Save reads them all.
   const tabs = modalTabs([
     ['general', 'General', h('div', { class: 'form-grid' },
+      ...field(t('Language'), language, t('Menus, panels and dialogs switch at once; terminal output is not translated')),
       h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
       ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
       ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
@@ -841,7 +847,7 @@ export function settingsDialog(app) {
         pasteConfirmMultiline: pasteConfirm.cb.checked, pasteWarnSuspicious: pasteWarn.cb.checked,
         localShell: localShell.value.trim(), localShellIntegration: shellInt.cb.checked, editorCommand: editor.value.trim(),
         confirmClose: confirmClose.cb.checked, sftpAutoOpen: sftpAutoOpen.cb.checked, restoreWorkspace: restoreWs.cb.checked, downloadDir: downloadDir.value.trim(), logDir: logDir.value.trim(), logPlainText: logPlain.cb.checked,
-        keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked,
+        keepAliveInterval: clamp(parseInt(keepAlive.value, 10), 0, 3600, 30), autoUpdate: autoUpdate.cb.checked, language: language.value,
         monitorBar: monitorBar.cb.checked, monitorInterval: clamp(parseInt(monitorInterval.value, 10), 2, 30, 3),
         highlightEnabled: hlEnabled.cb.checked, highlightRules: hlRules,
       }) },

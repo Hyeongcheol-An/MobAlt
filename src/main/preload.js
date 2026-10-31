@@ -12,6 +12,10 @@ const send = (ch, ...args) => ipcRenderer.send(ch, ...args);
 // after the paint. app.js overwrites every one of these once it runs.
 let bootChrome = null;
 try { bootChrome = ipcRenderer.sendSync('app:boot-chrome'); } catch {}
+// The interface language and its dictionary, fetched the same way: src/renderer/i18n.js reads them at import time,
+// so every label the modules build while loading is already in the saved language (no English flash, no async gap).
+let bootI18n = null;
+try { bootI18n = ipcRenderer.sendSync('app:boot-i18n'); } catch {}
 const applyBootChrome = () => {
   const root = document.documentElement;
   if (!root || !bootChrome || !bootChrome.vars) return false;
@@ -90,6 +94,7 @@ contextBridge.exposeInMainWorld('api', {
     // this window's tab state ({ tab, pinned, others, left, right }, app.js menuTabState): the Session menu's items follow it
     tabState: (state) => send('tabs:state', state),
     testMenuState: () => invoke('test:menu-state'), // test mode: the Session menu's tab items, { id: enabled }
+    testMenuLabels: () => invoke('test:menu-labels'), // test mode: the application menu as shown, [{ label, submenu }] (translated)
     // test mode: every window ({ id, main, detached, title, bounds }), run code in one of them, close one
     testWindows: () => invoke('test:windows'),
     testEval: (id, code) => invoke('test:eval', id, code),
@@ -167,6 +172,13 @@ contextBridge.exposeInMainWorld('api', {
     importMoba: () => invoke('sessions:import-moba'),
     exportJson: () => invoke('sessions:export'),
     importJson: () => invoke('sessions:import-json'),
+  },
+  // interface language (src/main/i18n.js): what this window booted with, the dictionary of another language for a
+  // switch at run time, and the user guide's URL in a language
+  i18n: {
+    boot: () => bootI18n, // { locale, system, dict, languages: [{ code, name, guide }] }
+    dict: (code) => invoke('i18n:dict', code),
+    guideUrl: (code) => invoke('i18n:guide-url', code),
   },
   settings: {
     get: () => invoke('settings:get'),

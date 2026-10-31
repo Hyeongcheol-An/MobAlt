@@ -8,6 +8,9 @@ import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
 import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
+import { t, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
+
+translateDom(document); // the static labels of index.html, before anything else is rendered (the preload fetched the dictionary)
 
 /** Long paths keep their tail (the leaf folder is what matters in a status bar). */
 const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
@@ -31,6 +34,7 @@ class App {
 
   async init() {
     applyIcons(); // static toolbar / panel buttons carry data-icon hooks
+    document.addEventListener('i18n:changed', () => this.onLanguageChanged()); // a switch at run time: what app.js renders itself
     // algorithms: ssh2's defaults / supported names / legacy additions for the session editor's Advanced SSH lists
     [this.settings, this.sessions, this.info, this.algorithms] = await Promise.all([window.api.settings.get(), window.api.sessions.list(), window.api.app.info(), window.api.ssh.algorithms().catch(() => null)]);
     const detachedKey = typeof window.api.app.detachedKey === 'function' ? window.api.app.detachedKey() : null;
@@ -48,7 +52,7 @@ class App {
     this.wireUi();
     $('#st-version').textContent = `MobAlt ${this.info.version}`;
     $('#st-x11').classList.toggle('on', !!this.info.x11Available);
-    $('#st-x11').title = this.info.x11Available ? `Local X server: ${this.info.display}` : 'No X server found (install XQuartz for X11 forwarding)';
+    $('#st-x11').title = this.info.x11Available ? t('Local X server: {display}', { display: this.info.display }) : t('No X server found (install XQuartz for X11 forwarding)');
     if (!this.settings.sidebarVisible) $('#sidebar').classList.add('collapsed');
     this._syncSidebarToggle();
     this.showPanel(this.settings.sidebarTab || 'sessions');
@@ -287,6 +291,7 @@ class App {
     // the panels that list settings follow too: a macro or a Wake-on-LAN address saved in the other window shows up here
     if (macrosChanged) this.macrosPanel.render();
     if (wolChanged) this.toolsPanel.renderWolHistory();
+    this._applyLanguage(); // another window chose a language: this one follows
   }
 
   // ---------- main-process events ----------
@@ -1169,6 +1174,29 @@ class App {
     this._applyTheme();
     if (!quiet) this.workspace.allPanes().forEach((p) => p.applySettings(this.settings));
     if (!quiet && this._findResearch) this._findResearch(); // open find highlights take the new theme's colours
+    await this._applyLanguage();
+  }
+
+  /**
+   * Settings → General → Language: the window switches at once. The dictionary comes from the main process (which
+   * rebuilt the menu already), src/renderer/i18n.js re-translates the static hooks of index.html and fires
+   * `i18n:changed`, on which every component that keeps rendered labels renders itself again (onLanguageChanged
+   * here, the tree / tabs / panels in their own modules). Terminal output is never touched.
+   */
+  async _applyLanguage() {
+    const code = resolveSetting(this.settings.language);
+    if (code === currentLocale()) return false;
+    let dict = {};
+    try { dict = await window.api.i18n.dict(code); } catch (e) { console.error('[i18n]', e); }
+    setLocale(code, dict);
+    return true;
+  }
+
+  /** The labels app.js writes itself, redone in the new language (components do their own on the same event). */
+  onLanguageChanged() {
+    if (!this.info) return;
+    $('#st-x11').title = this.info.x11Available ? t('Local X server: {display}', { display: this.info.display }) : t('No X server found (install XQuartz for X11 forwarding)');
+    this._syncSidebarToggle();
   }
 
   /**
