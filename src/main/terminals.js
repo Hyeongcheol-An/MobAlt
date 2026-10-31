@@ -374,7 +374,7 @@ function spawnLocal(registry, settings, { cols = 80, rows = 24, cwd, shell, args
     name: 'xterm-256color',
     cols,
     rows,
-    cwd: cwd || os.homedir(),
+    cwd: String(cwd || '').replace(/^~(?=\/|$)/, os.homedir()) || os.homedir(), // a Start folder of "~" or "~/x" as typed would make the shell die at once (chdir fails); empty = home
     env,
     encoding: null,
   });
@@ -419,8 +419,8 @@ function shQuote(s) {
 function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, username, privateKeyPath, moshServer, moshPredict, knownHostsFile } = {}) {
   const pty = require('node-pty');
   const bin = findMosh();
-  if (!bin) throw new Error('mosh client not found — install it with "brew install mosh"');
-  if (!host) throw new Error('host is required');
+  if (!bin) throw new Error(t('mosh client not found — install it with "brew install mosh"'));
+  if (!host) throw new Error(t('host is required'));
   const keyFile = privateKeyPath ? privateKeyPath.replace(/^~(?=\/|$)/, os.homedir()) : '';
   const hostKeyOpts = knownHostsFile
     ? ['-o', 'StrictHostKeyChecking=yes', '-o', shQuote(`UserKnownHostsFile="${String(knownHostsFile).replace(/"/g, '')}"`)]
@@ -462,7 +462,7 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
     sock.write(b);
   };
 
-  sock.on('connect', () => registry.data(id, `\x1b[90mConnected to ${host}:${port}\x1b[0m\r\n`));
+  sock.on('connect', () => registry.data(id, `\x1b[90m${t('Connected to {target}', { target: `${host}:${port}` })}\x1b[0m\r\n`));
   sock.on('data', (buf) => {
     const out = [];
     for (const b of buf) {
@@ -506,7 +506,7 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
     }
     if (out.length) registry.bytes(id, Buffer.from(out));
   });
-  sock.on('error', (e) => registry.data(id, `\r\n\x1b[31mTelnet error: ${e.message}\x1b[0m\r\n`));
+  sock.on('error', (e) => registry.data(id, `\r\n\x1b[31m${t('Telnet error: {error}', { error: e.message })}\x1b[0m\r\n`));
   sock.on('close', () => registry.exit(id, 0, 'closed'));
 
   registry.register(id, {
@@ -565,13 +565,13 @@ function spawnSerial(registry, opts) {
   };
   port.open((err) => {
     if (err) {
-      registry.data(id, `\r\n\x1b[31mCannot open ${opts.path}: ${err.message}\x1b[0m\r\n`);
+      registry.data(id, `\r\n\x1b[31m${t('Cannot open {path}: {error}', { path: opts.path, error: err.message })}\x1b[0m\r\n`);
       return finish(1, 'failed');
     }
-    registry.data(id, `\x1b[90mConnected to ${opts.path} @ ${baudRate} ${port.settings.dataBits}${(port.settings.parity || 'none')[0].toUpperCase()}${port.settings.stopBits}\x1b[0m\r\n`);
+    registry.data(id, `\x1b[90m${t('Connected to {path} @ {baud} {mode}', { path: opts.path, baud: baudRate, mode: `${port.settings.dataBits}${(port.settings.parity || 'none')[0].toUpperCase()}${port.settings.stopBits}` })}\x1b[0m\r\n`);
   });
   port.on('data', (b) => registry.bytes(id, b));
-  port.on('error', (e) => registry.data(id, `\r\n\x1b[31mSerial error: ${e.message}\x1b[0m\r\n`));
+  port.on('error', (e) => registry.data(id, `\r\n\x1b[31m${t('Serial error: {error}', { error: e.message })}\x1b[0m\r\n`));
   port.on('close', () => finish(0, 'closed'));
   registry.register(id, {
     kind: 'serial',
@@ -582,7 +582,7 @@ function spawnSerial(registry, opts) {
     },
     // ZMODEM bytes: as they are (no newline mapping, no local echo), paced by the port's own transmit buffer
     writeRaw: (buf) => new Promise((resolve, reject) => {
-      if (!port.isOpen) return reject(new Error('the port is closed'));
+      if (!port.isOpen) return reject(new Error(t('the port is closed')));
       port.write(buf, (e) => {
         if (e) return reject(e);
         port.drain((e2) => (e2 ? reject(e2) : resolve()));
