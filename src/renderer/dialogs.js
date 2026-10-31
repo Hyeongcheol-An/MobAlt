@@ -126,6 +126,17 @@ function modalTabs(sections) {
   show(sections[0][0]);
   return { strip, pages, show };
 }
+/**
+ * Keep a tabbed dialog body at the height of its tallest section, so the dialog does not grow, shrink and re-centre
+ * when another section comes to the front. Measured once the modal is in the DOM (each page shown in turn); the
+ * CSS min-heights (.settings-tabs, .shortcuts-tabs) stay as floors.
+ */
+function holdTallest(container, { pages, show }, current) {
+  let max = 0;
+  for (const k of Object.keys(pages)) { show(k); max = Math.max(max, container.offsetHeight); }
+  show(current);
+  container.style.minHeight = `${max}px`;
+}
 
 /** Session editor. Resolves with the session object to save, or null. */
 export function sessionEditor(app, initial = {}) {
@@ -576,7 +587,7 @@ export function settingsDialog(app) {
   } }, 'Check now');
   // Four section tabs (General / Terminal / Logging / Updates): each fits the 900×560 minimum window without scrolling.
   // Every field stays in the DOM whichever tab is in front, so Save reads them all.
-  const { strip, pages } = modalTabs([
+  const tabs = modalTabs([
     ['general', 'General', h('div', { class: 'form-grid' },
       h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, confirmClose.el, sftpAutoOpen.el, restoreWs.el),
       ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
@@ -601,10 +612,11 @@ export function settingsDialog(app) {
       h('label', {}), h('div', { class: 'checks' }, checkNow, updStatus)
     )],
   ]);
+  const body = h('div', { class: 'settings-tabs' }, tabs.strip, ...Object.values(tabs.pages));
   const m = showModal({
     title: 'Settings',
     width: 'wide',
-    body: h('div', { class: 'settings-tabs' }, strip, ...Object.values(pages)),
+    body,
     buttons: [
       { label: 'Cancel', value: null },
       { label: 'Save', primary: true, action: (api) => api.close({
@@ -617,6 +629,7 @@ export function settingsDialog(app) {
       }) },
     ],
   });
+  holdTallest(body, tabs, 'general'); // Terminal is the tallest section: the dialog never jumps when it comes to the front
   return m.promise;
 }
 
@@ -701,6 +714,8 @@ export function shortcutsDialog(app) {
       ['Dialog: confirm / close', '⏎ / Esc'], ['Dialog: next / previous control', 'Tab / ⇧Tab'], ['Dialog tabs: previous / next, first / last section', '← → / Home End'],
     ]],
   ];
-  const { strip, pages } = modalTabs(sections.map(([k, label, rows]) => [k, label, h('div', {}, h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))))]));
-  showModal({ title: 'Keyboard shortcuts', width: 'wide', body: h('div', { class: 'shortcuts-tabs' }, strip, ...Object.values(pages)), buttons: [{ label: 'Close', value: null }] });
+  const tabs = modalTabs(sections.map(([k, label, rows]) => [k, label, h('div', {}, h('div', { class: 'shortcuts' }, rows.map(([a, b]) => h('div', {}, h('span', {}, a), h('span', { class: 'kbd' }, b)))))]));
+  const body = h('div', { class: 'shortcuts-tabs' }, tabs.strip, ...Object.values(tabs.pages));
+  showModal({ title: 'Keyboard shortcuts', width: 'wide', body, buttons: [{ label: 'Close', value: null }] });
+  holdTallest(body, tabs, sections[0][0]);
 }
