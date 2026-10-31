@@ -71,6 +71,7 @@ contextBridge.exposeInMainWorld('api', {
     testWolPackets: () => invoke('test:wol-packets'), // what it received: [{ from, port, length, hex }]
     testMonitorStats: () => invoke('test:monitor-stats'), // { execCount, samples }: exec channels opened, monitor polls started (test mode only)
     testMonitorCommand: (cmd) => invoke('test:monitor-command', cmd), // run this instead of the monitoring snippet (null = the snippet; test mode only)
+    testFs: (op, ...args) => invoke('test:fs', op, ...args),
     checkUpdates: () => invoke('app:check-updates'),
     // main-process notices ({ level, text }): internal errors that would otherwise be lost in the console
     onNotice: (fn) => on('app:notice', fn),

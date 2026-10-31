@@ -765,3 +765,7 @@ body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }
 .hl-rules .list-table input:focus, .hl-rules .list-table select:focus { border-color: var(--accent); outline: none; }
 .hl-rules .list-table input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .hl-actions { display: flex; gap: 8px; margin-top: 10px; }
+/* ---- zmodem ---- */
+/* A transfer that came from a terminal (rz / sz) carries a small "zmodem" chip in the files panel's transfer list, so
+   it is told apart from the panel's own SFTP / FTP transfers; the theme tokens keep it readable on every palette. */
+.xfer .xfer-proto { flex: 0 0 auto; font-size: 9px; line-height: 14px; padding: 0 4px; border: 1px solid var(--border); border-radius: 3px; color: var(--fg-dim); text-transform: uppercase; letter-spacing: .03em; }

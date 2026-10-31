@@ -6,6 +6,7 @@ const fs = require('fs');
 const net = require('net');
 const path = require('path');
 const crypto = require('crypto');
+const { StringDecoder } = require('string_decoder');
 const { ensureZdotdir } = require('./zdotdir');
 
 /**
@@ -170,8 +171,14 @@ class TerminalRegistry extends EventEmitter {
     return 't_' + crypto.randomBytes(6).toString('hex');
   }
 
+  /**
+   * handle: { kind, write(text), resize(cols, rows), kill(), writeRaw?(Buffer) → Promise }. A backend with writeRaw
+   * feeds its output through bytes(), and the Zmodem manager (zmodem.js) puts a sentry on it ('register' event):
+   * h.rawSink sees the bytes before xterm, h.inputGate may swallow keystrokes during a transfer.
+   */
   register(id, handle) {
     this.map.set(id, handle);
+    this.emit('register', id, handle);
   }
 
   get(id) {
@@ -195,6 +202,19 @@ class TerminalRegistry extends EventEmitter {
     this.emit('data', id, data);
   }
 
+  /**
+   * Raw output bytes of a backend (local pty, SSH shell, telnet, serial): a sink installed on the handle (the Zmodem
+   * sentry) takes them first; otherwise they are decoded as UTF-8 with the terminal's own decoder (a character split
+   * across chunks stays whole) and forwarded as text — so a session log never sees a ZMODEM stream.
+   */
+  bytes(id, buf) {
+    const h = this.map.get(id);
+    if (!h) return;
+    if (h.rawSink) return h.rawSink(buf);
+    const text = (h.decoder || (h.decoder = new StringDecoder('utf8'))).write(buf);
+    if (text) this.data(id, text);
+  }
+
   /** reason: 'exit' | 'closed' | 'failed' | 'cancelled' | 'lost' (SSH: dropped by the server/network; detail = the error seen, if any). */
   exit(id, code, reason, detail) {
     this._endLog(id, `\n--- session ended ${new Date().toISOString()} ---\n`);
@@ -205,7 +225,9 @@ class TerminalRegistry extends EventEmitter {
 
   write(id, data) {
     const h = this.map.get(id);
-    if (h) h.write(data);
+    if (!h) return;
+    if (h.inputGate && h.inputGate(data)) return; // a Zmodem transfer is running: keystrokes must not enter its stream
+    h.write(data);
   }
 
   resize(id, cols, rows) {
@@ -284,24 +306,43 @@ function buildEnv(settings, shell) {
   return env;
 }
 
+/**
+ * Resolves once the pty has taken the queued writes (node-pty queues them against the kernel's EAGAIN); the Zmodem
+ * sender paces a file on it so a big upload is not buffered whole in memory. Without the queue (another node-pty)
+ * there is nothing to wait for.
+ */
+function ptyDrained(proc) {
+  const q = proc._writeStream && proc._writeStream._writeQueue;
+  if (!q) return Promise.resolve();
+  return new Promise((resolve) => {
+    const poll = () => (q.length <= 2 ? resolve() : setTimeout(poll, 5));
+    poll();
+  });
+}
+
 function spawnLocal(registry, settings, { cols = 80, rows = 24, cwd, shell, args } = {}) {
   const pty = require('node-pty');
   const id = registry.newId();
   const sh = shell || defaultShell(settings);
   const shArgs = args || settings.localShellArgs || ['-l'];
   const env = buildEnv(settings, sh);
-  const proc = pty.spawn(sh, shArgs, {
+  // The output is read as raw bytes (encoding: null) so a ZMODEM stream survives — node-pty then leaves IUTF8 off the
+  // pty, which breaks erasing multi-byte characters in canonical mode (`read`, `cat`, password prompts); `stty iutf8`
+  // in the child puts it back before the shell starts (exec keeps the pid and the login flag).
+  const proc = pty.spawn('/bin/sh', ['-c', 'stty iutf8 2>/dev/null; exec "$0" "$@"', sh, ...shArgs], {
     name: 'xterm-256color',
     cols,
     rows,
     cwd: cwd || os.homedir(),
     env,
+    encoding: null,
   });
-  proc.onData((d) => registry.data(id, d));
+  proc.onData((d) => registry.bytes(id, d));
   proc.onExit(({ exitCode }) => registry.exit(id, exitCode, 'exit'));
   registry.register(id, {
     kind: 'local',
     write: (d) => proc.write(d),
+    writeRaw: (buf) => { proc.write(buf); return ptyDrained(proc); },
     resize: (c, r) => proc.resize(c, r),
     kill: () => proc.kill(),
     pid: proc.pid,
@@ -380,8 +421,6 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
     sock.write(b);
   };
 
-  const { StringDecoder } = require('string_decoder');
-  const decoder = new StringDecoder('utf8');
   sock.on('connect', () => registry.data(id, `\x1b[90mConnected to ${host}:${port}\x1b[0m\r\n`));
   sock.on('data', (buf) => {
     const out = [];
@@ -424,7 +463,7 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
           break;
       }
     }
-    if (out.length) registry.data(id, decoder.write(Buffer.from(out)));
+    if (out.length) registry.bytes(id, Buffer.from(out));
   });
   sock.on('error', (e) => registry.data(id, `\r\n\x1b[31mTelnet error: ${e.message}\x1b[0m\r\n`));
   sock.on('close', () => registry.exit(id, 0, 'closed'));
@@ -441,6 +480,15 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
       }
       sock.write(Buffer.from(parts));
     },
+    // ZMODEM bytes: only IAC is doubled (no CR → CR LF), the stream must stay 8-bit clean
+    writeRaw: (buf) => new Promise((resolve, reject) => {
+      const parts = [];
+      for (const b of buf) {
+        if (b === 255) parts.push(255, 255);
+        else parts.push(b);
+      }
+      sock.write(Buffer.from(parts), (e) => (e ? reject(e) : resolve()));
+    }),
     resize: (c, r) => { curCols = c; curRows = r; sendNaws(); },
     kill: () => sock.destroy(),
   });
@@ -454,7 +502,6 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
  */
 function spawnSerial(registry, opts) {
   const { SerialPort } = require('serialport');
-  const { StringDecoder } = require('string_decoder');
   const id = registry.newId();
   const baudRate = parseInt(opts.baudRate, 10) || 9600;
   const port = new SerialPort({
@@ -468,7 +515,6 @@ function spawnSerial(registry, opts) {
     xoff: opts.flow === 'xonxoff',
     autoOpen: false,
   });
-  const decoder = new StringDecoder('utf8');
   const nl = { cr: '\r', lf: '\n', crlf: '\r\n' }[opts.newline || 'cr'];
   let closed = false;
   const finish = (code, reason) => {
@@ -483,7 +529,7 @@ function spawnSerial(registry, opts) {
     }
     registry.data(id, `\x1b[90mConnected to ${opts.path} @ ${baudRate} ${port.settings.dataBits}${(port.settings.parity || 'none')[0].toUpperCase()}${port.settings.stopBits}\x1b[0m\r\n`);
   });
-  port.on('data', (b) => registry.data(id, decoder.write(b)));
+  port.on('data', (b) => registry.bytes(id, b));
   port.on('error', (e) => registry.data(id, `\r\n\x1b[31mSerial error: ${e.message}\x1b[0m\r\n`));
   port.on('close', () => finish(0, 'closed'));
   registry.register(id, {
@@ -493,6 +539,14 @@ function spawnSerial(registry, opts) {
       if (opts.localEcho) registry.data(id, d.replace(/\r/g, '\r\n'));
       port.write(d.replace(/\r/g, nl));
     },
+    // ZMODEM bytes: as they are (no newline mapping, no local echo), paced by the port's own transmit buffer
+    writeRaw: (buf) => new Promise((resolve, reject) => {
+      if (!port.isOpen) return reject(new Error('the port is closed'));
+      port.write(buf, (e) => {
+        if (e) return reject(e);
+        port.drain((e2) => (e2 ? reject(e2) : resolve()));
+      });
+    }),
     resize: () => {},
     kill: () => (port.isOpen ? port.close(() => finish(0, 'closed')) : finish(0, 'closed')),
   });

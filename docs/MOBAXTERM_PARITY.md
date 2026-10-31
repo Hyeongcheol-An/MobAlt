@@ -29,21 +29,21 @@ last column says which parts are missing.
 | Category | ✅ | 🟡 | ❌ | ➖ | Rows |
 |---|---|---|---|---|---|
 | 1. Session types | 7 | 6 | 4 | 4 | 21 |
-| 2. SSH specifics | 18 | 9 | 8 | 2 | 37 |
+| 2. SSH specifics | 19 | 9 | 7 | 2 | 37 |
 | 3. Terminal | 10 | 13 | 7 | 1 | 31 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
 | 5. Network and admin tools, embedded servers, Moba* utilities | 7 | 2 | 7 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **51** | **40** | **33** | **59** | **183** |
+| **Sections 1–7 (each feature once)** | **52** | **40** | **32** | **59** | **183** |
 | 8. Recent additions (24.3 → 26.6) | 4 | 16 | 7 | 3 | 30 |
 | 9. UX details power users rely on | 8 | 10 | 1 | 1 | 20 |
-| **All tables** | **63** | **66** | **41** | **63** | **233** |
+| **All tables** | **64** | **66** | **40** | **63** | **233** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 124 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 51 in full, 40 in a narrower or different form and lacks 33.
+MobAlt has 52 in full, 40 in a narrower or different form and lacks 32.
 
 ## 1. Session types
 
@@ -98,7 +98,7 @@ MobAlt has 51 in full, 40 in a narrower or different form and lacks 33.
 | Graphical SSH-browser (SFTP/SCP) | ✅ | Sftp panel (⌘2) opens on connect: upload/download with progress and cancel, mkdir, rename, chmod, delete, hidden files, double-click edits and saves back; SFTP only, no SCP mode |
 | SSH-browser extras (SUDO, history, paste, diff…) | 🟡 | has overwrite confirmation, preserved mtime on download, sort, Show in Finder, host-key prompt; no SUDO, address history, ⌘V file paste, SCP fallback, diff or column memory |
 | Follow terminal folder | ✅ | "SFTP follows terminal folder" session option (OSC 7 hook for bash/zsh) plus the panel's Follow checkbox; off by default |
-| Zmodem (rz/sz) | ❌ | not implemented |
+| Zmodem (rz/sz) | ✅ | In-terminal transfers in SSH, local, telnet and serial panes (zmodem.js Sentry on the byte stream): `sz` downloads, `rz` uploads, progress and cancel in the transfer list; not Mosh |
 | Adapt locales | ❌ | no locale push to the remote shell |
 | Expert SSH settings (ciphers, KEX, MAC, post-quantum) | ✅ | Advanced SSH → Algorithms: per-session key exchange, host key, cipher and MAC lists pre-filled from ssh2's defaults, validated against what ssh2 supports, "Legacy algorithms" as a preset; a mismatch names what both sides offer; ssh2 1.17 has strict KEX (Terrapin) but no ML-KEM (post-quantum waits on ssh2) |
 | Terminal type per session | ❌ | fixed `xterm-256color` |
@@ -355,7 +355,8 @@ Priorities take the ❌ rows above; size is a rough estimate (S = days, M = a we
 
 | Item | Why | Size |
 |---|---|---|
-| Zmodem (rz/sz) transfers in the terminal | the classic way to move files through serial consoles and jump hosts where SFTP is unavailable | M |
+| Multi-line paste guard with editable preview and malicious-paste checks (homographs, pipe-to-shell, profile redirects, zero-width spaces) | the single most-cited MobaXterm safety net; xterm.js exposes the paste path already | M |
+| Remote monitoring bar (CPU / RAM / disk / net) via a polling exec channel on the SSH connection | on by default in MobaXterm since 25.2; ssh2 already has the connection | M |
 | Wake-on-LAN and a subnet / network scanner in the Tools panel | rounds out Tools; WoL is a UDP magic packet, the scanner reuses the port-scan worker | S + M |
 | Tab pin, close left/right, detach-to-window | tab colour already exists; detach needs a second BrowserWindow sharing the terminal registry | M |
 | SSH key generator UI (`ssh-keygen` wrapper) | the most common "first SSH" task; also closes the MobaKeyGen gap | S |

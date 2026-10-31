@@ -24,6 +24,7 @@ const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
 const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
+const { ZmodemManager } = require('./zmodem');
 
 const pkg = require('../../package.json');
 const scans = new Map(); // running network scans: id → { cancel, promise } (netscan.js); quitting cancels them
@@ -145,6 +146,8 @@ const ssh = new SshManager(registry, store, prompter);
 const monitor = new RemoteMonitor(ssh); // the monitoring bar's polls; keeps the previous sample per connection for the rates
 const sftp = new SftpManager(ssh, store);
 const ftp = new FtpManager(store, prompter);
+// rz / sz inside a terminal: a sentry on every byte stream the registry registers; its dialogs go through dialogs.js
+const zmodem = new ZmodemManager(registry, store, { dialogs, getWin: () => win, downloadsDir: () => app.getPath('downloads') });
 let updater = null;
 const tunnels = new TunnelManager(ssh, store);
 
@@ -182,6 +185,7 @@ const toOwner = (channel) => (x) => {
 };
 sftp.on('transfer', toOwner('sftp:transfer'));
 sftp.on('edit-synced', toOwner('sftp:edit-synced'));
+zmodem.on('transfer', toOwner('sftp:transfer')); // same list, same Cancel
 ftp.on('transfer', toOwner('sftp:transfer'));
 ftp.on('edit-synced', toOwner('sftp:edit-synced'));
 tunnels.on('changed', (list) => broadcast('tunnels:changed', list));
@@ -566,6 +570,21 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     return bundleWatch ? bundleWatch.send(String(version)) : false;
   });
+  // Test-only: a few filesystem helpers the renderer test scripts have no bridge for — make a random file, hash a
+  // file (sha256), read small text, stat, make a temp dir, remove. Only when a test script is injected; a release
+  // never reaches this (the renderer has no fs access of its own).
+  ipcMain.handle('test:fs', (_e, op, ...args) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    if (op === 'randomFile') { const [p, size] = args; fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, crypto.randomBytes(size | 0)); return fs.statSync(p).size; }
+    if (op === 'sha256') { return crypto.createHash('sha256').update(fs.readFileSync(args[0])).digest('hex'); }
+    if (op === 'exists') { return fs.existsSync(args[0]); }
+    if (op === 'readText') { return fs.readFileSync(args[0], 'utf8'); }
+    if (op === 'writeText') { fs.mkdirSync(path.dirname(args[0]), { recursive: true }); fs.writeFileSync(args[0], args[1]); return true; }
+    if (op === 'mkdtemp') { return fs.mkdtempSync(path.join(os.tmpdir(), args[0] || 'mobalt-test-')); }
+    if (op === 'mkdirp') { fs.mkdirSync(args[0], { recursive: true }); return true; }
+    if (op === 'rm') { fs.rmSync(args[0], { recursive: true, force: true }); return true; }
+    return null;
+  });
   // Test-only: a main-process notice (what the uncaughtException handler sends) with the given text.
   ipcMain.handle('test:notice', (_e, text) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
@@ -742,8 +761,8 @@ function registerIpc() {
     }
     return locals.map((l) => files(id).upload(id, l, remoteDir.replace(/\/$/, '') + '/' + path.basename(l)));
   });
-  ipcMain.handle('sftp:cancel', (_e, tid) => { sftp.cancel(tid); ftp.cancel(tid); });
-  ipcMain.handle('sftp:transfers', () => [...sftp.listTransfers(), ...ftp.listTransfers()]);
+  ipcMain.handle('sftp:cancel', (_e, tid) => { sftp.cancel(tid); ftp.cancel(tid); zmodem.cancel(tid); });
+  ipcMain.handle('sftp:transfers', () => [...sftp.listTransfers(), ...ftp.listTransfers(), ...zmodem.listTransfers()]);
   ipcMain.handle('sftp:edit', (_e, id, remote) => files(id).editRemote(id, remote));
 
   ipcMain.handle('tunnel:start', (_e, spec) => (spec.connId ? tunnels.startForConnection(spec.connId, spec) : tunnels.startStandalone(spec)));
