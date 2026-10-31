@@ -25,6 +25,8 @@ await window.api.app.testKey('F19');        // one real key press: raises the wi
 await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
 (await window.api.app.testQuitCheck()).relaunchRequested; // true once the banner's Relaunch ran (test mode records, never restarts)
 await window.api.app.testNotice('Internal error: x'); // a main-process notice (app:notice) → error toast (test mode only)
+await window.api.app.testNextDialog({ canceled: false, filePaths: ['/f'] }); // answer the next native file dialog / sheet instead of showing it (test mode only; see below)
+(await window.api.app.testNextDialog()).pending;        // answers still queued (0 once every dialog you triggered has taken one)
 app.action('new-session' | 'new-local' | 'quick-connect' | 'duplicate' | 'reconnect' | 'disconnect' |
            'rename-tab' | 'close' | 'close-pane' | 'split' | 'split-menu' | 'layout' | 'unsplit' |
            'next-pane' | 'next-tab' | 'prev-tab' | 'zoom' | 'find' | 'find-close' | 'clear' |
@@ -47,6 +49,29 @@ DOM: toolbar `#toolbar`, sidebar `#sidebar` with `#session-tree`, `#session-filt
 status bar `#statusbar` (`#st-session`, `#st-cwd`), dialogs under `#modal-root` (`.modal`,
 `.mtabs button`, `.close`), context menus under `#ctx-root`, toasts under `#toast-root`.
 Terminal text: `[...Array(pane.term.buffer.active.length)].map((_, i) => pane.term.buffer.active.getLine(i)?.translateToString(true)).join('\n')`.
+
+## Native file dialogs and sheets
+
+Open / save dialogs and message sheets cannot be driven headlessly, so every one in the main process goes
+through `src/main/dialogs.js`: in test mode it answers from a queue first and only opens the real dialog
+when the queue is empty. A script queues one answer per dialog it is about to trigger:
+
+```js
+await window.api.app.testNextDialog({ canceled: false, filePath: dir + '/sessions.json' }); // next showSaveDialog
+await window.api.app.testNextDialog({ canceled: false, filePaths: [file1, file2] });        // next showOpenDialog
+await window.api.app.testNextDialog({ response: 0 });                                       // next showMessageBox: button index
+await window.api.app.testNextDialog({ canceled: true });                                     // Cancel / Esc, for any of them
+(await window.api.app.testNextDialog()).pending;                                             // how many answers are still waiting
+```
+
+Answers are consumed in order by whatever opens next: Session → Export / Import Sessions (JSON), Import from
+MobaXterm.ini, the session editor's private-key "Browse…", the SFTP panel's download-to / upload-from pickers,
+the renderer's `window.api.dialog.*` bridge and the updater's sheets. An empty queue means the real dialog
+opens and a headless run hangs on it, so queue exactly one answer per dialog and check that `pending` is 0
+afterwards (a leftover answer would be eaten by the next dialog). The main process logs every canned answer as
+`[test] dialog answered without showing: <kind> "<title>" ← {...}`. `test/e2e-import-export.js` covers all of
+these paths (export / import JSON, `test/fixtures/mobaxterm-sample.ini`, key picker, SFTP pickers, each cancel
+path) and needs the local sshd below.
 
 ## Local SSH server for real connections
 

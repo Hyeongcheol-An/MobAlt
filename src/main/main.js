@@ -17,6 +17,7 @@ const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
 const { liveConnections, quitQuestion } = require('./live');
 const { startBundleWatch, relaunchOptions } = require('./bundlewatch');
+const dialogs = require('./dialogs'); // native dialogs; answered from the queue in test mode
 
 const pkg = require('../../package.json');
 app.setName('MobAlt');
@@ -444,6 +445,14 @@ function registerIpc() {
     win.webContents.send('app:notice', { level: 'error', text: String(text) });
     return true;
   });
+  // Test-only: the answer the next native file picker / sheet gives instead of opening ({ canceled, filePaths?,
+  // filePath?, response? }); answers queue up in order and the real dialog is back once the queue is empty.
+  // Without a result it only reports how many answers are still waiting.
+  ipcMain.handle('test:next-dialog', (_e, result) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    if (result === undefined || result === null) return { pending: dialogs.pending() };
+    return { pending: dialogs.enqueue(result) };
+  });
   ipcMain.handle('app:screenshot', async (_e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
@@ -506,11 +515,11 @@ function registerIpc() {
       const base = s.downloadDir || app.getPath('downloads');
       const name = path.posix.basename(remote);
       if (isDir) {
-        const r = await dialog.showOpenDialog(win, { title: `Download folder "${name}" into…`, defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
+        const r = await dialogs.showOpenDialog(win, { title: `Download folder "${name}" into…`, defaultPath: base, properties: ['openDirectory', 'createDirectory'] });
         if (r.canceled || !r.filePaths[0]) return null;
         local = path.join(r.filePaths[0], name);
       } else {
-        const r = await dialog.showSaveDialog(win, { title: 'Download to…', defaultPath: path.join(base, name) });
+        const r = await dialogs.showSaveDialog(win, { title: 'Download to…', defaultPath: path.join(base, name) });
         if (r.canceled || !r.filePath) return null;
         local = r.filePath;
       }
@@ -519,7 +528,7 @@ function registerIpc() {
   });
   ipcMain.handle('sftp:upload', async (_e, id, locals, remoteDir) => {
     if (!locals || !locals.length) {
-      const r = await dialog.showOpenDialog(win, { title: `Upload to ${remoteDir}`, properties: ['openFile', 'openDirectory', 'multiSelections'] });
+      const r = await dialogs.showOpenDialog(win, { title: `Upload to ${remoteDir}`, properties: ['openFile', 'openDirectory', 'multiSelections'] });
       if (r.canceled) return [];
       locals = r.filePaths;
     }
@@ -557,7 +566,7 @@ function registerIpc() {
     return { imported: n, found: found.length };
   });
   ipcMain.handle('sessions:import-moba', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
+    const r = await dialogs.showOpenDialog(win, { title: 'Select MobaXterm.ini', filters: [{ name: 'MobaXterm settings', extensions: ['ini', 'mxtsessions'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
     const found = importers.parseMobaXtermIni(r.filePaths[0]);
     let n = 0;
@@ -568,14 +577,14 @@ function registerIpc() {
     return { imported: n, found: found.length };
   });
   ipcMain.handle('sessions:export', async () => {
-    const r = await dialog.showSaveDialog(win, { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
+    const r = await dialogs.showSaveDialog(win, { title: 'Export sessions', defaultPath: path.join(app.getPath('documents'), 'mobalt-sessions.json') });
     if (r.canceled || !r.filePath) return null;
     const d = await store.getSessions();
     fs.writeFileSync(r.filePath, JSON.stringify({ folders: d.folders, sessions: d.sessions.map(publicSession) }, null, 2));
     return r.filePath;
   });
   ipcMain.handle('sessions:import-json', async () => {
-    const r = await dialog.showOpenDialog(win, { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
+    const r = await dialogs.showOpenDialog(win, { title: 'Import sessions JSON', filters: [{ name: 'JSON', extensions: ['json'] }], properties: ['openFile'] });
     if (r.canceled || !r.filePaths[0]) return null;
     const data = JSON.parse(fs.readFileSync(r.filePaths[0], 'utf8'));
     let n = 0;
@@ -598,9 +607,9 @@ function registerIpc() {
     try { store.saveWorkspace(data); } catch {}
   });
 
-  ipcMain.handle('dialog:open', (_e, opts) => dialog.showOpenDialog(win, opts));
-  ipcMain.handle('dialog:save', (_e, opts) => dialog.showSaveDialog(win, opts));
-  ipcMain.handle('dialog:message', (_e, opts) => dialog.showMessageBox(win, opts));
+  ipcMain.handle('dialog:open', (_e, opts) => dialogs.showOpenDialog(win, opts));
+  ipcMain.handle('dialog:save', (_e, opts) => dialogs.showSaveDialog(win, opts));
+  ipcMain.handle('dialog:message', (_e, opts) => dialogs.showMessageBox(win, opts));
   ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url));
   ipcMain.handle('shell:show-item', (_e, p) => shell.showItemInFolder(p));
   ipcMain.handle('shell:open-path', (_e, p) => shell.openPath(p));
