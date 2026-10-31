@@ -1,32 +1,90 @@
 {
   "@generated": "scripts/i18n-extract.js — run `npm run i18n`; the keys are the English source strings, each dictionary in this folder maps them",
   "strings": {
+    "⌥⌘1 on a split tab: the other panes keep their terminals as tabs right after this one, or close": {
+      "refs": [
+        "src/renderer/dialogs.js:784"
+      ]
+    },
+    "Ask every time": {
+      "refs": [
+        "src/renderer/dialogs.js:784"
+      ]
+    },
+    "Cancel": {
+      "refs": [
+        "src/renderer/layout.js:659"
+      ]
+    },
+    "Closing drops {n} live connection.": {
+      "plural": "Closing drops {n} live connections.",
+      "refs": [
+        "src/renderer/layout.js:657"
+      ]
+    },
+    "Keep only this pane": {
+      "refs": [
+        "src/renderer/layout.js:660"
+      ]
+    },
+    "Keep the active pane, close the others": {
+      "refs": [
+        "src/renderer/dialogs.js:784"
+      ]
+    },
     "Language": {
       "refs": [
-        "src/renderer/dialogs.js:790",
-        "src/renderer/dialogs.js:806"
+        "src/renderer/dialogs.js:793",
+        "src/renderer/dialogs.js:809"
       ]
     },
     "Local X server: {display}": {
       "refs": [
         "src/renderer/app.js:55",
-        "src/renderer/app.js:1198"
+        "src/renderer/app.js:1209"
       ]
     },
     "Menus, panels and dialogs switch at once; terminal output is not translated": {
       "refs": [
-        "src/renderer/dialogs.js:806"
+        "src/renderer/dialogs.js:809"
+      ]
+    },
+    "Move panes to tabs": {
+      "refs": [
+        "src/renderer/layout.js:661"
+      ]
+    },
+    "Move the other panes to tabs of their own": {
+      "refs": [
+        "src/renderer/dialogs.js:784"
       ]
     },
     "No X server found (install XQuartz for X11 forwarding)": {
       "refs": [
         "src/renderer/app.js:55",
-        "src/renderer/app.js:1198"
+        "src/renderer/app.js:1209"
       ]
     },
     "System default ({name})": {
       "refs": [
-        "src/renderer/dialogs.js:790"
+        "src/renderer/dialogs.js:793"
+      ]
+    },
+    "The other pane can become a tab of its own right after this one, its terminal as it is — or close.": {
+      "plural": "The {n} other panes can become tabs of their own right after this one, their terminals as they are — or close.",
+      "refs": [
+        "src/renderer/layout.js:656"
+      ]
+    },
+    "Unsplit": {
+      "refs": [
+        "src/renderer/dialogs.js:784",
+        "src/renderer/dialogs.js:822"
+      ]
+    },
+    "Unsplit this tab": {
+      "refs": [
+        "src/renderer/layout.js:653"
       ]
     }
   }
