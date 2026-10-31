@@ -440,6 +440,7 @@ export class Workspace {
     if (next) tab.activePane = next;
     this._applyZoom(tab);
     for (const p of panes) p.fit(); // the zoomed pane grows to the tab, the restored ones shrink back to their cells
+    for (const p of panes) p.syncWebgl?.(); // hidden siblings give their GPU context back, restored ones take one (terminal.js WEBGL_BUDGET)
     this.app.updateMultiexec?.(); // the broadcast set is the zoomed pane alone
     this.app.saveWorkspaceSoon?.();
     return true;
@@ -464,18 +465,21 @@ export class Workspace {
       tab.activePane && tab.activePane.focus();
       return;
     }
-    if (this.active) {
-      this.active.tabEl.classList.remove('active');
-      this.active.tabEl.setAttribute('aria-selected', 'false');
-      this.active.pageEl.classList.remove('active');
+    const prev = this.active;
+    if (prev) {
+      prev.tabEl.classList.remove('active');
+      prev.tabEl.setAttribute('aria-selected', 'false');
+      prev.pageEl.classList.remove('active');
     }
     this.active = tab;
+    if (prev) for (const p of prev.panes()) p.syncWebgl?.(); // off screen now: their GPU contexts go back to the budget first…
     tab.tabEl.classList.add('active');
     tab.tabEl.setAttribute('aria-selected', 'true');
     tab.pageEl.classList.add('active');
     this._rove(tab);
     tab.tabEl.scrollIntoView({ inline: 'nearest', block: 'nearest' });
     for (const p of tab.panes()) p.fit();
+    for (const p of tab.panes()) p.syncWebgl?.(); // …and the panes shown now take theirs (terminal.js WEBGL_BUDGET)
     if (tab.activePane) this.app.focusPane(tab.activePane, true);
     this.app.onActiveTabChanged(tab);
   }
@@ -665,6 +669,7 @@ export class Workspace {
       p.el.classList.toggle('show-head', panes.length > 1);
       p.mount();
       p.fit();
+      p.syncWebgl?.(); // a re-layout may have shown or hidden the pane (zoom, split): the renderer follows
     }
     this.syncThemes(tab);
     this.app.saveWorkspaceSoon?.();

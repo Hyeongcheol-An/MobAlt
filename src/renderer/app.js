@@ -534,7 +534,6 @@ class App {
   focusPane(pane, viaTab = false) {
     if (pane && pane.tab && pane.tab.zoomed && pane.tab.zoomed !== pane) this.workspace.setZoom(pane.tab, null); // a hidden pane that gets the focus (⌘], reconnect, a drop) must be seen
     if (pane && pane.tab) queueMicrotask(() => pane.tab.tabEl && this.workspace.updateTab(pane.tab)); // tab dot follows the active pane
-    if (pane && !pane.webgl && pane.mounted && pane.kind !== 'empty' && pane.kind !== 'ftp' && this.workspace.allPanes().length <= 12) pane._loadWebgl(); // regain GPU rendering after a context-limit burst
     if (this.focused && this.focused !== pane) this.focused.el.classList.remove('focused');
     this.focused = pane;
     pane.el.classList.add('focused');
@@ -543,6 +542,7 @@ class App {
       if (this.tabTitlePane(pane.tab)?.session) this.syncTabTitle(pane.tab); // a session tab keeps its session's name and icon whichever pane is used
       if (!viaTab && this.workspace.active !== pane.tab) this.workspace.activate(pane.tab);
     }
+    if (typeof pane.syncWebgl === 'function') pane.syncWebgl(); // on screen now (a split, a drop, an un-zoom): a GPU context within the budget
     pane.focus();
     this.updateStatus(pane);
     this.sftpPanel.setPane(pane);
