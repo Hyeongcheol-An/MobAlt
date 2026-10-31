@@ -667,6 +667,7 @@ export function paneSettingsDialog(app, pane) {
   };
   const modal = showModal({
     title: t('Pane Settings — {title}', { title: pane.title }),
+    width: 'wide', // the theme row (select + preview) needs the Settings dialog's width in every language
     body,
     buttons: [
       { label: t('Cancel'), value: null },
