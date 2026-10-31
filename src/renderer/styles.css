@@ -91,6 +91,8 @@ input, select, textarea { user-select: text; }
 #side-strip { width: 30px; flex: none; display: flex; flex-direction: column; background: var(--bg-2); border-right: 1px solid var(--divider); }
 .strip-btn { position: relative; width: 30px; min-height: 84px; border: 0; background: transparent; color: var(--fg-dim); padding: 0; border-bottom: 1px solid var(--divider); }
 .strip-btn span { display: block; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; letter-spacing: .5px; }
+/* CJK labels stand upright and read top-down (the Latin ones read bottom-up, rotated): the 180° turn would print them upside down */
+.strip-btn span:lang(ko), .strip-btn span:lang(ja), .strip-btn span:lang(zh) { text-orientation: upright; transform: none; letter-spacing: 0; }
 .strip-btn:hover { color: var(--fg); background: var(--bg-3); }
 .strip-btn.active { color: var(--fg); background: var(--bg); }
 .strip-btn.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
