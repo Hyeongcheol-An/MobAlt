@@ -159,7 +159,7 @@ export function contextMenu(x, y, items) {
     }
     if (!it) continue;
     const row = h('div', { class: 'ctx-item' + (it.disabled ? ' disabled' : ''), role: 'menuitem', tabindex: -1, 'aria-disabled': it.disabled ? 'true' : null, onclick: () => { closeContextMenu(); it.action && it.action(); } }, it.label, it.key ? h('span', { class: 'k' }, it.key) : null);
-    if (it.danger) row.style.color = '#ffb3ae';
+    if (it.danger) row.style.color = 'var(--danger-fg)';
     menu.append(row);
   }
   root.append(menu);

@@ -111,8 +111,14 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
 - **로그**: Terminal → Start/Stop Session Log 또는 세션 옵션으로 출력을 `~/Documents/MobAlt Logs/`에
   기록합니다. Settings → Logging의 *Strip colours and control sequences*를 켜면 ANSI 색상·제어
   시퀀스·폴더 추적 훅을 걷어낸 일반 텍스트로 저장합니다.
-- **테마·글꼴**: Settings의 Theme/Font가 모든 터미널에 적용되고, 세션별로 Terminal 탭에서 덮어쓸 수
-  있습니다.
+- **테마·외관**: Settings → Theme는 터미널만이 아니라 프로그램 전체의 색을 바꿉니다. 툴바·사이드바·탭·
+  상태 표시줄·대화상자·메뉴·토스트·배너가 선택한 팔레트에서 파생된 크롬 색을 쓰고(*Moba Dark*는 익숙한
+  어두운 크롬, *Light*는 거의 흰 패널에 어두운 글자의 밝은 앱, *One Dark*·*Dracula*·*Solarized Dark*·
+  *Gruvbox Dark*는 각자의 색조로 크롬을 물들임), 네이티브 컨트롤과 타이틀 바 띠도 따라갑니다. 크롬의 모든
+  글자색은 어느 테마에서든 배경과 최소 4.5:1 명암비를 유지합니다. 테마 선택 상자 옆에는 그 팔레트 자체의
+  색으로 그린 프롬프트 견본이 보이고, Save를 누르면 바로 적용됩니다. Settings → Font는 모든 터미널에
+  적용되고, 세션별로 Terminal 탭에서 테마·글꼴을 덮어쓸 수 있습니다. 세션 테마는 그 창의 터미널만 바꾸고
+  창 전체는 전역 테마를 따릅니다.
 
 ## 파일 (SFTP / FTP)
 
@@ -176,7 +182,7 @@ to SFTP panel when SSH connects").
 
 ![설정](images/settings.png)
 
-설정에는 글꼴, 커서, 스크롤백, 테마, 마우스/키, 로컬 셸과 폴더 통합, 외부 편집기, 다운로드·로그 폴더,
+설정에는 글꼴, 커서, 스크롤백, 테마(창 전체의 외관, *테마·외관* 참고), 마우스/키, 로컬 셸과 폴더 통합, 외부 편집기, 다운로드·로그 폴더,
 SSH keep-alive, 종료 확인, 작업대 복원, 업데이트 확인이 있습니다. "Open config folder"가 저장 위치를
 보여 줍니다.
 

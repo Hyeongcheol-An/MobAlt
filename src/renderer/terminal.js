@@ -1,6 +1,7 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
 import { h, contextMenu, toast, icon } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
+import { THEMES, searchDecorations } from './theme.js';
 
 /** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
 const startErrorText = (e) => errMsg(e);
@@ -14,43 +15,7 @@ const SearchAddon = window.SearchAddon.SearchAddon;
 const WebglAddon = window.WebglAddon.WebglAddon;
 const Unicode11Addon = window.Unicode11Addon.Unicode11Addon;
 
-export const THEMES = {
-  'moba-dark': { background: '#1e1e1e', foreground: '#ececec', cursor: '#b4b4c0', cursorAccent: '#1e1e1e', selectionBackground: 'rgba(78,161,255,.35)',
-    black: '#000000', red: '#cd3131', green: '#0dbc79', yellow: '#e5e510', blue: '#2472c8', magenta: '#bc3fbc', cyan: '#11a8cd', white: '#e5e5e5',
-    brightBlack: '#666666', brightRed: '#f14c4c', brightGreen: '#23d18b', brightYellow: '#f5f543', brightBlue: '#3b8eea', brightMagenta: '#d670d6', brightCyan: '#29b8db', brightWhite: '#ffffff' },
-  'one-dark': { background: '#282c34', foreground: '#abb2bf', cursor: '#528bff', selectionBackground: 'rgba(82,139,255,.3)',
-    black: '#282c34', red: '#e06c75', green: '#98c379', yellow: '#e5c07b', blue: '#61afef', magenta: '#c678dd', cyan: '#56b6c2', white: '#abb2bf',
-    brightBlack: '#5c6370', brightRed: '#e06c75', brightGreen: '#98c379', brightYellow: '#e5c07b', brightBlue: '#61afef', brightMagenta: '#c678dd', brightCyan: '#56b6c2', brightWhite: '#ffffff' },
-  dracula: { background: '#282a36', foreground: '#f8f8f2', cursor: '#f8f8f2', selectionBackground: 'rgba(68,71,90,.8)',
-    black: '#21222c', red: '#ff5555', green: '#50fa7b', yellow: '#f1fa8c', blue: '#bd93f9', magenta: '#ff79c6', cyan: '#8be9fd', white: '#f8f8f2',
-    brightBlack: '#6272a4', brightRed: '#ff6e6e', brightGreen: '#69ff94', brightYellow: '#ffffa5', brightBlue: '#d6acff', brightMagenta: '#ff92df', brightCyan: '#a4ffff', brightWhite: '#ffffff' },
-  'solarized-dark': { background: '#002b36', foreground: '#839496', cursor: '#93a1a1', selectionBackground: 'rgba(7,54,66,.9)',
-    black: '#073642', red: '#dc322f', green: '#859900', yellow: '#b58900', blue: '#268bd2', magenta: '#d33682', cyan: '#2aa198', white: '#eee8d5',
-    brightBlack: '#002b36', brightRed: '#cb4b16', brightGreen: '#586e75', brightYellow: '#657b83', brightBlue: '#839496', brightMagenta: '#6c71c4', brightCyan: '#93a1a1', brightWhite: '#fdf6e3' },
-  'gruvbox-dark': { background: '#282828', foreground: '#ebdbb2', cursor: '#ebdbb2', selectionBackground: 'rgba(80,73,69,.9)',
-    black: '#282828', red: '#cc241d', green: '#98971a', yellow: '#d79921', blue: '#458588', magenta: '#b16286', cyan: '#689d6a', white: '#a89984',
-    brightBlack: '#928374', brightRed: '#fb4934', brightGreen: '#b8bb26', brightYellow: '#fabd2f', brightBlue: '#83a598', brightMagenta: '#d3869b', brightCyan: '#8ec07c', brightWhite: '#ebdbb2' },
-  light: { background: '#ffffff', foreground: '#1f2328', cursor: '#1f2328', selectionBackground: 'rgba(0,120,215,.25)',
-    black: '#000000', red: '#cd3131', green: '#00bc00', yellow: '#949800', blue: '#0451a5', magenta: '#bc05bc', cyan: '#0598bc', white: '#555555',
-    brightBlack: '#666666', brightRed: '#cd3131', brightGreen: '#14ce14', brightYellow: '#b5ba00', brightBlue: '#0451a5', brightMagenta: '#bc05bc', brightCyan: '#0598bc', brightWhite: '#a5a5a5' },
-};
-
-/** Relative luminance of a '#rrggbb' colour (0 black … 1 white). */
-const luminance = (hex) => {
-  const ch = (i) => { const v = parseInt(hex.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
-  return 0.2126 * ch(1) + 0.7152 * ch(3) + 0.0722 * ch(5);
-};
-/** `a` mixed into `b` by `t` (0…1), both '#rrggbb'. */
-const mix = (a, b, t) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * t + parseInt(b.slice(i, i + 2), 16) * (1 - t)).toString(16).padStart(2, '0')).join('');
-export const isLightTheme = (theme) => luminance(theme.background || '#1e1e1e') > 0.4;
-/**
- * Find-bar highlight colours for a palette. The fixed greys suit the dark themes; under a light theme's dark text they
- * turned every match but the active one into a dark block (1.9:1), so a light theme gets a pale tint of its own blue.
- */
-export function searchDecorations(theme) {
-  const matchBackground = isLightTheme(theme) ? mix(theme.blue || '#0451a5', theme.background, 0.25) : '#515c6a';
-  return { matchBackground, activeMatchBackground: '#e6b422', activeMatchBorder: '#e6b422', matchOverviewRuler: '#888', activeMatchColorOverviewRuler: '#e6b422' };
-}
+export { THEMES, searchDecorations }; // the palettes live in theme.js; app.js and dialogs.js keep importing them from here
 
 let seq = 0;
 

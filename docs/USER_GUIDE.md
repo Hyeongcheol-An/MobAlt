@@ -118,8 +118,15 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 - **Logging**: Terminal → Start/Stop Session Log, or the session option, writes the raw output to
   `~/Documents/MobAlt Logs/`. Settings → Logging → *Strip colours and control sequences* keeps the
   logs as plain text instead (ANSI colours, cursor movement and the folder-tracking hook are removed).
-- **Themes and fonts**: Settings → Theme/Font apply to all terminals; a session can override them in
-  its Terminal tab.
+- **Themes and appearance**: Settings → Theme colours the whole program, not only the terminals. The
+  toolbar, sidebar, tabs, status bar, dialogs, menus, toasts and banners take a chrome palette derived
+  from the chosen one — *Moba Dark* is the familiar dark chrome, *Light* is a light application with
+  near-white panels and dark text, *One Dark*, *Dracula*, *Solarized Dark* and *Gruvbox Dark* tint the
+  chrome in their own hue — and the native controls and the title-bar strip follow. Every text colour in
+  the chrome keeps at least 4.5:1 contrast on its background, in every theme. The theme select shows a
+  sample prompt in the palette's own colours; Save applies it at once. Settings → Font applies to all
+  terminals; a session can override theme and font in its Terminal tab — its own theme colours just that
+  pane's terminal, the window keeps the global one.
 
 ## Files (SFTP / FTP)
 
@@ -185,7 +192,8 @@ MobAlt restores your tabs, splits and sessions on the next launch and reconnects
 
 ![Settings](images/settings.png)
 
-Settings cover fonts, cursor, scrollback, theme, mouse/keys, the local shell and its folder
+Settings cover fonts, cursor, scrollback, theme (the look of the whole window, see *Themes and
+appearance*), mouse/keys, the local shell and its folder
 integration, the external editor, download and log folders, SSH keep-alive, close confirmation,
 workspace restore and the update check. "Open config folder" shows where everything is stored.
 

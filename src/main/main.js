@@ -143,6 +143,14 @@ ftp.on('edit-synced', (e) => win && !win.isDestroyed() && win.webContents.send('
 tunnels.on('changed', (list) => win && !win.isDestroyed() && win.webContents.send('tunnels:changed', list));
 
 // ---------- window ----------
+/** `{ background: '#rrggbb', scheme: 'dark'|'light' }` from the renderer (app:chrome), or null when it is not one. */
+function validChrome(c) {
+  if (!c || typeof c !== 'object' || !/^#[0-9a-f]{6}$/i.test(String(c.background)) || (c.scheme !== 'dark' && c.scheme !== 'light')) return null;
+  return { background: String(c.background).toLowerCase(), scheme: c.scheme };
+}
+/** The chrome palette the renderer last applied, remembered in the settings, so a new window and the native theme start in it. */
+const chromeOf = (settings) => validChrome(settings && settings.chrome) || { background: '#1e1f22', scheme: 'dark' };
+
 function createWindow() {
   const settings = store.getSettings();
   const bounds = settings.windowBounds || { width: 1400, height: 880 };
@@ -153,7 +161,7 @@ function createWindow() {
     title: 'MobAlt',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 14, y: 14 },
-    backgroundColor: '#1e1f22',
+    backgroundColor: chromeOf(settings).background, // the applied theme's chrome: no dark flash behind a light theme
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -369,6 +377,22 @@ function registerIpc() {
   }));
   ipcMain.on('app:quit', () => app.quit());
   ipcMain.handle('app:relaunch', () => relaunch());
+  // The renderer applied a theme (Settings → Theme, or at startup): the window background (the title-bar strip, what
+  // shows through while resizing) and the native theme (menus, sheets, prefers-color-scheme) follow its chrome
+  // palette, and the pair is remembered so the next launch starts in it (createWindow, app.whenReady).
+  ipcMain.on('app:chrome', (_e, c) => {
+    const chrome = validChrome(c);
+    if (!chrome) return;
+    if (win && !win.isDestroyed()) win.setBackgroundColor(chrome.background);
+    nativeTheme.themeSource = chrome.scheme;
+    const cur = store.getSettings().chrome;
+    if (!cur || cur.background !== chrome.background || cur.scheme !== chrome.scheme) store.setSettings({ chrome });
+  });
+  // Test-only: what the window and the native theme were last told, and what the next launch would start in.
+  ipcMain.handle('test:chrome', () => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    return { background: win && !win.isDestroyed() ? win.getBackgroundColor() : null, scheme: nativeTheme.themeSource, stored: store.getSettings().chrome || null };
+  });
   // Test-only: perform a REAL drag-and-drop through the Chrome DevTools Protocol so that the
   // browser's own drop rules (effectAllowed/dropEffect, dragover preventDefault) are exercised.
   ipcMain.handle('test:resize', (_e, w, h) => {
@@ -648,8 +672,8 @@ process.on('uncaughtException', (e) => {
     if (win && !win.isDestroyed()) win.webContents.send('app:notice', { level: 'error', text: `Internal error: ${e.message}` });
   } catch {}
 });
-nativeTheme.themeSource = 'dark';
 app.whenReady().then(() => {
+  nativeTheme.themeSource = chromeOf(store.getSettings()).scheme; // the applied theme's chrome (app:chrome keeps it current)
   // `npm start` runs the bare Electron binary, which shows Electron's own icon in the Dock; the packaged
   // app gets build/icon.icns from electron-builder. Point the dev Dock tile at the rendered PNG.
   if (process.platform === 'darwin' && !app.isPackaged && app.dock) {

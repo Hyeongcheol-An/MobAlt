@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld('api', {
     // a different MobAlt.app is on disk (brew upgrade / dragged DMG): { version, current }; relaunch() restarts into it
     onBundleUpdated: (fn) => on('app:bundle-updated', fn),
     relaunch: () => invoke('app:relaunch'),
+    // the chrome palette the renderer applied ({ background: '#rrggbb', scheme: 'dark'|'light' }): window background + native theme
+    chrome: (chrome) => send('app:chrome', chrome),
+    testChrome: () => invoke('test:chrome'),
   },
   term: {
     spawnLocal: (opts) => invoke('term:spawn-local', opts),

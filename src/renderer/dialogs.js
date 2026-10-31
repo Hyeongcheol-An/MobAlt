@@ -3,6 +3,20 @@ import { h, showModal, toast, confirmDialog, TYPE_LABEL, icon } from './ui.js';
 import { THEMES } from './terminal.js';
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+/**
+ * Settings → Theme: a sample prompt painted in the chosen theme's own colours (inline styles, never the chrome's
+ * tokens), so the preview reads the same whatever the window currently looks like.
+ */
+function paintThemePreview(el, name) {
+  const t = THEMES[name] || THEMES['moba-dark'];
+  el.replaceChildren(
+    h('span', { style: { color: t.green } }, 'user@host'), ':', h('span', { style: { color: t.blue } }, '~'), '$ ls ',
+    h('span', { style: { color: t.cyan } }, 'src '), h('span', { style: { color: t.magenta } }, 'docs '), h('span', { style: { color: t.yellow } }, 'README')
+  );
+  Object.assign(el.style, { background: t.background, color: t.foreground, borderColor: t.brightBlack || t.foreground });
+  el.title = `${themeLabel(name)}: the terminal colours`;
+  return el;
+}
 const clamp = (v, min, max, def) => (Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : def);
 const DEFAULT_PORT = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
 const BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
@@ -484,6 +498,8 @@ export function settingsDialog(app) {
   const cursorBlink = check('Blink cursor', s.cursorBlink);
   const scrollback = num(s.scrollback, { min: 100, max: 1000000 });
   const theme = select(Object.keys(THEMES).map((t) => [t, themeLabel(t)]), s.theme);
+  const themePreview = paintThemePreview(h('span', { class: 'theme-preview', 'aria-hidden': 'true' }), theme.value);
+  theme.addEventListener('change', () => paintThemePreview(themePreview, theme.value));
   const rightClickPaste = check('Right-click pastes (⇧-right-click for menu)', s.rightClickPaste);
   const copyOnSelect = check('Copy on select', s.copyOnSelect);
   const optMeta = check('Option key acts as Meta/Alt', s.macOptionIsMeta !== false);
@@ -515,7 +531,8 @@ export function settingsDialog(app) {
     body: h('div', { class: 'form-grid' },
       ...field('Font family', fontFamily), ...field('Font size', fontSize), ...field('Line height', lineHeight),
       ...field('Cursor', cursorStyle), h('label', {}), h('div', { class: 'checks' }, cursorBlink.el),
-      ...field('Scrollback lines', scrollback), ...field('Theme', theme),
+      ...field('Scrollback lines', scrollback),
+      ...field('Theme', h('div', { class: 'inline theme-field' }, theme, themePreview), 'Colours the whole window — toolbar, sidebar, tabs, dialogs — not only the terminals; a session can keep its own terminal theme'),
       h('label', {}, 'Mouse / keys'), h('div', { class: 'checks' }, rightClickPaste.el, copyOnSelect.el, optMeta.el),
       ...field('Local shell', localShell), h('label', {}), h('div', { class: 'checks' }, shellInt.el),
       ...field('External editor', editor, '{file} is replaced by the temp file path; omit it to append the path'),
