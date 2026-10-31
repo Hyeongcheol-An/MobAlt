@@ -21,9 +21,28 @@ const clamp = (v, min, max, def) => (Number.isFinite(v) ? Math.min(max, Math.max
 const DEFAULT_PORT = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
 const BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
 
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+/**
+ * A labelled form row. The visible label names the control for assistive tech (VoiceOver: "Font size, stepper"):
+ * the control gets a stable id derived from the label text (`fld-font-size`; a numbered one if that id is already on
+ * screen in another dialog) and the label points at it. `input` may be a wrapper (an .inline group, the Theme
+ * preview): then its first input/select/textarea is the one named; a picker row (role=radiogroup) carries its own
+ * aria-label and is left alone, as are controls that already have an id.
+ */
 function field(label, input, help) {
+  const lab = h('label', {}, label);
+  const ctl = input.matches('input, select, textarea') ? input : [...input.querySelectorAll('input, select, textarea')].find((c) => !c.closest('[role=radiogroup]'));
+  if (ctl) {
+    if (!ctl.id) {
+      const base = `fld-${slug(label) || 'field'}`;
+      let id = base;
+      for (let n = 2; document.getElementById(id); n++) id = `${base}-${n}`;
+      ctl.id = id;
+    }
+    lab.htmlFor = ctl.id;
+  }
   // Element.append() would render a literal "null", so only include the help node when present.
-  const out = [h('label', {}, label), input];
+  const out = [lab, input];
   if (help) out.push(h('div', { class: 'form-help' }, help));
   return out;
 }
@@ -37,8 +56,8 @@ function check(label, checked, attrs = {}) {
   const cb = h('input', { type: 'checkbox', checked: !!checked, ...attrs });
   return { el: h('label', {}, cb, label), cb };
 }
-function select(options, value) {
-  return h('select', {}, options.map(([v, l]) => h('option', { value: v, selected: v === value }, l)));
+function select(options, value, attrs = {}) {
+  return h('select', attrs, options.map(([v, l]) => h('option', { value: v, selected: v === value }, l)));
 }
 /** One pick of a picker row (role=radio): only the chosen one (or `extra.stop`) is in the Tab order, see pickRow(). */
 function pick(content, checked, title, onclick, extra = {}) {
@@ -102,7 +121,7 @@ function tabStripKeys(strip) {
 let tabSeq = 0;
 /**
  * Section tabs of a dialog: the `.mtabs` strip (a tablist) and one `.mpage` panel per section, the first one shown.
- * `sections` = [[key, label, panel], …]; returns { strip, pages, show(key) }. Every panel stays in the DOM, so a
+ * `sections` = [[key, label, panel], …]; returns { strip, pages, btns, show(key) }. Every panel stays in the DOM, so a
  * Save handler reads all its fields whichever section is in front.
  */
 function modalTabs(sections) {
@@ -124,7 +143,7 @@ function modalTabs(sections) {
     return (btns[k] = h('button', { type: 'button', role: 'tab', 'aria-controls': page.id, onclick: () => show(k) }, label));
   })));
   show(sections[0][0]);
-  return { strip, pages, show };
+  return { strip, pages, btns, show };
 }
 /**
  * Keep a tabbed dialog body at the height of its tallest section, so the dialog does not grow, shrink and re-centre
@@ -162,7 +181,7 @@ export function sessionEditor(app, initial = {}) {
     );
   };
   renderIcons();
-  const customColor = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(colorVal) ? colorVal : '#4ea1ff', title: 'Custom colour' });
+  const customColor = h('input', { type: 'color', value: /^#[0-9a-f]{6}$/i.test(colorVal) ? colorVal : '#4ea1ff', title: 'Custom colour', 'aria-label': 'Custom colour' });
   const colorRow = pickRow('Colour');
   const renderColors = () => {
     // a custom colour (the colour input) is none of the swatches: "—" then holds the group's Tab stop without being chosen
@@ -206,7 +225,7 @@ export function sessionEditor(app, initial = {}) {
   authMethod.addEventListener('change', applyAuth);
   const sshSessions = app.sessions.sessions.filter((x) => x.type === 'ssh' && x.id !== s.id);
   const jumpSel = select([['', '(none)'], ...sshSessions.map((x) => [x.id, `${x.name} (${x.username ? x.username + '@' : ''}${x.host})`]), ['__manual', 'Enter manually…']], s.jumpSessionId || (s.jumpHost ? '__manual' : ''));
-  const jumpHost = text(s.jumpHost, { placeholder: 'user@bastion[:port]', hidden: jumpSel.value !== '__manual' });
+  const jumpHost = text(s.jumpHost, { placeholder: 'user@bastion[:port]', 'aria-label': 'Jump host address', hidden: jumpSel.value !== '__manual' });
   jumpSel.addEventListener('change', () => (jumpHost.hidden = jumpSel.value !== '__manual'));
   const x11 = check('X11 forwarding (XQuartz)', s.x11);
   const agentFwd = check('Agent forwarding', s.agentForward);
@@ -249,12 +268,13 @@ export function sessionEditor(app, initial = {}) {
     );
   };
   serialSel.addEventListener('change', () => { if (serialSel.value) serialCustom.value = serialSel.value; });
-  const serialRefresh = h('button', { class: 'btn small', type: 'button', title: 'Rescan ports', onclick: () => loadPorts() }, '↻');
+  const serialRefresh = h('button', { class: 'btn small', type: 'button', title: 'Rescan ports', 'aria-label': 'Rescan ports', onclick: () => loadPorts() }, '↻');
   const baud = select(BAUD_RATES.map((b) => [String(b), String(b)]), String(s.baudRate || 115200));
-  const dataBits = select([['8', '8 data bits'], ['7', '7 data bits'], ['6', '6'], ['5', '5']], String(s.dataBits || 8));
-  const parity = select([['none', 'No parity'], ['even', 'Even'], ['odd', 'Odd']], s.parity || 'none');
-  const stopBits = select([['1', '1 stop bit'], ['2', '2 stop bits']], String(s.stopBits || 1));
-  const flow = select([['none', 'No flow control'], ['rtscts', 'RTS/CTS'], ['xonxoff', 'XON/XOFF']], s.flow || 'none');
+  // the four Framing selects share one visible caption: each carries its own name
+  const dataBits = select([['8', '8 data bits'], ['7', '7 data bits'], ['6', '6'], ['5', '5']], String(s.dataBits || 8), { 'aria-label': 'Data bits' });
+  const parity = select([['none', 'No parity'], ['even', 'Even'], ['odd', 'Odd']], s.parity || 'none', { 'aria-label': 'Parity' });
+  const stopBits = select([['1', '1 stop bit'], ['2', '2 stop bits']], String(s.stopBits || 1), { 'aria-label': 'Stop bits' });
+  const flow = select([['none', 'No flow control'], ['rtscts', 'RTS/CTS'], ['xonxoff', 'XON/XOFF']], s.flow || 'none', { 'aria-label': 'Flow control' });
   const localEcho = check('Local echo', s.localEcho);
   const newline = select([['cr', 'CR'], ['lf', 'LF'], ['crlf', 'CR+LF']], s.newline || 'cr');
 
@@ -272,7 +292,7 @@ export function sessionEditor(app, initial = {}) {
           h('td', {}, { local: 'Local (-L)', remote: 'Remote (-R)', dynamic: 'SOCKS (-D)' }[t.type]),
           h('td', { class: 'mono' }, `${t.bindHost || '127.0.0.1'}:${t.bindPort}`),
           h('td', { class: 'mono' }, t.type === 'dynamic' ? '—' : `${t.destHost}:${t.destPort}`),
-          h('td', {}, h('input', { type: 'checkbox', checked: t.enabled !== false, onchange: (e) => (t.enabled = e.target.checked) })),
+          h('td', {}, h('input', { type: 'checkbox', checked: t.enabled !== false, 'aria-label': `Tunnel ${t.bindPort} enabled`, onchange: (e) => (t.enabled = e.target.checked) })),
           h('td', {}, h('button', { class: 'btn small icon-only', type: 'button', title: 'Remove', 'aria-label': `Remove tunnel ${t.bindPort}`, onclick: (e) => {
             const viaKeyboard = e.currentTarget === document.activeElement;
             tunnels.splice(i, 1);
@@ -292,15 +312,8 @@ export function sessionEditor(app, initial = {}) {
     terminal: h('div', { class: 'mpage form-grid' }),
     tunnels: h('div', { class: 'mpage' }, h('p', { style: { color: 'var(--fg-dim)', marginTop: 0 } }, 'Port forwards started automatically when this session connects.'), tunnelTable),
   };
-  const tabBtns = {};
-  const tabs = tabStripKeys(h('div', { class: 'mtabs' }, Object.keys(pages).map((k) => (tabBtns[k] = h('button', { onclick: () => showPage(k) }, { basic: 'Basic', advanced: 'Advanced SSH', terminal: 'Terminal', tunnels: `Tunnels` }[k])))));
-  const showPage = (k) => {
-    for (const [n, p] of Object.entries(pages)) {
-      p.classList.toggle('active', n === k);
-      tabBtns[n].classList.toggle('active', n === k);
-    }
-  };
-  tabBtns.basic.classList.add('active');
+  // the same tablist / tab / tabpanel strip as Settings and Keyboard shortcuts (arrows between the sections, aria-selected on the one in front)
+  const { strip: tabs, btns: tabBtns, show: showPage } = modalTabs([['basic', 'Basic', pages.basic], ['advanced', 'Advanced SSH', pages.advanced], ['terminal', 'Terminal', pages.terminal], ['tunnels', 'Tunnels', pages.tunnels]]);
 
   const typeBtns = {};
   const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((t) => (typeBtns[t] = h('button', { type: 'button', class: t === type ? 'active' : '', onclick: () => setType(t) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '💻', telnet: '☎️', serial: '🔌', ftp: '📁', rdp: '🪟', vnc: '🖥️' }[t]), TYPE_LABEL[t]))));
@@ -467,16 +480,17 @@ export function sessionEditor(app, initial = {}) {
 
 export function tunnelForm(initial = {}) {
   const type = select([['local', 'Local (-L): local port → remote destination'], ['remote', 'Remote (-R): remote port → local destination'], ['dynamic', 'Dynamic (-D): SOCKS5 proxy']], initial.type || 'local');
-  const bindHost = text(initial.bindHost || '127.0.0.1');
-  const bindPort = num(initial.bindPort || '', { min: 0, max: 65535, placeholder: '8080' });
-  const destHost = text(initial.destHost || '', { placeholder: 'localhost' });
-  const destPort = num(initial.destPort || '', { min: 1, max: 65535, placeholder: '80' });
+  // host:port pairs share one visible label (Bind / Destination): each box carries its own name
+  const bindHost = text(initial.bindHost || '127.0.0.1', { 'aria-label': 'Bind address' });
+  const bindPort = num(initial.bindPort || '', { min: 0, max: 65535, placeholder: '8080', 'aria-label': 'Bind port' });
+  const destHost = text(initial.destHost || '', { placeholder: 'localhost', 'aria-label': 'Destination host' });
+  const destPort = num(initial.destPort || '', { min: 1, max: 65535, placeholder: '80', 'aria-label': 'Destination port' });
   const name = text(initial.name || '', { placeholder: 'optional label' });
-  const destRow = [h('label', {}, 'Destination'), h('div', { class: 'inline' }, destHost, ':', destPort)];
+  const destRow = field('Destination', h('div', { class: 'inline' }, destHost, ':', destPort));
   type.addEventListener('change', () => destRow.forEach((e) => (e.hidden = type.value === 'dynamic')));
   const m = showModal({
     title: 'Tunnel',
-    body: h('div', { class: 'form-grid' }, ...field('Type', type), ...field('Label', name), h('label', {}, 'Bind'), h('div', { class: 'inline' }, bindHost, ':', bindPort), ...destRow),
+    body: h('div', { class: 'form-grid' }, ...field('Type', type), ...field('Label', name), ...field('Bind', h('div', { class: 'inline' }, bindHost, ':', bindPort)), ...destRow),
     buttons: [
       { label: 'Cancel', value: null },
       { label: 'OK', primary: true, action: (api) => {
@@ -653,7 +667,7 @@ export function hostKeyDialog(p) {
 }
 
 export function passwordDialog(p) {
-  const input = h('input', { type: 'password', autocomplete: 'current-password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
+  const input = h('input', { type: 'password', autocomplete: 'current-password', 'aria-label': 'Password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)' } });
   const save = h('input', { type: 'checkbox', checked: false });
   const m = showModal({
     title: p.title || 'Password',
@@ -671,7 +685,7 @@ export function passwordDialog(p) {
 }
 
 export function kbdIntDialog(p) {
-  const inputs = (p.prompts || []).map((pr) => h('input', { type: pr.echo ? 'text' : 'password', style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)', marginBottom: '8px' } }));
+  const inputs = (p.prompts || []).map((pr) => h('input', { type: pr.echo ? 'text' : 'password', 'aria-label': pr.prompt, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg)', marginBottom: '8px' } }));
   const m = showModal({
     title: p.name || 'Authentication',
     width: 'narrow',

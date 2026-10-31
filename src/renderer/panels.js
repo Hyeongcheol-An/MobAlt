@@ -224,12 +224,12 @@ export class MacrosPanel {
   }
 
   edit(m) {
-    const name = h('input', { type: 'text', value: m ? m.name : '', placeholder: 'name' });
-    const text = h('textarea', { spellcheck: false, placeholder: 'Text to send. Use \\n for Enter, \\t for Tab, \\x03 for Ctrl-C.', style: { minHeight: '140px' } });
+    const name = h('input', { type: 'text', id: 'fld-macro-name', value: m ? m.name : '', placeholder: 'name' });
+    const text = h('textarea', { id: 'fld-macro-text', spellcheck: false, placeholder: 'Text to send. Use \\n for Enter, \\t for Tab, \\x03 for Ctrl-C.', style: { minHeight: '140px' } });
     text.value = m ? m.text.replace(/\r/g, '\\n').replace(/\t/g, '\\t').replace(/[\x00-\x08\x0b-\x1f]/g, (c) => '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0')) : '';
     const modal = showModal({
       title: m ? 'Edit macro' : 'New macro',
-      body: h('div', { class: 'form-grid' }, h('label', {}, 'Name'), name, h('label', {}, 'Text'), text),
+      body: h('div', { class: 'form-grid' }, h('label', { for: name.id }, 'Name'), name, h('label', { for: text.id }, 'Text'), text),
       buttons: [
         { label: 'Cancel', value: null },
         { label: 'Save', primary: true, action: (api) => {

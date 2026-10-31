@@ -496,12 +496,12 @@ export class SessionTree {
     const inside = (p) => !!f && (p === f.path || p.startsWith(f.path + '/'));
     const folders = this.collectFolders().sort().filter((p) => !inside(p));
     const current = s ? s.folder || '' : f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : '';
-    const sel = h('select', {}, h('option', { value: '' }, '(root)'), folders.map((p) => h('option', { value: p, selected: p === current }, p)));
+    const sel = h('select', { id: 'fld-move-folder' }, h('option', { value: '' }, '(root)'), folders.map((p) => h('option', { value: p, selected: p === current }, p)));
     const { showModal } = await import('./ui.js');
     const m = showModal({
       title: 'Move to folder',
       width: 'narrow',
-      body: h('div', { class: 'form-grid' }, h('label', {}, s ? 'Folder' : `Move "${f.name}" into`), sel),
+      body: h('div', { class: 'form-grid' }, h('label', { for: sel.id }, s ? 'Folder' : `Move "${f.name}" into`), sel),
       buttons: [{ label: 'Cancel', value: null }, { label: 'Move', primary: true, action: (api) => api.close(sel.value) }],
     });
     const r = await m.promise;
