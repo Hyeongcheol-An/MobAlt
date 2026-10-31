@@ -1,5 +1,5 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
-import { h, contextMenu, toast, icon } from './ui.js';
+import { h, contextMenu, toast, icon, promptDialog } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
@@ -86,6 +86,14 @@ export class TermPane {
     this.logging = false;
     this.tab = null;
     this.zoomed = false; // filling its tab (layout.js setZoom → setZoomed)
+    this.multiexecExcluded = false; // the Exclude box under the terminal (MobaXterm's per-terminal MultiExec switch): runtime only, reset when the mode goes off
+    // the pane menu's per-terminal state (MobaXterm's right-click reconfiguration, Rename Terminal, Read-only, plus the
+    // background label): kept with the pane — the workspace file, a window transfer (transferState) — pane > session > Settings
+    this.overrides = {}; // Pane Settings…: theme, fontFamily, fontSize, cursorStyle, cursorBlink, scrollback, highlight ('on' | 'off')
+    for (const [k, v] of Object.entries(opts.overrides || {})) if (v !== undefined && v !== null && v !== '') this.overrides[k] = v;
+    this.badge = opts.badge ? { ...opts.badge } : null; // the background label: { show, text, position } over the session's backgroundShown / backgroundName / backgroundPosition
+    this.readOnly = false; // Read-Only: keystrokes and pastes to this pane are dropped (setReadOnly)
+    this.titleLocked = false; // Rename Pane…: the shell's title sequences and the folder no longer rename the pane
     this.dead = false;
     this.disposed = false;
     this.connectedAt = null;
@@ -105,14 +113,15 @@ export class TermPane {
 
     const s = app.settings;
     const theme = this.themeFor(s);
+    const o = this.overrides;
     this.term = new Terminal({
       allowProposedApi: true,
-      fontFamily: s.fontFamily,
-      fontSize: this.session?.fontSize || s.fontSize,
+      fontFamily: o.fontFamily || s.fontFamily,
+      fontSize: this.baseFontSize(s),
       lineHeight: s.lineHeight || 1,
-      cursorBlink: s.cursorBlink,
-      cursorStyle: s.cursorStyle || 'block',
-      scrollback: s.scrollback || 10000,
+      cursorBlink: o.cursorBlink ?? s.cursorBlink,
+      cursorStyle: o.cursorStyle || s.cursorStyle || 'block',
+      scrollback: o.scrollback || s.scrollback || 10000,
       theme: terminalTheme(theme), // the palette plus a selection band that is visible on it (theme.js)
       macOptionIsMeta: s.macOptionIsMeta !== false,
       rightClickSelectsWord: false,
@@ -138,6 +147,7 @@ export class TermPane {
         this.session?.icon ? h('span', { class: 'picon' }, this.session.icon) : null,
         (this.headTitle = h('span', { class: 'title' }, this.title)),
         (this.zoomBadge = h('span', { class: 'zoom-badge', hidden: true }, t('zoomed'))),
+        (this.roBadge = h('span', { class: 'zoom-badge ro-badge', hidden: true, title: t('Read-only: keystrokes and pastes to this pane are dropped') }, t('read-only'))),
         (this.zoomBtn = h('button', { class: 'zoom', title: t('Zoom pane (⇧⌘⏎)'), 'aria-label': t('Zoom pane'), 'aria-pressed': 'false', onclick: () => app.action('zoom-pane', undefined, this) }, icon('zoom'))),
         // the monitoring bar toggle: an ARIA toggle like ⤢ (a stable name, aria-pressed carries the state); SSH / Mosh panes only
         (this.monBtn = h('button', { class: 'monitor', title: t('Show remote monitoring bar'), 'aria-label': t('Remote monitoring bar'), 'aria-pressed': 'false', hidden: !this.monitorAllowed(), onclick: () => app.action('toggle-monitor', undefined, this) }, icon('monitor'))),
@@ -147,20 +157,33 @@ export class TermPane {
       )),
       // the remote monitoring strip: a status region that is never announced (it changes every few seconds)
       (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': t('Remote monitoring'), hidden: true })),
-      (this.termEl = h('div', { class: 'pane-term' }))
+      // the terminal, with the background label behind its text: an overlay above xterm's canvas (which paints an opaque
+      // background) in the pane's foreground colour at ~16 % opacity, pointer-events none — never part of the buffer
+      (this.termEl = h('div', { class: 'pane-term' }, (this.badgeEl = h('div', { class: 'pane-badge', 'aria-hidden': 'true', hidden: true }, (this.badgeText = h('span', { class: 'badge-text' })))))),
+      // MobaXterm's per-terminal MultiExec switch: a strip under the terminal, shown while the mode is on
+      // (syncMultiexecStrip), with the one checkbox `Exclude "<title>" from MultiExec mode` — ticked, the pane stays on
+      // screen and connected but gets no broadcast keystrokes. Right-click / ⇧F10 on it: the mode's bulk menu (app.js).
+      (this.mxEl = h('div', { class: 'pane-mx', role: 'group', hidden: true, oncontextmenu: (e) => this._mxMenu(e), onkeydown: (e) => this._mxKey(e) },
+        h('label', { class: 'mx-label' },
+          (this.mxBox = h('input', { type: 'checkbox', class: 'mx-box', onchange: () => this.setMultiexecExcluded(this.mxBox.checked) })),
+          (this.mxCaption = h('span', { class: 'mx-caption' })))))
     );
+    this._mxRelabel();
     if (this.session?.color) this.el.style.setProperty('--pane-color', this.session.color);
     this.el.style.setProperty('--term-bg', theme.background || '#1e1e1e'); // chrome around the cell grid matches the palette from the first paint
+    this.el.style.setProperty('--term-fg', theme.foreground || '#ececec'); // the background label's colour
     this.el.addEventListener('mousedown', () => app.focusPane(this), true);
     this._wireDnD();
     this._i18nOff = onChange(() => this._relabel()); // a language switch: the labels this pane keeps on screen (dispose() unsubscribes)
 
     this.term.onData((d) => this._onInput(d));
     this.term.onBinary((d) => this._onInput(d));
+    this.term.onScroll((y) => this._onScroll(y)); // "Synchronize mouse wheel scrolling" (MultiExec bulk menu)
     this.term.onResize(({ cols, rows }) => {
       if (this.termId) window.api.term.resize(this.termId, cols, rows);
     });
     this.term.onTitleChange((title) => {
+      if (this.titleLocked) return; // Rename Pane…: the name stands
       this.title = title || this.title;
       this.updateTitle();
     });
@@ -193,6 +216,12 @@ export class TermPane {
       }
       return true;
     });
+    if (opts.title) { // a renamed pane coming back (workspace restore, a window transfer)
+      this.title = opts.title;
+      this.titleLocked = true;
+    }
+    if (opts.readOnly) this.setReadOnly(true);
+    this.updateTitle(); // the head, the Exclude caption and the background label show the title this pane starts with
   }
 
   /** Which drop zone the pointer is in: center (replace) or an edge (split in that direction). */
@@ -288,6 +317,7 @@ export class TermPane {
     // canvas is the addon's. Disposing the addon drops its listener, so the wait is never started.
     this.termEl.addEventListener('webglcontextlost', () => this._onWebglLost(), true);
     this.termEl.addEventListener('contextmenu', (e) => this._contextMenu(e));
+    this.termEl.addEventListener('wheel', () => { this._wheelAt = performance.now(); }, { capture: true, passive: true }); // _onScroll tells a wheel scroll from output arriving
     // ⌘V, Edit → Paste and the native context menu all land as a `paste` event on xterm's textarea (or its element);
     // taking it in the capture phase on the pane keeps xterm's own listeners from sending the clipboard straight to
     // the shell, so the paste guard (app.js guardPaste) sees every paste before the terminal does.
@@ -396,6 +426,8 @@ export class TermPane {
 
   updateTitle() {
     this.headTitle.textContent = this.title;
+    this._mxRelabel(); // the Exclude box names the pane (MobaXterm v21.5: the terminal title is written in the checkbox)
+    this.syncBadge(); // a label without its own text shows the title
     this.app.onPaneTitle(this);
   }
 
@@ -422,6 +454,8 @@ export class TermPane {
       this.updateTitle();
     }
     this.zoomBadge.textContent = t('zoomed');
+    this.roBadge.textContent = t('read-only');
+    this.roBadge.title = t('Read-only: keystrokes and pastes to this pane are dropped');
     this.zoomBtn.title = this.zoomed ? t('Restore panes (⇧⌘⏎)') : t('Zoom pane (⇧⌘⏎)');
     this.zoomBtn.setAttribute('aria-label', t('Zoom pane'));
     this.monBtn.setAttribute('aria-label', t('Remote monitoring bar'));
@@ -431,6 +465,7 @@ export class TermPane {
       btn.setAttribute('aria-label', label);
     }
     this.monitorEl.setAttribute('aria-label', t('Remote monitoring'));
+    this._mxRelabel();
     if (!this.monitorEl.hidden) {
       if (this._monitorNote) this._monitorRender(null, this._monitorNote.note, this._monitorNote.detail);
       else if (this.monitorSample) this._monitorRender(this.monitorSample);
@@ -456,6 +491,173 @@ export class TermPane {
     this.zoomBtn.replaceChildren(icon(on ? 'unzoom' : 'zoom'));
     this.zoomBtn.title = on ? t('Restore panes (⇧⌘⏎)') : t('Zoom pane (⇧⌘⏎)');
     this.zoomBtn.setAttribute('aria-pressed', String(on));
+  }
+
+  // ---------- MultiExec: the per-terminal switch ----------
+  /** A terminal MultiExec could write to: live, not a placeholder or an FTP card (app.js multiexecCandidates adds "on screen"). */
+  multiexecCandidate() {
+    return !this.disposed && !this.dead && !!this.termId && this.kind !== 'empty' && this.kind !== 'ftp' && !this.readOnly; // a read-only pane takes no input at all
+  }
+
+  /** The strip's caption, tooltip and group name follow the title (updateTitle) and the language (_relabel). */
+  _mxRelabel() {
+    const caption = t('Exclude "{title}" from MultiExec mode', { title: this.title });
+    this.mxCaption.textContent = caption;
+    this.mxEl.title = caption; // the caption is clipped to the pane's width, never wrapped: the tooltip carries it whole
+    this.mxEl.setAttribute('aria-label', t('MultiExec: {title}', { title: this.title }));
+  }
+
+  /**
+   * Show the strip while MultiExec is on and this pane is a candidate, hide it otherwise (app.js updateMultiexec calls
+   * this on every change); the terminal re-fits around it like around the monitoring bar. The box always shows the flag.
+   */
+  syncMultiexecStrip() {
+    if (this.disposed) return;
+    const on = !!this.app.multiexec && this.multiexecCandidate();
+    this.mxBox.checked = this.multiexecExcluded;
+    if (this.mxEl.hidden === !on) return;
+    this.mxEl.hidden = !on;
+    this.fit(); // the strip takes a row from the terminal
+  }
+
+  /**
+   * Tick / untick the Exclude box: the pane stays on screen and connected, out of (or back in) the broadcast set at
+   * once — no dialog, no disconnect. Typing into an excluded pane still reaches its own shell (app.js broadcast).
+   * `update: false` lets a bulk action (Activate all / none, Invert) recount the banner once.
+   */
+  setMultiexecExcluded(on, { update = true } = {}) {
+    on = !!on;
+    this.multiexecExcluded = on;
+    this.mxBox.checked = on;
+    this.el.classList.toggle('mx-excluded', on);
+    if (update) this.app.updateMultiexec();
+  }
+
+  /** Right-click on the strip: MobaXterm's bulk menu of the mode (Activate all / none, Invert selection, synchronised scrolling). */
+  _mxMenu(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.app.multiexecMenu(e.clientX, e.clientY);
+  }
+
+  /** ⇧F10 / the Menu key on the focused box: the same menu, under the box; Esc hands the focus back to it (ui.js). */
+  _mxKey(e) {
+    if (!((e.key === 'F10' && e.shiftKey) || e.key === 'ContextMenu')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = this.mxBox.getBoundingClientRect();
+    this.app.multiexecMenu(r.left, r.bottom + 2);
+  }
+
+  /**
+   * The viewport moved (xterm onScroll, y = the new top line). With "Synchronize mouse wheel scrolling" on, a wheel
+   * scroll of this pane moves the other MultiExec terminals by the same number of lines (app.js syncScroll); output
+   * arriving at the bottom, a search hit or a scroll done on another pane's behalf moves this viewport too and is not
+   * passed on — only a scroll right after a wheel event in this pane is.
+   */
+  _onScroll(y) {
+    const prev = this._ydisp ?? y;
+    this._ydisp = y;
+    if (y === prev || !this.app.multiexec || !this.app.multiexecSyncScroll || this.app._syncingScroll) return;
+    if (performance.now() - (this._wheelAt || 0) > 250) return;
+    this.app.syncScroll(this, y - prev);
+  }
+
+  /** Scroll the viewport by `delta` lines on behalf of another pane (clamped by xterm; never fed back: syncScroll guards). */
+  scrollBy(delta) {
+    try { this.term.scrollLines(delta); } catch {}
+  }
+
+  // ---------- the pane menu's per-terminal items: Rename Pane…, Pane Settings…, Read-Only, Background Label ----------
+  /** The font size this pane starts from (⌘= / ⌘- step away from it, ⌘0 returns to it): its own override, else the session's, else Settings. */
+  baseFontSize(s = this.app.settings) {
+    return this.overrides.fontSize || this.session?.fontSize || s.fontSize;
+  }
+
+  /**
+   * Pane Settings… (app.js paneSettings): replace this pane's own overrides — theme, font family / size, cursor style /
+   * blink, scrollback, keyword highlighting — and repaint; blanks follow the session, then Settings. The workspace remembers them.
+   */
+  applyOverrides(o) {
+    const next = {};
+    for (const [k, v] of Object.entries(o || {})) if (v !== undefined && v !== null && v !== '') next[k] = v;
+    this.overrides = next;
+    this.applySettings(this.app.settings);
+    this.app.saveWorkspaceSoon?.();
+  }
+
+  /** Rename Pane… (MobaXterm's "Rename Terminal"): the pane's own name, locked against the shell's title sequences and the folder; empty = automatic again. */
+  async renamePrompt() {
+    const name = await promptDialog(t('Rename pane'), { value: this.title, label: t('Shown in the pane head and used for the tab title; leave empty to go back to the automatic title') });
+    if (name === null) return;
+    this.setTitle(name.trim());
+  }
+
+  /** A name of the user's (locked), or '' for the automatic title again: the session's name, a shell's folder (app.js onPaneCwd), the shell's own title. */
+  setTitle(name) {
+    if (name) {
+      this.title = name;
+      this.titleLocked = true;
+    } else {
+      this.titleLocked = false;
+      this._cwdTitled = false;
+      this.title = this.session ? this.session.name : (this._defaultTitle = this._kindTitle());
+    }
+    this.updateTitle();
+    if (!this.titleLocked && this.kind === 'local' && !this.session && this.remoteCwd) this.app.onPaneCwd(this); // a shell is named after its folder again
+    this.app.saveWorkspaceSoon?.();
+  }
+
+  /**
+   * Read-Only (the pane menu, Pane Settings…): the terminal keeps drawing output but drops keystrokes and pastes (xterm's
+   * disableStdin, and _onInput / pasteText for what reaches them otherwise); MultiExec leaves it out. A chip in the head says so.
+   */
+  setReadOnly(on) {
+    on = !!on;
+    if (this.readOnly === on) return;
+    this.readOnly = on;
+    this.term.options.disableStdin = on;
+    this.el.classList.toggle('read-only', on);
+    this.roBadge.hidden = !on;
+    this.app.updateMultiexec?.();
+    this.app.saveWorkspaceSoon?.();
+  }
+
+  /**
+   * The background label as it shows: the pane's own setting over the session's (backgroundShown / backgroundName /
+   * backgroundPosition, the session editor's Terminal tab); an empty text falls back to the session's label, then the
+   * session name, then the pane title.
+   */
+  badgeState() {
+    const s = this.session || {}, b = this.badge || {};
+    const show = b.show ?? !!s.backgroundShown;
+    const text = String(b.text || '').trim() || String(s.backgroundName || '').trim() || s.name || this.title;
+    const position = b.position || s.backgroundPosition || 'center';
+    return { show, text, position };
+  }
+
+  /** Draw or hide the label (an overlay inside .pane-term, never in the terminal buffer, a log or a copy); called on every change that can affect it. */
+  syncBadge() {
+    if (this.disposed) return;
+    const { show, text, position } = this.badgeState();
+    const on = show && this.kind !== 'empty' && this.kind !== 'ftp';
+    this.badgeEl.hidden = !on;
+    this.badgeText.textContent = on ? text : '';
+    this.badgeEl.classList.toggle('top-right', position === 'top-right');
+  }
+
+  /** Change this pane's own label setting (a field left out keeps following the session) and redraw; the workspace remembers it. */
+  setBadge(patch) {
+    this.badge = { ...(this.badge || {}), ...patch };
+    this.syncBadge();
+    this.app.saveWorkspaceSoon?.();
+  }
+
+  /** Background Label ▸ Set Text…: the label's text for this pane (shown at once); empty = the session name, or the pane title. */
+  async badgePrompt() {
+    const text = await promptDialog(t('Background label'), { value: String(this.badge?.text ?? this.session?.backgroundName ?? ''), placeholder: this.session?.name || this.title, label: t('Large, dim text behind this pane\'s terminal; empty = the session\'s label, else its name (or the pane title)') });
+    if (text === null) return;
+    this.setBadge({ text: text.trim(), show: true });
   }
 
   setStatus(status, msg) {
@@ -625,7 +827,7 @@ export class TermPane {
   }
 
   _onInput(d) {
-    if (this.dead || this.kind === 'empty' || this._replaying) return; // a replay's answers to terminal queries are not keystrokes
+    if (this.dead || this.kind === 'empty' || this._replaying || this.readOnly) return; // a replay's answers to terminal queries are not keystrokes; a read-only pane drops its input
     if (this.app.macroRecorder) this.app.macroRecorder.text += d;
     if (this.app.multiexec) this.app.broadcast(d, this);
     else this.write(d);
@@ -1096,19 +1298,21 @@ export class TermPane {
 
   zoom(delta) {
     const s = this.app.settings;
-    if (delta === 0) this.term.options.fontSize = s.fontSize;
+    if (delta === 0) this.term.options.fontSize = this.baseFontSize(s);
     else this.term.options.fontSize = Math.max(8, Math.min(40, this.term.options.fontSize + delta));
     this.highlighter.fontChanged();
     this.fit();
   }
 
+  /** Settings saved (or this pane's overrides changed): the terminal's options, pane > session > Settings. */
   applySettings(s) {
-    this.term.options.fontFamily = s.fontFamily;
-    this.term.options.fontSize = this.session?.fontSize || s.fontSize;
+    const o = this.overrides;
+    this.term.options.fontFamily = o.fontFamily || s.fontFamily;
+    this.term.options.fontSize = this.baseFontSize(s);
     this.term.options.lineHeight = s.lineHeight || 1;
-    this.term.options.cursorBlink = s.cursorBlink;
-    this.term.options.cursorStyle = s.cursorStyle;
-    this.term.options.scrollback = s.scrollback;
+    this.term.options.cursorBlink = o.cursorBlink ?? s.cursorBlink;
+    this.term.options.cursorStyle = o.cursorStyle || s.cursorStyle;
+    this.term.options.scrollback = o.scrollback || s.scrollback;
     this.applyTheme(s); // also hands the highlighter the rules, the on/off state and the palette
     this.highlighter.fontChanged();
     this.term.options.macOptionIsMeta = s.macOptionIsMeta !== false;
@@ -1123,7 +1327,7 @@ export class TermPane {
    */
   _syncHighlight(s = this.app.settings) {
     if (!this.highlighter) return;
-    const o = this.session?.highlight;
+    const o = this.overrides.highlight || this.session?.highlight; // the pane's own switch, else the session's, else Settings
     const enabled = o === 'on' || (o !== 'off' && s.highlightEnabled !== false);
     const invalid = this.highlighter.configure({ enabled, rules: s.highlightRules || DEFAULT_RULES, theme: this.themeFor(s) });
     const key = invalid.map((i) => i.rule.pattern).join('\n');
@@ -1131,9 +1335,9 @@ export class TermPane {
     this._hlInvalid = key;
   }
 
-  /** The palette this pane should show: the session's own theme, else the global one. */
+  /** The palette this pane should show: its own (Pane Settings…), else the session's, else the global one. */
   themeFor(s = this.app.settings) {
-    return THEMES[this.session?.theme || s.theme] || THEMES['moba-dark'];
+    return THEMES[this.overrides.theme || this.session?.theme || s.theme] || THEMES['moba-dark'];
   }
 
   /**
@@ -1168,6 +1372,10 @@ export class TermPane {
    */
   async pasteText(text) {
     if (!text || this.dead || this.kind === 'empty' || this.kind === 'ftp') return false;
+    if (this.readOnly) {
+      toast(t('This pane is read-only'), 'info');
+      return false;
+    }
     const final = await this.app.guardPaste(this, text);
     if (!final || this.disposed) return false;
     this.term.paste(final);
@@ -1180,13 +1388,14 @@ export class TermPane {
 
   _contextMenu(e) {
     e.preventDefault();
-    if (this.app.settings.rightClickPaste && !e.shiftKey) {
+    if (this.app.settings.rightClickPaste && !e.shiftKey && !e.ctrlKey) { // ⇧- or ⌃-right-click opens the menu while a right-click pastes (MobaXterm takes either)
       if (this.term.hasSelection()) {
         this.copy();
         this.term.clearSelection();
       } else this.paste();
       return;
     }
+    const badge = this.badgeState();
     contextMenu(e.clientX, e.clientY, [
       { label: t('Copy'), key: '⌘C', action: () => this.copy(), disabled: !this.term.hasSelection() },
       { label: t('Paste'), key: '⌘V', action: () => this.paste() },
@@ -1195,9 +1404,29 @@ export class TermPane {
       { label: t('Find…'), key: '⌘F', action: () => this.app.action('find') },
       { label: t('Clear'), key: '⌘K', action: () => this.clear() },
       '-',
+      // this terminal's own items, as MobaXterm's terminal menu has them: Rename Terminal, the running terminal's
+      // settings, font zoom, Read-only — plus the background label (iTerm2's badge; MobaXterm has none)
+      { label: t('Rename Pane…'), action: () => this.renamePrompt() },
+      { label: t('Pane Settings…'), action: () => this.app.paneSettings(this), disabled: this.kind === 'empty' || this.kind === 'ftp' },
+      { label: t('Background Label'), items: [
+        { label: badge.show ? t('Hide') : t('Show'), action: () => this.setBadge({ show: !badge.show }) },
+        { label: t('Set Text…'), action: () => this.badgePrompt() },
+        '-',
+        { label: t('Centre'), checked: badge.position !== 'top-right', action: () => this.setBadge({ position: 'center' }) },
+        { label: t('Top Right'), checked: badge.position === 'top-right', action: () => this.setBadge({ position: 'top-right' }) },
+      ] },
+      { label: t('Font Size'), items: [
+        { label: t('Increase'), key: '⌘=', action: () => this.zoom(1) },
+        { label: t('Decrease'), key: '⌘-', action: () => this.zoom(-1) },
+        { label: t('Reset'), key: '⌘0', action: () => this.zoom(0) },
+      ] },
+      { label: t('Read-Only'), checked: this.readOnly, action: () => this.setReadOnly(!this.readOnly) },
+      '-',
       { label: t('Split Right'), key: '⌘D', action: () => this.app.action('split', 'right', this) },
       { label: t('Split Down'), key: '⇧⌘D', action: () => this.app.action('split', 'down', this) },
       { label: this.zoomed ? t('Restore Panes') : t('Zoom Pane'), key: '⇧⌘⏎', action: () => this.app.action('zoom-pane', undefined, this), disabled: !this.tab || this.tab.panes().length < 2 },
+      // while MultiExec is on: the same switch as the box under the terminal, as a checkable item
+      this.app.multiexec && this.multiexecCandidate() ? { label: t('Exclude from MultiExec'), checked: this.multiexecExcluded, action: () => this.setMultiexecExcluded(!this.multiexecExcluded) } : null,
       '-',
       { label: this.logging ? t('Stop Session Log') : t('Start Session Log…'), action: () => this.toggleLog() },
       this.monitorAllowed() ? { label: this.monitorEnabled() ? t('Hide Remote Monitoring Bar') : t('Show Remote Monitoring Bar'), action: () => this.toggleMonitor() } : null,
@@ -1216,6 +1445,8 @@ export class TermPane {
       termId: this.termId || null, status: this.status, title: this.title, remoteCwd: this.remoteCwd || null, dead: !!this.dead,
       logging: !!this.logging, logFile: this.logFile || null, sftpConnId: this.sftpConnId || null, sftpStatus: this.sftpStatus,
       cwdTitled: !!this._cwdTitled, connectedAt: this.connectedAt || null, fontSize: this.term.options.fontSize,
+      // the pane menu's per-terminal state goes with the pane (the window that takes it over passes these to the constructor)
+      titleLocked: !!this.titleLocked, overrides: { ...this.overrides }, badge: this.badge ? { ...this.badge } : null, readOnly: !!this.readOnly,
     };
   }
 
@@ -1237,6 +1468,7 @@ export class TermPane {
    */
   async attach(d) {
     this.title = d.title || this.title;
+    this.titleLocked = !!d.titleLocked;
     this.remoteCwd = d.remoteCwd || null;
     if (this.kind === 'local' && this.remoteCwd) this.cwd = this.remoteCwd;
     this._cwdTitled = !!d.cwdTitled;
