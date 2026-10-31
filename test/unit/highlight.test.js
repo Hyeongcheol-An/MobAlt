@@ -33,6 +33,10 @@ test('the built-in rules: errors, warnings, success, IPv4 / IPv6, URLs and sizes
     assert.deepEqual(highlightLine(plain, DEFAULT_RULES), [], plain);
   }
   assert.deepEqual(spans('512 MB free, 1.5 GiB used, 3k lines', highlightLine('512 MB free, 1.5 GiB used, 3k lines', DEFAULT_RULES)), ['accent-dim:512 MB', 'accent-dim:1.5 GiB'], 'a lowercase single letter is not a unit (5m: minutes or metres?)');
+  // a single-letter unit needs two digits or a decimal: the "2B" of an escape literal and the "7b" of a hash are not sizes
+  for (const plain of ['esc [2B down', 'hash 3bf2a1 7b 2b', 'cursor [12B [1;5B', 'id 5M', '9B']) assert.deepEqual(highlightLine(plain, DEFAULT_RULES), [], plain);
+  assert.deepEqual(spans('15M 5.0M 512M 100B 1.5G 12b', highlightLine('15M 5.0M 512M 100B 1.5G 12b', DEFAULT_RULES)), ['accent-dim:15M', 'accent-dim:5.0M', 'accent-dim:512M', 'accent-dim:100B', 'accent-dim:1.5G', 'accent-dim:12b']);
+  assert.deepEqual(spans('[512MB] 2GB 5%', highlightLine('[512MB] 2GB 5%', DEFAULT_RULES)), ['accent-dim:512MB', 'accent-dim:2GB', 'accent-dim:5%'], 'two-letter units and percents keep a single digit and a bracket');
 });
 
 test('plain patterns are literal substrings (escaped), regex ones are regexes; ignore case per rule', async () => {
