@@ -124,11 +124,11 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 그래픽 매크로(마우스 + 키보드) | ❌ | 미구현 |
 | 색상 스킴 | 🟡 | 내장 테마 6종(Settings → Terminal → Theme)과 세션별 덮어쓰기. 사용자 정의나 가져오기는 없음 |
 | 글꼴(번들 글꼴, 합자, 고정 크기) | 🟡 | 설치된 아무 글꼴, 크기, 줄 간격(Settings → Terminal), ⌘= / ⌘- / ⌘0, 세션별 글꼴 크기. 합자와 행/열 고정은 없음 |
-| 키워드 구문 강조 | ✅ | Settings → Terminal → Keyword highlighting: 편집 가능한 규칙 표(일반 텍스트 또는 정규식, 색, 배경, 굵게, 밑줄), 오류·경고·성공·IP 주소·URL·용량 기본 규칙, 색은 터미널 테마에서. 세션별 켜기 / 끄기 |
+| 키워드 구문 강조 | ✅ | Settings → Features → Keyword highlighting: 편집 가능한 규칙 표(일반 텍스트 또는 정규식, 색, 배경, 굵게, 밑줄), 오류·경고·성공·IP 주소·URL·용량 기본 규칙, 색은 터미널 테마에서. 세션별 켜기 / 끄기 |
 | 터미널 내 검색 | ✅ | ⌘F 증분 검색, 대소문자·정규식 토글, 일치 개수 |
 | 로그 / 저장 / 인쇄 | 🟡 | 폴더로 세션 로그. "터미널 텍스트 저장"이나 인쇄는 없음(Select All 후 복사) |
 | 스크롤백 | ✅ | Settings → Terminal → Scrollback lines(100 – 1,000,000, 기본 10,000). ⌘K로 지움 |
-| 붙여넣기 동작(우클릭, 여러 줄 미리보기, 지연) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V. 브래킷 붙여넣기 지원. 여러 줄·긴 붙여넣기는 편집 가능한 미리보기로 먼저 확인(Settings → Terminal → Paste guard). 줄별 지연은 없음 |
+| 붙여넣기 동작(우클릭, 여러 줄 미리보기, 지연) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V. 브래킷 붙여넣기 지원. 여러 줄·긴 붙여넣기는 편집 가능한 미리보기로 먼저 확인(Settings → Features → Paste guard). 줄별 지연은 없음 |
 | 악성 붙여넣기 경고 | ✅ | 모든 붙여넣기에서 폭 없는 문자·bidi·제어 문자, 마지막 줄바꿈, 줄 안의 CR, `curl \| sh`, 셸 프로필과 `authorized_keys` 쓰기, `rm -rf /` 류 명령, 동형 문자를 검사. 발견 항목은 목록과 미리보기 표시로 보여 주고 "Paste cleaned"가 숨은 문자를 걷어냄(Settings → Terminal → "Warn about suspicious pastes") |
 | 선택하면 복사 | ✅ | Settings → Terminal → Copy on select(기본 켜짐) |
 | 선택 모드(단어, 사각형) | ✅ | 더블클릭 단어, 트리플클릭 줄, ⌥-드래그 사각형 선택(xterm.js 열 선택). 단어 구분 문자는 설정 불가 |
@@ -307,7 +307,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 전부 자동 저장(Quick connect 세션 포함) | 🟡 | 세션과 설정은 Save 때, 작업대는 20초마다 저장. Quick connect 세션은 저장되지 않음 |
 | 전역 토글인 우클릭 붙여넣기 | ✅ | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", 기본 켜짐 |
 | 선택 시 복사, Alt-드래그 사각형, 조정 가능한 구분 문자 | ✅ | Copy on select(토글), ⌥-드래그 열 선택. 구분 문자 조정은 없음 |
-| 미리보기와 악성 검사가 있는 여러 줄 붙여넣기 보호 | ✅ | "Paste N lines into …?"에 편집 가능한 미리보기와 의심 항목 목록. 두 토글 모두 Settings → Terminal → Paste guard |
+| 미리보기와 악성 검사가 있는 여러 줄 붙여넣기 보호 | ✅ | "Paste N lines into …?"에 편집 가능한 미리보기와 의심 항목 목록. 두 토글 모두 Settings → Features → Paste guard |
 | MultiExec와 분할 보기(Exclude, 스크롤 동기화) | 🟡 | 8페인까지 분할과 격자. MultiExec에 Exclude나 스크롤 동기화는 없음 |
 | 일급 객체인 매크로(WaitFor, 중첩, 폴더, 암호화) | 🟡 | 녹화·텍스트 매크로를 하나 또는 모든 터미널에 재생. 부가 기능은 없음 |
 | 드롭다운으로 고르는 점프 호스트 | ✅ | Advanced SSH → Jump host 드롭다운(저장된 세션 또는 직접 입력), 점프 세션 자신의 점프 호스트로 연쇄. Sftp와 X11도 통과. SSH 세션만 |

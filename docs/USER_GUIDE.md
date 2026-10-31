@@ -179,7 +179,7 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
 - **Find** (⌘F): incremental search with case and regex toggles and a match counter.
 - **Keyword highlighting**: errors, warnings, OK/done, IP addresses, URLs and sizes (`512M`, `3.2GB`) are
   coloured as they arrive, with colours taken from the terminal theme so they read on every palette.
-  Settings → Terminal → *Keyword highlighting* switches it off; *Rules…* opens the table — each rule is a
+  Settings → Features → *Keyword highlighting* switches it off; *Rules…* opens the table — each rule is a
   plain text or a regular expression, ignore case, a colour, an optional background, bold and underline;
   *Restore defaults* brings the built-in set back. Where rules overlap, the earlier match wins, then the
   longer one. A session's Terminal tab can force it on or off (*Keyword highlighting: Default / On / Off*).
@@ -195,7 +195,7 @@ a local session with *Start folder* set to a project and `claude --resume <id>` 
   writes to `~/.zshrc` and friends or `~/.ssh/authorized_keys`, `rm -rf /`-style commands and Latin
   words with Cyrillic or Greek look-alike letters. Findings are listed and marked in the preview;
   *Paste cleaned* strips the hidden characters and the trailing newline, *Paste as is* sends the text
-  unchanged. Both checks are Settings → Terminal → Paste guard toggles (on by default); they cover ⌘V,
+  unchanged. Both checks are Settings → Features → Paste guard toggles (on by default); they cover ⌘V,
   right-click and text dropped on a pane, not macros. With MultiExec on, one confirmation covers every
   visible terminal.
 - **Keys**: Shift+Enter and Option+Enter send ESC+CR (a newline in TUI apps such as Claude Code);

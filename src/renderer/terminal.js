@@ -835,12 +835,12 @@ export class TermPane {
     this.applyTheme(s); // also hands the highlighter the rules, the on/off state and the palette
     this.highlighter.fontChanged();
     this.term.options.macOptionIsMeta = s.macOptionIsMeta !== false;
-    this.syncMonitor(); // Settings → Terminal: the bar's default and interval
+    this.syncMonitor(); // Settings → Features: the bar's default and interval
     this.fit();
   }
 
   /**
-   * Keyword highlighting for this pane (Settings → Terminal → Keyword highlighting): the session's override (on / off)
+   * Keyword highlighting for this pane (Settings → Features → Keyword highlighting): the session's override (on / off)
    * wins over the global switch; the rules are the saved ones or the built-in set, coloured from this pane's palette.
    * A rule whose regex does not compile is skipped and said so once per pane (never thrown into the data path).
    */

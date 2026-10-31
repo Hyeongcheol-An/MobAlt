@@ -246,7 +246,7 @@ export function sessionEditor(app, initial = {}) {
   const agentFwd = check('Agent forwarding', s.agentForward);
   const compression = check('Compression', s.compression);
   const legacy = check('Legacy algorithms (old devices)', s.legacyAlgorithms);
-  // the remote monitoring bar: a session without its own value shows Settings → Terminal's default and saves it explicitly
+  // the remote monitoring bar: a session without its own value shows Settings → Features' default and saves it explicitly
   const monitor = check('Show remote monitoring bar', s.monitor ?? app.settings.monitorBar !== false);
   // --- mosh / ftp
   const moshServer = text(s.moshServer, { placeholder: 'mosh-server (path on the remote host, optional)' });
@@ -430,13 +430,13 @@ export function sessionEditor(app, initial = {}) {
       ...ALGO_CATS.flatMap(([cat, label]) => [...field(label, algoArea[cat]), algoErr[cat]]),
     ] : []),
     h('label', {}, 'Monitoring'), h('div', { class: 'checks' }, monitor.el),
-    h('div', { class: 'form-help' }, 'CPU, memory, disk, network, load and uptime under the terminal, polled over this connection every few seconds (Settings → Terminal sets the default and the refresh); the pane head and the View menu toggle it per pane')
+    h('div', { class: 'form-help' }, 'CPU, memory, disk, network, load and uptime under the terminal, polled over this connection every few seconds (Settings → Features sets the default and the refresh); the pane head and the View menu toggle it per pane')
   );
   pages.terminal.append(
     ...field('Startup commands', startup),
     h('label', {}, 'Behaviour'), h('div', { class: 'checks' }, sftpAuto.el, followCwd.el, logging.el),
     ...field('Theme', theme), ...field('Font size', fontSize),
-    ...field('Keyword highlighting', highlight, 'Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Terminal'),
+    ...field('Keyword highlighting', highlight, 'Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Features'),
     ...field('Notes', notes)
   );
 
@@ -655,7 +655,7 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const sameRules = (a, b) => JSON.stringify((a || []).map(normalizeRule)) === JSON.stringify((b || []).map(normalizeRule));
 
 /**
- * Settings → Terminal → Keyword highlighting → Rules…: the editable rule table (pattern, regex, ignore case, colour,
+ * Settings → Features → Keyword highlighting → Rules…: the editable rule table (pattern, regex, ignore case, colour,
  * background, bold, underline). Resolves with the rule list to save (empty patterns dropped), or null on Cancel; OK
  * refuses a regex that does not compile (toast, the pattern keeps the focus). "Restore defaults" reloads the built-in set.
  */
