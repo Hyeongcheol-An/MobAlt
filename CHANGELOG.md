@@ -1,3 +1,34 @@
+## [0.13.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.12.0...v0.13.0) (2026-10-31)
+
+### Features
+
+* **settings:** a Features tab for the paste guard, monitoring bar and keyword highlighting ([835a007](https://github.com/Hyeongcheol-An/MobAlt/commit/835a00715b9dcc5e72ddc6db545f0c0e2479178b))
+* **ssh:** expert algorithm settings ([73b532a](https://github.com/Hyeongcheol-An/MobAlt/commit/73b532a486b0fdaa5f60d259c6b56450c4396b2a))
+* **ssh:** key generator ([e3acfcb](https://github.com/Hyeongcheol-An/MobAlt/commit/e3acfcb5dc8afa44aaaf9ad0ac59cdc9ac79a758))
+* **ssh:** remote monitoring bar ([90eec89](https://github.com/Hyeongcheol-An/MobAlt/commit/90eec89052a68365226bbdaf0989fe5ec3c24b77))
+* **tabs:** detach a tab to its own window ([7fd5f76](https://github.com/Hyeongcheol-An/MobAlt/commit/7fd5f760007deb522aa1548d30c1687fdc0a706d))
+* **tabs:** pin and close-left/right ([beb2b2b](https://github.com/Hyeongcheol-An/MobAlt/commit/beb2b2bbc4f90bdb2ee683ef5b9fee1af46c19aa))
+* **terminal:** keyword highlighting ([12ad503](https://github.com/Hyeongcheol-An/MobAlt/commit/12ad50392a7a7608b70bd1cdff171dd59b93db8f))
+* **terminal:** paste guard — confirm multi-line pastes, flag suspicious content ([e8f7137](https://github.com/Hyeongcheol-An/MobAlt/commit/e8f7137fbd583fe474c716564cb3db29a885fd81))
+* **terminal:** zmodem rz/sz transfers ([14d4927](https://github.com/Hyeongcheol-An/MobAlt/commit/14d4927ef2719564d310c20be107795138ca53f3))
+* **tools:** Wake-on-LAN and network scanner ([21e9455](https://github.com/Hyeongcheol-An/MobAlt/commit/21e9455c477405dc135b2abc57bfe6afc9e5b6c2))
+
+### Bug Fixes
+
+* **keygen:** lock the dialog while it installs, say "folder" and "~user" plainly, refuse ~user remote files ([6c8fa75](https://github.com/Hyeongcheol-An/MobAlt/commit/6c8fa757c8ae88320574ecaa3d8855061d6487b8))
+* **monitor:** fold the strip to the pane's width and mark a stale sample ([d0a0de8](https://github.com/Hyeongcheol-An/MobAlt/commit/d0a0de84e9672168a726d3033dd63ea76511fa65))
+* **session:** a Mosh session keeps and applies its Advanced SSH algorithm settings ([c9ac210](https://github.com/Hyeongcheol-An/MobAlt/commit/c9ac21039bba3468fef3edf6230fdd712a5be9d9))
+* **ssh:** legacy preset without the 1024-bit DH group, one host-key prompt per host, readable DH error ([e7e3146](https://github.com/Hyeongcheol-An/MobAlt/commit/e7e3146edeba0353d3dd36be92bc8cdaf4358625))
+* **tabs:** pinned tab keeps focus, Session menu items grey out, detached windows close and cascade ([52dd4c7](https://github.com/Hyeongcheol-An/MobAlt/commit/52dd4c79528c69c5f459686f8548a22eddb0e9ed))
+* **terminal:** drain the Zmodem stream after an abort, notice a dead peer in seconds, keep replays and logs clean ([05371ef](https://github.com/Hyeongcheol-An/MobAlt/commit/05371ef1ff6ffb73492345e1d01901d006fd258a))
+* **terminal:** keep keyword decorations off the alternate screen, notice rows rewritten in place ([18ad120](https://github.com/Hyeongcheol-An/MobAlt/commit/18ad120fd2a2c296f03056984e201e6b0937fd8e))
+* **terminal:** no stray byte reaches the pane after a dead Zmodem peer ([a11e519](https://github.com/Hyeongcheol-An/MobAlt/commit/a11e519e344de4b81913ac20b1c6c01a8249fd74))
+* **terminal:** paste guard edges, a fluid preview, readable marks; one Zmodem checkbox ([3f70149](https://github.com/Hyeongcheol-An/MobAlt/commit/3f701496403d43f50a32046f2066e9d9ea808d42))
+* **terminal:** webgl budget — a GPU context only for the panes on screen ([f300f96](https://github.com/Hyeongcheol-An/MobAlt/commit/f300f96e4545ff8e96aa2d4c67a9312af9ade6fe))
+* **theme:** readable monitor meters, detached marker, scan ＋ hover, a ring on the rDNS box ([5452c08](https://github.com/Hyeongcheol-An/MobAlt/commit/5452c08c3428fdafab2d19545ef5585609cadc2f))
+* **tools:** keep the scanner's Workers and Timeout fields on their own rows in a narrow sidebar ([bf5eca7](https://github.com/Hyeongcheol-An/MobAlt/commit/bf5eca70b949a15c68aeeab0a7f848173e3c7b74))
+* **tools:** one scan at a time, dual-stack targets, port prefill, Ports sort, narrow and short layouts, WoL polish ([078da52](https://github.com/Hyeongcheol-An/MobAlt/commit/078da52f7ed1d607d68d2a568a13b5ae2ddca91e))
+
 ## [0.12.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.11.0...v0.12.0) (2026-10-31)
 
 ### Features
