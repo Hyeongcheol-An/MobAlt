@@ -137,7 +137,8 @@ brew install --cask mobalt
   `claude --resume <id>`로 두면 열 때마다 Claude Code가 이어집니다.
 - **MultiExec**: 툴바 버튼 또는 ⇧⌘M. 켜져 있는 동안 입력이 모든 터미널로 갑니다. 터미널 아래의 체크 상자를 켜면 그 페인은 제외됩니다(접속은 유지되고, 직접 친 키는 그 페인에만 들어감). 체크 상자 줄이나 배너를 우클릭하면 Activate all / none, Invert selection, 휠 스크롤 동기화.
 - **키보드**: Help → Keyboard Shortcuts. 우클릭은 붙여넣기(⇧+우클릭은 메뉴), 선택하면 복사됩니다.
-  Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈으로 동작합니다.
+  Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈으로 동작하고, 클립보드에
+  이미지가 있으면 ⌘V로 Claude Code에 붙여넣습니다(`[Image #1]`).
 
 ## 데이터와 개인정보
 

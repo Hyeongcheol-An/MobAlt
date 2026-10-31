@@ -200,17 +200,24 @@ export class TermPane {
       return true;
     });
     this.term.attachCustomKeyEventHandler((e) => {
+      // The keypress a Shift+Enter keydown is followed by: xterm's own keypress path would send a plain CR after the
+      // ESC CR sent below (a newline, then a submit, in Claude Code). preventDefault() on the keydown stops the
+      // browser from firing it at all; this guard covers a browser that fires it anyway.
+      if (e.type === 'keypress') return !(e.key === 'Enter' && e.shiftKey);
       if (e.type !== 'keydown') return true;
       if (this.dead && e.key === 'Enter') {
+        e.preventDefault();
         this.reconnect();
         return false;
       }
       // Let macOS menu accelerators (⌘…) through; xterm ignores them anyway.
       if (e.metaKey) return false;
-      // Shift+Enter → ESC CR (iTerm2-style): newline in Claude Code and other TUIs
-      // instead of submitting. Skip while an IME composition (Korean etc.) is active.
+      // Shift+Enter → ESC CR (what Claude Code's own /terminal-setup binds in VS Code, Zed and Alacritty, and what
+      // Option+Enter sends through macOptionIsMeta): a newline in Claude Code and other TUIs instead of a submit.
+      // Skip while an IME composition (Korean etc.) is active.
       if (e.key === 'Enter' && e.shiftKey && !e.altKey && !e.ctrlKey
           && !e.isComposing && e.keyCode !== 229) {
+        e.preventDefault(); // xterm cancels only the keys it handles itself; without this the keypress above follows
         this._onInput('\x1b\r');
         return false;
       }
@@ -326,6 +333,7 @@ export class TermPane {
       e.stopPropagation();
       const text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
       if (text) this.pasteText(text);
+      else this.pasteImage(); // no text: an image on the clipboard is handed to the application as Ctrl+V
     }, true);
     this.ro = new ResizeObserver(() => this.fit());
     this.ro.observe(this.termEl);
@@ -1356,10 +1364,27 @@ export class TermPane {
     this._syncHighlight(s); // the keyword colours follow the palette (a no-op when nothing changed)
   }
 
-  /** Right-click / pane menu paste: the clipboard text, through the guard. */
+  /** Right-click / pane menu paste: the clipboard text, through the guard; with no text, an image as Ctrl+V (pasteImage). */
   async paste() {
     const text = await window.api.clipboard.read();
     if (text) this.pasteText(text);
+    else this.pasteImage();
+  }
+
+  /**
+   * A paste with no text on the clipboard: when the clipboard holds an image, the terminal gets a Ctrl+V (0x16), the
+   * key TUIs that read the system clipboard themselves — Claude Code shows "[Image #1]" — take an image on. There is
+   * nothing to paste for a shell, and whether the application took the image up cannot be seen from here, so nothing
+   * is written on screen either way; text on the clipboard always wins (the callers paste it instead). Like a typed
+   * Ctrl+V the byte goes through _onInput: MultiExec broadcasts it, a macro being recorded keeps it. Resolves true
+   * when it was sent.
+   */
+  async pasteImage() {
+    if (this.dead || this.kind === 'empty' || this.kind === 'ftp') return false;
+    const kinds = await window.api.clipboard.kinds().catch(() => null);
+    if (!kinds || kinds.text || !kinds.image || this.disposed) return false;
+    this._onInput('\x16');
+    return true;
   }
 
   /**
