@@ -15,6 +15,7 @@ cask "mobalt" do
     strategy :github_latest
   end
 
+  auto_updates true
   depends_on macos: :ventura
 
   app "MobAlt.app"
