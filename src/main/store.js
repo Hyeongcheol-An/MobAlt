@@ -108,6 +108,8 @@ const DEFAULT_SETTINGS = {
   readyTimeout: 20000,
   monitorBar: true, // remote monitoring bar under SSH panes (a session's own setting wins; a pane can be toggled by hand)
   monitorInterval: 3, // seconds between two polls of the bar (2–30)
+  highlightEnabled: true, // Settings → Terminal → Keyword highlighting (a session can override it: on / off)
+  highlightRules: null, // the rule table; null = the built-in rules (src/renderer/highlight.js DEFAULT_RULES), so a fresh install follows their updates
   macros: [],
   tunnels: [],
   windowBounds: null,
