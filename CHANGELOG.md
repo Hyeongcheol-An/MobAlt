@@ -1,3 +1,27 @@
+## [0.11.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.10.1...v0.11.0) (2026-10-31)
+
+### Features
+
+* **a11y:** per-row focus and type-ahead in the SFTP list and session tree ([497240a](https://github.com/Hyeongcheol-An/MobAlt/commit/497240a1be53b91881ae90c2af0ef40c72b769d0))
+* **brand:** design the app icon and DMG background as SVG sources ([9108ac1](https://github.com/Hyeongcheol-An/MobAlt/commit/9108ac169b685dfbf97f23353ccf4abd020d564b))
+* **multiexec:** broadcast only to the terminals visible in the active tab ([5e55a89](https://github.com/Hyeongcheol-An/MobAlt/commit/5e55a89681e7d1241cc35ac22645fb50176ef964))
+* **update:** notice a newer MobAlt.app on disk and offer a relaunch ([f060f60](https://github.com/Hyeongcheol-An/MobAlt/commit/f060f6099a0037dbe723a4170b4b6e002c263512))
+
+### Bug Fixes
+
+* **a11y:** keyboard follow-ups in the SFTP list, session tree, panels and Shortcuts dialog ([4ea3ddb](https://github.com/Hyeongcheol-An/MobAlt/commit/4ea3ddb81e8bd84d98fe9f02511bd6e1f18bd4dc))
+* **brand:** give the DMG labels a mid-tone band readable in light and dark Finder ([056f192](https://github.com/Hyeongcheol-An/MobAlt/commit/056f192dd2d4bba725b14ffe045f66e0b1a6bc39)), closes [#6b84b3](https://github.com/Hyeongcheol-An/MobAlt/issues/6b84b3)
+* **build:** use the personal bundle id io.github.hyeongcheol-an.mobalt ([5a359cc](https://github.com/Hyeongcheol-An/MobAlt/commit/5a359cc3a746a2ef2cadab2412ea868c062785bb))
+* **repo:** drop the node_modules symlink that slipped into v0.10.1 and ignore symlinked node_modules too ([d8d39cb](https://github.com/Hyeongcheol-An/MobAlt/commit/d8d39cb75713f5a858ec9b642f3fbee5e75f8a9d))
+* **ssh:** announce a connection the server dropped ([ab0af87](https://github.com/Hyeongcheol-An/MobAlt/commit/ab0af8711d7a3f082d34509a681fbb6c782b7be9))
+* **test:** drop the committed test/sshd-runtime symlink and ignore it as a link too ([d980cdf](https://github.com/Hyeongcheol-An/MobAlt/commit/d980cdfcc1cb6a0a4b1e769350a107cd1e74dd83))
+* **ui:** keep the all-tabs menu inside the window and clip long dialog titles ([b3c93fc](https://github.com/Hyeongcheol-An/MobAlt/commit/b3c93fcf16a2c737d1ca5a7ddceb892ebb2bcd22))
+* **ui:** light-theme find matches and FTP card contrast, unbreakable update call to action ([fb908dd](https://github.com/Hyeongcheol-An/MobAlt/commit/fb908dd3a60ed22c10213e87e5a39ba8ce67fe2b))
+* **ui:** name a tab after its session while other panes are used ([602d32b](https://github.com/Hyeongcheol-An/MobAlt/commit/602d32bf624a3866ac8cfd0a81e0bf3ec6357530))
+* **ui:** toasts clear the find bar, long notices wrap, cards sit below the pane head ([06d1dd8](https://github.com/Hyeongcheol-An/MobAlt/commit/06d1dd821d6142dd20e201986fcbce3b88ec9787)), closes [#toast-root](https://github.com/Hyeongcheol-An/MobAlt/issues/toast-root) [#multiexec-count](https://github.com/Hyeongcheol-An/MobAlt/issues/multiexec-count)
+* **update:** quiet "Check now" in Settings; the relaunch question says Relaunch ([ebf36b7](https://github.com/Hyeongcheol-An/MobAlt/commit/ebf36b781bd5dc32f29dc875aa43a27049988621))
+* **update:** relaunch through LaunchServices and surface main-process notices ([109ae56](https://github.com/Hyeongcheol-An/MobAlt/commit/109ae5668fda5b65b5bbc1c4b852a80514b31fe1))
+
 ## [0.10.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.10.0...v0.10.1) (2026-10-30)
 
 ### Bug Fixes
