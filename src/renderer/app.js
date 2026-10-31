@@ -970,7 +970,7 @@ class App {
   // ---------- paste guard ----------
   /**
    * Every paste into a terminal (terminal.js pasteText: ⌘V / Edit → Paste, right-click and the pane menu, text
-   * dropped on a pane) comes through here before xterm sees it. With Settings → Terminal → Paste guard on (both
+   * dropped on a pane) comes through here before xterm sees it. With Settings → Features → Paste guard on (both
    * toggles are, by default) a multi-line or very long paste asks first, and a suspicious one shows what it hides and
    * offers a cleaned copy (src/renderer/pasteguard.js). Resolves with the text to paste — as given, edited in the
    * dialog or cleaned — or null when the user cancelled. With MultiExec on, the one dialog names the broadcast set;

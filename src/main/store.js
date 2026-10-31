@@ -87,7 +87,7 @@ const DEFAULT_SETTINGS = {
   rightClickPaste: true,
   copyOnSelect: true,
   macOptionIsMeta: true, // Option key acts as Meta/Alt (xterm macOptionIsMeta); what Settings shows before the first Save
-  pasteConfirmMultiline: true, // Settings → Terminal → Paste guard: ask before a multi-line or very long paste reaches a terminal
+  pasteConfirmMultiline: true, // Settings → Features → Paste guard: ask before a multi-line or very long paste reaches a terminal
   pasteWarnSuspicious: true, // … and show what a paste hides (invisible characters, curl | sh, profile writes…) with "Paste cleaned"
   bell: 'none',
   localShell: '',
@@ -108,7 +108,7 @@ const DEFAULT_SETTINGS = {
   readyTimeout: 20000,
   monitorBar: true, // remote monitoring bar under SSH panes (a session's own setting wins; a pane can be toggled by hand)
   monitorInterval: 3, // seconds between two polls of the bar (2–30)
-  highlightEnabled: true, // Settings → Terminal → Keyword highlighting (a session can override it: on / off)
+  highlightEnabled: true, // Settings → Features → Keyword highlighting (a session can override it: on / off)
   highlightRules: null, // the rule table; null = the built-in rules (src/renderer/highlight.js DEFAULT_RULES), so a fresh install follows their updates
   macros: [],
   tunnels: [],

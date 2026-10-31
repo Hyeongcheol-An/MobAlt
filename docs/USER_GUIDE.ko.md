@@ -165,7 +165,7 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   연결로 보여 줍니다.
 - **찾기**(⌘F): 대소문자·정규식 토글과 일치 수 표시가 있는 증분 검색.
 - **키워드 강조**: 오류·경고·OK/done·IP 주소·URL·용량(`512M`, `3.2GB`)이 출력되는 대로 색으로 표시됩니다.
-  색은 터미널 테마에서 가져와 어느 팔레트에서든 읽힙니다. Settings → Terminal → *Keyword highlighting*으로
+  색은 터미널 테마에서 가져와 어느 팔레트에서든 읽힙니다. Settings → Features → *Keyword highlighting*으로
   끄고, *Rules…*에서 규칙 표를 편집합니다 — 규칙마다 일반 텍스트 또는 정규식, 대소문자 무시, 색, 선택적
   배경, 굵게, 밑줄을 정하고 *Restore defaults*로 기본 규칙을 되돌립니다. 규칙이 겹치면 먼저 시작하는
   일치가, 같은 자리에서는 더 긴 일치가 이깁니다. 세션의 Terminal 탭에서 강제로 켜거나 끌 수 있습니다
@@ -180,7 +180,7 @@ installed on disk; relaunch to use it"라고 알리며 같은 재시작을 제�
   실행됨), 줄 안의 캐리지 리턴, `curl … | sh`, `~/.zshrc` 같은 프로필이나 `~/.ssh/authorized_keys`에
   쓰기, `rm -rf /` 류 명령, 키릴·그리스 문자가 섞인 라틴 단어(동형 문자). 발견 항목은 목록과 미리보기의
   표시로 보여 주고, *Paste cleaned*는 숨은 문자와 마지막 줄바꿈을 걷어내며 *Paste as is*는 그대로
-  보냅니다. 두 검사 모두 Settings → Terminal → Paste guard에서 끌 수 있고(기본 켜짐) ⌘V, 우클릭, 페인에
+  보냅니다. 두 검사 모두 Settings → Features → Paste guard에서 끌 수 있고(기본 켜짐) ⌘V, 우클릭, 페인에
   놓은 텍스트에 적용되며 매크로에는 적용되지 않습니다. MultiExec가 켜져 있으면 확인 한 번으로 보이는 모든
   터미널에 들어갑니다.
 - **키**: Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈이 됩니다.

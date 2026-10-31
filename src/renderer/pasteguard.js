@@ -7,7 +7,7 @@
 //             `index` the first occurrence, `ranges` every occurrence for highlighting)
 //   cleaned:  the text without its invisible / control characters and trailing line break (what "Paste cleaned" sends)
 //
-//   pasteGuardMode(analysis, settings) → { confirm, warn, ask }  the two Settings → Terminal toggles applied
+//   pasteGuardMode(analysis, settings) → { confirm, warn, ask }  the two Settings → Features toggles applied
 
 /** A paste longer than this many characters asks for confirmation even on one line. */
 export const PASTE_CONFIRM_CHARS = 1000;
@@ -183,7 +183,7 @@ export function analysePaste(input) {
 }
 
 /**
- * What the guard should do with an analysed paste under the Settings → Terminal toggles (both on by default):
+ * What the guard should do with an analysed paste under the Settings → Features toggles (both on by default):
  * `confirm` — the multi-line / long-paste confirmation; `warn` — the suspicious-content findings are shown and
  * "Paste cleaned" offered; `ask` — a dialog is needed at all.
  */

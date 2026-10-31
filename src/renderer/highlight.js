@@ -30,7 +30,7 @@ const URL = String.raw`\b(?:https?|ftps?|sftp|ssh|wss?|file)://[^\s'"<>()\[\]]*[
 // space before the unit only with units of two letters or more ("3 b" is a list item, "512 MB" a size)
 const UNITS = String.raw`\b\d+(?:[.,]\d+)?(?:\s?(?:[KMGTPE]i?B|[kmgtpe]i?b|bytes?|ms|µs|us|ns)|[KMGTPE]i?|[Bb]|%)(?![\w.])`;
 
-/** The rules a fresh install highlights with (Settings → Terminal → Keyword highlighting → Restore defaults). */
+/** The rules a fresh install highlights with (Settings → Features → Keyword highlighting → Restore defaults). */
 export const DEFAULT_RULES = Object.freeze([
   { pattern: String.raw`\b(?:error|errors|fatal|panic|fail|failed|failure|denied|refused|timeout|timed out)\b`, regex: true, ci: true, color: 'red', bg: '', bold: true, underline: false },
   { pattern: String.raw`\b(?:warn|warning|warnings|deprecated)\b`, regex: true, ci: true, color: 'yellow', bg: '', bold: false, underline: false },

@@ -125,11 +125,11 @@ MobAlt has 51 in full, 40 in a narrower or different form and lacks 33.
 | Graphical macros (mouse + keyboard) | ❌ | not implemented |
 | Colour schemes | 🟡 | 6 built-in themes (Settings → Terminal → Theme) and a per-session override; no custom or imported themes |
 | Fonts (bundled fonts, ligatures, fixed size) | 🟡 | any installed font, size and line height (Settings → Terminal), ⌘= / ⌘- / ⌘0, per-session font size; no ligatures, no fixed rows/cols |
-| Syntax highlighting of keywords | ✅ | Settings → Terminal → Keyword highlighting: an editable rule table (plain text or regex, colour, background, bold, underline) with defaults for errors, warnings, success, IP addresses, URLs and sizes, coloured from the terminal theme; per-session on / off |
+| Syntax highlighting of keywords | ✅ | Settings → Features → Keyword highlighting: an editable rule table (plain text or regex, colour, background, bold, underline) with defaults for errors, warnings, success, IP addresses, URLs and sizes, coloured from the terminal theme; per-session on / off |
 | Search in terminal | ✅ | ⌘F incremental search with case and regex toggles and a match counter |
 | Logging / save / print | 🟡 | session log to a folder; no "Save terminal text" or print (Select All + copy instead) |
 | Scrollback | ✅ | Settings → Terminal → Scrollback lines (100 – 1,000,000; default 10,000); ⌘K clears |
-| Paste behaviour (right-click, multi-line preview, delay) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V; bracketed paste honoured; a multi-line or long paste asks first with an editable preview (Settings → Terminal → Paste guard); no per-line delay |
+| Paste behaviour (right-click, multi-line preview, delay) | 🟡 | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", ⌘V; bracketed paste honoured; a multi-line or long paste asks first with an editable preview (Settings → Features → Paste guard); no per-line delay |
 | Malicious-paste guard | ✅ | every paste is checked for zero-width / bidi / control characters, a trailing newline, a lone CR, `curl \| sh`, writes to shell profiles and `authorized_keys`, `rm -rf /`-style commands and look-alike letters; findings are listed and marked in the preview, "Paste cleaned" strips the hidden characters (Settings → Terminal → "Warn about suspicious pastes") |
 | Copy on select | ✅ | Settings → Terminal → Copy on select (on by default) |
 | Selection modes (word, rectangular) | ✅ | double-click word, triple-click line, ⌥-drag rectangular (xterm.js column selection); word delimiters not configurable |
@@ -308,7 +308,7 @@ MobAlt has 51 in full, 40 in a narrower or different form and lacks 33.
 | Everything auto-saves (incl. Quick connect sessions) | 🟡 | sessions and settings save on Save, the workspace every 20 s; Quick connect sessions are not saved |
 | Right-click paste as a global toggle | ✅ | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", on by default |
 | Copy-on-select, Alt-drag rectangle, tunable delimiters | ✅ | Copy on select (toggle), ⌥-drag column selection; delimiters not tunable |
-| Multi-line paste guard with preview and malware checks | ✅ | "Paste N lines into …?" with an editable preview and the suspicious-content findings; both toggles in Settings → Terminal → Paste guard |
+| Multi-line paste guard with preview and malware checks | ✅ | "Paste N lines into …?" with an editable preview and the suspicious-content findings; both toggles in Settings → Features → Paste guard |
 | MultiExec and split views (Exclude, sync scroll) | 🟡 | splits and grids up to 8 panes; MultiExec without Exclude or synchronised scrolling |
 | Macros as first-class objects (WaitFor, nesting, folders, encryption) | 🟡 | recorded and text macros, play to one or all terminals; none of the extras |
 | Jump hosts as a dropdown | ✅ | Advanced SSH → Jump host dropdown of saved sessions (or manual), chained through the jump session's own jump host; Sftp and X11 routed through; SSH sessions only |
