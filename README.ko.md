@@ -121,7 +121,8 @@ macOS Keychain 기반 암호화), `settings.json`, `known_hosts`, `workspace.jso
 
 ## 개발
 
-요구 사항: Node.js 22+, Xcode Command Line Tools(`node-pty` 빌드), Python 3(아이콘·DMG 배경 생성).
+요구 사항: Node.js 22+, Xcode Command Line Tools(`node-pty` 빌드). 아이콘·DMG 배경을 다시 생성할 때(`npm run assets`)는
+librsvg와 ImageMagick도 필요합니다: `brew install librsvg imagemagick`.
 
 ```bash
 git clone https://github.com/Hyeongcheol-An/MobAlt.git

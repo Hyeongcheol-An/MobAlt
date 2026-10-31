@@ -125,7 +125,8 @@ there is no telemetry; the optional update check only downloads the release mani
 
 ## Development
 
-Requirements: Node.js 22+, Xcode Command Line Tools (for `node-pty`), Python 3 (icon/DMG assets).
+Requirements: Node.js 22+, Xcode Command Line Tools (for `node-pty`). Regenerating the icon/DMG assets
+(`npm run assets`) also needs librsvg and ImageMagick: `brew install librsvg imagemagick`.
 
 ```bash
 git clone https://github.com/Hyeongcheol-An/MobAlt.git
