@@ -27,8 +27,9 @@ const IPV4 = String.raw`\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]
 const IPV6 = String.raw`(?<![\w:.])(?:(?:[0-9a-f]{1,4}:){7}[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,7}:|(?:[0-9a-f]{1,4}:){1,6}:[0-9a-f]{1,4}|(?:[0-9a-f]{1,4}:){1,5}(?::[0-9a-f]{1,4}){1,2}|(?:[0-9a-f]{1,4}:){1,4}(?::[0-9a-f]{1,4}){1,3}|(?:[0-9a-f]{1,4}:){1,3}(?::[0-9a-f]{1,4}){1,4}|(?:[0-9a-f]{1,4}:){1,2}(?::[0-9a-f]{1,4}){1,5}|[0-9a-f]{1,4}:(?::[0-9a-f]{1,4}){1,6}|:(?::[0-9a-f]{1,4}){1,7})(?![\w:])`;
 const URL = String.raw`\b(?:https?|ftps?|sftp|ssh|wss?|file)://[^\s'"<>()\[\]]*[^\s'"<>()\[\].,;:!?]`;
 // 512M, 3.2GB, 1.5GiB, 200ms, 45% — a number with a size / time / percent unit (never a bare number or a version); a
-// space before the unit only with units of two letters or more ("3 b" is a list item, "512 MB" a size)
-const UNITS = String.raw`\b\d+(?:[.,]\d+)?(?:\s?(?:[KMGTPE]i?B|[kmgtpe]i?b|bytes?|ms|µs|us|ns)|[KMGTPE]i?|[Bb]|%)(?![\w.])`;
+// space before the unit only with units of two letters or more ("3 b" is a list item, "512 MB" a size); a single-letter
+// unit needs two digits or a decimal and no CSI-literal context ("\033[2B" and the "7b" of a hash are not sizes)
+const UNITS = String.raw`\b(?:\d+(?:[.,]\d+)?(?:\s?(?:[KMGTPE]i?B|[kmgtpe]i?b|bytes?|ms|µs|us|ns)|%)|(?<![\[;])(?:\d{2,}|\d+[.,]\d+)(?:[KMGTPE]i?|[Bb]))(?![\w.])`;
 
 /** The rules a fresh install highlights with (Settings → Features → Keyword highlighting → Restore defaults). */
 export const DEFAULT_RULES = Object.freeze([
@@ -206,7 +207,22 @@ export class TermHighlighter {
     this._fontKey = '';
     this._cell = null;
     this._font = null; // { family, size, cols, spacing } for the bold overlay
+    this._snap = null; // { base, y0, texts }: the screenful above the last scan, so a row rewritten in place is noticed (_verifyRecent)
     this._sub = term.onWriteParsed(() => this._onWriteParsed());
+    // Full-screen apps (less, vim, htop) draw on the alternate buffer, but xterm places decorations by marker line
+    // against whichever buffer is active: the normal buffer's would be painted onto the app's rows at the same
+    // positions. So they all go when the alternate buffer comes up, and are rebuilt when the normal one is back.
+    this._bufSub = term.buffer.onBufferChange(() => this._onBufferChange());
+  }
+
+  _onBufferChange() {
+    if (this.disposed) return;
+    try {
+      if (this.term.buffer.active.type === 'alternate') this.reset();
+      else this.rescan();
+    } catch (e) {
+      this._fail(e);
+    }
   }
 
   /** Enable / rules / palette in one go; a call that changes nothing is free. Returns compileRules().invalid. */
@@ -243,6 +259,7 @@ export class TermHighlighter {
     this.rows = [];
     this.deadRows = 0;
     this.count = 0;
+    this._snap = null;
     if (this.tail) { this.tail.dispose(); this.tail = null; }
   }
 
@@ -261,6 +278,7 @@ export class TermHighlighter {
       if (this.count > MAX_DECORATIONS) this._trim(); // before the screen is done: the trim takes the rows highest up, the screen may be there
       if (vp < from) this._scanRange(vp, Math.min(from - 1, vp + this.term.rows - 1), Infinity, old);
       this._setTail();
+      this._snapshot(cursor);
     } catch (e) {
       this._fail(e);
     }
@@ -270,6 +288,7 @@ export class TermHighlighter {
     if (this.disposed) return;
     this.disposed = true;
     try { this._sub.dispose(); } catch {}
+    try { this._bufSub.dispose(); } catch {}
     this.reset();
   }
 
@@ -306,6 +325,7 @@ export class TermHighlighter {
       this._verifyRecent(Math.max(0, cursor - this.term.rows), from, old);
       this._scanRange(from, cursor, SCAN_BUDGET_MS, old);
       this._setTail();
+      this._snapshot(cursor);
       if (this.count > MAX_DECORATIONS) this._trim();
       if (this.deadRows > 64 && this.deadRows > this.rows.length / 4) this._compact();
     } catch (e) {
@@ -314,21 +334,39 @@ export class TermHighlighter {
   }
 
   /**
-   * Rows above the scanned range that were decorated and are within a screenful of the cursor: a progress bar that
-   * moves the cursor up and rewrites them changed their text — rescan those (a line that gained a keyword that way is
-   * not noticed; only newly written rows are scanned).
+   * Rows above the scanned range within a screenful of the cursor: a progress bar, docker pull or apt moves the cursor
+   * up and rewrites them. A row whose text differs from the last scan's snapshot (or, without one, from its own
+   * record) is scanned again — a row that gained a keyword in place is highlighted, one that lost it is not any more.
    */
   _verifyRecent(lo, hi, old) {
     if (hi <= lo) return;
     const buf = this.term.buffer.active;
-    for (const [y, r] of old) {
-      if (y < lo || y >= hi) continue;
+    const snap = this._snap;
+    const shift = snap && this.tail && !this.tail.isDisposed ? this.tail.line - snap.base : 0; // the scrollback trimmed lines since: every row moved up
+    const done = new Set();
+    for (let y = lo; y < hi; y++) {
       const line = buf.getLine(y);
-      if (line && trimEnd(line.translateToString(true)) === r.text) continue;
+      if (!line) continue;
+      const text = trimEnd(line.translateToString(true));
+      const i = snap ? y - (snap.y0 + shift) : -1;
+      const known = snap && i >= 0 && i < snap.texts.length ? snap.texts[i] : (old.get(y) || {}).text;
+      if (known === undefined || known === text) continue;
       let y0 = y;
       while (y0 > 0 && buf.getLine(y0)?.isWrapped) y0--;
+      if (done.has(y0)) continue;
+      done.add(y0);
       this._scanLogical(y0, old);
     }
+  }
+
+  /** Remember the text of the screenful that ends at the cursor (_verifyRecent); the tail marker anchors it against scrollback trimming. */
+  _snapshot(cursor) {
+    if (!this.tail || this.tail.isDisposed) { this._snap = null; return; }
+    const buf = this.term.buffer.active;
+    const y0 = Math.max(0, cursor - this.term.rows + 1);
+    const texts = [];
+    for (let y = y0; y <= cursor; y++) texts.push(trimEnd(buf.getLine(y)?.translateToString(true) || ''));
+    this._snap = { base: this.tail.line, y0, texts };
   }
 
   /**

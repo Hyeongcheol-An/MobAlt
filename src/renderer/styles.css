@@ -782,3 +782,14 @@ body.detached #toolbar .brand::after { content: " ▸"; opacity: .55; }
 body.detached #toolbar .brand::after { color: var(--fg-dim); opacity: 1; }
 /* The scan table's ＋ keeps its accent colour on the hover surface, where the accent is ≥ 4.5:1 (it is not on --bg-active). */
 .scan-table .scan-add:hover { background: var(--bg-hover); }
+/* ---- qa5 terminal ---- */
+/* Paste guard: a mark is a light tint of the warn / danger colour over the input background (18 % and 20 %: the text
+   over it keeps ≥ 4.5:1 on every theme — One Dark is the floor at 4.7:1 — where the full --warn-bg fill read at
+   3.2:1); the 1px outline still says which kind it is. The "(line n)" suffix keeps the box's own text colour: at
+   opacity .8 it read at 3.2–3.7:1. */
+.pg-mark { background: color-mix(in srgb, var(--warn) 18%, var(--bg-input)); }
+.pg-mark.danger { background: color-mix(in srgb, var(--danger) 20%, var(--bg-input)); }
+.pg-findings .pg-where { opacity: 1; }
+/* Transfers: a visually hidden polite live region beside the list carries one sentence per finished transfer
+   (sftp.js _announce); the list re-renders on every progress tick, so it cannot be the live region itself. */
+.xfer-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }

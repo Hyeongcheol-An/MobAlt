@@ -117,6 +117,38 @@ class PlainTextFilter {
   }
 }
 
+/**
+ * Status lines the main process writes into a terminal (Zmodem progress, "Connecting to…", failures) carry a private
+ * OSC marker instead of an SGR colour: main does not know the pane's palette, and SGR 90 / 31 are invisible (Solarized
+ * Dark) or below 4.5:1 on most dark themes. The renderer (terminal.js) swaps the marker for a true-colour SGR from the
+ * pane's own theme; the plain-text log filter drops it like any OSC, so a session log keeps the words only.
+ */
+const STATUS_DIM = '\x1b]7704;dim\x07';
+const STATUS_FAIL = '\x1b]7704;fail\x07';
+
+/**
+ * Terminal queries that xterm answers on its data channel — DA1/2/3, DSR, DECRQM, XTVERSION, the kitty keyboard
+ * query, window-size / title reports, OSC colour queries, DECRQSS / XTGETTCAP, DECID. A window that attaches to a
+ * terminal later redraws the ring buffer through a fresh xterm, which would answer them all over again — straight
+ * into the shell (vim's OSC 11 and DECRQM 12 left zsh in its "execute:" prompt). They change nothing on screen, so
+ * the ring keeps everything but them.
+ */
+const QUERY_RE = /\x1b\[[?>=]?[0-9;]*(?:c|n|\$p)|\x1b\[>[0-9;]*q|\x1b\[\?u|\x1b\[(?:1[4-9]|2[01])(?:;\d*)*t|\x1b\](?:4|5|1[0-9])(?:;\d+)?;\?(?:;\?)*(?:\x07|\x1b\\)|\x1bP[$+]q[^\x07\x1b\x9c]*(?:\x07|\x1b\\|\x9c)|\x1bZ/g;
+
+/**
+ * `text` without the query sequences, plus the tail that may be the start of one the chunk cut off (`pending`, to be
+ * prepended to the next chunk; bounded so a runaway string is not held forever).
+ */
+function stripQueries(s) {
+  let pending = '';
+  const i = s.lastIndexOf('\x1b');
+  if (i >= 0 && PlainTextFilter.seqEnd(s, i) < 0 && s.length - i < 4096) {
+    pending = s.slice(i);
+    s = s.slice(0, i);
+  }
+  return { text: s.replace(QUERY_RE, ''), pending };
+}
+
 /** Output kept per terminal for a window that attaches to it later (a detached tab): the last 256 KB. */
 const RING_BYTES = 256 * 1024;
 /** How long a finished terminal's output stays replayable (a tab in transit between windows when its backend ended). */
@@ -131,15 +163,22 @@ class TerminalRegistry extends EventEmitter {
     this.ringLimit = RING_BYTES;
   }
 
-  /** Keep the tail of a terminal's output: whole chunks, trimmed to the limit (the first kept chunk cut at a line start). */
+  /**
+   * Keep the tail of a terminal's output: whole chunks, trimmed to the limit (the first kept chunk cut at a line start),
+   * without the terminal queries a replay must not answer again (stripQueries; a query split across chunks is held
+   * back until its end arrives).
+   */
   _ring(id, chunk) {
     let r = this.rings.get(id);
     if (!r) {
-      r = { parts: [], size: 0, timer: null };
+      r = { parts: [], size: 0, timer: null, pending: '' };
       this.rings.set(id, r);
     }
-    r.parts.push(chunk);
-    r.size += chunk.length;
+    const { text, pending } = stripQueries(r.pending + chunk);
+    r.pending = pending;
+    if (!text) return;
+    r.parts.push(text);
+    r.size += text.length;
     while (r.size > this.ringLimit && r.parts.length > 1) r.size -= r.parts.shift().length;
     if (r.size > this.ringLimit) { // one chunk bigger than the whole ring
       const p = r.parts[0];
@@ -155,7 +194,7 @@ class TerminalRegistry extends EventEmitter {
   /** Everything a window needs to draw a terminal it is taking over: the buffered output ('' when nothing is known). */
   replay(id) {
     const r = this.rings.get(id);
-    return r ? r.parts.join('') : '';
+    return r ? r.parts.join('') + r.pending : '';
   }
 
   /** The ring of a terminal that ended stays for RING_GRACE_MS (a tab in transit still gets its last screen), then goes. */
@@ -192,9 +231,10 @@ class TerminalRegistry extends EventEmitter {
     return n;
   }
 
-  data(id, data) {
+  /** Text for the terminal; `flags.nolog` keeps it out of a session log (a Zmodem stream's remainder is never text). */
+  data(id, data, flags) {
     const log = this.logs.get(id);
-    if (log) {
+    if (log && !(flags && flags.nolog)) {
       const text = log.filter ? log.filter.push(data) : data;
       if (text) log.ws.write(text);
     }
@@ -562,4 +602,4 @@ async function listSerialPorts() {
     .filter((p, i, a) => a.findIndex((x) => x.path === p.path) === i);
 }
 
-module.exports = { TerminalRegistry, PlainTextFilter, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, defaultShell, spawnMosh, findMosh };
+module.exports = { TerminalRegistry, PlainTextFilter, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, defaultShell, spawnMosh, findMosh, stripQueries, QUERY_RE, STATUS_DIM, STATUS_FAIL };

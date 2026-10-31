@@ -720,14 +720,30 @@ export class SftpPanel {
     else if (prev && prev.finishedAt) t.finishedAt = prev.finishedAt;
     this.transfers.set(t.id, t);
     if (t.status !== 'running') {
+      // the end of a transfer is announced: a toast (the toast root is a polite live region; an error one an alert)
+      // for failures and for Zmodem, whose only other trace is a line in the terminal; a visually hidden live region
+      // for the rest, so a batch of panel uploads does not stack toasts
+      const what = `${t.name} ${t.kind === 'upload' ? 'uploaded' : 'downloaded'}${t.total ? ` (${fmtSize(t.total)})` : ''}`;
       if (t.status === 'done') {
         const st = this.states.get(t.connId);
         if (st && this.connId === t.connId && t.kind === 'upload') this.navigate(st.path);
         setTimeout(() => { this.transfers.delete(t.id); this.renderTransfers(); }, 30000);
+        if (t.proto === 'zmodem') toast(`Zmodem: ${what}`, 'info');
+        else this._announce(what);
       } else if (t.status === 'error') toast(`${t.kind} ${t.name}: ${t.error}`, 'error', 6000);
+      else this._announce(`${t.kind} of ${t.name} ${t.status}`);
     }
     this.renderTransfers();
     this.app.setStatusTransfers([...this.transfers.values()].filter((x) => x.status === 'running').length);
+  }
+
+  /** One sentence per finished transfer for screen readers (styles.css .xfer-live); the list itself re-renders on every progress tick, so it cannot be the live region. */
+  _announce(text) {
+    if (!this.live) {
+      this.live = h('div', { class: 'xfer-live', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' });
+      this.els.transfers.insertAdjacentElement('afterend', this.live);
+    }
+    this.live.textContent = text;
   }
 
   renderTransfers() {

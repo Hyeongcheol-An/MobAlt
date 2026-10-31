@@ -39,3 +39,21 @@ test('ring: the output of a terminal that ended stays replayable for a while, th
   assert.ok(ring && ring.timer, 'a timer will drop it');
   clearTimeout(ring.timer);
 });
+
+test('ring: terminal queries are left out of the replay (a fresh xterm would answer them into the shell), even split across chunks', () => {
+  const r = new TerminalRegistry();
+  r.register('a', { kind: 'local', write() {}, resize() {}, kill() {} });
+  r.data('a', 'vim\x1b]11;?\x07\x1b[?12$p\x1b[c\x1b[>c\x1b[6n\x1b[?6n\x1b[>0q\x1b[?u\x1b[18t\x1b[21;2t\x1bP$qm\x1b\\\x1bP+q544e\x1b\\\x1b]4;1;?\x1b\\\x1bZ ok');
+  assert.equal(r.replay('a'), 'vim ok');
+  r.data('a', 'a\x1b]1');
+  assert.equal(r.replay('a'), 'vim oka\x1b]1', 'the start of a sequence is held back from the ring but replayed as is: the live stream completes it');
+  r.data('a', '1;?\x1b\\b');
+  assert.equal(r.replay('a'), 'vim okab', 'a query split across two chunks goes too');
+  r.data('a', 'x\x1b[3');
+  r.data('a', '1mz');
+  assert.equal(r.replay('a'), 'vim okabx\x1b[31mz', 'a split non-query is kept whole');
+  // what is not a query stays: SGR, the alternate screen, OSC 7 (the folder hook), the status marker, DECSET, a title
+  const keep = '\x1b[?1049h\x1b]7;file://h/p\x07\x1b]7704;dim\x07t\x1b[0m\x1b[?2004h\x1b]0;title\x07\x1b[22;0t\x1b[2J';
+  r.data('b', keep);
+  assert.equal(r.replay('b'), keep);
+});
