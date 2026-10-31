@@ -425,7 +425,8 @@ class App {
     rs.addEventListener('mousedown', (e) => {
       e.preventDefault();
       const start = e.clientX, w0 = $('#sidebar').getBoundingClientRect().width;
-      const move = (ev) => document.documentElement.style.setProperty('--sidebar-w', Math.max(180, Math.min(700, window.innerWidth - 520, w0 + ev.clientX - start)) + 'px');
+      const grow = document.documentElement.dir === 'rtl' ? -1 : 1; // right to left: the sidebar is on the right, dragging left widens it
+      const move = (ev) => document.documentElement.style.setProperty('--sidebar-w', Math.max(180, Math.min(700, window.innerWidth - 520, w0 + grow * (ev.clientX - start))) + 'px');
       const up = () => {
         document.removeEventListener('mousemove', move);
         document.removeEventListener('mouseup', up);
@@ -844,7 +845,7 @@ class App {
     const ap = this.activePane();
     const n = ap && ap.tab ? ap.tab.panes().length : 0;
     const zoomed = !!(ap && ap.tab && ap.tab.zoomed);
-    contextMenu(r.left, r.bottom + 4, [
+    contextMenu(document.documentElement.dir === 'rtl' ? r.right : r.left, r.bottom + 4, [ // under the button, aligned on its start edge
       { label: t('Split Right (side by side)'), key: '⌘D', action: () => this.action('split', 'right') },
       { label: t('Split Down (top / bottom)'), key: '⇧⌘D', action: () => this.action('split', 'down') },
       '-',
@@ -1045,8 +1046,10 @@ class App {
         : pane.kind === 'serial' ? `${s?.serialPath} @ ${s?.baudRate}`
         : pane.kind === 'ftp' ? `${s?.username ? s.username + '@' : 'anonymous@'}${s?.host}${s?.port && s.port !== 21 ? ':' + s.port : ''}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
-      el.textContent = `${(TYPE_LABEL[pane.kind] || pane.kind).toUpperCase()} · ${where} · ${stateLabel(pane.status)}${msg ? ' (' + msg + ')' : ''}`; // the kind's label follows the interface language (LOCAL / SERIAL)
-      if (pane.kind === 'mosh' && pane.sftpStatus && pane.sftpStatus !== 'idle') el.textContent += ' · ' + t('SFTP: {state}', { state: stateLabel(pane.sftpStatus) });
+      // the kind's label follows the interface language (LOCAL / SERIAL); user@host:port is a <bdi> (styles.css: its own
+      // direction), so in a right-to-left interface it is not reordered with the words around it
+      el.replaceChildren(`${(TYPE_LABEL[pane.kind] || pane.kind).toUpperCase()} · `, h('bdi', {}, where), ` · ${stateLabel(pane.status)}${msg ? ' (' + msg + ')' : ''}`);
+      if (pane.kind === 'mosh' && pane.sftpStatus && pane.sftpStatus !== 'idle') el.append(' · ' + t('SFTP: {state}', { state: stateLabel(pane.sftpStatus) }));
       const browsing = this.sftpPanel.states.get(pane.kind === 'mosh' ? pane.sftpConnId : pane.termId);
       $('#st-cwd').textContent = pane.dead ? '' : shortPath(pane.remoteCwd || pane.cwd || (browsing && browsing.path) || '');
     }

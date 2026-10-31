@@ -159,7 +159,7 @@ export class TermPane {
       (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': t('Remote monitoring'), hidden: true })),
       // the terminal, with the background label behind its text: an overlay above xterm's canvas (which paints an opaque
       // background) in the pane's foreground colour at ~16 % opacity, pointer-events none — never part of the buffer
-      (this.termEl = h('div', { class: 'pane-term' }, (this.badgeEl = h('div', { class: 'pane-badge', 'aria-hidden': 'true', hidden: true }, (this.badgeText = h('span', { class: 'badge-text' })))))),
+      (this.termEl = h('div', { class: 'pane-term', dir: 'ltr' }, (this.badgeEl = h('div', { class: 'pane-badge', 'aria-hidden': 'true', hidden: true }, (this.badgeText = h('span', { class: 'badge-text' })))))),
       // MobaXterm's per-terminal MultiExec switch: a strip under the terminal, shown while the mode is on
       // (syncMultiexecStrip), with the one checkbox `Exclude "<title>" from MultiExec mode` — ticked, the pane stays on
       // screen and connected but gets no broadcast keystrokes. Right-click / ⇧F10 on it: the mode's bulk menu (app.js).
