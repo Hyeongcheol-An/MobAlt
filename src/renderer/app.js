@@ -1109,7 +1109,8 @@ class App {
   _renderUpdateBanner() {
     if (!this.updateOnDisk) return;
     const versions = { version: h('b', {}, this.updateOnDisk), current: h('b', {}, this._updateCurrent) };
-    $('#update-banner-text').replaceChildren(...fillNodes(t('MobAlt {version} is installed on disk — you are running {current}.'), versions), ' ', h('span', { class: 'keep' }, t('Relaunch to use it.')));
+    // one sentence key: a translation places the {relaunch} part (kept visible when the banner is narrow) and the spacing itself
+    $('#update-banner-text').replaceChildren(...fillNodes(t('MobAlt {version} is installed on disk — you are running {current}. {relaunch}'), { ...versions, relaunch: h('span', { class: 'keep' }, t('Relaunch to use it.')) }));
   }
 
   showUpdateBanner(on) {

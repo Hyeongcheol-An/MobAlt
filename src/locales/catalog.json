@@ -1987,6 +1987,11 @@
         "src/renderer/app.js"
       ]
     },
+    "Enabled": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "ends with a newline: the last line runs at once on a prompt without bracketed paste": {
       "refs": [
         "src/renderer/pasteguard.js"
@@ -3175,7 +3180,7 @@
         "src/main/updater.js"
       ]
     },
-    "MobAlt {version} is installed on disk — you are running {current}.": {
+    "MobAlt {version} is installed on disk — you are running {current}. {relaunch}": {
       "refs": [
         "src/renderer/app.js"
       ]
@@ -6230,7 +6235,6 @@
     },
     "Zoom": {
       "refs": [
-        "src/renderer/dialogs.js",
         "src/main/main.js"
       ]
     },
@@ -6270,6 +6274,11 @@
       ]
     },
     "Zoom pane (fill the tab) / restore": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Zoom text": {
       "refs": [
         "src/renderer/dialogs.js"
       ]

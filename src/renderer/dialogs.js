@@ -374,7 +374,7 @@ export function sessionEditor(app, initial = {}) {
   const renderTunnels = () => {
     tunnelRows.replaceChildren(
       h('table', { class: 'list-table' },
-        h('thead', {}, h('tr', {}, h('th', {}, t('Type')), h('th', {}, t('Bind')), h('th', {}, t('Destination')), h('th', {}, t('On')), h('th', {}))),
+        h('thead', {}, h('tr', {}, h('th', {}, t('Type')), h('th', {}, t('Bind')), h('th', {}, t('Destination')), h('th', {}, t('Enabled')), h('th', {}))),
         h('tbody', {}, tunnels.map((tu, i) => h('tr', {},
           h('td', {}, tunnelTypeLabel(tu.type)),
           h('td', { class: 'mono' }, `${tu.bindHost || '127.0.0.1'}:${tu.bindPort}`),
@@ -1057,7 +1057,7 @@ export function shortcutsDialog(app) {
     ]],
     ['panes', t('Panes & terminal'), [
       [t('Split right / down'), '⌘D / ⇧⌘D'], [t('Grid 2 / 4 / 6 / 8 panes'), '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], [t('Unsplit'), '⌥⌘1'], [t('Close pane'), '⇧⌘W'], [t('Next pane'), '⌘]'], [t('Zoom pane (fill the tab) / restore'), '⇧⌘⏎'],
-      [t('Find'), '⌘F'], [t('Clear terminal'), '⌘K'], [t('Zoom'), '⌘= / ⌘- / ⌘0'], [t('Copy / Paste'), '⌘C / ⌘V'], [t('Paste (terminal)'), rightClick ? t('Right-click') : '⌘V'], [t('Terminal menu'), rightClick ? t('⇧Right-click') : t('Right-click')],
+      [t('Find'), '⌘F'], [t('Clear terminal'), '⌘K'], [t('Zoom text'), '⌘= / ⌘- / ⌘0'], [t('Copy / Paste'), '⌘C / ⌘V'], [t('Paste (terminal)'), rightClick ? t('Right-click') : '⌘V'], [t('Terminal menu'), rightClick ? t('⇧Right-click') : t('Right-click')],
       [t('Newline in TUI apps (ESC+CR)'), '⇧Enter / ⌥Enter'], [t('MultiExec'), '⇧⌘M'],
     ]],
     ['sidebar', t('Sidebar, SFTP & lists'), [
