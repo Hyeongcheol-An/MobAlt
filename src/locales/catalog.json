@@ -11,6 +11,11 @@
         "src/renderer/app.js"
       ]
     },
+    "\"{name}\" already exists in {dir}.": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "\"{pattern}\" is not a valid regular expression: {error}": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -56,6 +61,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "(no MX records)": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "(no PTR record: {host} has no reverse DNS name)": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "(no saved SSH session yet)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -71,6 +86,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "(no TXT records)": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "(none)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -78,7 +98,8 @@
     },
     "(root)": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/sidebar.js"
       ]
     },
     "(scanning…)": {
@@ -114,6 +135,11 @@
     "{account}'s password (attempt {n})": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "{create} or {import}": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "{d}d {h}h": {
@@ -242,10 +268,21 @@
         "src/main/live.js"
       ]
     },
+    "{n} ch": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "{n} character": {
       "plural": "{n} characters",
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "{n} character recorded": {
+      "plural": "{n} characters recorded",
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "{n} connection is still open ({kinds}). {verb} anyway?": {
@@ -264,6 +301,12 @@
       "plural": "{n} files",
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "{n} item already exists in {dir}.": {
+      "plural": "{n} items already exist in {dir}.",
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "{n} line": {
@@ -301,6 +344,21 @@
         "src/renderer/app.js"
       ]
     },
+    "{name} copy": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "{name} downloaded": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "{name} downloaded ({size})": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "{name} is not a file": {
       "refs": [
         "src/main/zmodem.js"
@@ -309,6 +367,16 @@
     "{name} is not an SSH session": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "{name} uploaded": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "{name} uploaded ({size})": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "{path} already exists — choose another file name": {
@@ -321,10 +389,40 @@
         "src/main/keygen.js"
       ]
     },
+    "{path}: {error}": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "{port}/tcp open": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "{rtt} ms": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "{s}s": {
       "refs": [
         "src/renderer/monitor.js",
         "src/renderer/ui.js"
+      ]
+    },
+    "{sent} / {size}": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "{sent} / {size} · {done}/{total} files": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "{size}/s": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "{theme}: the terminal colours": {
@@ -475,9 +573,20 @@
         "src/renderer/terminal.js"
       ]
     },
+    "■ Stop": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "● LOG": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "● Rec": {
+      "refs": [
+        "src/renderer/panels.js",
+        "src/renderer/index.html"
       ]
     },
     "⚠️ Host key changed!": {
@@ -498,6 +607,11 @@
     "1 stop bit": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "192.168.1.0/24, 10.0.0.1-50 or host": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "2 × 1 (2 stacked)": {
@@ -551,9 +665,34 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "A CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or one host; up to a /16": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "A file named \"{name}\" already exists here. Replace it with \"{from}\"?": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "A folder named \"{name}\" already exists here. Replace it with \"{from}\"? The server may refuse this.": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "a key or escape sequence, not text; the terminal would act on it": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "A name cannot contain \"/\"": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "A name to remember this MAC by (up to 40 characters)": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "A pane is zoomed": {
@@ -623,6 +762,21 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Add {ip} as an SSH session": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Add {ip} as session": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Add as session": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Add to ssh-agent (ssh-add --apple-use-keychain)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -651,6 +805,11 @@
     "Algorithms": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "All tabs": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Already present on {host} in {file}": {
@@ -770,6 +929,21 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Broadcast address": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Broadcast address (a directed broadcast such as 192.168.1.255 reaches another subnet)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Broadcast keystrokes to every visible terminal in this tab (⇧⌘M)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Browse…": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -789,8 +963,16 @@
       "refs": [
         "src/renderer/dialogs.js",
         "src/renderer/layout.js",
+        "src/renderer/panels.js",
+        "src/renderer/sftp.js",
+        "src/renderer/sidebar.js",
         "src/renderer/ui.js",
         "src/main/main.js"
+      ]
+    },
+    "Cancel transfer": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "cancelled": {
@@ -811,6 +993,11 @@
     "Cannot create {dir}: {error}": {
       "refs": [
         "src/main/keygen.js"
+      ]
+    },
+    "Cannot move a folder into itself": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Cannot open {path}: {error}": {
@@ -856,6 +1043,16 @@
     "Carriage return": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "cd Terminal Here": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "cd terminal to this folder": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Check for updates at startup": {
@@ -929,6 +1126,7 @@
         "src/renderer/app.js",
         "src/renderer/dialogs.js",
         "src/renderer/layout.js",
+        "src/renderer/sftp.js",
         "src/renderer/terminal.js",
         "src/renderer/ui.js"
       ]
@@ -946,7 +1144,8 @@
     "Close (Esc)": {
       "refs": [
         "src/renderer/dialogs.js",
-        "src/renderer/ui.js"
+        "src/renderer/ui.js",
+        "src/renderer/index.html"
       ]
     },
     "Close {n} other pane? {conns} will be dropped.": {
@@ -1033,6 +1232,11 @@
         "src/renderer/layout.js"
       ]
     },
+    "Collapse All": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
     "Colour": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1074,9 +1278,20 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Connect": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Connect All Sessions (tabs)": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
     "connected": {
       "refs": [
-        "src/renderer/app.js"
+        "src/renderer/app.js",
+        "src/renderer/sidebar.js"
       ]
     },
     "Connected to {path} @ {baud} {mode}": {
@@ -1108,6 +1323,11 @@
     "Connecting to jump host {target}...": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "Connecting via SSH…": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "connection closed during the host key check": {
@@ -1180,6 +1400,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Contents of {name}": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Context menu: focused tab, row, macro, SFTP entry": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1188,6 +1413,12 @@
     "Control character": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "Copied {n} host as text": {
+      "plural": "Copied {n} hosts as text",
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "Copy": {
@@ -1201,9 +1432,29 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Copy as text": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Copy Current Path": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Copy on select": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Copy Path": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Copy the results as text": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Could not connect to {where}: {error}": {
@@ -1254,6 +1505,11 @@
     "CPU: measured between two polls": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Create a session": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Cursor": {
@@ -1320,6 +1576,86 @@
     "Default (Settings)": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Delete": {
+      "refs": [
+        "src/renderer/panels.js",
+        "src/renderer/sftp.js",
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Delete \"{name}\" on the remote host? This cannot be undone.": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Delete ({n})": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Delete {count} items (including {n} folder with its contents) on the remote host? This cannot be undone.": {
+      "plural": "Delete {count} items (including {n} folders with their contents) on the remote host? This cannot be undone.",
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Delete {n} item on the remote host? This cannot be undone.": {
+      "plural": "Delete {n} items on the remote host? This cannot be undone.",
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Delete folder": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Delete Folder": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Delete folder \"{name}\" and everything inside it on the remote host? This cannot be undone.": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Delete folder \"{name}\" and its {n} session?": {
+      "plural": "Delete folder \"{name}\" and its {n} sessions?",
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Delete folder \"{name}\"?": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Delete macro \"{name}\"?": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Delete selected": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Delete session": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Delete session \"{name}\"?": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Deleted {name}": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Destination": {
@@ -1395,7 +1731,8 @@
     },
     "Discard": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/sftp.js"
       ]
     },
     "Discard changes": {
@@ -1406,6 +1743,11 @@
     "Discard the changes to this session?": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Discard unsaved changes?": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Disconnect": {
@@ -1440,6 +1782,31 @@
         "src/renderer/terminal.js"
       ]
     },
+    "DNS: {servers}": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "done": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "done in {seconds}s": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Double-click a macro to play it in the active terminal": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Double-click to play": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "download": {
       "refs": [
         "src/main/zmodem.js"
@@ -1447,7 +1814,18 @@
     },
     "Download": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/updater.js"
+      ]
+    },
+    "Download ({n})": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "download {name}: {error}": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Download failed": {
@@ -1465,6 +1843,16 @@
         "src/main/main.js"
       ]
     },
+    "download of {name} {status}": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Download selected": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Download to…": {
       "refs": [
         "src/main/main.js"
@@ -1476,9 +1864,15 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Drag files from Finder into the list to upload.": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Duplicate": {
       "refs": [
-        "src/renderer/layout.js"
+        "src/renderer/layout.js",
+        "src/renderer/sidebar.js"
       ]
     },
     "Duplicate \"{name}\"": {
@@ -1531,14 +1925,40 @@
         "src/main/main.js"
       ]
     },
+    "Edit (built-in)": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Edit in External Editor": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Edit macro": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Edit session — {name}": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
     },
+    "Edit…": {
+      "refs": [
+        "src/renderer/panels.js",
+        "src/renderer/sidebar.js"
+      ]
+    },
     "Empty": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Empty folder": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Empty pane": {
@@ -1556,9 +1976,29 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "Enter a CIDR, an address range or a host": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Enter a host": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Enter a MAC address": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Enter a target: a CIDR (192.168.1.0/24), a range (10.0.0.1-10.0.0.50) or a host": {
       "refs": [
         "src/main/netscan.js"
+      ]
+    },
+    "Enter an octal mode such as 755 or 0644": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Enter manually…": {
@@ -1592,6 +2032,11 @@
         "src/main/tools.js"
       ]
     },
+    "error: {message}": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Errors, warnings, IP addresses, URLs… coloured by the rules in Settings → Features": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1617,6 +2062,11 @@
         "src/main/ssh.js"
       ]
     },
+    "Expand All": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
     "Experimental": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1625,6 +2075,11 @@
     "Export failed: {error}": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "Export JSON…": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Export sessions": {
@@ -1678,9 +2133,34 @@
         "src/main/sftp.js"
       ]
     },
+    "Files": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Files are browsed over a separate SSH connection to this host": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Filter sessions": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Filter sessions…": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Find": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Find in terminal": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Find…": {
@@ -1702,6 +2182,11 @@
     "Flow control": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Focus a terminal first": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "Focus Next Pane": {
@@ -1731,7 +2216,33 @@
     },
     "Folder": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "folder name": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Folder name": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Folder names cannot contain \"/\"": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Folder names cannot contain \"/\" — use New Subfolder to nest folders": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Follow terminal": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Font family": {
@@ -1757,6 +2268,16 @@
     "Framing": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "from port": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "From port": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "FTP password": {
@@ -1794,9 +2315,19 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Generate an SSH key pair (ssh-keygen)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Generate SSH key": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Generate SSH key…": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Generate SSH Key…": {
@@ -1812,6 +2343,16 @@
     "Generating {type} key…": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Give the macro a name": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Go": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Greek": {
@@ -1835,6 +2376,11 @@
         "src/main/main.js"
       ]
     },
+    "Hide Hidden Files": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Hide remote monitoring bar": {
       "refs": [
         "src/renderer/terminal.js"
@@ -1847,7 +2393,13 @@
     },
     "Hide sidebar (⌘B)": {
       "refs": [
-        "src/renderer/app.js"
+        "src/renderer/app.js",
+        "src/renderer/index.html"
+      ]
+    },
+    "Hide until another version appears": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Highlight keywords: errors, warnings, OK, IP addresses, URLs, sizes": {
@@ -1855,9 +2407,15 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Home": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Host": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
       ]
     },
     "host {host}": {
@@ -1901,14 +2459,44 @@
         "src/main/ftp.js"
       ]
     },
+    "host or IP": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Host or IP": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Host: {host}": {
       "refs": [
         "src/renderer/terminal.js"
       ]
     },
+    "Hostname": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "hostname or IP": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Hostname: {hostname}": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Hosts probed at the same time": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "How a host is probed": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Icon": {
@@ -1941,6 +2529,17 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "import ~/.ssh/config": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Import ~/.ssh/config": {
+      "refs": [
+        "src/renderer/sidebar.js",
+        "src/renderer/index.html"
+      ]
+    },
     "Import failed": {
       "refs": [
         "src/renderer/app.js"
@@ -1954,6 +2553,21 @@
     "Import from MobaXterm.ini…": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Import JSON…": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Import MobaXterm.ini": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Import MobaXterm.ini…": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Import Sessions (JSON)…": {
@@ -1992,6 +2606,11 @@
     "Incorrect passphrase. Enter passphrase for key {key}": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "Inside \"{folder}\"": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Install on a server…": {
@@ -2109,6 +2728,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Keep the panel on the shell's current folder": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Keep-alive (s)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2179,6 +2803,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "label (optional)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Label for the history": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Language": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2196,7 +2830,8 @@
     },
     "Later": {
       "refs": [
-        "src/main/updater.js"
+        "src/main/updater.js",
+        "src/renderer/index.html"
       ]
     },
     "Layout 1 × 2  (2 side by side)": {
@@ -2289,6 +2924,16 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Loading…": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "local": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
     "Local": {
       "refs": [
         "src/renderer/app.js",
@@ -2318,6 +2963,11 @@
     "Local shell": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Local X server": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Local X server: {display}": {
@@ -2352,6 +3002,7 @@
     },
     "Login failed (530): check the username/password": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
       ]
     },
@@ -2365,6 +3016,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Look up the host name of every hit": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Look-alike letters": {
       "refs": [
         "src/renderer/pasteguard.js"
@@ -2373,6 +3029,37 @@
     "looks like a space but is not one to the shell: it becomes part of the word": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "MAC aa:bb:cc:dd:ee:ff": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "MAC address": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "MAC address: aa:bb:cc:dd:ee:ff, aa-bb-cc-dd-ee-ff, aabb.ccdd.eeff or bare hex; the last 10 are remembered": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "macro name": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Macros": {
+      "refs": [
+        "src/renderer/panels.js",
+        "src/renderer/index.html"
+      ]
+    },
+    "Macros (⌘4)": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Macros Panel": {
@@ -2391,9 +3078,24 @@
         "src/renderer/highlight.js"
       ]
     },
+    "Magic packet sent to {label} ({mac}) via {broadcast}:{port}": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Magic packet sent to {mac} via {broadcast}:{port}": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "marks on the first {painted} of {total} places": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Match case": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Matches in every terminal take the rule's colour. Plain text matches anywhere in a line; Regex is a JavaScript regular expression. Colours come from the terminal theme, so they read on every palette. Where rules overlap, the earlier match wins, then the longer one.": {
@@ -2466,6 +3168,11 @@
         "src/main/main.js"
       ]
     },
+    "Modified": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Mongolian vowel separator": {
       "refs": [
         "src/renderer/pasteguard.js"
@@ -2511,6 +3218,11 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Mosh session \"{name}\": files are browsed over a separate SSH connection to {where}.": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "mosh-server (path on the remote host, optional)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2524,6 +3236,16 @@
     "Mouse / keys": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Move": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Move \"{name}\" into": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Move panes to tabs": {
@@ -2566,9 +3288,25 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Move to folder": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Move to Folder…": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "ms": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "MultiExec": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
       ]
     },
     "MultiExec (broadcast input)": {
@@ -2616,9 +3354,16 @@
         "src/renderer/app.js"
       ]
     },
+    "name": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Name": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/panels.js",
+        "src/renderer/sftp.js"
       ]
     },
     "narrow no-break space": {
@@ -2629,6 +3374,21 @@
     "Needs the mosh client on this Mac (brew install mosh) and mosh-server on the remote host; UDP ports 60000-61000 must be reachable.": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Net info": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Network scanner": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Network tools": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Network: received ↓ / sent ↑, every interface but loopback, averaged since the last poll": {
@@ -2646,9 +3406,23 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "New folder": {
+      "refs": [
+        "src/renderer/sftp.js",
+        "src/renderer/sidebar.js",
+        "src/renderer/index.html"
+      ]
+    },
+    "New Folder…": {
+      "refs": [
+        "src/renderer/sftp.js",
+        "src/renderer/sidebar.js"
+      ]
+    },
     "New local terminal": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
       ]
     },
     "New Local Terminal": {
@@ -2656,19 +3430,56 @@
         "src/main/main.js"
       ]
     },
+    "New local terminal (⌘T)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "New macro": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "New macro from text": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "New session": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
+      ]
+    },
+    "New session (⌘N)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "New Session Here…": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "New Session…": {
       "refs": [
+        "src/renderer/sidebar.js",
         "src/main/main.js"
+      ]
+    },
+    "New Subfolder…": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Newline in TUI apps (ESC+CR)": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Next (⏎)": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Next / previous tab": {
@@ -2689,6 +3500,11 @@
     "no \"sessions\" array": {
       "refs": [
         "src/main/importers.js"
+      ]
+    },
+    "No active terminal": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "No active tunnels.": {
@@ -2721,6 +3537,16 @@
         "src/main/importers.js"
       ]
     },
+    "No host answered.": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "No macros. Press ● Rec to record keystrokes in the active terminal, or ＋ to type one.": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "No matches": {
       "refs": [
         "src/renderer/app.js"
@@ -2734,6 +3560,11 @@
     "no name": {
       "refs": [
         "src/main/importers.js"
+      ]
+    },
+    "no open ports found": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "no output (exit {code})": {
@@ -2766,6 +3597,11 @@
         "src/main/zmodem.js"
       ]
     },
+    "no records": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "No route to {target}; check the broadcast address ({code})": {
       "refs": [
         "src/main/wol.js"
@@ -2781,9 +3617,20 @@
         "src/renderer/terminal.js"
       ]
     },
+    "No saved sessions yet.": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "No scan results to copy": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "No session": {
       "refs": [
-        "src/renderer/app.js"
+        "src/renderer/app.js",
+        "src/renderer/index.html"
       ]
     },
     "No sessions found": {
@@ -2794,6 +3641,11 @@
     "No sessions found in {file}": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "No sessions match.": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "no sh on the host": {
@@ -2931,9 +3783,24 @@
         "src/main/algorithms.js"
       ]
     },
+    "Nothing recorded": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Nothing to upload: every item already exists": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Nothing to zoom — open a session first": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "Octal mode (current {mode}, {rwx})": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Odd": {
@@ -2972,6 +3839,22 @@
         "src/renderer/app.js"
       ]
     },
+    "Open": {
+      "refs": [
+        "src/renderer/sftp.js",
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Open All in Grid (2 columns)": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Open an SSH session to browse remote files here.": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Open config folder": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2985,6 +3868,26 @@
     "Open file browser": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Open in External Editor": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Open in Split Down": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Open in Split Right": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Open ports": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "Open session down": {
@@ -3027,9 +3930,19 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Open SFTP for this host (via SSH)": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Open the SFTP browser for this Mosh session first (Sftp panel)": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Opened {name} in editor; saves are uploaded automatically": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Opening {name} in {app}…": {
@@ -3077,9 +3990,29 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Overwrite": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Overwrite replaces the existing files; \"Skip existing\" uploads only the others.": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Overwrite?": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "overwrites a disk device": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "Panels": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Panes & terminal": {
@@ -3090,6 +4023,11 @@
     "paragraph separator": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "Parent folder": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Parity": {
@@ -3154,8 +4092,14 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Path not found": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Path not found on the server ({code} {detail})": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
       ]
     },
@@ -3164,14 +4108,35 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Per probe, in milliseconds": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "permission denied": {
       "refs": [
         "src/main/monitor.js"
       ]
     },
+    "Permission denied": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Permission denied on the server ({code} {detail})": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
+      ]
+    },
+    "Permissions for {name}": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Permissions…": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Pin / Unpin Tab": {
@@ -3187,6 +4152,16 @@
     "Pin Tab": {
       "refs": [
         "src/renderer/layout.js"
+      ]
+    },
+    "Ping": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Ping + TCP": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Pinned": {
@@ -3214,6 +4189,16 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "Play in Active Terminal": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Play in All Terminals": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "pop directional formatting": {
       "refs": [
         "src/renderer/pasteguard.js"
@@ -3239,6 +4224,21 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Port scan": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Ports": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Ports must be between 1 and 65535": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Ports must be between 1 and 65535: {part}": {
       "refs": [
         "src/main/netscan.js"
@@ -3247,6 +4247,11 @@
     "Prediction": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Previous (⇧⏎)": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Previous Tab": {
@@ -3262,6 +4267,11 @@
     "Private key passphrase": {
       "refs": [
         "src/main/ssh.js"
+      ]
+    },
+    "Production": {
+      "refs": [
+        "src/renderer/sidebar.js"
       ]
     },
     "Profile write": {
@@ -3286,12 +4296,18 @@
     },
     "Quick connect": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
       ]
     },
     "Quick connect  ⇧⌘N": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "quick connect: user@host[:port]": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Quick Connect…": {
@@ -3303,6 +4319,11 @@
       "refs": [
         "src/main/live.js",
         "src/main/main.js"
+      ]
+    },
+    "Quit and start the version on disk": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Range too large: {n} addresses; the limit is a /16 ({max})": {
@@ -3332,10 +4353,26 @@
         "src/main/main.js"
       ]
     },
+    "Record keystrokes of the active terminal": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Recording keystrokes… press ■ Stop when done": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Red": {
       "refs": [
         "src/renderer/dialogs.js",
         "src/renderer/highlight.js"
+      ]
+    },
+    "Refresh": {
+      "refs": [
+        "src/renderer/sftp.js",
+        "src/renderer/index.html"
       ]
     },
     "Regex": {
@@ -3350,13 +4387,15 @@
     },
     "Regular expression": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
       ]
     },
     "Relaunch": {
       "refs": [
         "src/main/main.js",
-        "src/main/updater.js"
+        "src/main/updater.js",
+        "src/renderer/index.html"
       ]
     },
     "Relaunch to use it.": {
@@ -3419,6 +4458,11 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Remote path": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Remove": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3434,6 +4478,26 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Rename": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Rename folder": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Rename Folder…": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Rename macro": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Rename tab": {
       "refs": [
         "src/renderer/layout.js"
@@ -3445,6 +4509,12 @@
         "src/main/main.js"
       ]
     },
+    "Rename…": {
+      "refs": [
+        "src/renderer/panels.js",
+        "src/renderer/sftp.js"
+      ]
+    },
     "repeat the passphrase": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3452,12 +4522,18 @@
     },
     "Replace": {
       "refs": [
-        "src/renderer/app.js"
+        "src/renderer/app.js",
+        "src/renderer/sftp.js"
       ]
     },
     "Replace \"{title}\" with \"{name}\"? The current connection will be dropped.": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "Replace?": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Rescan ports": {
@@ -3473,6 +4549,11 @@
     "Reset Zoom": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Resolving {host}…": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "Restart now": {
@@ -3587,7 +4668,13 @@
     },
     "Save": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/panels.js"
+      ]
+    },
+    "Save (⌘S)": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Save & Connect": {
@@ -3610,9 +4697,19 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Save macro": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Save private key as": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Saved {name}": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "saved password": {
@@ -3620,9 +4717,71 @@
         "src/main/ssh.js"
       ]
     },
+    "Saved sessions": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
+    "Scan": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Scan (⏎)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Scan finished: {n} host up of {total} in {seconds} s": {
+      "plural": "Scan finished: {n} hosts up of {total} in {seconds} s",
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Scan method": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Scan progress": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Scan results": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Scan stopped: {n} host up, {done}/{total} scanned": {
+      "plural": "Scan stopped: {n} hosts up, {done}/{total} scanned",
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
+    "Scan target": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Scanning {host} ports {from}-{to}…": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "Screen Sharing": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "Scroll tabs left": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Scroll tabs right": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Scrollback lines": {
@@ -3643,6 +4802,16 @@
     "Select All": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Select files to delete": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Select files to download": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Select MobaXterm.ini": {
@@ -3668,6 +4837,11 @@
     "Send files with Zmodem (rz)": {
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "Send the magic packet (⏎)": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Sending to {where} is not allowed on this Mac ({code})": {
@@ -3702,17 +4876,24 @@
     },
     "Server error {code}: {detail}": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
       ]
     },
     "Session": {
       "refs": [
-        "src/main/main.js"
+        "src/main/main.js",
+        "src/renderer/index.html"
       ]
     },
     "Session ended.": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Session logging": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Session logs": {
@@ -3745,6 +4926,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Sessions": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Sessions (⌘1)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Sessions / SFTP / Tools / Macros": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3762,7 +4953,13 @@
     },
     "Settings": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
+      ]
+    },
+    "Settings (⌘,)": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Settings saved": {
@@ -3773,6 +4970,16 @@
     "Settings…": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Sftp": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "SFTP browser (⌘2)": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "SFTP follows terminal folder (injects prompt hook)": {
@@ -3825,6 +5032,21 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Show hidden": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Show Hidden Files": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Show in Finder": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Show remote monitoring bar": {
       "refs": [
         "src/renderer/dialogs.js",
@@ -3856,6 +5078,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Size": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Skip existing": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "SOCKS (-D)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3864,6 +5096,31 @@
     "soft hyphen": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "Sort by modified": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Sort by name": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Sort by size": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Split / grid layouts (⌘D right, ⇧⌘D down)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Split ▾": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Split down": {
@@ -3935,6 +5192,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "SSH tunnels / port forwarding (⇧⌘U)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "ssh-add failed: {error}": {
       "refs": [
         "src/main/keygen.js"
@@ -3985,6 +5247,11 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Start Tunnel via this Session…": {
+      "refs": [
+        "src/renderer/sidebar.js"
+      ]
+    },
     "Start/Stop Session Log": {
       "refs": [
         "src/main/main.js"
@@ -4022,7 +5289,8 @@
     },
     "Stop": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
       ]
     },
     "Stop bits": {
@@ -4033,6 +5301,11 @@
     "Stop Session Log": {
       "refs": [
         "src/renderer/terminal.js"
+      ]
+    },
+    "Stop the scan": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "stopped": {
@@ -4085,6 +5358,16 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "TCP ports": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "TCP ports to try (comma-separated, ranges allowed)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Telnet error: {error}": {
       "refs": [
         "src/main/terminals.js"
@@ -4094,7 +5377,8 @@
       "refs": [
         "src/renderer/dialogs.js",
         "src/renderer/layout.js",
-        "src/main/main.js"
+        "src/main/main.js",
+        "src/renderer/index.html"
       ]
     },
     "Terminal → Start Session Log, or a session's Logging option, writes here": {
@@ -4120,12 +5404,18 @@
     "Text": {
       "refs": [
         "src/renderer/dialogs.js",
-        "src/renderer/highlight.js"
+        "src/renderer/highlight.js",
+        "src/renderer/panels.js"
       ]
     },
     "Text to paste (editable)": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Text to send. Use \\n for Enter, \\t for Tab, \\x03 for Ctrl-C.": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "That is a folder; add a file name": {
@@ -4146,6 +5436,11 @@
     "the connection closed": {
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "The first port must not be greater than the last": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "The folder is not empty ({code} {detail})": {
@@ -4180,6 +5475,7 @@
     },
     "The name already exists on the server ({code} {detail})": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
       ]
     },
@@ -4251,13 +5547,20 @@
         "src/main/ssh.js"
       ]
     },
+    "The scan could not start": {
+      "refs": [
+        "src/renderer/panels.js"
+      ]
+    },
     "The server closed the connection (421 {detail})": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
       ]
     },
     "The server does not support FTPS (explicit TLS); untick FTPS": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
       ]
     },
@@ -4268,7 +5571,13 @@
     },
     "The server refused the operation ({code} {detail})": {
       "refs": [
+        "src/renderer/sftp.js",
         "src/main/ftp.js"
+      ]
+    },
+    "The server refused the operation (does the name already exist?)": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "The server rejected the request (501 {detail})": {
@@ -4311,9 +5620,24 @@
         "src/main/ssh.js"
       ]
     },
+    "Timeout": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "TLS certificate not trusted ({error}) — tick \"Accept untrusted / self-signed certificate\" in the session if you trust this server": {
       "refs": [
         "src/main/ftp.js"
+      ]
+    },
+    "to port": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "To port": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Toggle sidebar": {
@@ -4331,9 +5655,24 @@
         "src/main/netscan.js"
       ]
     },
+    "Tools": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Tools (⌘3)": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Tools Panel": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Traceroute": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Trailing newline": {
@@ -4361,6 +5700,11 @@
         "src/renderer/app.js"
       ]
     },
+    "Tunneling": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Tunneling…": {
       "refs": [
         "src/main/main.js"
@@ -4379,6 +5723,11 @@
     "type its first letters": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "UDP port": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "underline": {
@@ -4513,9 +5862,29 @@
         "src/main/zmodem.js"
       ]
     },
+    "upload {name}: {error}": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "Upload cancelled": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Upload failed: {error}": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "Upload Files Here…": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "upload of {name} {status}": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Upload to {dir}": {
@@ -4523,9 +5892,20 @@
         "src/main/main.js"
       ]
     },
+    "Upload…": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Uploaded {name}": {
       "refs": [
         "src/renderer/app.js"
+      ]
+    },
+    "Uploading {n} item": {
+      "plural": "Uploading {n} items",
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Uptime": {
@@ -4578,6 +5958,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "via SSH": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "View": {
       "refs": [
         "src/main/main.js"
@@ -4586,6 +5971,21 @@
     "Wait for the key to be generated and installed": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Wake": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Wake-on-LAN": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Wake-on-LAN failed: {message}": {
+      "refs": [
+        "src/renderer/panels.js"
       ]
     },
     "Warn about suspicious pastes": {
@@ -4611,6 +6011,11 @@
     "word joiner": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "Workers": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "writes to ~/.{file}: a shell profile runs at every new shell": {
@@ -4689,6 +6094,11 @@
         "src/main/zmodem.js"
       ]
     },
+    "Zmodem transfer in the terminal (rz / sz)": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "Zmodem transfers (rz/sz)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -4702,6 +6112,11 @@
     "Zmodem: {name} skipped by the remote side": {
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "Zmodem: {what}": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Zmodem: received {name} ({size}) → {path}": {
