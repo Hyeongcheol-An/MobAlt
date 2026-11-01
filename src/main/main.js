@@ -820,6 +820,17 @@ function registerIpc() {
       });
     });
   });
+  // Test-only: the TCP socket of an SSH connection as Node sees it — { noDelay, remoteAddress, remotePort } (noDelay
+  // null when the connection is gone or rides a jump hop's channel): what test/e2e-ssh.js checks TCP_NODELAY with,
+  // since on loopback the ACK is never delayed and Nagle costs nothing measurable. Node keeps the flag under a symbol.
+  ipcMain.handle('test:conn-socket', (_e, id) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const info = ssh.conns.get(id);
+    const sock = info && info.client && info.client._sock;
+    if (!sock || typeof sock.setNoDelay !== 'function' || !('remoteAddress' in sock)) return { noDelay: null };
+    const sym = Object.getOwnPropertySymbols(sock).find((x) => x.description === 'kSetNoDelay');
+    return { noDelay: sym ? !!sock[sym] : null, remoteAddress: sock.remoteAddress, remotePort: sock.remotePort };
+  });
   // Test-only: the open windows, code run inside one of them (its resolved value comes back) and closing one — the
   // test script lives in the main window; a detached window is driven through these.
   ipcMain.handle('test:windows', () => {

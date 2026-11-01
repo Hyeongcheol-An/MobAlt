@@ -134,6 +134,19 @@
     const st = await window.api.sftp.stat(connId, '/tmp/mobalt-e2e/hello2.txt');
     results.chmod = st.mode.toString(8);
     results.tunnels = (await window.api.tunnels.list()).map((t) => `${t.type}:${t.bindPort}->${t.destHost}:${t.destPort}=${t.status}`);
+    // 3b. the connection's TCP socket runs with TCP_NODELAY (ssh2 never sets it, Electron's Node leaves Nagle on: a
+    //     sequential SFTP round trip cost 54 ms and a keystroke echo 65 ms on a 12 ms RTT); the socket flag is the check —
+    //     loopback never delays an ACK, so 50 sequential stats take 10–22 ms here with Nagle on or off — and the timing
+    //     a latency guard (100 ms: five times the slowest run seen, a tenth of a Nagle-bound round trip over a network)
+    const sockInfo = await window.api.app.testConnSocket(connId);
+    results.tcpNoDelay = !!sockInfo && sockInfo.noDelay === true && sockInfo.remotePort === 2222;
+    {
+      const t0 = performance.now();
+      for (let i = 0; i < 50; i++) await window.api.sftp.stat(connId, '/tmp/mobalt-e2e/hello2.txt');
+      results.stat50Ms = Math.round(performance.now() - t0);
+      results.stat50Fast = results.stat50Ms < 100;
+    }
+    log('socket', JSON.stringify(sockInfo), '| 50 sequential stats', results.stat50Ms, 'ms');
 
     // 4. encrypted key -> passphrase prompt
     const p2 = app.openSession(s2);

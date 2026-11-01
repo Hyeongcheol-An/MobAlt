@@ -453,7 +453,7 @@ const OPT_ECHO = 1, OPT_SGA = 3, OPT_TTYPE = 24, OPT_NAWS = 31;
 
 function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
   const id = registry.newId();
-  const sock = net.connect({ host, port });
+  const sock = net.connect({ host, port, noDelay: true }); // a keystroke is one small packet: never held for the server's delayed ACK (Electron's Node leaves Nagle on)
   let curCols = cols, curRows = rows;
   let state = 0, cmd = 0, sb = [];
 

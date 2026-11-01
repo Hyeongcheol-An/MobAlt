@@ -47,7 +47,7 @@ class TunnelManager extends EventEmitter {
     t.connections = 0;
     if (t.type === 'local') {
       await new Promise((resolve, reject) => {
-        const server = net.createServer((sock) => {
+        const server = net.createServer({ noDelay: true }, (sock) => { // TCP_NODELAY on the local leg too: an interactive protocol through the tunnel is not held for delayed ACKs
           t.connections++;
           this._emit();
           client.forwardOut(sock.remoteAddress || '127.0.0.1', sock.remotePort || 0, t.destHost, t.destPort, (err, stream) => {
@@ -81,7 +81,7 @@ class TunnelManager extends EventEmitter {
         const stream = accept();
         t.connections++;
         this._emit();
-        const sock = net.connect(t.destPort, t.destHost);
+        const sock = net.connect({ port: t.destPort, host: t.destHost, noDelay: true });
         this._counter(t, sock);
         sock.on('connect', () => pipe(sock, stream));
         sock.on('error', () => stream.close());
@@ -94,7 +94,7 @@ class TunnelManager extends EventEmitter {
       };
     } else if (t.type === 'dynamic') {
       await new Promise((resolve, reject) => {
-        const server = net.createServer((sock) => this._socks5(sock, client, t));
+        const server = net.createServer({ noDelay: true }, (sock) => this._socks5(sock, client, t));
         server.on('error', reject);
         server.listen(t.bindPort, t.bindHost || '127.0.0.1', () => {
           t.bindPort = server.address().port;
