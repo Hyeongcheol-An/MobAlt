@@ -8,8 +8,12 @@ test/qa/run.sh <script.js> <out-dir> [auto-quit-ms]     # screenshots → <out-d
 MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout (e.g. a snapshot)
 ```
 
-- `<out-dir>/userdata` is a fresh user-data folder (sessions/settings start empty), so your real
-  sessions are never touched or shown.
+- `<out-dir>/userdata` is the run's own user-data folder, so your real sessions are never touched or
+  shown. It is created empty (sessions/settings start empty) and reused when it already exists — a
+  second run into the same `<out-dir>` starts with what the first one saved; delete the folder for a
+  clean start. A session log started in test mode (Start Session Log, a session's Logging option)
+  goes under that folder too (`userdata/MobAlt Logs/`), never into the real `~/Documents/MobAlt Logs`,
+  unless Settings → Log folder names a place.
 - A run keeps to itself, so several can go at the same time and none disturbs what you are doing meanwhile: the
   window comes up without taking the keyboard or activating the app, and the page is told it is focused instead
   (DevTools focus emulation) — `document.hasFocus()`, `:focus` / `:focus-visible` and `testKey` work whichever window
