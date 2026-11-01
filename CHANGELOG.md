@@ -1,3 +1,10 @@
+## [0.15.2](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.15.1...v0.15.2) (2026-11-01)
+
+### Bug Fixes
+
+* **pane:** a narrow head hides the read-only chip too; a menu a few pixels too tall is not shortened ([bbdac3d](https://github.com/Hyeongcheol-An/MobAlt/commit/bbdac3d15870b1c7313f63824881528fb65bb9ad))
+* **terminal:** a pane opened into a split is fitted again once the GPU renderer is in ([fe2f6c2](https://github.com/Hyeongcheol-An/MobAlt/commit/fe2f6c25e086cdeb82c9ae1751d88adbe86167ed))
+
 ## [0.15.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.15.0...v0.15.1) (2026-11-01)
 
 ### Bug Fixes
