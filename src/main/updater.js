@@ -70,63 +70,63 @@ function setupUpdater(store, getWin, hooks = {}) {
     const autoUpdater = loadAutoUpdater();
     if (!autoUpdater || wired) return autoUpdater;
     wired = true;
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
-  autoUpdater.logger = null;
+    autoUpdater.autoDownload = false;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.logger = null;
 
-  autoUpdater.on('update-available', async (info) => {
-    const manual = loud();
-    // The bundle on disk already is this release (or newer): a brew upgrade or a dragged DMG replaced the app
-    // while it was running. Nothing to download; the banner (and a manual check's dialog) say to relaunch.
-    const disk = await onDisk();
-    if (disk && disk !== app.getVersion() && compareVersions(disk, info.version) >= 0) {
-      const message = t('{version} is already installed on disk; relaunch to use it', { version: disk });
-      try { hooks.bundleOnDisk && hooks.bundleOnDisk(disk); } catch {}
-      finish({ status: 'on-disk', version: disk, message });
-      if (manual) {
-        const r = await dialogs.showMessageBox(win(), {
-          type: 'info',
-          message: t('MobAlt {version} is already installed on disk; relaunch to use it', { version: disk }),
-          detail: t('You are running {current}. Nothing needs to be downloaded; relaunching starts the version that is on disk.', { current: app.getVersion() }),
-          buttons: [t('Relaunch'), t('Later')], defaultId: 0, cancelId: 1,
-        });
-        if (r.response === 0 && hooks.relaunch) hooks.relaunch();
+    autoUpdater.on('update-available', async (info) => {
+      const manual = loud();
+      // The bundle on disk already is this release (or newer): a brew upgrade or a dragged DMG replaced the app
+      // while it was running. Nothing to download; the banner (and a manual check's dialog) say to relaunch.
+      const disk = await onDisk();
+      if (disk && disk !== app.getVersion() && compareVersions(disk, info.version) >= 0) {
+        const message = t('{version} is already installed on disk; relaunch to use it', { version: disk });
+        try { hooks.bundleOnDisk && hooks.bundleOnDisk(disk); } catch {}
+        finish({ status: 'on-disk', version: disk, message });
+        if (manual) {
+          const r = await dialogs.showMessageBox(win(), {
+            type: 'info',
+            message: t('MobAlt {version} is already installed on disk; relaunch to use it', { version: disk }),
+            detail: t('You are running {current}. Nothing needs to be downloaded; relaunching starts the version that is on disk.', { current: app.getVersion() }),
+            buttons: [t('Relaunch'), t('Later')], defaultId: 0, cancelId: 1,
+          });
+          if (r.response === 0 && hooks.relaunch) hooks.relaunch();
+        }
+        return;
       }
-      return;
-    }
-    finish({ status: 'available', version: info.version, message: t('MobAlt {version} is available', { version: info.version }) });
-    const r = await dialogs.showMessageBox(win(), {
-      type: 'info',
-      message: t('MobAlt {version} is available', { version: info.version }),
-      detail: t('You are using {current}. Download it now? It is installed when you quit, or right away if you choose to restart after the download.', { current: app.getVersion() }),
-      buttons: [t('Download'), t('Later')], defaultId: 0, cancelId: 1,
+      finish({ status: 'available', version: info.version, message: t('MobAlt {version} is available', { version: info.version }) });
+      const r = await dialogs.showMessageBox(win(), {
+        type: 'info',
+        message: t('MobAlt {version} is available', { version: info.version }),
+        detail: t('You are using {current}. Download it now? It is installed when you quit, or right away if you choose to restart after the download.', { current: app.getVersion() }),
+        buttons: [t('Download'), t('Later')], defaultId: 0, cancelId: 1,
+      });
+      if (r.response === 0) {
+        autoUpdater.downloadUpdate().catch((e) => dialogs.showMessageBox(win(), { type: 'error', message: t('Download failed'), detail: e.message }));
+      }
     });
-    if (r.response === 0) {
-      autoUpdater.downloadUpdate().catch((e) => dialogs.showMessageBox(win(), { type: 'error', message: t('Download failed'), detail: e.message }));
-    }
-  });
-  autoUpdater.on('update-not-available', () => {
-    const manual = loud();
-    finish({ status: 'up-to-date', version: app.getVersion(), message: t('MobAlt {version} is up to date', { version: app.getVersion() }) });
-    if (manual) dialogs.showMessageBox(win(), { type: 'info', message: t('MobAlt is up to date'), detail: t('Version {version}', { version: app.getVersion() }) });
-  });
-  autoUpdater.on('update-downloaded', async (info) => {
-    const r = await dialogs.showMessageBox(win(), {
-      type: 'info',
-      message: t('MobAlt {version} is ready to install', { version: info.version }),
-      detail: t('Restart now to install it, or keep working: it is installed when you quit.'),
-      buttons: [t('Restart now'), t('Later')], defaultId: 0, cancelId: 1,
+    autoUpdater.on('update-not-available', () => {
+      const manual = loud();
+      finish({ status: 'up-to-date', version: app.getVersion(), message: t('MobAlt {version} is up to date', { version: app.getVersion() }) });
+      if (manual) dialogs.showMessageBox(win(), { type: 'info', message: t('MobAlt is up to date'), detail: t('Version {version}', { version: app.getVersion() }) });
     });
-    if (r.response === 0) {
-      try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}
-      setImmediate(() => autoUpdater.quitAndInstall());
-    }
-  });
-  autoUpdater.on('error', (e) => {
-    const manual = loud();
-    finish({ status: 'error', message: t('Update check failed: {error}', { error: e.message }) });
-    if (manual) dialogs.showMessageBox(win(), { type: 'error', message: t('Update check failed'), detail: e.message });
-  });
+    autoUpdater.on('update-downloaded', async (info) => {
+      const r = await dialogs.showMessageBox(win(), {
+        type: 'info',
+        message: t('MobAlt {version} is ready to install', { version: info.version }),
+        detail: t('Restart now to install it, or keep working: it is installed when you quit.'),
+        buttons: [t('Restart now'), t('Later')], defaultId: 0, cancelId: 1,
+      });
+      if (r.response === 0) {
+        try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}
+        setImmediate(() => autoUpdater.quitAndInstall());
+      }
+    });
+    autoUpdater.on('error', (e) => {
+      const manual = loud();
+      finish({ status: 'error', message: t('Update check failed: {error}', { error: e.message }) });
+      if (manual) dialogs.showMessageBox(win(), { type: 'error', message: t('Update check failed'), detail: e.message });
+    });
     return autoUpdater;
   };
 
