@@ -1,3 +1,10 @@
+## [0.15.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.15.0...v0.15.1) (2026-11-01)
+
+### Bug Fixes
+
+* **pane:** the ⚙ menu keeps the keyboard in the terminal, toggles, opens upwards, fits a narrow head ([fe686c8](https://github.com/Hyeongcheol-An/MobAlt/commit/fe686c88ab423642479982dac92c95751177c3a6))
+* **x11:** the forwarded display gets this Mac's own cookie ([fa70036](https://github.com/Hyeongcheol-An/MobAlt/commit/fa70036f95a5c2b9196a456a209f5bc6a76a5d78))
+
 ## [0.15.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.14.0...v0.15.0) (2026-11-01)
 
 ### Features
