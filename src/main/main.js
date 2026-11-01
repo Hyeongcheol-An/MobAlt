@@ -1068,7 +1068,10 @@ function registerIpc() {
 
   // FTP sessions share the sftp:* API; the connection id decides which backend serves it.
   const files = (id) => (ftp.has(id) ? ftp : sftp);
-  ipcMain.handle('sftp:list', (_e, id, dir) => files(id).list(id, dir));
+  // a folder that is not there is an expected answer, not a fault: resolved as { notFound, error } — the bridge turns it
+  // back into the rejection the renderer handles — so Electron logs no handler stack for it (every other error still rejects)
+  const notFound = (e) => !!e && (e.code === 2 || /^No such file$/i.test(e.message || '') || /^Path not found/i.test(e.message || '')); // SSH_FX_NO_SUCH_FILE, ssh2's text, ftp.js's explained 550
+  ipcMain.handle('sftp:list', (_e, id, dir) => files(id).list(id, dir).catch((e) => (notFound(e) ? { notFound: true, error: e.message } : Promise.reject(e))));
   ipcMain.handle('sftp:home', (_e, id) => files(id).home(id));
   ipcMain.handle('sftp:realpath', (_e, id, p) => files(id).realpath(id, p));
   ipcMain.handle('sftp:stat', (_e, id, p) => files(id).stat(id, p));
