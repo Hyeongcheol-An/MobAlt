@@ -1,3 +1,39 @@
+## [0.16.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.15.2...v0.16.0) (2026-11-01)
+
+### Features
+
+* **ssh:** post-quantum key exchange (ML-KEM, sntrup761) as a session option ([9c21e34](https://github.com/Hyeongcheol-An/MobAlt/commit/9c21e3479f336f3a63c4b8c2390ea33d779650a5))
+
+### Bug Fixes
+
+* **i18n:** the round's strings after review — French typography, Spanish and Vietnamese terms, quoting, the cancelled row ([fa8e4eb](https://github.com/Hyeongcheol-An/MobAlt/commit/fa8e4ebb3c789c144927f822595fca6876d83ae1))
+* **log:** the session log's file-name stamp in local time; test runs log under their user-data folder ([e0fd2f6](https://github.com/Hyeongcheol-An/MobAlt/commit/e0fd2f64980913bb06eccbc5259bba31ccb96f25))
+* **serial:** a vanished device ends the pane as a drop; Send Break; Backspace in the local echo; plain open errors ([63f7db2](https://github.com/Hyeongcheol-An/MobAlt/commit/63f7db2a9c35e584c60c3ff862f63c109bf53fd8))
+* **sftp:** a filter box over the list, tooltips led by the name, broken links said so; tunnels worded and counted ([669b138](https://github.com/Hyeongcheol-An/MobAlt/commit/669b1380c2d6794d22272bfe3f5a806c73d2417b))
+* **sftp:** a Finder drop on a terminal that does not follow the shell uploads where the panel is, or asks ([6f5980f](https://github.com/Hyeongcheol-An/MobAlt/commit/6f5980f0e5cdbef34fca1216ed5e5d355dcf71b4))
+* **sftp:** a folder deleted under the panel is announced once and the panel climbs; a reconnect returns to the last folder; a jump hop's failure names the jump host ([dd14b9d](https://github.com/Hyeongcheol-An/MobAlt/commit/dd14b9d49c4108882931a816f82d352b0edbed50))
+* **sftp:** a plain cancel's row stays "cancelled" — the reason is appended only when there is one ([696444f](https://github.com/Hyeongcheol-An/MobAlt/commit/696444faa289d7c5ca7c7580ccd8dc1d005f4dd4))
+* **sftp:** a session with the SFTP browser off is not listed until asked for ([0478755](https://github.com/Hyeongcheol-An/MobAlt/commit/04787556ff7a839f34be5a1e17006b09e0f32b0b))
+* **sftp:** a vanished folder is an answer to sftp:list, not a handler fault ([c334f4a](https://github.com/Hyeongcheol-An/MobAlt/commit/c334f4afbc75597fcd6d2929f4d519bce2c4df1f))
+* **sftp:** an operation in a vanished folder re-lists it; End and type-ahead no longer wait for the whole 20k fill ([e651a2f](https://github.com/Hyeongcheol-An/MobAlt/commit/e651a2f3a350bdd41e6a3a8649866e262db871f3))
+* **sftp:** downloads land in <name>.part and resume from it; a Disconnect marks its transfers cancelled ([cbb10af](https://github.com/Hyeongcheol-An/MobAlt/commit/cbb10af7cfa42910daa8e01b774f7105674c99f2))
+* **sftp:** the panel follows only a change of folder, keeps a listing from being overtaken, lists FTP panes ([c7744f2](https://github.com/Hyeongcheol-An/MobAlt/commit/c7744f2525b68d7691a42bbbd586e74c841b8e97))
+* **ssh:** a cancelled connection attempt is torn down, with a Cancel button in the connecting pane ([88f62ff](https://github.com/Hyeongcheol-An/MobAlt/commit/88f62ffd6df4db376fea79afd032dacebbf8cb00))
+* **ssh:** an aborted post-quantum exchange drops its secrets at once (dispose) ([890b7bf](https://github.com/Hyeongcheol-An/MobAlt/commit/890b7bf0d321266dc4df0685c07e1745f850b35f))
+* **ssh:** post-quantum review — Mosh host check and companion, wiping, IANA alias, patch guard ([3195ff5](https://github.com/Hyeongcheol-An/MobAlt/commit/3195ff5a61befb4000ef1b9c16ea6a1fb53a2b64))
+* **ssh:** the lost-connection toast ends its first sentence before counting the stopped tunnels ([cdb4a09](https://github.com/Hyeongcheol-An/MobAlt/commit/cdb4a09ac0e7df63f6f8925d4cb406decbcf7873))
+* **telnet:** the session's username answers the login: prompt ([bf6c81e](https://github.com/Hyeongcheol-An/MobAlt/commit/bf6c81e2ba3f3f275c1faf038d4548b3e2763175))
+* **x11:** a forwarded window closes with its client ([0d48185](https://github.com/Hyeongcheol-An/MobAlt/commit/0d481858dc288e88882576c1a8a71ea1526f857e))
+
+### Performance Improvements
+
+* **main:** load electron-updater, ssh2 and basic-ftp on first use, not at start ([7fd1271](https://github.com/Hyeongcheol-An/MobAlt/commit/7fd1271520da4d8be981c947957f1be9e96b9a0a))
+* **renderer:** release the WebGL addon's cursor-blink timer when a pane's renderer goes ([84c02ba](https://github.com/Hyeongcheol-An/MobAlt/commit/84c02ba92019a4e097bbf96733600261c3a8c46c))
+* **sftp:** list() keeps 8 READDIR requests in flight — a 20 000-entry listing 1.8 s → 0.3 s; symlinks resolved readlink-first ([b998044](https://github.com/Hyeongcheol-An/MobAlt/commit/b99804425866c13249eab07740caca654020028f))
+* **sftp:** the list renders the first screen now and the rest in frames — a sort click 720 → 25 ms on 20 000 entries ([8e03d29](https://github.com/Hyeongcheol-An/MobAlt/commit/8e03d29fd5f4aef835d38aa5d9eabcd437766e06))
+* **ssh:** @noble/post-quantum is loaded by the first ML-KEM key generation, not at startup ([df272ff](https://github.com/Hyeongcheol-An/MobAlt/commit/df272ffcfde34c016a996493d5dbcfa1d4883775))
+* **ssh:** TCP_NODELAY on every SSH socket — sequential SFTP round trip 54 → 7 ms, 20k listing 11.4 → 1.8 s ([56361db](https://github.com/Hyeongcheol-An/MobAlt/commit/56361dba3614a48bfdf5811871554eacf9224ad9))
+
 ## [0.15.2](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.15.1...v0.15.2) (2026-11-01)
 
 ### Bug Fixes
