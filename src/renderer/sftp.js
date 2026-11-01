@@ -58,7 +58,8 @@ export function connIdOf(pane) {
 export class SftpPanel {
   constructor(app) {
     this.app = app;
-    this.states = new Map(); // connId -> {path, entries, selected:Set, hidden, follow, pane}
+    this.states = new Map(); // connId -> {path, entries, selected:Set, hidden, follow, pane, off}
+    this.wanted = new Set(); // connIds whose listing was asked for (show(), navigate()): a session with the SFTP browser off is listed only then
     this.connId = null;
     this.transfers = new Map();
     this.els = {
@@ -135,6 +136,7 @@ export class SftpPanel {
       if (st.path !== null) this.renderList();
       else if (st.loading) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('Loading…')));
       else if (st.error) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, errMsg(st.error)));
+      else if (st.off) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('SFTP browser is off for this session — Refresh lists its files anyway')));
     }
     this.renderMoshHint(this.pane);
     this.renderTransfers();
@@ -172,8 +174,14 @@ export class SftpPanel {
     const cdBtn = document.querySelector('[data-sftp="terminal-cd"]');
     if (cdBtn) cdBtn.hidden = noTerminal; // nothing to cd in
     this.els.hidden.checked = st.hidden;
-    if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
-    else this.renderList();
+    if (st.path === null && !st.loading) {
+      // a session whose "Open SFTP browser automatically" is off is not listed until asked for (Open SFTP Browser in
+      // the pane menu, Refresh): a server without the sftp subsystem would otherwise report an error on every pane switch
+      if (st.pane.session?.sftpAuto === false && !this.wanted.has(connId)) {
+        st.off = true; // the note is drawn again on a language switch (relabel)
+        this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('SFTP browser is off for this session — Refresh lists its files anyway')));
+      } else this.navigate(st.pane.remoteCwd || '.');
+    } else this.renderList();
   }
 
   /** The connection line above the toolbar: session name, the "via SSH" badge of a Mosh companion, user@host[:port]. */
@@ -188,6 +196,7 @@ export class SftpPanel {
   }
 
   show(connId) {
+    this.wanted.add(connId); // asked for: listed even when the session's SFTP browser is off
     this.app.showPanel('sftp');
     const pane = this.app.paneByConn(connId);
     if (pane) this.setPane(pane);
@@ -195,6 +204,7 @@ export class SftpPanel {
 
   dropConnection(connId) {
     this.states.delete(connId);
+    this.wanted.delete(connId);
     if (this.connId === connId) this.setConnection(null);
   }
 
@@ -231,6 +241,8 @@ export class SftpPanel {
     if (!st || !connId) return;
     st.loading = true;
     st.error = null;
+    st.off = false;
+    this.wanted.add(connId);
     if (st.path === null) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('Loading…')));
     try {
       if (path === '~' || (path || '').startsWith('~/')) path = (await window.api.sftp.home(connId)) + path.slice(1);
@@ -248,7 +260,9 @@ export class SftpPanel {
       this.app.setStatusCwd(r.path);
     } catch (e) {
       if (this.connId !== connId) return;
-      toast(t('{path}: {error}', { path: path || '.', error: errMsg(e) }), 'error');
+      // the first listing failing is the connection's problem (no sftp subsystem, a shell that talks): name the session
+      if (st.path === null) toast(t('SFTP unavailable on {session}: {error}', { session: st.pane.session?.name || st.pane.title, error: errMsg(e) }), 'error');
+      else toast(t('{path}: {error}', { path: path || '.', error: errMsg(e) }), 'error');
       if (st.path === null) {
         st.error = e; // the message stays on screen: relabel() explains it again after a language switch
         this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, errMsg(e)));
