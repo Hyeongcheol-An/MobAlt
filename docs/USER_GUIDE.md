@@ -124,6 +124,11 @@ folder dialog and leaves the field as it was when you cancel.
   it (unknown names are refused inline), *Reset to defaults* puts the lists back, and "Legacy
   algorithms (old devices)" is a preset that adds the SHA-1 key exchanges, CBC ciphers and DSA host
   keys old appliances still need. Only lists that differ from the defaults are stored.
+- **Post-quantum key exchange**: Advanced SSH → Post-quantum offers the ML-KEM-768 + X25519 and
+  sntrup761 + X25519 hybrids (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) before
+  the session's key-exchange list, so a server that has them takes one and an older server falls back
+  to the list as before. Off by default; the server needs OpenSSH 8.9 or newer (ML-KEM from 9.9). The
+  grey line after the handshake names what was agreed, "(post-quantum)" after a hybrid.
 - **Jump hosts**: Advanced SSH → Jump host picks another saved session as the bastion (ProxyJump).
 - **When it fails**: the terminal prints what happened, for example
   `authentication failed — server accepts: publickey; tried: ~/.ssh/id_ed25519`, or a hint that

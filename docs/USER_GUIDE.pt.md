@@ -124,6 +124,11 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
   (nomes desconhecidos são recusados ali mesmo), *Restaurar padrões* repõe as listas, e “Algoritmos
   antigos (equipamentos velhos)” é uma predefinição que adiciona as trocas de chaves SHA-1, as cifras CBC e as chaves de host
   DSA de que equipamentos antigos ainda precisam. Só as listas diferentes dos padrões são guardadas.
+- **Troca de chaves pós-quântica**: SSH avançado → Pós-quântica oferece os híbridos ML-KEM-768 + X25519 e
+  sntrup761 + X25519 (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) antes da lista de troca de
+  chaves da sessão: um servidor que os tenha escolhe um deles e um servidor mais antigo volta à lista como antes.
+  Desligada por padrão; o servidor precisa de OpenSSH 8.9 ou mais recente (ML-KEM a partir da 9.9). A linha cinza
+  após o handshake informa o que foi acordado, com "(pós-quântica)" após um híbrido.
 - **Hosts de salto**: SSH avançado → Host de salto escolhe outra sessão salva como bastion (ProxyJump).
 - **Quando falha**: o terminal mostra o que aconteceu, por exemplo
   `authentication failed — server accepts: publickey; tried: ~/.ssh/id_ed25519` (em português, “falha na autenticação — o
