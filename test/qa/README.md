@@ -36,6 +36,8 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `testKey({ keyCode: 'Enter', modifiers: ['shift'], char: '\r', windowId })` presses the key with modifiers and,
   with `char`, the character event a real press gives the browser (the keypress), in the main window or the one
   named — what a terminal pane sees from a user's Shift+Enter (test/e2e-claude-keys.js).
+- `npm run perf` (`test/qa/perf.js`) measures start-up, idle CPU, memory and the bundle size through this harness,
+  on the dev checkout and on `dist/mac-arm64/MobAlt.app`; `docs/PERFORMANCE.md` has the method and the numbers.
 - `test/qa/claude-code-check.js` drives the real Claude Code CLI (`claude` on the login shell's PATH or in
   `~/.local/bin`, signed in): Shift+Enter as a newline in its composer and ⌘V with an image on the clipboard as
   `[Image #1]`, in a plain, split, zoomed and detached pane. It is a manual check, not an e2e suite (those never need
@@ -64,6 +66,7 @@ window.api.app.testFirstFrames();              // the first 12 animation frames 
 await window.api.app.testNextDialog({ canceled: false, filePaths: ['/f'] }); // answer the next native file dialog / sheet instead of showing it (test mode only; see below)
 (await window.api.app.testNextDialog()).pending;        // answers still queued (0 once every dialog you triggered has taken one)
 await window.api.app.testWindows();                      // every window: [{ id, main, detached, title, bounds }] (test mode only; a detached tab opens a second one)
+await window.api.app.testPerf({ gc, domCounters, detached, heapSnapshot, profile }); // boot timestamps, every process's CPU share and working set, a GC first, the DOM counters, the detached DOM trees JS holds, a .heapsnapshot, a CPU profile of both JS threads (test mode only; docs/PERFORMANCE.md, test/qa/perf.js)
 await window.api.app.testEval(id, 'window.app.workspace.tabs.length'); // run code in another window (its own window.app); the resolved value comes back
 await window.api.app.testCloseWindow(id);                // close a window as its close button would (a detached window hands its tabs back first)
 await window.api.app.testMenuState();                    // the native Session menu's tab items as enabled right now: { 'tab-pin': true, 'tab-close-left': false, … } (test mode only)

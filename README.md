@@ -168,6 +168,7 @@ npm run install:local  # build arm64, sign if a Developer ID identity is availab
 npm run i18n           # refresh src/locales/catalog.json after adding or rewording interface strings
 npm run i18n:status    # what each language's dictionary still owes (-- --list prints the strings)
 npm run docs:shots     # the user-guide screenshots in every interface language (docs/images/<code>/)
+npm run perf           # start-up, idle CPU, memory and bundle size, before/after tables (docs/PERFORMANCE.md)
 ```
 
 In shells that export `ELECTRON_RUN_AS_NODE=1` (VS Code's integrated terminal), run
