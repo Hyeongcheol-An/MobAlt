@@ -464,7 +464,11 @@ class SshManager {
           ctx.out(`${GREY}${t('Jump established, connecting to {target}...', { target: `${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
         } catch (e) {
           if (jump) jump.end();
-          return fail(new Error(t('Jump host failed: {error}', { error: e.message })));
+          // the failure is the jump hop's: explained against the jump host — the "nc -vz" hint names its host and port,
+          // never the target's — and marked, so the caller's _explainError leaves it as it is
+          const err = new Error(t('Jump host failed: {error}', { error: e.explained ? e.message : this._explainError(e, ctx, jumpCfg) }));
+          err.explained = true;
+          return fail(err);
         }
       }
 
@@ -648,6 +652,7 @@ class SshManager {
 
   /** Turn a connect/auth failure into the message shown to the user (hints for the usual causes). */
   _explainError(e, ctx, cfg) {
+    if (e.explained) return e.message; // a jump hop's failure, explained against the jump host in connectClient
     let msg = e.message;
     // the regexes classify ssh2's own (English) messages; the hints are composed around them as {error}
     if (ctx.cancelled) msg = t('authentication cancelled');

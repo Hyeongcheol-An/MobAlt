@@ -32,6 +32,12 @@ export function errMsg(e) {
   return m;
 }
 
+/** A listing error that says the folder is not there (SFTP's "No such file", an FTP 550 of that kind). */
+export function isNotFound(e) {
+  const m = ((e && e.message) || String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, '').replace(/^FTPError:\s*/, '');
+  return /^No such file$/i.test(m) || /^Path not found/i.test(m) || /^(550|553)\b.*(no such|not found|failed to open|does not exist)/i.test(m);
+}
+
 /** Overwrite / Skip existing / Cancel for an upload that would replace `names` in `dir` (null = cancel the whole upload). */
 function overwriteDialog(names, dir) {
   const what = names.length === 1 ? t('"{name}" already exists in {dir}.', { name: names[0], dir }) : tn('{n} item already exists in {dir}.', '{n} items already exist in {dir}.', names.length, { dir });
@@ -61,6 +67,10 @@ export class SftpPanel {
     this.states = new Map(); // connId -> {path, entries, selected:Set, hidden, follow, pane}
     this.connId = null;
     this.transfers = new Map();
+    // the folder last shown for a session (by id) or a pane without one: a reconnected connection starts there again
+    // when it still exists, instead of at the home folder
+    this.lastPaths = new Map();
+    this.lastPathsByPane = new WeakMap();
     this.els = {
       empty: $('#sftp-empty'), ui: $('#sftp-ui'), conn: $('#sftp-conn'), path: $('#sftp-path'), pathForm: $('#sftp-path-form'),
       follow: $('#sftp-follow'), hidden: $('#sftp-hidden'), list: $('#sftp-list'), transfers: $('#sftp-transfers'),
@@ -172,8 +182,20 @@ export class SftpPanel {
     const cdBtn = document.querySelector('[data-sftp="terminal-cd"]');
     if (cdBtn) cdBtn.hidden = noTerminal; // nothing to cd in
     this.els.hidden.checked = st.hidden;
-    if (st.path === null && !st.loading) this.navigate(st.pane.remoteCwd || '.');
-    else this.renderList();
+    if (st.path === null && !st.loading) {
+      const remembered = st.pane.remoteCwd ? null : this.remembered(st.pane);
+      this.navigate(st.pane.remoteCwd || remembered || '.', { remembered: !!remembered });
+    } else this.renderList();
+  }
+
+  /** The folder this pane (its session) showed last, if any. */
+  remembered(pane) {
+    return (pane.session?.id && this.lastPaths.get(pane.session.id)) || this.lastPathsByPane.get(pane) || null;
+  }
+
+  _remember(pane, path) {
+    if (pane.session?.id) this.lastPaths.set(pane.session.id, path);
+    this.lastPathsByPane.set(pane, path);
   }
 
   /** The connection line above the toolbar: session name, the "via SSH" badge of a Mosh companion, user@host[:port]. */
@@ -225,7 +247,13 @@ export class SftpPanel {
     }
   }
 
-  async navigate(path) {
+  /**
+   * Show `path`. `remembered`: the folder a reconnected session showed last — when it is gone the home folder is shown
+   * without a word. `walkUp`: a step of the climb below. A folder that no longer exists under the panel (a refresh,
+   * a listing after an operation) is announced once — a toast and a line in the list — and the panel climbs to the
+   * nearest parent that still exists instead of keeping stale rows and repeating "Path not found".
+   */
+  async navigate(path, { remembered = false, walkUp = false } = {}) {
     const connId = this.connId;
     const st = this.state();
     if (!st || !connId) return;
@@ -242,12 +270,24 @@ export class SftpPanel {
       st.path = r.path;
       st.entries = r.entries;
       st.selected.clear();
+      if (!walkUp) st.notice = null; // the "no longer exists" line stays over the parent it led to, until the next folder
       this.els.path.value = r.path;
       this.els.path.scrollLeft = this.els.path.scrollWidth; // long paths: keep the tail visible
       this.renderList();
       this.app.setStatusCwd(r.path);
+      this._remember(st.pane, r.path);
     } catch (e) {
       if (this.connId !== connId) return;
+      st.loading = false;
+      if (remembered && isNotFound(e)) return this.navigate('.'); // the remembered folder is gone: home, quietly
+      const gone = isNotFound(e) && (walkUp || st.path === null || path === st.path) && path && path !== '/' && path !== '.' && !path.startsWith('~');
+      if (gone) {
+        if (!walkUp) {
+          st.notice = t('"{path}" no longer exists', { path });
+          toast(t('"{path}" no longer exists — showing the nearest folder that does', { path }), 'warn');
+        }
+        return this.navigate(parentPath(path), { walkUp: true });
+      }
       toast(t('{path}: {error}', { path: path || '.', error: errMsg(e) }), 'error');
       if (st.path === null) {
         st.error = e; // the message stays on screen: relabel() explains it again after a language switch
@@ -300,6 +340,7 @@ export class SftpPanel {
       up.addEventListener('dblclick', () => this.cmd('up'));
       list.append(up);
     }
+    if (st.notice) list.append(h('div', { class: 'sftp-msg sftp-notice' }, st.notice)); // the folder that vanished under the panel (navigate)
     if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, t('Empty folder')));
     for (const e of entries) {
       const row = h('div', {

@@ -261,6 +261,7 @@ html[dir="rtl"] .tree-row .sub { direction: ltr; unicode-bidi: isolate; text-ali
 .sftp-row.link .name { font-style: italic; }
 .sftp-row.hidden-file:not(.selected) .name { color: var(--fg-dim); }   /* dimmed as a colour (≥ 4.5:1), not as an opacity */
 .sftp-msg { padding: 14px; color: var(--fg-faint); text-align: center; }
+.sftp-msg.sftp-notice { padding: 6px 14px; color: var(--warn); font-size: 11px; border-bottom: 1px solid var(--divider); }   /* "… no longer exists" over the parent the panel climbed to */
 .sftp-transfers { max-height: 160px; overflow: auto; border-top: 1px solid var(--divider); font-size: 11px; }
 .sftp-transfers:empty { display: none; }
 .xfer { padding: 4px 8px; border-bottom: 1px solid var(--divider); }

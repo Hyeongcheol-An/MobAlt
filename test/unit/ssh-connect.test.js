@@ -1,8 +1,9 @@
 'use strict';
-// Every SSH socket runs with TCP_NODELAY: ssh2 never sets it and Electron's Node leaves Nagle on, so connectClient makes
-// the socket itself (net.connect with noDelay) and hands it to ssh2 as `sock`; the host-key check's socket the same.
-// A socket error still reaches the caller as before (ssh2 relays it with its code), and a server that closes before
-// the banner fails the connection the way it always did.
+// SshManager.connectClient against real local sockets: every SSH socket runs with TCP_NODELAY (ssh2 never sets it and
+// Electron's Node leaves Nagle on, so connectClient makes the socket itself — net.connect with noDelay — and hands it
+// to ssh2 as `sock`; the host-key check's socket the same), a socket error still reaches the caller with its code, a
+// server that closes before the banner fails the connection the way it always did, and a jump hop's failure is
+// explained against the jump host.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -73,4 +74,22 @@ test('verifyHost connects through a noDelay socket too', async () => {
   assert.equal(calls.length, 1);
   assert.equal(calls[0].opts.noDelay, true);
   assert.equal(calls[0].opts.port, port);
+});
+
+test('a jump hop that times out is explained against the jump host: the nc hint names its host and port, not the target', async () => {
+  const silent = net.createServer((s) => s.on('error', () => {})); // accepts and never speaks: the handshake limit ends it
+  await new Promise((r) => silent.listen(0, '127.0.0.1', r));
+  const jumpPort = silent.address().port;
+  const ssh = new SshManager(null, { getSettings: () => ({ readyTimeout: 400 }) }, { status() {}, hostKey: () => Promise.resolve(true) });
+  const ctx = { out() {} };
+  const cfg = { host: 'target.example', port: 2299, username: 'u', jumpHost: `u@127.0.0.1:${jumpPort}` };
+  let error = null;
+  await ssh.connectClient(cfg, ctx).catch((e) => (error = e));
+  silent.close();
+  assert.ok(error, 'failed');
+  assert.equal(error.explained, true);
+  const msg = ssh._explainError(error, ctx, cfg);
+  assert.match(msg, /^Jump host failed: Timed out while waiting for handshake/);
+  assert.match(msg, new RegExp(`nc -vz 127\\.0\\.0\\.1 ${jumpPort}`), 'the hint names the jump host and its port');
+  assert.doesNotMatch(msg, /target\.example|2299/, 'never the target');
 });

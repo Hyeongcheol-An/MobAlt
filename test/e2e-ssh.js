@@ -147,6 +147,28 @@
       results.stat50Fast = results.stat50Ms < 100;
     }
     log('socket', JSON.stringify(sockInfo), '| 50 sequential stats', results.stat50Ms, 'ms');
+    // 3c. the folder the panel shows is deleted underneath it: one warning, a line in the list, and the panel climbs to
+    //     the nearest parent that still exists — a further refresh is quiet (no stale rows, no repeated "Path not found")
+    {
+      const seen = [];
+      const mo = new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seen.push(n.textContent); });
+      mo.observe(document.getElementById('toast-root'), { childList: true });
+      await window.api.sftp.mkdir(connId, '/tmp/mobalt-e2e/gone');
+      await window.api.sftp.mkdir(connId, '/tmp/mobalt-e2e/gone/deeper');
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e/gone/deeper');
+      const deep = app.sftpPanel.state().path;
+      await window.api.sftp.remove(connId, '/tmp/mobalt-e2e/gone', true);
+      await app.sftpPanel.cmd('refresh');
+      await waitFor(() => app.sftpPanel.state().path !== deep && !app.sftpPanel.state().loading, 5000, 'panel climbed');
+      const parent = app.sftpPanel.state().path;
+      results.goneFolderClimbs = parent === deep.replace(/\/gone\/deeper$/, '') && document.querySelector('#sftp-list .sftp-notice')?.textContent === `"${deep}" no longer exists`;
+      results.goneFolderToastOnce = seen.filter((x) => /no longer exists/.test(x)).length === 1 && !seen.some((x) => /Path not found/.test(x));
+      await app.sftpPanel.cmd('refresh');
+      await sleep(300);
+      results.goneFolderQuietAfter = seen.filter((x) => /no longer exists|Path not found/.test(x)).length === 1 && app.sftpPanel.state().path === parent && !document.querySelector('#sftp-list .sftp-notice');
+      log('folder deleted underneath:', deep, '→', parent, '| toasts', JSON.stringify(seen));
+      mo.disconnect();
+    }
 
     // 4. encrypted key -> passphrase prompt
     const p2 = app.openSession(s2);
@@ -284,6 +306,10 @@
       //     so far in <name>.part (the sshd child is killed from the other connection the moment the transfer runs, so
       //     the loopback download cannot finish first)
       const spId = sp.termId;
+      // the panel browses a folder on this connection: a reconnect brings it back there (9b), not to the home folder
+      app.sftpPanel.show(spId);
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e/src');
+      const browsed = app.sftpPanel.state().path;
       const big = '/tmp/mobalt-e2e/big.bin', bigLocal = '/tmp/mobalt-e2e-dl/big.bin', bigLocal2 = '/tmp/mobalt-e2e-dl/big2.bin';
       const sizeOf = async (p) => parseInt((await window.api.ssh.exec(pane.termId, `stat -f %z ${p} 2>/dev/null || echo -1`)).stdout.trim(), 10);
       await window.api.ssh.exec(pane.termId, `head -c 300000000 /dev/urandom > ${big}`);
@@ -310,9 +336,14 @@
       await sp.reconnect();
       await waitFor(() => sp.status === 'connected', 15000, 'reconnected after the drop');
       await sleep(1200);
-      // 9b. the next download of the same file offers Resume (a sheet: Resume / Start over / Cancel), which continues
-      //     from the .part's end — the row says "resuming at …" meanwhile and the result's checksum is the remote file's
+      // 9b. the panel of the reconnected session opens on the folder it showed before the drop; the next download of the
+      //     same file offers Resume (a sheet: Resume / Start over / Cancel), which continues from the .part's end — the
+      //     row says "resuming at …" meanwhile and the result's checksum is the remote file's
       {
+        app.sftpPanel.show(sp.termId);
+        await waitFor(() => app.sftpPanel.state()?.path && !app.sftpPanel.state().loading, 5000, 'panel back after reconnect');
+        results.reconnectKeepsFolder = app.sftpPanel.state().path === browsed;
+        log('panel after reconnect:', app.sftpPanel.state().path, '(was', browsed + ')');
         await window.api.app.testNextDialog({ response: 0 }); // Resume
         const dl2 = await window.api.sftp.download(sp.termId, big, bigLocal, false);
         let rowSeen = '';
