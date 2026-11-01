@@ -235,7 +235,8 @@ folder dialog and leaves the field as it was when you cancel.
   of the same name lands as `name (1).ext` and is listed under that name.
 - **Clipboard**: selecting copies (Settings → Terminal → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
-  on a local terminal it pastes the paths.
+  on a local terminal it pastes the paths. When the shell's folder is not known (the session does not follow the terminal) they go to the folder the
+  Sftp panel shows for that connection, or you are asked first.
 - **Paste guard**: a paste with more than one line (or over 1000 characters) asks first — *Paste N
   lines into …?* shows the text in an editable preview; ⌘⏎ pastes, Esc cancels. Every paste is also
   checked for what the clipboard does not show: zero-width and bidi characters, no-break spaces (a space
@@ -278,11 +279,15 @@ The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on
 - Navigate by double-clicking folders, typing a path (`~` works) or using ⬆ / 🏠 / ⟳.
   "Follow terminal" keeps the panel on the shell's current directory (needs the session
   option, which injects a small prompt hook). `>_` sends `cd` to the terminal.
+- The box above the list ("Filter files…") narrows it to the names containing what you type; Enter or ↓ goes to the
+  first match, Esc clears it.
 - Toolbar and context menu: new folder, rename, permissions, delete, download, upload. Multi-select
   with ⌘ / ⇧. Drag files from Finder onto the list to upload; existing names ask before overwriting.
 - Double-click a text file to edit it in the built-in editor (⌘S saves back). "Edit in external
   editor" opens it in your editor (Settings → General → External editor) and re-uploads on every save.
-- Transfers show progress, speed and a cancel button; "Show in Finder" after a download.
+- Transfers show progress, speed and a cancel button; "Show in Finder" after a download. A download is written to
+  `<name>.part` and takes its name once complete; if it stops (a dropped connection, Disconnect), the next download
+  of the same file offers *Resume* or *Start over*.
 - Column headers sort by name, size or date. When the sidebar is narrow the date column hides.
 
 ## Tunnels (port forwarding)
@@ -297,7 +302,8 @@ The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on
 
 Start a tunnel over an open connection or let MobAlt open a dedicated connection to a saved
 session. Tunnels listed in a session's **Tunnels** tab start automatically when that session
-connects, and you are told if one fails to bind.
+connects, and you are told if one fails to bind. A port that is taken is named as such: *Port 8080 is already in use on
+this Mac* (or *on the server* for a remote forward).
 
 ## X11, Mosh, Serial, RDP/VNC
 

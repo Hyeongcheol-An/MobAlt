@@ -254,7 +254,9 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
   geführt.
 - **Zwischenablage**: Auswählen kopiert („Einstellungen“ → „Terminal“ → „Bei Auswahl kopieren“); ein Rechtsklick setzt
   ein (⇧-Rechtsklick öffnet das Menü). Dateien aus dem Finder, die Sie auf einem SSH-Terminal ablegen, werden
-  hochgeladen; auf einem lokalen Terminal werden die Pfade eingesetzt.
+  hochgeladen; auf einem lokalen Terminal werden die Pfade eingesetzt. Ist der Ordner der Shell unbekannt (die Sitzung folgt dem
+  Terminal nicht), landen sie in dem Ordner, den das Panel „Sftp“ für diese Verbindung zeigt; ist das Panel noch nicht
+  offen, werden Sie zuerst gefragt.
 - **Einsetzschutz**: Einsetzen von mehr als einer Zeile (oder über 1000 Zeichen) fragt zuerst nach — *N Zeilen in …
   einsetzen?* zeigt den Text in einer bearbeitbaren Vorschau; ⌘⏎ setzt ein, Esc bricht ab. Jedes Einsetzen wird zudem
   auf das geprüft, was die Zwischenablage nicht zeigt: breitenlose und Bidi-Zeichen, geschützte Leerzeichen (fürs Auge
@@ -299,13 +301,17 @@ Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim
 - Navigieren Sie per Doppelklick auf Ordner, durch Eintippen eines Pfads (`~` funktioniert) oder mit ⬆ / 🏠 / ⟳.
   „Terminal folgen“ hält das Panel im aktuellen Ordner der Shell (erfordert die Sitzungsoption, die einen kleinen
   Prompt-Hook einfügt). `>_` sendet `cd` an das Terminal.
+- Das Feld über der Liste („Dateien filtern…“) filtert beim Tippen nach Namen; die Eingabetaste oder ↓ springt zum ersten
+  Treffer, Esc leert es.
 - Symbolleiste und Kontextmenü: neuer Ordner, umbenennen, Zugriffsrechte, löschen, herunterladen, hochladen.
   Mehrfachauswahl mit ⌘ / ⇧. Ziehen Sie Dateien aus dem Finder auf die Liste, um sie hochzuladen; bei vorhandenen Namen
   wird vor dem Überschreiben gefragt.
 - Ein Doppelklick auf eine Textdatei öffnet sie im integrierten Editor (⌘S sichert zurück). „In externem Editor
   bearbeiten“ öffnet sie in Ihrem Editor („Einstellungen“ → „Allgemein“ → „Externer Editor“) und lädt sie bei jedem
   Sichern erneut hoch.
-- Übertragungen zeigen Fortschritt, Geschwindigkeit und eine Abbrechen-Taste; nach einem Download „Im Finder zeigen“.
+- Übertragungen zeigen Fortschritt, Geschwindigkeit und eine Abbrechen-Taste; nach einem Download „Im Finder zeigen“. Ein Download wird nach
+  `<Name>.part` geschrieben und erhält seinen Namen erst, wenn er vollständig ist; bricht er ab (Verbindungsabbruch, Trennen),
+  bietet der nächste Download derselben Datei *Fortsetzen* oder *Von vorn* an.
 - Die Spaltenköpfe sortieren nach Name, Größe oder Datum. Ist die Seitenleiste schmal, wird die Datumsspalte
   ausgeblendet.
 
@@ -321,7 +327,8 @@ Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim
 
 Starten Sie einen Tunnel über eine offene Verbindung oder lassen Sie MobAlt eine eigene Verbindung zu einer
 gesicherten Sitzung öffnen. Tunnel, die im Tab **Tunnel** einer Sitzung eingetragen sind, starten automatisch, wenn
-diese Sitzung verbindet, und Sie erfahren es, wenn einer sich nicht binden lässt.
+diese Sitzung verbindet, und Sie erfahren es, wenn einer sich nicht binden lässt. Ein belegter Port wird als solcher benannt: *Port 8080 wird auf
+diesem Mac bereits verwendet* (bei einer Remote-Weiterleitung *auf dem Server*).
 
 ## X11, Mosh, seriell, RDP/VNC
 

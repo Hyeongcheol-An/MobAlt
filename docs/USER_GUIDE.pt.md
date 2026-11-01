@@ -235,7 +235,8 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
   com o mesmo nome é salvo como `nome (1).ext` e listado com esse nome.
 - **Área de transferência**: selecionar copia (Ajustes → Terminal → Copiar ao selecionar); o clique direito cola
   (⇧-clique direito abre o menu). Soltar arquivos do Finder num terminal SSH os envia;
-  num terminal local, cola os caminhos.
+  num terminal local, cola os caminhos. Se a pasta do shell é desconhecida (a sessão não segue o terminal), eles vão para a pasta que o painel Sftp
+  mostra para essa conexão; se o painel ainda não está aberto, você é perguntado antes.
 - **Proteção de colagem**: uma colagem com mais de uma linha (ou com mais de 1000 caracteres) pede confirmação antes — *Colar N
   linhas em …?* mostra o texto numa pré-visualização editável; ⌘⏎ cola, Esc cancela. Toda colagem também é
   verificada quanto ao que a área de transferência não mostra: caracteres de largura zero e bidirecionais, espaços sem quebra (um espaço
@@ -278,11 +279,15 @@ O painel **Sftp** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente 
 - Navegue clicando duas vezes nas pastas, digitando um caminho (`~` funciona) ou usando ⬆ / 🏠 / ⟳.
   “Seguir terminal” mantém o painel na pasta atual do shell (requer a opção da
   sessão, que injeta um pequeno hook no prompt). `>_` envia `cd` ao terminal.
+- A caixa acima da lista (“Filtrar arquivos…”) filtra por nome enquanto você digita; Enter ou ↓ vai ao primeiro resultado,
+  Esc a limpa.
 - Barra de ferramentas e menu de contexto: nova pasta, renomear, permissões, apagar, baixar, enviar. Seleção múltipla
   com ⌘ / ⇧. Arraste arquivos do Finder para a lista para enviá-los; nomes já existentes pedem confirmação antes de substituir.
 - Clique duas vezes num arquivo de texto para editá-lo no editor integrado (⌘S salva de volta). “Editar no Editor
   Externo” o abre no seu editor (Ajustes → Geral → Editor externo) e o reenvia a cada gravação.
-- As transferências mostram progresso, velocidade e um botão de cancelar; “Mostrar no Finder” depois de um download.
+- As transferências mostram progresso, velocidade e um botão de cancelar; “Mostrar no Finder” depois de um download. Um download é gravado em `<nome>.part` e só
+  recebe o nome ao terminar; se parar (conexão perdida, Desconectar), o próximo download do mesmo arquivo oferece *Retomar* ou
+  *Recomeçar*.
 - Os cabeçalhos das colunas ordenam por nome, tamanho ou data. Quando a barra lateral está estreita, a coluna de data some.
 
 ## Túneis (encaminhamento de portas)
@@ -297,7 +302,8 @@ O painel **Sftp** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente 
 
 Inicie um túnel sobre uma conexão aberta ou deixe o MobAlt abrir uma conexão dedicada a uma sessão
 salva. Os túneis listados na aba **Túneis** de uma sessão iniciam automaticamente quando essa sessão
-se conecta, e você é avisado se algum não conseguir escutar na porta.
+se conecta, e você é avisado se algum não conseguir escutar na porta. Uma porta ocupada é dita como tal: *A porta 8080 já está em uso neste Mac*
+(ou *no servidor* para um encaminhamento remoto).
 
 ## X11, Mosh, Serial, RDP/VNC
 

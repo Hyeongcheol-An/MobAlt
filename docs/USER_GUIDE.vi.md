@@ -232,7 +232,8 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   cùng tên được lưu thành `name (1).ext` và được liệt kê dưới tên đó.
 - **Bảng nhớ tạm**: chọn văn bản là sao chép (Cài đặt → Terminal → Sao chép khi chọn); nhấp chuột phải để dán
   (⇧-chuột phải mở menu). Thả tệp từ Finder vào terminal SSH sẽ tải chúng lên;
-  vào terminal cục bộ thì dán đường dẫn.
+  vào terminal cục bộ thì dán đường dẫn. Khi không rõ thư mục của shell (phiên không theo terminal), tệp được tải lên thư mục mà bảng Sftp
+  đang hiển thị cho kết nối đó; nếu bảng chưa mở, bạn được hỏi trước.
 - **Bảo vệ dán**: nội dung dán có nhiều hơn một dòng (hoặc trên 1000 ký tự) sẽ hỏi trước — *Dán N
   dòng vào …?* hiện văn bản trong ô xem trước có thể sửa; ⌘⏎ để dán, Esc để hủy. Mọi lần dán cũng
   được kiểm tra những gì bảng nhớ tạm không cho thấy: ký tự độ rộng 0 và ký tự bidi, khoảng trắng không ngắt (nhìn
@@ -275,11 +276,14 @@ Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự 
 - Điều hướng bằng cách nhấp đúp vào thư mục, gõ đường dẫn (dùng được `~`) hoặc dùng ⬆ / 🏠 / ⟳.
   "Theo terminal" giữ bảng ở thư mục hiện tại của shell (cần tùy chọn tương ứng trong phiên,
   tùy chọn này chèn một hook nhỏ vào dấu nhắc). `>_` gửi lệnh `cd` tới terminal.
+- Ô phía trên danh sách ("Lọc tệp…") lọc theo tên khi bạn gõ; Enter hoặc ↓ đến mục khớp đầu tiên, Esc xóa bộ lọc.
 - Thanh công cụ và menu ngữ cảnh: thư mục mới, đổi tên, quyền, xóa, tải về, tải lên. Chọn nhiều mục
   bằng ⌘ / ⇧. Kéo tệp từ Finder vào danh sách để tải lên; tên đã tồn tại sẽ được hỏi trước khi ghi đè.
 - Nhấp đúp vào tệp văn bản để sửa trong trình sửa tích hợp (⌘S lưu ngược lên máy chủ). "Sửa bằng trình
   sửa ngoài" mở tệp trong trình sửa của bạn (Cài đặt → Chung → Trình sửa ngoài) và tải lại lên mỗi khi lưu.
-- Quá trình truyền tệp hiện tiến độ, tốc độ và nút hủy; "Hiện trong Finder" sau khi tải về.
+- Quá trình truyền tệp hiện tiến độ, tốc độ và nút hủy; "Hiện trong Finder" sau khi tải về. Tệp tải về được ghi vào
+  `<tên>.part` và chỉ mang tên thật khi hoàn tất; nếu bị dừng (mất kết nối, Ngắt kết nối), lần tải về tiếp theo của cùng tệp
+  sẽ hỏi *Tiếp tục* hay *Bắt đầu lại*.
 - Tiêu đề cột sắp xếp theo tên, kích cỡ hoặc ngày. Khi thanh bên hẹp, cột ngày được ẩn.
 
 ## Đường hầm (chuyển tiếp cổng)
@@ -294,7 +298,8 @@ Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự 
 
 Khởi động đường hầm trên một kết nối đang mở, hoặc để MobAlt mở một kết nối riêng tới một phiên
 đã lưu. Các đường hầm liệt kê trong thẻ **Đường hầm** của một phiên tự khởi động khi phiên đó
-kết nối, và bạn được báo nếu có đường hầm không lắng nghe được.
+kết nối, và bạn được báo nếu có đường hầm không lắng nghe được. Cổng đã bị chiếm sẽ được nêu rõ: *Cổng 8080 đã được dùng trên máy Mac này*
+(hoặc *trên máy chủ* với chuyển tiếp từ xa).
 
 ## X11, Mosh, Serial, RDP/VNC
 
