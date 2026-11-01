@@ -171,6 +171,11 @@ function proxy(channel, x11, onError) {
   sock.on('data', (b) => channel.write(b));
   sock.on('error', () => channel.close());
   sock.on('close', () => channel.close());
+  // A remote X client that exits gets its channel half-closed by sshd (EOF, no close): the local socket is ended at
+  // once so that XQuartz drops the client and its window — otherwise the window stayed on screen until the SSH
+  // session itself disconnected. The other way round, the X server ending the connection sends the client EOF.
+  channel.on('end', () => sock.end());
+  sock.on('end', () => { try { channel.end(); } catch {} });
   channel.on('close', () => sock.destroy());
   channel.on('error', () => sock.destroy());
 }
