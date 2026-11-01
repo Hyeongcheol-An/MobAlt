@@ -158,14 +158,16 @@
       await app.sftpPanel.navigate('/tmp/mobalt-e2e/gone/deeper');
       const deep = app.sftpPanel.state().path;
       await window.api.sftp.remove(connId, '/tmp/mobalt-e2e/gone', true);
-      await app.sftpPanel.cmd('refresh');
-      await waitFor(() => app.sftpPanel.state().path !== deep && !app.sftpPanel.state().loading, 5000, 'panel climbed');
+      // an operation inside the vanished folder (an upload into it) fails with its own "Path not found" — and the panel
+      // lists the folder again right after, so the climb and the notice happen instead of stale rows
+      await app.sftpPanel.uploadTo(connId, [root + '/LICENSE'], deep);
+      await waitFor(() => app.sftpPanel.state().path !== deep && !app.sftpPanel.state().loading, 5000, 'panel climbed after the failed operation');
       const parent = app.sftpPanel.state().path;
       results.goneFolderClimbs = parent === deep.replace(/\/gone\/deeper$/, '') && document.querySelector('#sftp-list .sftp-notice')?.textContent === `"${deep}" no longer exists`;
-      results.goneFolderToastOnce = seen.filter((x) => /no longer exists/.test(x)).length === 1 && !seen.some((x) => /Path not found/.test(x));
+      results.goneFolderToastOnce = seen.filter((x) => /no longer exists/.test(x)).length === 1 && seen.filter((x) => /Path not found/.test(x)).length === 1;
       await app.sftpPanel.cmd('refresh');
       await sleep(300);
-      results.goneFolderQuietAfter = seen.filter((x) => /no longer exists|Path not found/.test(x)).length === 1 && app.sftpPanel.state().path === parent && !document.querySelector('#sftp-list .sftp-notice');
+      results.goneFolderQuietAfter = seen.filter((x) => /no longer exists/.test(x)).length === 1 && seen.filter((x) => /Path not found/.test(x)).length === 1 && app.sftpPanel.state().path === parent && !document.querySelector('#sftp-list .sftp-notice');
       log('folder deleted underneath:', deep, '→', parent, '| toasts', JSON.stringify(seen));
       mo.disconnect();
     }
@@ -191,6 +193,41 @@
       filter.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
       results.filterEscClears = filter.value === '' && app.sftpPanel.rows().length === entries.length && document.activeElement !== filter;
       log('dangling:', JSON.stringify(dangling), '| tooltip', JSON.stringify(title), '| filter rows ok:', results.filterRows);
+    }
+    // 3e. a 20 000-entry folder: End and type-ahead during the chunked fill resolve against the data — the keydown returns
+    //     at once instead of drawing the whole listing first (667 / 1 007 ms before), and the focus lands on the row once
+    //     its batch is drawn
+    {
+      await window.api.ssh.exec(connId, 'mkdir -p /tmp/mobalt-e2e/big20k && cd /tmp/mobalt-e2e/big20k && for i in $(seq -w 1 20000); do : > f_$i; done');
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e/big20k');
+      const list = document.getElementById('sftp-list');
+      const rowsNow = () => list.querySelectorAll('.sftp-row[data-name]').length;
+      const firstRow = () => list.querySelector('.sftp-row[data-name]:not([data-name=".."])');
+      await waitFor(() => rowsNow() >= 20001, 20000, 'first fill of 20k');
+      const key = (k) => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      app.sftpPanel.renderList(); // a fresh fill, the first screen drawn
+      firstRow().focus();
+      let t0 = performance.now();
+      key('End');
+      const endMs = performance.now() - t0, rowsAfterEnd = rowsNow();
+      results.endNoFlush = endMs < 50 && rowsAfterEnd < 20001 && app.sftpPanel.state().lastSel === 'f_20000';
+      await waitFor(() => document.activeElement?.dataset?.name === 'f_20000', 5000, 'the focus lands on the last row');
+      results.endFocusLands = document.activeElement?.dataset?.name === 'f_20000' && [...app.sftpPanel.state().selected].join() === 'f_20000';
+      app.sftpPanel.renderList();
+      firstRow().focus();
+      t0 = performance.now();
+      for (const k of ['f', '_', '1', '9']) key(k); // "f_19" → f_19000, far below the rows drawn so far
+      const taMs = performance.now() - t0, rowsAfterTa = rowsNow();
+      results.typeAheadNoFlush = taMs < 50 && rowsAfterTa < 20001 && app.sftpPanel.state().lastSel === 'f_19000';
+      await waitFor(() => document.activeElement?.dataset?.name === 'f_19000', 5000, 'the type-ahead focus lands');
+      results.typeAheadFocusLands = document.activeElement?.dataset?.name === 'f_19000';
+      app.sftpPanel.renderList();
+      firstRow().focus();
+      key('Home'); // stays as it was: the first row is always drawn
+      results.homeImmediate = document.activeElement?.dataset?.name === 'f_00001';
+      log('20k keyboard during the fill: End', endMs.toFixed(1), 'ms with', rowsAfterEnd, 'rows drawn; type-ahead', taMs.toFixed(1), 'ms with', rowsAfterTa, 'rows drawn');
+      await window.api.ssh.exec(connId, 'rm -rf /tmp/mobalt-e2e/big20k');
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e');
     }
 
     // 4. encrypted key -> passphrase prompt
@@ -316,7 +353,7 @@
       new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seenToasts.push(n.textContent); }).observe(document.getElementById('toast-root'), { childList: true });
       // killing the sshd child ends the TCP connection with a clean EOF ("closed by the server") or, when the Mac is busy
       // and the reset arrives first, with ECONNRESET ("lost: read ECONNRESET"): the server dropped us either way
-      const lostRe = /^Connection to enc-key was (closed by the server|lost: .+?) 1 tunnel started from the Tunnels dialog was stopped\.$/; // one ad-hoc tunnel is on this connection when it drops (below)
+      const lostRe = /^Connection to enc-key was (closed by the server|lost: .+?)\. 1 tunnel started from the Tunnels dialog was stopped\.$/; // one ad-hoc tunnel is on this connection when it drops (below); two sentences
       const sp = await app.openSession(app.sessions.sessions.find((x) => x.id === s2.id)); // saved passphrase: no prompt
       await waitFor(() => sp.status === 'connected', 15000, 'drop-test session connected');
       await sleep(1500);

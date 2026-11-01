@@ -86,8 +86,8 @@ export class SftpPanel {
     });
     this.els.filter.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === 'ArrowDown') {
-        const row = this.rows()[0];
-        if (row) { e.preventDefault(); this.select(this.state().entries.find((x) => x.name === row.dataset.name)); }
+        const first = this.visibleEntries()[0]; // the first match (its row is always among the first drawn)
+        if (first) { e.preventDefault(); this.select(first); }
       } else if (e.key === 'Escape') {
         const st = this.state();
         this.els.filter.value = '';
@@ -383,8 +383,8 @@ export class SftpPanel {
   /**
    * Draw the listing. The first screenful of rows is appended now, the rest in animation frames of a few milliseconds
    * each: 20 000 entries are 100 000 nodes — 770 ms in one go, which a sort click or a refresh must not cost. What
-   * needs every row (keyboard navigation, a dialog looking for its row) calls rows() / rowFor(), which finish the fill
-   * first; the keyboard cursor moves to its row once that row is in.
+   * needs every row (a dialog looking for its row, ⌘A) calls rows() / rowFor(), which finish the fill first; the keyboard
+   * resolves against the data (onKey) and its cursor moves to the row once that row is in (_focusName).
    */
   renderList() {
     const st = this.state();
@@ -440,6 +440,10 @@ export class SftpPanel {
           if ((i & 127) === 0 && performance.now() - t0 > budgetMs) break;
         }
         list.append(f);
+        if (this._pendingFocus) { // the keyboard asked for a row this batch may have drawn
+          const r = this._rowNow(this._pendingFocus);
+          if (r) { this._pendingFocus = null; this.focusRow(r); }
+        }
         if (i < entries.length) this._fillRaf = requestAnimationFrame(() => step(6));
         else {
           this._fill = null;
@@ -458,9 +462,28 @@ export class SftpPanel {
 
   /** A chunked fill still running (renderList) is dropped: the listing is being drawn again. */
   _stopFill() {
+    this._pendingFocus = null;
     if (!this._fill) return;
     cancelAnimationFrame(this._fillRaf);
     this._fill = null;
+  }
+
+  /** The row of `name` as drawn so far (no fill completed for it). */
+  _rowNow(name) {
+    return name == null ? null : this.els.list.querySelector(`.sftp-row[data-name="${CSS.escape(name)}"]`);
+  }
+
+  /**
+   * Focus the row of `name`: now when it is drawn, else — while a chunked fill is still on its way to it — as soon as
+   * its batch lands (the fill checks after every batch), so End, PageDown and type-ahead on a 20 000-entry listing
+   * never wait for the whole DOM.
+   */
+  _focusName(name) {
+    const row = this._rowNow(name);
+    if (row) {
+      this._pendingFocus = null;
+      this.focusRow(row);
+    } else if (this._fill) this._pendingFocus = name;
   }
 
   /** Finish a chunked fill now, so every row is in the DOM for whoever asked. */
@@ -539,7 +562,7 @@ export class SftpPanel {
       if (st.selected.has(e.name)) st.selected.delete(e.name);
       else st.selected.add(e.name);
     } else if (ev && ev.shiftKey && st.lastSel) {
-      const names = this.rows().map((r) => r.dataset.name);
+      const names = this.visibleEntries(st).map((x) => x.name); // the data, in display order: a fill still drawing is not waited for
       const a = names.indexOf(st.lastSel), b = names.indexOf(e.name);
       for (let i = Math.min(a, b); i <= Math.max(a, b); i++) st.selected.add(names[i]);
     } else {
@@ -548,7 +571,7 @@ export class SftpPanel {
     }
     st.lastSel = e.name;
     this._paintSelection(st);
-    this.focusRow(this.rowFor(e.name));
+    this._focusName(e.name);
   }
 
   _paintSelection(st) {
@@ -609,17 +632,20 @@ export class SftpPanel {
       return;
     }
     const sel = this.selectedEntries();
-    const rows = this.rows(), names = rows.map((r) => r.dataset.name);
+    // the names in display order come from the data, not the DOM: a 20 000-entry listing still being drawn in batches
+    // answers End, PageDown and type-ahead at once, and the focus moves to the row once its batch is in (_focusName)
+    const names = this.visibleEntries(st).map((x) => x.name);
     const focused = e.target.closest('.sftp-row[data-name]');
     const onUp = !!focused && focused.dataset.name === '..';
-    const i = focused && !onUp ? rows.indexOf(focused) : -1; // -1: the list itself has the focus, no cursor yet
+    const curName = this._pendingFocus || (focused && !onUp ? focused.dataset.name : null); // a focus still on its way counts as the cursor
+    const i = curName ? names.indexOf(curName) : -1; // -1: the list itself has the focus, no cursor yet
     const cur = i >= 0 ? st.entries.find((x) => x.name === names[i]) : null; // the row with the focus ring
     const go = (j, extend) => { // cursor to row j (clamped); ⇧ extends the selection from the last selected entry
       const n = names[Math.max(0, Math.min(names.length - 1, j))];
       if (n !== undefined) this.select(st.entries.find((x) => x.name === n), extend ? e : null);
       e.preventDefault();
     };
-    const page = () => Math.max(1, Math.floor(this.els.list.clientHeight / ((rows[0] && rows[0].offsetHeight) || 24)) - 1);
+    const page = () => { const r0 = this._rowsNow()[0]; return Math.max(1, Math.floor(this.els.list.clientHeight / ((r0 && r0.offsetHeight) || 24)) - 1); };
     if (e.key === 'Enter') {
       if (onUp) this.cmd('up');
       else if (cur && sel.length <= 1) this.open(cur);
@@ -693,7 +719,7 @@ export class SftpPanel {
           await this.navigate(st.path);
           this._cursorTo(n.trim()); // the new folder is what the user acts on next (open, rename…)
         } catch (err) {
-          toast(errMsg(err), 'error');
+          this._opFailed(err);
         }
         return;
       }
@@ -716,6 +742,17 @@ export class SftpPanel {
     return this.uploadTo(this.connId, paths, st.path, st.entries);
   }
 
+  /**
+   * An operation failed: say so, and when the failure says the path is not there, list the folder again — a folder
+   * deleted under the panel is then announced and climbed out of (navigate), a vanished entry drops off the list —
+   * instead of leaving the stale rows. `folder`: the folder the operation worked in, when it is not the one shown.
+   */
+  _opFailed(err, connId = this.connId, folder = null) {
+    toast(errMsg(err), 'error');
+    const st = this.state();
+    if (st && this.connId === connId && st.path && (!folder || folder === st.path) && isNotFound(err)) this.navigate(st.path);
+  }
+
   /** Upload with an overwrite check (used by the panel and by drops on a terminal). */
   async uploadTo(connId, paths, dir, entries) {
     if (!paths || !paths.length) {
@@ -723,7 +760,7 @@ export class SftpPanel {
         const ids = await window.api.sftp.upload(connId, [], dir); // native picker
         if (ids && ids.length) toast(tn('Uploading {n} item to {dir}', 'Uploading {n} items to {dir}', ids.length, { dir }), 'info');
       } catch (e) {
-        toast(errMsg(e), 'error');
+        this._opFailed(e, connId, dir);
       }
       return;
     }
@@ -742,7 +779,7 @@ export class SftpPanel {
       const ids = await window.api.sftp.upload(connId, todo, dir);
       if (ids && ids.length) toast(tn('Uploading {n} item to {dir}', 'Uploading {n} items to {dir}', ids.length, { dir }), 'info');
     } catch (e) {
-      toast(errMsg(e), 'error');
+      this._opFailed(e, connId, dir);
     }
   }
 
@@ -751,7 +788,7 @@ export class SftpPanel {
       try {
         await window.api.sftp.download(this.connId, this.join(e.name), null, e.type === 'd');
       } catch (err) {
-        toast(errMsg(err), 'error');
+        this._opFailed(err);
       }
     }
   }
@@ -767,7 +804,7 @@ export class SftpPanel {
     if (!ok) return;
     const st = this.state();
     // the keyboard cursor moves to the row after the deleted ones (else the one before them)
-    const names = this.rows().map((r) => r.dataset.name), gone = new Set(entries.map((e) => e.name));
+    const names = this.visibleEntries(st).map((x) => x.name), gone = new Set(entries.map((e) => e.name)); // display order, from the data
     const after = names.slice(names.findLastIndex((n) => gone.has(n)) + 1).find((n) => !gone.has(n));
     const before = names.slice(0, Math.max(0, names.findIndex((n) => gone.has(n)))).reverse().find((n) => !gone.has(n));
     for (const e of entries) {
@@ -802,7 +839,7 @@ export class SftpPanel {
       await this.navigate(st.path);
       if (this.connId === connId && st.lastSel === n) this._cursorTo(n); // …and so does the selection
     } catch (err) {
-      toast(errMsg(err), 'error');
+      this._opFailed(err, connId);
     }
   }
 
@@ -815,7 +852,7 @@ export class SftpPanel {
       await window.api.sftp.chmod(this.connId, this.join(e.name), parseInt(v.trim(), 8));
       this.navigate(this.state().path);
     } catch (err) {
-      toast(errMsg(err), 'error');
+      this._opFailed(err);
     }
   }
 
@@ -826,7 +863,7 @@ export class SftpPanel {
     try {
       content = await window.api.sftp.read(connId, remote);
     } catch (err) {
-      return toast(errMsg(err), 'error');
+      return this._opFailed(err, connId);
     }
     const ta = h('textarea', { class: 'editor-area', spellcheck: false, 'aria-label': t('Contents of {name}', { name: e.name }) });
     ta.value = content;
