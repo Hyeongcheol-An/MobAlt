@@ -61,11 +61,36 @@
     "files": [
       "src/**/*",
       "package.json",
-      "!**/*.map"
+      "!**/*.map",
+      "!src/locales/{catalog.json,README.md}",
+      "!**/node_modules/node-pty/{deps,src,prebuilds/win32-*}/**",
+      "!**/node_modules/@serialport/bindings-cpp/{src,prebuilds/android-*,prebuilds/linux-*,prebuilds/win32-*}/**",
+      "!**/node_modules/@serialport/binding-mock/**",
+      "!**/node_modules/@xterm/*/src/**",
+      "!**/node_modules/@xterm/xterm/lib/xterm.mjs",
+      "!**/node_modules/{nan,node-addon-api}/**",
+      "!**/node_modules/**/node_modules/node-addon-api/**",
+      "!**/node_modules/cpu-features/{deps/**,buildcheck.gypi,buildcheck.js,binding.gyp}",
+      "!**/node_modules/**/{*.h,*.hpp,*.c,*.cc,*.cpp,*.gyp,*.gypi,*.a,*.o,*.stamp,Makefile}",
+      "!**/node_modules/**/build/**/obj.target/**",
+      "!**/node_modules/**/{CHANGELOG,CONTRIBUTING,CODE_OF_CONDUCT,HISTORY,RELEASES,SECURITY,README,Readme,readme}.md"
     ],
     "asarUnpack": [
       "node_modules/node-pty/**",
       "node_modules/@serialport/bindings-cpp/**"
+    ],
+    "electronLanguages": [
+      "en",
+      "ko",
+      "zh-CN",
+      "ja",
+      "vi",
+      "hi",
+      "de",
+      "fr",
+      "es",
+      "pt",
+      "ar"
     ],
     "mac": {
       "category": "public.app-category.developer-tools",
