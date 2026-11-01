@@ -1,9 +1,9 @@
 /*
  * The WebAssembly face of OpenSSH's sntrup761.c (build.sh): four static buffers the host fills and reads through
- * the exported pointers, and one export per KEM operation over them. No heap, no libc: memcpy / memset are the
- * ones the compiler may call for the reference code's loops and struct copies, explicit_bzero the one it calls to
- * wipe secrets, and the optblockers are the volatiles its constant-time helpers read (as kexsntrup761x25519.c
- * defines them in OpenSSH). Public domain.
+ * the exported pointers, one export per KEM operation over them, and the bounds of the C stack so the host can
+ * wipe it. No heap, no libc: memcpy / memset are the ones the compiler may call for the reference code's loops
+ * and struct copies, explicit_bzero the one it calls to wipe secrets, and the optblockers are the volatiles its
+ * constant-time helpers read (as kexsntrup761x25519.c defines them in OpenSSH). Public domain.
  */
 #include "crypto_api.h"
 
@@ -45,6 +45,14 @@ static unsigned char PK[crypto_kem_sntrup761_PUBLICKEYBYTES];
 static unsigned char SK[crypto_kem_sntrup761_SECRETKEYBYTES];
 static unsigned char CT[crypto_kem_sntrup761_CIPHERTEXTBYTES];
 static unsigned char K[crypto_kem_sntrup761_BYTES];
+
+/* the C shadow stack's bounds (wasm-ld's symbols; --stack-first puts it at the start of memory, below the
+ * static data): the host zeroes [stack_lo, stack_hi) after every operation, so no secret lingers in the
+ * locals the reference code leaves behind */
+extern unsigned char __stack_low[];
+extern unsigned char __stack_high[];
+__attribute__((export_name("stack_lo"))) unsigned char *sntrup761_stack_lo(void) { return __stack_low; }
+__attribute__((export_name("stack_hi"))) unsigned char *sntrup761_stack_hi(void) { return __stack_high; }
 
 __attribute__((export_name("pk"))) unsigned char *sntrup761_pk(void) { return PK; }
 __attribute__((export_name("sk"))) unsigned char *sntrup761_sk(void) { return SK; }

@@ -4,7 +4,9 @@
 // to WebAssembly by vendor/sntrup761/build.sh. The module has no heap and no libc; its randomness and its SHA-512
 // come from Node's crypto through the two imports below, so the WebAssembly only ever does the NTRU Prime
 // arithmetic. One static buffer per value inside the module (pk, sk, ct, k): the host copies in, runs the
-// operation, copies out and wipes.
+// operation, copies out and wipes — the buffers it used and the module's whole C stack ([stack_lo, stack_hi), the
+// start of linear memory: build.sh places it first), where the reference code's locals (the shared secret, the
+// small polynomials, the hash inputs) would otherwise linger. test/unit/pqkex.test.js scans the memory for them.
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
@@ -15,7 +17,7 @@ const CIPHERTEXTBYTES = 1039;
 const BYTES = 32;
 
 let wasm = null;
-/** The instantiated module (loaded on first use, synchronously: a 50 KB module, well under a millisecond). */
+/** The instantiated module (loaded on first use, synchronously: an 11.7 KB module, well under a millisecond). */
 function instance() {
   if (wasm) return wasm;
   const bytes = fs.readFileSync(path.join(__dirname, 'sntrup761.wasm'));
@@ -34,14 +36,20 @@ function instance() {
   memory = inst.exports.memory;
   if (typeof inst.exports._initialize === 'function') inst.exports._initialize();
   const e = inst.exports;
+  const stackLo = e.stack_lo(), stackHi = e.stack_hi();
+  const wipeStack = () => view(stackLo, stackHi - stackLo).fill(0);
   wasm = {
     pk: () => view(e.pk(), PUBLICKEYBYTES),
     sk: () => view(e.sk(), SECRETKEYBYTES),
     ct: () => view(e.ct(), CIPHERTEXTBYTES),
     k: () => view(e.k(), BYTES),
-    keypair: e.keypair,
-    enc: e.enc,
-    dec: e.dec,
+    // every operation leaves its locals on the C stack: wiped before the result is read
+    keypair: () => { try { return e.keypair(); } finally { wipeStack(); } },
+    enc: () => { try { return e.enc(); } finally { wipeStack(); } },
+    dec: () => { try { return e.dec(); } finally { wipeStack(); } },
+    memory: () => memory,
+    stack: () => ({ lo: stackLo, hi: stackHi }),
+    buffers: () => ({ pk: e.pk(), sk: e.sk(), ct: e.ct(), k: e.k() }),
   };
   return wasm;
 }
@@ -85,6 +93,12 @@ function decapsulate(cipherText, secretKey) {
   return sharedSecret;
 }
 
+/** For the tests: the module's linear memory, its stack bounds and buffer offsets (never used by the exchange). */
+function _inspect() {
+  const w = instance();
+  return { memory: w.memory(), stack: w.stack(), buffers: w.buffers() };
+}
+
 module.exports = {
   publicKeyBytes: PUBLICKEYBYTES,
   secretKeyBytes: SECRETKEYBYTES,
@@ -93,4 +107,5 @@ module.exports = {
   keygen,
   encapsulate,
   decapsulate,
+  _inspect,
 };
