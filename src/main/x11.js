@@ -10,6 +10,9 @@ const { t, tn } = require('./i18n'); // interface language: every message shown 
 
 const XAUTH_CANDIDATES = ['/opt/X11/bin/xauth', '/usr/X11/bin/xauth', 'xauth'];
 
+// XQuartz's launchd socket in its per-session folder under /private/tmp. (launchctl getenv DISPLAY may name one under
+// /var/run instead; a client connected through that one got no answer from the server in testing, while the running
+// server's /tmp/.X11-unix socket — the next choice — works, so it is not used.)
 function launchdSocket(num) {
   try {
     for (const d of fs.readdirSync('/private/tmp')) {
@@ -54,19 +57,31 @@ function tcpTarget(display) {
   return { host: m[1] || '127.0.0.1', port: 6000 + parseInt(m[2], 10) };
 }
 
+/**
+ * The cookie the local server expects. `xauth list :N` is asked first: xauth resolves that to this Mac's own entry
+ * (host/unix:N) — the one XQuartz wrote when it started. The old scan of the whole list took the first entry whose
+ * name ended in :N, which on a Mac that has used X over the network is a stale 192.168.x.x:0 cookie ahead of the local
+ * one, and the server then answered every forwarded client with "Invalid MIT-MAGIC-COOKIE-1 key".
+ */
 function localCookie(display) {
   const num = displayNumber(display);
+  const parse = (out) => {
+    let fallback = null;
+    for (const line of out.split('\n')) {
+      const cols = line.trim().split(/\s+/);
+      if (cols.length < 3 || cols[1] !== 'MIT-MAGIC-COOKIE-1') continue;
+      if (/\/unix:\d+$/.test(cols[0]) && cols[0].endsWith(`:${num}`)) return cols[2]; // the local socket's entry first
+      if (cols[0].endsWith(`:${num}`) && !fallback) fallback = cols[2];
+    }
+    return fallback;
+  };
   for (const bin of XAUTH_CANDIDATES) {
     try {
-      const out = execFileSync(bin, ['list'], { encoding: 'utf8', env: { ...process.env, DISPLAY: display } });
-      let fallback = null;
-      for (const line of out.split('\n')) {
-        const cols = line.trim().split(/\s+/);
-        if (cols.length < 3 || cols[1] !== 'MIT-MAGIC-COOKIE-1') continue;
-        if (cols[0].endsWith(`:${num}`)) return cols[2];
-        if (!fallback) fallback = cols[2];
-      }
-      if (fallback) return fallback;
+      const env = { ...process.env, DISPLAY: display };
+      const exact = parse(execFileSync(bin, ['list', `:${num}`], { encoding: 'utf8', env }));
+      if (exact) return exact;
+      const any = parse(execFileSync(bin, ['list'], { encoding: 'utf8', env }));
+      if (any) return any;
     } catch {}
   }
   return null;
