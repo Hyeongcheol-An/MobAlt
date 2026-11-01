@@ -69,7 +69,7 @@ MobAlt가 실행 중인 채로 업그레이드해도 괜찮습니다 — MobAlt�
 | SSH | SSH 터미널 + SFTP 브라우저, 터널, X11·에이전트 포워딩 |
 | Mosh | `mosh` 클라이언트로 여는 로밍 터미널(SSH로 부트스트랩) |
 | 로컬 | macOS 로그인 셸(zsh/bash), 폴더 따라가기 |
-| Telnet | NAWS/TTYPE 협상을 지원하는 텔넷 |
+| Telnet | NAWS/TTYPE 협상을 지원하는 텔넷. 세션의 사용자 이름은 `login:` 프롬프트에서 전송됩니다 |
 | 시리얼 | USB-시리얼 콘솔(전송 속도, 프레임 형식, 흐름 제어, 로컬 에코) |
 | FTP | FTP / FTPS(명시적 TLS) 파일 브라우저(Sftp 패널) |
 | RDP / VNC | Windows App 또는 macOS 화면 공유로 넘김 |

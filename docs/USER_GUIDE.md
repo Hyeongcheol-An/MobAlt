@@ -69,7 +69,7 @@ and fill in the Basic tab. Double-click a session to connect; right-click for th
 | SSH | Terminal over SSH with an SFTP browser, tunnels, X11 and agent forwarding |
 | Mosh | Roaming terminal through the `mosh` client (bootstrapped over SSH) |
 | Local | Your macOS login shell (zsh/bash) with folder following |
-| Telnet | Classic telnet with NAWS/TTYPE negotiation |
+| Telnet | Classic telnet with NAWS/TTYPE negotiation; the session's username is sent at the `login:` prompt |
 | Serial | USB-serial console (baud, framing, flow control, local echo) |
 | FTP | FTP / FTPS (explicit TLS) file browser in the Sftp panel |
 | RDP / VNC | Hands off to Windows App or macOS Screen Sharing |

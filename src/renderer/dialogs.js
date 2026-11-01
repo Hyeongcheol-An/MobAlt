@@ -428,6 +428,8 @@ export function sessionEditor(app, initial = {}) {
       loadPorts();
     } else {
       b.append(...field(t('Host'), host), ...field(t('Port'), port), ...field(t('Username'), username));
+      // telnet has no login of its own: the username answers the server's prompt (the username half of MobaXterm's auto-login)
+      if (type === 'telnet') b.append(h('div', { class: 'form-help' }, t('Sent at the login: prompt')));
     }
     if (type === 'ssh') {
       b.append(...field(t('Authentication'), authMethod), ...pwRow, ...clearRow, ...keyRow, ...ppRow);

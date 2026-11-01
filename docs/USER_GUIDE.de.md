@@ -71,7 +71,7 @@ diesem Ordner).
 | SSH | Terminal über SSH mit SFTP-Browser, Tunneln, X11- und Agent-Weiterleitung |
 | Mosh | Roaming-Terminal über den `mosh`-Client (per SSH gestartet) |
 | Lokal | Ihre macOS-Login-Shell (zsh/bash) mit Ordnerverfolgung |
-| Telnet | Klassisches Telnet mit NAWS/TTYPE-Aushandlung |
+| Telnet | Klassisches Telnet mit NAWS/TTYPE-Aushandlung; der Benutzername der Sitzung wird am `login:`-Prompt gesendet |
 | Seriell | USB-Seriell-Konsole (Baudrate, Datenformat, Flusskontrolle, lokales Echo) |
 | FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „Sftp“ |
 | RDP / VNC | Übergibt an Windows App oder die macOS-Bildschirmfreigabe |

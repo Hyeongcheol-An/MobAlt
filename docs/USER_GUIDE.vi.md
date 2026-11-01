@@ -67,7 +67,7 @@ rồi điền thẻ Cơ bản. Nhấp đúp vào phiên để kết nối; nhấ
 | SSH | Terminal qua SSH, kèm trình duyệt SFTP, đường hầm, chuyển tiếp X11 và agent |
 | Mosh | Terminal chuyển vùng qua client `mosh` (khởi động qua SSH) |
 | Cục bộ (Local) | Shell đăng nhập macOS của bạn (zsh/bash), có theo dõi thư mục |
-| Telnet | Telnet cổ điển với thương lượng NAWS/TTYPE |
+| Telnet | Telnet cổ điển với thương lượng NAWS/TTYPE; tên người dùng của phiên được gửi tại dấu nhắc `login:` |
 | Serial | Console USB-serial (baud, khung, điều khiển luồng, echo cục bộ) |
 | FTP | Trình duyệt tệp FTP / FTPS (TLS tường minh) trong bảng Sftp |
 | RDP / VNC | Chuyển sang Windows App hoặc Chia sẻ màn hình của macOS |

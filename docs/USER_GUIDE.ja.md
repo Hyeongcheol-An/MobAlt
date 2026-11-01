@@ -69,7 +69,7 @@ MobAlt の実行中にアップグレードしても問題ありません — Mo
 | SSH | SSH 経由のターミナル。SFTP ブラウザ、トンネル、X11 とエージェント転送付き |
 | Mosh | `mosh` クライアントによるローミング対応ターミナル（SSH でブートストラップ） |
 | ローカル | macOS のログインシェル（zsh/bash）。フォルダの追従付き |
-| Telnet | NAWS/TTYPE ネゴシエーション付きの昔ながらの telnet |
+| Telnet | NAWS/TTYPE ネゴシエーション付きの昔ながらの telnet。セッションのユーザー名は `login:` プロンプトで送信されます |
 | シリアル | USB シリアルコンソール（ボーレート、フレーミング、フロー制御、ローカルエコー） |
 | FTP | SFTP パネルでの FTP / FTPS（明示的 TLS）ファイルブラウザ |
 | RDP / VNC | Windows App または macOS の画面共有に引き渡します |

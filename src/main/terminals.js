@@ -451,7 +451,7 @@ function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, usern
 const IAC = 255, DONT = 254, DO = 253, WONT = 252, WILL = 251, SB = 250, SE = 240;
 const OPT_ECHO = 1, OPT_SGA = 3, OPT_TTYPE = 24, OPT_NAWS = 31;
 
-function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
+function spawnTelnet(registry, { host, port = 23, username = '', cols = 80, rows = 24 }) {
   const id = registry.newId();
   const sock = net.connect({ host, port });
   let curCols = cols, curRows = rows;
@@ -461,7 +461,22 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
     const b = Buffer.from([IAC, SB, OPT_NAWS, (curCols >> 8) & 255, curCols & 255, (curRows >> 8) & 255, curRows & 255, IAC, SE]);
     sock.write(b);
   };
-  sock.on('connect', () => registry.data(id, `\x1b[90m${t('Connected to {target}', { target: `${host}:${port}` })}\x1b[0m\r\n`));
+  // The username part of MobaXterm's telnet auto-login: a session with a username answers the first `login:` /
+  // `Username:` prompt (whatever the case, within 10 s of the connection) with it, once; a password is the user's.
+  let loginWatch = username ? { tail: '' } : null;
+  const watchLogin = (bytes) => {
+    if (!loginWatch) return;
+    loginWatch.tail = (loginWatch.tail + bytes.toString('latin1')).slice(-160);
+    if (/(login|username)\s*:\s*$/i.test(loginWatch.tail)) {
+      loginWatch = null;
+      sock.write(username + '\r\n');
+    }
+  };
+
+  sock.on('connect', () => {
+    registry.data(id, `\x1b[90m${t('Connected to {target}', { target: `${host}:${port}` })}\x1b[0m\r\n`);
+    if (loginWatch) setTimeout(() => { loginWatch = null; }, 10000);
+  });
   sock.on('data', (buf) => {
     const out = [];
     for (const b of buf) {
@@ -503,7 +518,11 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
           break;
       }
     }
-    if (out.length) registry.bytes(id, Buffer.from(out));
+    if (out.length) {
+      const bytes = Buffer.from(out);
+      watchLogin(bytes);
+      registry.bytes(id, bytes);
+    }
   });
   sock.on('error', (e) => registry.data(id, `\r\n\x1b[31m${t('Telnet error: {error}', { error: e.message })}\x1b[0m\r\n`));
   sock.on('close', () => registry.exit(id, 0, 'closed'));

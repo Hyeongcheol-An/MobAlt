@@ -66,7 +66,7 @@ MobAlt 运行期间升级没有问题——即使是在 MobAlt 自己的终端�
 | SSH | 通过 SSH 的终端，附带 SFTP 浏览器、隧道、X11 和代理转发 |
 | Mosh | 通过 `mosh` 客户端的漫游终端（经 SSH 引导） |
 | 本地 | 你的 macOS 登录 Shell（zsh/bash），支持文件夹跟随 |
-| Telnet | 经典 telnet，支持 NAWS/TTYPE 协商 |
+| Telnet | 经典 telnet，支持 NAWS/TTYPE 协商；会话的用户名在 `login:` 提示时发送 |
 | 串口 | USB 串口控制台（波特率、帧格式、流控制、本地回显） |
 | FTP | SFTP 面板中的 FTP / FTPS（显式 TLS）文件浏览器 |
 | RDP / VNC | 交给 Windows App 或 macOS“屏幕共享”处理 |

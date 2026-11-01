@@ -792,7 +792,7 @@ export class TermPane {
         this.app.registerPane(this);
       } else if (this.kind === 'telnet') {
         this.setStatus('connecting');
-        const r = await window.api.term.spawnTelnet({ host: this.session.host, port: this.session.port || 23, ...size });
+        const r = await window.api.term.spawnTelnet({ host: this.session.host, port: this.session.port || 23, username: this.session.username || '', ...size });
         this.termId = r.id;
         this.app.registerPane(this);
         this.setStatus('connected');

@@ -69,7 +69,7 @@ derecha/hacia abajo, editar, duplicar, eliminar, iniciar un túnel, nueva sesió
 | SSH | Terminal por SSH con explorador SFTP, túneles, X11 y reenvío del agente |
 | Mosh | Terminal itinerante mediante el cliente `mosh` (arrancado por SSH) |
 | Local | Tu shell de inicio de sesión de macOS (zsh/bash) con seguimiento de carpeta |
-| Telnet | Telnet clásico con negociación NAWS/TTYPE |
+| Telnet | Telnet clásico con negociación NAWS/TTYPE; el nombre de usuario de la sesión se envía en el indicador `login:` |
 | Serie | Consola USB-serie (baudios, trama, control de flujo, eco local) |
 | FTP | Explorador de archivos FTP / FTPS (TLS explícito) en el panel Sftp |
 | RDP / VNC | Delega en Windows App o en Compartir Pantalla de macOS |

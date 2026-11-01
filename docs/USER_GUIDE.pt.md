@@ -69,7 +69,7 @@ e preencha a aba Básico. Clique duas vezes numa sessão para conectar; clique c
 | SSH | Terminal via SSH com navegador SFTP, túneis, encaminhamento X11 e do agente |
 | Mosh | Terminal itinerante pelo cliente `mosh` (iniciado via SSH) |
 | Local | O seu shell de login do macOS (zsh/bash), com acompanhamento da pasta |
-| Telnet | Telnet clássico com negociação NAWS/TTYPE |
+| Telnet | Telnet clássico com negociação NAWS/TTYPE; o nome de usuário da sessão é enviado no prompt `login:` |
 | Serial | Console USB-serial (baud, enquadramento, controle de fluxo, eco local) |
 | FTP | Navegador de arquivos FTP / FTPS (TLS explícito) no painel Sftp |
 | RDP / VNC | Passa a conexão ao Windows App ou ao Compartilhamento de Tela do macOS |
