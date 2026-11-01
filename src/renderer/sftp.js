@@ -99,11 +99,27 @@ export class SftpPanel {
       }
     });
     const list = this.els.list;
+    // the rows carry no listeners of their own (20 000 of them would): click, double-click and the context menu are
+    // read off the list and resolved to the row under the pointer
+    const rowOf = (e) => e.target.closest('.sftp-row[data-name]');
+    const entryOf = (row) => { const st = this.state(); return st && row.dataset.name !== '..' ? st.entries.find((x) => x.name === row.dataset.name) || null : null; };
     list.addEventListener('contextmenu', (e) => {
-      if (e.target === list || e.target.classList.contains('sftp-msg')) {
+      const row = rowOf(e), entry = row && entryOf(row);
+      if (entry) {
+        e.preventDefault();
+        if (!this.state().selected.has(entry.name)) this.select(entry, e);
+        this.menu(e.clientX, e.clientY, entry);
+      } else if (e.target === list || e.target.classList.contains('sftp-msg')) {
         e.preventDefault();
         this.menu(e.clientX, e.clientY, null);
       }
+    });
+    list.addEventListener('dblclick', (e) => {
+      const row = rowOf(e);
+      if (!row) return;
+      if (row.dataset.name === '..') return this.cmd('up');
+      const entry = entryOf(row);
+      if (entry) this.open(entry);
     });
     // keyboard: the rows are options of a multi-select listbox with one Tab stop (roving tabindex), see onKey()
     list.setAttribute('role', 'listbox');
@@ -116,7 +132,9 @@ export class SftpPanel {
     });
     this._typeAhead = typeAhead(); // letters typed on a row jump to the next entry whose name starts with them
     list.addEventListener('click', (e) => {
-      if (e.target === list) this.clearSelection();
+      const row = rowOf(e), entry = row && entryOf(row);
+      if (entry) this.select(entry, e);
+      else if (e.target === list) this.clearSelection();
     });
     list.addEventListener('dragover', (e) => {
       if (e.dataTransfer.types.includes('Files')) {
@@ -305,21 +323,29 @@ export class SftpPanel {
   visibleEntries(st = this.state()) {
     if (!st) return [];
     st.sort = st.sort || { key: 'name', dir: 1 };
+    const byName = new Intl.Collator().compare; // localeCompare's order, without its per-call cost (20 000 entries sort in a few ms)
     const cmp = (a, b) => {
       if (a.type !== b.type) return a.type === 'd' ? -1 : 1; // folders first, whatever the sort key
       const k = st.sort.key;
-      const d = k === 'size' ? a.size - b.size : k === 'mtime' ? a.mtime - b.mtime : a.name.localeCompare(b.name);
-      return (d || a.name.localeCompare(b.name)) * st.sort.dir;
+      const d = k === 'size' ? a.size - b.size : k === 'mtime' ? a.mtime - b.mtime : byName(a.name, b.name);
+      return (d || byName(a.name, b.name)) * st.sort.dir;
     };
     return st.entries.filter((e) => st.hidden || !e.name.startsWith('.')).sort(cmp);
   }
 
+  /**
+   * Draw the listing. The first screenful of rows is appended now, the rest in animation frames of a few milliseconds
+   * each: 20 000 entries are 100 000 nodes — 770 ms in one go, which a sort click or a refresh must not cost. What
+   * needs every row (keyboard navigation, a dialog looking for its row) calls rows() / rowFor(), which finish the fill
+   * first; the keyboard cursor moves to its row once that row is in.
+   */
   renderList() {
     const st = this.state();
     if (!st) return;
     const list = this.els.list;
     const hadFocus = list.contains(document.activeElement); // keep the keyboard in the list across a re-render
     const headFocus = document.activeElement?.closest('.sftp-head button')?.dataset.sort; // …or on the header cell that sorted
+    this._stopFill();
     list.replaceChildren();
     const entries = this.visibleEntries(st);
     // sortable header cells are buttons: Tab reaches them, Enter / Space sort (a click re-renders, so a focused
@@ -335,32 +361,45 @@ export class SftpPanel {
         } }, label + (active ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''));
     };
     list.append(h('div', { class: 'sftp-row sftp-head', role: 'presentation' }, h('span', {}), headCell('name', t('Name'), t('Sort by name'), 'name'), headCell('size', t('Size'), t('Sort by size'), 'size'), headCell('mtime', t('Modified'), t('Sort by modified'), 'date')));
-    if (st.path !== '/') {
-      const up = h('div', { class: 'sftp-row dir', dataset: { name: '..' }, role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' }));
-      up.addEventListener('dblclick', () => this.cmd('up'));
-      list.append(up);
-    }
+    if (st.path !== '/') list.append(h('div', { class: 'sftp-row dir', dataset: { name: '..' }, role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' })));
     if (st.notice) list.append(h('div', { class: 'sftp-msg sftp-notice' }, st.notice)); // the folder that vanished under the panel (navigate)
     if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, t('Empty folder')));
-    for (const e of entries) {
-      const row = h('div', {
-        class: 'sftp-row' + (e.type === 'd' ? ' dir' : '') + (e.link ? ' link' : '') + (e.name.startsWith('.') ? ' hidden-file' : '') + (st.selected.has(e.name) ? ' selected' : ''),
-        dataset: { name: e.name }, title: `${e.modeStr} ${e.owner}:${e.group}${e.target ? ' → ' + e.target : ''}`,
-        role: 'option', tabindex: -1, 'aria-selected': String(st.selected.has(e.name)),
-      },
-        h('span', {}, e.type === 'd' ? '📁' : fileGlyph(e.name)),
-        h('span', { class: 'name' }, e.name),
-        h('span', { class: 'size' }, e.type === 'd' ? '' : fmtSize(e.size)),
-        h('span', { class: 'date' }, fmtDate(e.mtime))
-      );
-      row.addEventListener('click', (ev) => this.select(e, ev));
-      row.addEventListener('dblclick', () => this.open(e));
-      row.addEventListener('contextmenu', (ev) => {
-        ev.preventDefault();
-        if (!st.selected.has(e.name)) this.select(e, ev);
-        this.menu(ev.clientX, ev.clientY, e);
-      });
-      list.append(row);
+    const makeRow = (e) => {
+      const sel = st.selected.has(e.name);
+      const row = ROW.cloneNode(true);
+      row.className = 'sftp-row' + (e.type === 'd' ? ' dir' : '') + (e.link ? ' link' : '') + (e.name.startsWith('.') ? ' hidden-file' : '') + (sel ? ' selected' : '');
+      row.dataset.name = e.name;
+      row.title = `${e.modeStr} ${e.owner}:${e.group}${e.target ? ' → ' + e.target : ''}`;
+      if (sel) row.setAttribute('aria-selected', 'true');
+      const c = row.children;
+      c[0].textContent = e.type === 'd' ? '📁' : fileGlyph(e.name);
+      c[1].textContent = e.name;
+      c[2].textContent = e.type === 'd' ? '' : fmtSize(e.size);
+      c[3].textContent = fmtDate(e.mtime);
+      return row;
+    };
+    const first = Math.min(entries.length, Math.max(80, Math.ceil(list.clientHeight / 24) * 2)); // two screens: scrolling a little never shows a gap
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < first; i++) frag.append(makeRow(entries[i]));
+    list.append(frag);
+    if (first < entries.length) {
+      let i = first;
+      const step = (budgetMs) => {
+        const t0 = performance.now();
+        const f = document.createDocumentFragment();
+        while (i < entries.length) {
+          f.append(makeRow(entries[i++]));
+          if ((i & 127) === 0 && performance.now() - t0 > budgetMs) break;
+        }
+        list.append(f);
+        if (i < entries.length) this._fillRaf = requestAnimationFrame(() => step(6));
+        else {
+          this._fill = null;
+          this._syncRoving(document.activeElement === list); // the cursor row may have arrived with a late batch: the Tab stop (and the focus, while it still waits on the list) moves to it
+        }
+      };
+      this._fill = { step };
+      this._fillRaf = requestAnimationFrame(() => step(6));
     }
     this._syncRoving(hadFocus);
     if (headFocus) list.querySelector(`.sftp-head button[data-sort="${headFocus}"]`)?.focus({ preventScroll: true });
@@ -369,19 +408,57 @@ export class SftpPanel {
     repointOpeners((o) => (o.classList?.contains('sftp-row') && o.dataset.name ? this.rowFor(o.dataset.name) : null));
   }
 
-  /** Rows the keyboard cursor moves over, in display order (".." is focusable but outside the sequence). */
+  /** A chunked fill still running (renderList) is dropped: the listing is being drawn again. */
+  _stopFill() {
+    if (!this._fill) return;
+    cancelAnimationFrame(this._fillRaf);
+    this._fill = null;
+  }
+
+  /** Finish a chunked fill now, so every row is in the DOM for whoever asked. */
+  _flushFill() {
+    if (!this._fill) return;
+    const f = this._fill;
+    this._fill = null;
+    cancelAnimationFrame(this._fillRaf);
+    f.step(Infinity);
+  }
+
+  /** Rows the keyboard cursor moves over, in display order (".." is focusable but outside the sequence); a fill in progress is completed first. */
   rows() {
+    this._flushFill();
+    return this._rowsNow();
+  }
+
+  _rowsNow() {
     return [...this.els.list.querySelectorAll('.sftp-row[data-name]')].filter((r) => r.dataset.name !== '..');
   }
 
   rowFor(name) {
-    return name == null ? null : this.els.list.querySelector(`.sftp-row[data-name="${CSS.escape(name)}"]`);
+    if (name == null) return null;
+    const sel = `.sftp-row[data-name="${CSS.escape(name)}"]`;
+    let row = this.els.list.querySelector(sel);
+    if (!row && this._fill) { // not drawn yet: the rest of the listing is, then
+      this._flushFill();
+      row = this.els.list.querySelector(sel);
+    }
+    return row;
   }
 
-  /** The keyboard cursor's row: the last selected entry while it is shown, else the first entry. */
+  /**
+   * The keyboard cursor's row: the last selected entry while it is shown, else the first entry. Null while the last
+   * selected entry's row is still to be drawn by a fill in progress (the list itself takes the Tab stop meanwhile).
+   */
   cursorRow() {
     const st = this.state();
-    return (st && this.rows().find((r) => r.dataset.name === st.lastSel)) || this.rows()[0] || null;
+    if (!st) return null;
+    const rows = this._rowsNow();
+    if (st.lastSel != null) {
+      const row = rows.find((r) => r.dataset.name === st.lastSel);
+      if (row) return row;
+      if (this._fill && st.entries.some((e) => e.name === st.lastSel)) return null;
+    }
+    return rows[0] || null;
   }
 
   /** Roving tabindex: `row` is the list's single Tab stop; the list itself is one only while it has no rows. */
@@ -842,6 +919,9 @@ export class SftpPanel {
     }
   }
 }
+
+/** The row every entry is cloned from (renderList): cloning beats building five elements through h() 20 000 times over. */
+const ROW = h('div', { class: 'sftp-row', role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span'), h('span', { class: 'name' }), h('span', { class: 'size' }), h('span', { class: 'date' }));
 
 function fileGlyph(name) {
   // U+FE0F forces colour-emoji presentation for the two glyphs that default to text style

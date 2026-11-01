@@ -76,14 +76,21 @@ export function fmtSize(n) {
  * A file date for a listing, in the interface language's order (10/31, 14:05 · 31.10., 14:05 · 10. 31. 14:05):
  * month, day and time within this year, the full date (year first or last as the language has it) otherwise.
  */
+const dateFormats = new Map(); // locale + this year / another year → Intl.DateTimeFormat: one per call cost a 20 000-row listing half its render time
 export function fmtDate(ts) {
   if (!ts) return '';
   const d = new Date(ts);
-  const now = new Date();
-  const opts = d.getFullYear() === now.getFullYear()
-    ? { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
-    : { year: 'numeric', month: '2-digit', day: '2-digit' };
-  try { return new Intl.DateTimeFormat(locale(), opts).format(d); } catch { return new Intl.DateTimeFormat('en', opts).format(d); }
+  const thisYear = d.getFullYear() === new Date().getFullYear();
+  const key = locale() + (thisYear ? ':y' : ':o');
+  let f = dateFormats.get(key);
+  if (!f) {
+    const opts = thisYear
+      ? { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
+      : { year: 'numeric', month: '2-digit', day: '2-digit' };
+    try { f = new Intl.DateTimeFormat(locale(), opts); } catch { f = new Intl.DateTimeFormat('en', opts); }
+    dateFormats.set(key, f);
+  }
+  return f.format(d);
 }
 
 export function fmtDuration(ms) {
