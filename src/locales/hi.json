@@ -1536,5 +1536,20 @@
   "Zoom pane (fill the tab) / restore": "पेन ज़ूम करें (टैब भरें) / रीस्टोर",
   "Zoom text": "टेक्स्ट ज़ूम",
   "zoomed": "ज़ूम किया",
-  "zsh/bash integration (folder following)": "zsh/bash इंटीग्रेशन (फ़ोल्डर फ़ॉलो)"
+  "zsh/bash integration (folder following)": "zsh/bash इंटीग्रेशन (फ़ोल्डर फ़ॉलो)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — {s} सेकंड में TCP कनेक्शन नहीं बना। आमतौर पर होस्ट/पोर्ट इस नेटवर्क से पहुँच में नहीं है (लोकल टर्मिनल में \"nc -vz {host} {port}\" आज़माएँ)।",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — सर्वर ने जवाब दिया, पर {s} सेकंड में हैंडशेक पूरा नहीं हुआ।",
+  "{error} — the server closed the connection during the handshake.": "{error} — हैंडशेक के दौरान सर्वर ने कनेक्शन बंद कर दिया।",
+  "{key} (passphrase)": "{key} (पासफ़्रेज़)",
+  "Connection attempt cancelled.": "कनेक्शन का प्रयास रद्द।",
+  "Device {path} disconnected": "डिवाइस {path} डिस्कनेक्ट हो गया",
+  "Device {path} disconnected.": "डिवाइस {path} डिस्कनेक्ट हो गया।",
+  "Resource busy — the port is open in another pane or program": "रिसोर्स व्यस्त — पोर्ट किसी और पेन या प्रोग्राम में खुला है",
+  "Send Break": "Break भेजें",
+  "Sent at the login: prompt": "login: प्रॉम्प्ट पर भेजा जाता है",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "इस सेशन के लिए SFTP ब्राउज़र बंद है — रिफ़्रेश फिर भी इसकी फ़ाइलें सूचीबद्ध करता है",
+  "SFTP unavailable on {session}: {error}": "{session} पर SFTP उपलब्ध नहीं: {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "SSH_AUTH_SOCK पर ssh-agent पहुँच में नहीं",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: कोई कुंजी लोड नहीं (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "सहेजा हुआ पासवर्ड अस्वीकार हुआ। {account} का पासवर्ड लिखें"
 }

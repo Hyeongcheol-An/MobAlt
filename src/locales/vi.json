@@ -1415,5 +1415,20 @@
   "Zoom pane (fill the tab) / restore": "Phóng to ngăn (đầy thẻ) / khôi phục",
   "Zoom text": "Thu phóng chữ",
   "zoomed": "phóng to",
-  "zsh/bash integration (folder following)": "Tích hợp zsh/bash (theo dõi thư mục)"
+  "zsh/bash integration (folder following)": "Tích hợp zsh/bash (theo dõi thư mục)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — không thiết lập được kết nối TCP trong {s} giây. Thường là máy chủ/cổng không tới được từ mạng này (thử \"nc -vz {host} {port}\" trong terminal cục bộ).",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — máy chủ đã trả lời nhưng bắt tay không hoàn tất trong {s} giây.",
+  "{error} — the server closed the connection during the handshake.": "{error} — máy chủ đã đóng kết nối trong lúc bắt tay.",
+  "{key} (passphrase)": "{key} (cụm mật khẩu)",
+  "Connection attempt cancelled.": "Đã hủy lần kết nối.",
+  "Device {path} disconnected": "Thiết bị {path} đã ngắt kết nối",
+  "Device {path} disconnected.": "Thiết bị {path} đã ngắt kết nối.",
+  "Resource busy — the port is open in another pane or program": "Tài nguyên đang bận — cổng đang được mở trong ngăn hoặc chương trình khác",
+  "Send Break": "Gửi Break",
+  "Sent at the login: prompt": "Gửi tại dấu nhắc login:",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "Trình duyệt SFTP đang tắt cho phiên này — Làm mới vẫn liệt kê các tệp",
+  "SFTP unavailable on {session}: {error}": "SFTP không khả dụng trên {session}: {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "Không liên lạc được ssh-agent tại SSH_AUTH_SOCK",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: chưa nạp khóa nào (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "Mật khẩu đã lưu bị từ chối. Nhập mật khẩu của {account}"
 }

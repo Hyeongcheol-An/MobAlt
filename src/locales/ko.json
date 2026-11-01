@@ -1333,5 +1333,20 @@
   "Zoom pane (fill the tab) / restore": "페인 확대(탭 채우기) / 복원",
   "Zoom text": "글자 확대/축소",
   "zoomed": "확대됨",
-  "zsh/bash integration (folder following)": "zsh/bash 연동(폴더 따라가기)"
+  "zsh/bash integration (folder following)": "zsh/bash 연동(폴더 따라가기)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — {s}초 안에 TCP 연결이 이루어지지 않았습니다. 대개 이 네트워크에서 호스트/포트에 닿을 수 없습니다(로컬 터미널에서 \"nc -vz {host} {port}\"를 실행해 보세요).",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — 서버가 응답했지만 {s}초 안에 핸드셰이크가 끝나지 않았습니다.",
+  "{error} — the server closed the connection during the handshake.": "{error} — 핸드셰이크 중에 서버가 연결을 닫았습니다.",
+  "{key} (passphrase)": "{key} (암호문)",
+  "Connection attempt cancelled.": "연결 시도가 취소되었습니다.",
+  "Device {path} disconnected": "장치 {path} 연결 끊김",
+  "Device {path} disconnected.": "장치 {path}의 연결이 끊어졌습니다.",
+  "Resource busy — the port is open in another pane or program": "리소스 사용 중 — 다른 페인이나 프로그램이 포트를 열어 두었습니다",
+  "Send Break": "Break 보내기",
+  "Sent at the login: prompt": "login: 프롬프트에서 전송됩니다",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "이 세션은 SFTP 브라우저가 꺼져 있습니다 — 새로고침하면 파일을 나열합니다",
+  "SFTP unavailable on {session}: {error}": "{session}에서 SFTP를 쓸 수 없음: {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "SSH_AUTH_SOCK의 ssh-agent에 연결할 수 없습니다",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: 로드된 키가 없습니다 (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "저장된 암호가 거부되었습니다. {account}의 암호 입력"
 }

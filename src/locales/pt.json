@@ -1476,5 +1476,20 @@
   "Zoom pane (fill the tab) / restore": "Maximizar painel (preencher a aba) / restaurar",
   "Zoom text": "Tamanho do texto",
   "zoomed": "maximizado",
-  "zsh/bash integration (folder following)": "Integração zsh/bash (seguir a pasta)"
+  "zsh/bash integration (folder following)": "Integração zsh/bash (seguir a pasta)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — nenhuma conexão TCP em {s} s. Geralmente o host/porta não está acessível a partir desta rede (experimente “nc -vz {host} {port}” num terminal local).",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — o servidor respondeu, mas o handshake não terminou em {s} s.",
+  "{error} — the server closed the connection during the handshake.": "{error} — o servidor fechou a conexão durante o handshake.",
+  "{key} (passphrase)": "{key} (frase secreta)",
+  "Connection attempt cancelled.": "Tentativa de conexão cancelada.",
+  "Device {path} disconnected": "Dispositivo {path} desconectado",
+  "Device {path} disconnected.": "Dispositivo {path} desconectado.",
+  "Resource busy — the port is open in another pane or program": "Recurso ocupado — a porta está aberta em outro painel ou programa",
+  "Send Break": "Enviar Break",
+  "Sent at the login: prompt": "Enviado no prompt login:",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "O navegador SFTP está desligado para esta sessão — Atualizar lista os arquivos mesmo assim",
+  "SFTP unavailable on {session}: {error}": "SFTP indisponível em {session}: {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "ssh-agent inacessível em SSH_AUTH_SOCK",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: nenhuma chave carregada (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "A senha salva foi rejeitada. Digite a senha de {account}"
 }
