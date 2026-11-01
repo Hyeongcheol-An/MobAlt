@@ -1,3 +1,9 @@
+## [0.15.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.14.0...v0.15.0) (2026-11-01)
+
+### Features
+
+* **pane:** a ⚙ button in the pane header opens the pane menu ([76cb214](https://github.com/Hyeongcheol-An/MobAlt/commit/76cb2143ffa922202e8caa9544542b246e74a426))
+
 ## [0.14.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.13.1...v0.14.0) (2026-10-31)
 
 ### Features
