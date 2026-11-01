@@ -1278,7 +1278,7 @@
   "stale": "obsoleta",
   "stale ({n} s)": "obsoleta ({n} s)",
   "Start folder": "Carpeta inicial",
-  "Start Session Log…": "Iniciar registro de sesión…",
+  "Start Session Log": "Iniciar registro de sesión",
   "Start Tunnel via this Session…": "Iniciar túnel a través de esta sesión…",
   "Start/Stop Session Log": "Iniciar/detener registro de sesión",
   "starting": "iniciando",

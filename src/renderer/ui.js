@@ -180,6 +180,9 @@ export function isRtl() {
 // ---------- context menu ----------
 let ctxOpen = null;
 let ctxOpener = null; // element that had focus when the menu opened; focus goes back to it on close
+let ctxAnchor = null; // the button the menu hangs from (contextMenu opts.anchor): a press on it does not count as "outside", so its click can toggle
+let ctxOnClose = null; // opts.onClose: told once the menu is gone (the anchor's aria-expanded)
+let ctxOff = null; // the outside-mousedown listener of the open menu
 let ctxSubs = []; // the open sub-menus, outermost first: [{ el, row }] — ctxSubs[n] was opened from a row of level n
 const ctxContains = (el) => !!ctxOpen && (ctxOpen.contains(el) || ctxSubs.some((s) => s.el.contains(el)));
 /** Close the sub-menus from `level` on (0 = every one); `refocus` puts the keyboard back on the row that opened the outermost closed one. */
@@ -199,13 +202,17 @@ export function closeContextMenu() {
     const inMenu = !a || a === document.body || menu.contains(a) || ctxSubs.some((s) => s.el.contains(a));
     closeSubs(0);
     menu.remove();
-    const back = ctxOpener;
-    ctxOpener = null;
+    if (ctxOff) { document.removeEventListener('mousedown', ctxOff, true); ctxOff = null; }
+    const back = ctxOpener, onClose = ctxOnClose;
+    ctxOpener = null; ctxAnchor = null; ctxOnClose = null;
+    if (onClose) onClose();
     if (!inMenu) return; // focus already went somewhere else (e.g. into a dialog)
     if (back && back.isConnected && back !== document.body) back.focus({ preventScroll: true });
     else document.dispatchEvent(new CustomEvent('ctx-closed')); // app.js hands focus to the terminal
   }
 }
+/** The button the open menu hangs from (contextMenu opts.anchor), null when no menu is open or it has none. */
+export function contextMenuAnchor() { return ctxOpen ? ctxAnchor : null; }
 const enabledOf = (menu) => [...menu.querySelectorAll('.ctx-item:not(.disabled)')];
 /** Put a menu at (x, y), kept inside the window; a menu taller than the window keeps its first items reachable. */
 function placeMenu(menu, x, y) {
@@ -271,8 +278,9 @@ function buildMenu(items, level) {
     else if (e.key === 'ArrowUp') go(i < 0 ? -1 : i - 1);
     else if (e.key === 'Home') go(0);
     else if (e.key === 'End') go(-1);
-    else if (e.key === 'ArrowRight') { if (hasSub) { e.preventDefault(); e.stopPropagation(); openSub(cur, true); } }
-    else if (e.key === 'ArrowLeft') { if (level) { e.preventDefault(); e.stopPropagation(); closeSubs(level - 1, true); } }
+    // into a sub-menu is the key that points where it opens: → left to right, ← in a right-to-left interface
+    else if (e.key === (isRtl() ? 'ArrowLeft' : 'ArrowRight')) { if (hasSub) { e.preventDefault(); e.stopPropagation(); openSub(cur, true); } }
+    else if (e.key === (isRtl() ? 'ArrowRight' : 'ArrowLeft')) { if (level) { e.preventDefault(); e.stopPropagation(); closeSubs(level - 1, true); } }
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (hasSub) openSub(cur, true); else if (cur) cur.click(); }
     else if (e.key === 'Tab') { e.preventDefault(); closeContextMenu(); }
   });
@@ -283,22 +291,38 @@ function buildMenu(items, level) {
  * checkable item (menuitemcheckbox, ✓ while on); `items: [...]` makes a sub-menu that opens beside the row (hover,
  * click, →, Enter) and closes with ← or Esc, the keyboard back on its row.
  */
-export function contextMenu(x, y, items) {
+/**
+ * A context menu at (x, y): x is its left edge (its right edge in a right-to-left interface), y its top. opts, for a menu
+ * hanging from a button: `anchor` (the button — a press on it is not "outside", so the button's click can toggle the
+ * menu; contextMenuAnchor() tells whose menu is open), `above` (the button's top: the menu opens upwards, its bottom
+ * there, when it would not fit below, as native menus do), `onClose` (called once the menu is gone).
+ */
+export function contextMenu(x, y, items, opts = {}) {
   closeContextMenu();
   const menu = buildMenu(items, 0);
   $('#ctx-root').append(menu);
   ctxOpen = menu;
   ctxOpener = document.activeElement;
+  ctxAnchor = opts.anchor || null;
+  ctxOnClose = typeof opts.onClose === 'function' ? opts.onClose : null;
+  const r = menu.getBoundingClientRect();
+  let top = y;
+  if (opts.above != null && y + r.height > window.innerHeight - 6) {
+    // no room below the button: upwards when the menu fits there, else on the roomier side, shortened to it (it scrolls)
+    const below = window.innerHeight - 6 - y, aboveRoom = opts.above - 6;
+    if (r.height <= aboveRoom) top = opts.above - r.height;
+    else if (aboveRoom > below) { menu.style.maxHeight = aboveRoom + 'px'; top = 6; }
+    else menu.style.maxHeight = below + 'px';
+  }
   // left to right: the menu opens to the right of x; right to left: to its left (x is its right edge)
-  placeMenu(menu, isRtl() ? x - menu.getBoundingClientRect().width : x, y);
+  placeMenu(menu, isRtl() ? x - r.width : x, top);
   enabledOf(menu)[0]?.focus({ preventScroll: true });
   setTimeout(() => {
+    if (ctxOpen !== menu) return; // gone already
     const off = (e) => {
-      if (!ctxContains(e.target)) {
-        closeContextMenu();
-        document.removeEventListener('mousedown', off, true);
-      }
+      if (!ctxContains(e.target) && !(ctxAnchor && ctxAnchor.contains(e.target))) closeContextMenu();
     };
+    ctxOff = off;
     document.addEventListener('mousedown', off, true);
   }, 0);
   return menu;

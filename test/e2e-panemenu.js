@@ -86,6 +86,80 @@
     await esc();
     results.headerGearFocusBack = !ctx() && document.activeElement === gear;
     log('header gear', JSON.stringify({ gr: [Math.round(gr.left), Math.round(gr.bottom)], mr: mr && [Math.round(mr.left), Math.round(mr.top)] }));
+    // a mouse click on ⚙ (a real press through CDP) leaves the keyboard with the terminal: mousedown is prevented, the
+    // pane's terminal is the menu's opener, and the focus is back in it once an item ran
+    a.focus(); await sleep(80); // the keyboard was in the other pane: the click moves it to this one
+    const gp = { x: Math.round(gr.left + gr.width / 2), y: Math.round(gr.top + gr.height / 2) };
+    await window.api.app.testDrag(gp, gp); await sleep(200);
+    results.headerGearMouseOpens = !!ctx() && document.activeElement !== gear;
+    item(ctx(), 'Select All')?.click(); await sleep(120);
+    results.headerGearMouseFocusToTerminal = !ctx() && document.activeElement === b.term.textarea;
+    const md = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    gear.dispatchEvent(md);
+    results.headerGearMousedownPrevented = md.defaultPrevented;
+    // the empty pane's menu: the terminal items disabled or absent, the pane's own items live
+    await app.action('split', 'right'); await sleep(300);
+    const e1 = tab.panes().find((p) => p.kind === 'empty');
+    e1.menuBtn.focus(); e1.menuBtn.click(); await sleep(120);
+    const eL = labelsOf(ctx()), eDis = rows(ctx()).filter((r) => r.classList.contains('disabled')).map((r) => r.childNodes[0].textContent);
+    results.emptyPaneMenu = ['Paste', 'Select All', 'Find…', 'Clear', 'Pane Settings…', 'Read-Only'].every((l) => eDis.includes(l)) && ['Background Label', 'Font Size', 'Start Session Log…', 'Disconnect'].every((l) => !eL.includes(l)) && ['Rename Pane…', 'Split Right', 'Split Down', 'Zoom Pane', 'Close Pane'].every((l) => eL.includes(l) && !eDis.includes(l));
+    log('empty pane menu', JSON.stringify({ items: eL, disabled: eDis }));
+    await esc();
+    // Rename Pane… on the empty pane, then ">_ Local terminal" in it: the name stands
+    e1.setTitle('Scratch');
+    await e1.becomeLocal(); await prompt(e1);
+    results.emptyRenamedKeepsNameAsShell = e1.kind === 'local' && e1.title === 'Scratch' && e1.titleLocked === true && e1.headTitle.textContent === 'Scratch';
+    await app.closePane(e1); await sleep(200);
+    await app.action('split', 'right'); await sleep(300);
+    const e2 = tab.panes().find((p) => p.kind === 'empty');
+    await e2.becomeLocal(); await prompt(e2);
+    results.emptyPlainLocalAutoTitle = e2.kind === 'local' && !e2.titleLocked && e2.title !== 'Scratch';
+    await app.closePane(e2); await sleep(200);
+    results.backToTwoPanes = tab.panes().length === 2;
+    // ⚙ tells its state and toggles: a second click closes the menu
+    results.gearExpandedFalse = gear.getAttribute('aria-expanded') === 'false';
+    gear.focus(); gear.click(); await sleep(120);
+    results.gearExpandedTrue = !!ctx() && gear.getAttribute('aria-expanded') === 'true';
+    await window.api.app.testDrag(gp, gp); await sleep(200); // a real second press + click on the button
+    results.gearSecondClickCloses = !ctx() && gear.getAttribute('aria-expanded') === 'false';
+    // in a tab of its own (a and b stay as they are for the checks below): no room below the button → the menu opens
+    // upwards, its bottom at the button's top (a bottom pane of a 2×2 grid in the smallest window)
+    const t1 = tab;
+    const lp = await app.newLocalTab(); await prompt(lp);
+    const t2 = app.workspace.active;
+    await window.api.app.testResize(900, 560); await sleep(400);
+    await app.applyLayout('2x2'); await sleep(500);
+    const low = t2.panes().filter((p) => p.el.getBoundingClientRect().top > window.innerHeight / 3).sort((p, q) => q.el.getBoundingClientRect().left - p.el.getBoundingClientRect().left)[0];
+    const lg = low.menuBtn.getBoundingClientRect();
+    await window.api.app.testDrag({ x: Math.round(lg.left + lg.width / 2), y: Math.round(lg.top + lg.height / 2) }, { x: Math.round(lg.left + lg.width / 2), y: Math.round(lg.top + lg.height / 2) }); await sleep(200);
+    const lm = ctx() && ctx().getBoundingClientRect();
+    results.gearMenuOpensUpwards = !!lm && lm.bottom <= lg.top + 1 && lm.bottom >= lg.top - 8 && lm.top >= 0;
+    log('upward menu', JSON.stringify({ btnTop: Math.round(lg.top), menu: lm && [Math.round(lm.top), Math.round(lm.bottom)], winH: window.innerHeight }));
+    await esc();
+    app.settings.unsplitMode = 'active'; await app.unsplit(); await sleep(300); // this tab back to its one shell
+    // four panes side by side at 900 px: every head keeps ⚙ and ×, the split buttons go, nothing is clipped
+    for (let i = 0; i < 3; i++) { await app.action('split', 'right', t2.panes()[t2.panes().length - 1]); await sleep(250); }
+    const heads = t2.panes().map((p) => p.headEl);
+    const narrow = heads.reduce((m, el) => (el.clientWidth < m.clientWidth ? el : m));
+    const vis = (el) => el && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+    const nar = t2.panes().find((p) => p.headEl === narrow);
+    results.narrowHeadKeepsGearAndClose = narrow.scrollWidth <= narrow.clientWidth + 1 && vis(nar.menuBtn) && vis(nar.closeBtn) && !vis(nar.splitRightBtn) && !vis(nar.splitDownBtn) && nar.closeBtn.getBoundingClientRect().right <= nar.el.getBoundingClientRect().right + 1;
+    log('narrow head', JSON.stringify({ panes: t2.panes().length, width: narrow.clientWidth, scroll: narrow.scrollWidth }));
+    await app.closeTab(t2); await sleep(300);
+    app.workspace.activate(t1); await sleep(200);
+    await window.api.app.testResize(1400, 880); await sleep(400);
+    results.abIntact = app.workspace.active === t1 && t1.panes().length === 2 && t1.panes().includes(a) && t1.panes().includes(b);
+    // right to left: the key into a sub-menu is ←, out of it →
+    await app.saveSettings({ language: 'ar' }); await sleep(600);
+    const rtlPane = b;
+    rtlPane.menuBtn.focus(); rtlPane.menuBtn.click(); await sleep(150);
+    const blRow = rows(ctx()).find((r) => r.classList.contains('has-sub'));
+    blRow.focus(); key(blRow, 'ArrowLeft'); await sleep(120);
+    results.rtlArrowLeftOpensSub = !!sub();
+    key(document.activeElement, 'ArrowRight'); await sleep(120);
+    results.rtlArrowRightClosesSub = !sub() && document.activeElement === blRow;
+    await esc();
+    await app.saveSettings({ language: 'en' }); await sleep(600);
     await esc();
     await openMenu(b);
     const L = labelsOf(ctx());

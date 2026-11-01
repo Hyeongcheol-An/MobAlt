@@ -1,5 +1,5 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
-import { h, contextMenu, toast, icon, promptDialog, isRtl } from './ui.js';
+import { h, contextMenu, closeContextMenu, contextMenuAnchor, toast, icon, promptDialog, isRtl } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
@@ -149,13 +149,14 @@ export class TermPane {
         (this.zoomBadge = h('span', { class: 'zoom-badge', hidden: true }, t('zoomed'))),
         (this.roBadge = h('span', { class: 'zoom-badge ro-badge', hidden: true, title: t('Read-only: keystrokes and pastes to this pane are dropped') }, t('read-only'))),
         // ⚙: the pane menu (what ⇧- / ⌃-right-click opens) under the button — Rename Pane…, Pane Settings…, the label, the font size, Read-Only, split, zoom, close
-        (this.menuBtn = h('button', { class: 'pane-menu', title: t('Pane menu'), 'aria-label': t('Pane menu'), 'aria-haspopup': 'menu', onclick: () => this.openHeaderMenu() }, icon('settings'))),
+        // a mouse press never moves the keyboard onto the button (mousedown prevented): the menu's opener stays the terminal
+        (this.menuBtn = h('button', { class: 'pane-menu', title: t('Pane menu'), 'aria-label': t('Pane menu'), 'aria-haspopup': 'menu', 'aria-expanded': 'false', onmousedown: (e) => e.preventDefault(), onclick: () => this.openHeaderMenu() }, icon('settings'))),
         (this.zoomBtn = h('button', { class: 'zoom', title: t('Zoom pane (⇧⌘⏎)'), 'aria-label': t('Zoom pane'), 'aria-pressed': 'false', onclick: () => app.action('zoom-pane', undefined, this) }, icon('zoom'))),
         // the monitoring bar toggle: an ARIA toggle like ⤢ (a stable name, aria-pressed carries the state); SSH / Mosh panes only
         (this.monBtn = h('button', { class: 'monitor', title: t('Show remote monitoring bar'), 'aria-label': t('Remote monitoring bar'), 'aria-pressed': 'false', hidden: !this.monitorAllowed(), onclick: () => app.action('toggle-monitor', undefined, this) }, icon('monitor'))),
-        (this.splitRightBtn = h('button', { title: t('Split right'), 'aria-label': t('Split right'), onclick: () => app.action('split', 'right', this) }, icon('split'))),
-        (this.splitDownBtn = h('button', { title: t('Split down'), 'aria-label': t('Split down'), onclick: () => app.action('split', 'down', this) }, icon('split-down'))),
-        (this.closeBtn = h('button', { title: t('Close pane'), 'aria-label': t('Close pane'), onclick: () => app.closePane(this) }, icon('x')))
+        (this.splitRightBtn = h('button', { class: 'split-right', title: t('Split right'), 'aria-label': t('Split right'), onclick: () => app.action('split', 'right', this) }, icon('split'))),
+        (this.splitDownBtn = h('button', { class: 'split-down', title: t('Split down'), 'aria-label': t('Split down'), onclick: () => app.action('split', 'down', this) }, icon('split-down'))),
+        (this.closeBtn = h('button', { class: 'pane-close', title: t('Close pane'), 'aria-label': t('Close pane'), onclick: () => app.closePane(this) }, icon('x')))
       )),
       // the remote monitoring strip: a status region that is never announced (it changes every few seconds)
       (this.monitorEl = h('div', { class: 'pane-monitor', role: 'status', 'aria-live': 'off', 'aria-label': t('Remote monitoring'), hidden: true })),
@@ -741,7 +742,8 @@ export class TermPane {
     this.kind = 'local';
     this.session = null;
     this.cwd = cwd || (this.from && this.from.kind === 'local' ? this.from.cwd : null);
-    this.title = this._defaultTitle = this._kindTitle();
+    this._defaultTitle = this._kindTitle();
+    if (!this.titleLocked) this.title = this._defaultTitle; // a name given with Rename Pane… while the pane was empty stands (and the shell's folder does not take over)
     this.hidePlaceholder();
     this.updateTitle();
     this.syncWebgl(); // a terminal now: a GPU context when it is on screen
@@ -1425,40 +1427,50 @@ export class TermPane {
     this.openPaneMenu(e.clientX, e.clientY);
   }
 
-  /** The ⚙ button of the pane header: the pane menu under the button, its left edge at the button's (the right edge in a right-to-left interface). */
+  /**
+   * The ⚙ button of the pane header: the pane menu under the button, its left edge at the button's (the right edge in a
+   * right-to-left interface). A mouse click first puts the keyboard in this pane's terminal (the click itself never
+   * focuses the button, see mousedown above), so the menu's opener is the terminal and the focus returns there when the
+   * menu closes — typing goes on in the pane the menu was about. A keyboard user who Tabbed to the button (it is
+   * :focus-visible then) keeps it as the opener and gets it back on Escape.
+   */
   openHeaderMenu() {
+    if (contextMenuAnchor() === this.menuBtn) { closeContextMenu(); return; } // a second click on ⚙ closes its menu
+    if (!this.menuBtn.matches(':focus-visible') && this.kind !== 'empty' && this.kind !== 'ftp') this.focus();
     const r = this.menuBtn.getBoundingClientRect();
-    this.openPaneMenu(isRtl() ? r.right : r.left, r.bottom + 2);
+    this.menuBtn.setAttribute('aria-expanded', 'true');
+    this.openPaneMenu(isRtl() ? r.right : r.left, r.bottom + 2, { anchor: this.menuBtn, above: r.top - 2, onClose: () => this.menuBtn.setAttribute('aria-expanded', 'false') });
   }
 
-  /** The pane menu at a window point (x: the menu's left edge, or its right edge in a right-to-left interface): ⇧- / ⌃-right-click, the ⚙ button. */
-  openPaneMenu(x, y) {
+  /** The pane menu at a window point (x: the menu's left edge, or its right edge in a right-to-left interface): ⇧- / ⌃-right-click, the ⚙ button (opts: ui.js contextMenu). */
+  openPaneMenu(x, y, opts) {
     const badge = this.badgeState();
+    const empty = this.kind === 'empty'; // a placeholder: only what applies to the pane itself (name, split, zoom, close) is live
     contextMenu(x, y, [
       { label: t('Copy'), key: '⌘C', action: () => this.copy(), disabled: !this.term.hasSelection() },
-      { label: t('Paste'), key: '⌘V', action: () => this.paste() },
-      { label: t('Select All'), action: () => this.term.selectAll() },
+      { label: t('Paste'), key: '⌘V', action: () => this.paste(), disabled: empty },
+      { label: t('Select All'), action: () => this.term.selectAll(), disabled: empty },
       '-',
-      { label: t('Find…'), key: '⌘F', action: () => this.app.action('find') },
-      { label: t('Clear'), key: '⌘K', action: () => this.clear() },
+      { label: t('Find…'), key: '⌘F', action: () => this.app.action('find'), disabled: empty },
+      { label: t('Clear'), key: '⌘K', action: () => this.clear(), disabled: empty },
       '-',
       // this terminal's own items, as MobaXterm's terminal menu has them: Rename Terminal, the running terminal's
       // settings, font zoom, Read-only — plus the background label (iTerm2's badge; MobaXterm has none)
       { label: t('Rename Pane…'), action: () => this.renamePrompt() },
       { label: t('Pane Settings…'), action: () => this.app.paneSettings(this), disabled: this.kind === 'empty' || this.kind === 'ftp' },
-      { label: t('Background Label'), items: [
+      empty ? null : { label: t('Background Label'), items: [
         { label: badge.show ? t('Hide') : t('Show'), action: () => this.setBadge({ show: !badge.show }) },
         { label: t('Set Text…'), action: () => this.badgePrompt() },
         '-',
         { label: t('Centre'), checked: badge.position !== 'top-right', action: () => this.setBadge({ position: 'center' }) },
         { label: t('Top Right'), checked: badge.position === 'top-right', action: () => this.setBadge({ position: 'top-right' }) },
       ] },
-      { label: t('Font Size'), items: [
+      empty ? null : { label: t('Font Size'), items: [
         { label: t('Increase'), key: '⌘=', action: () => this.zoom(1) },
         { label: t('Decrease'), key: '⌘-', action: () => this.zoom(-1) },
         { label: t('Reset'), key: '⌘0', action: () => this.zoom(0) },
       ] },
-      { label: t('Read-Only'), checked: this.readOnly, action: () => this.setReadOnly(!this.readOnly) },
+      { label: t('Read-Only'), checked: this.readOnly, action: () => this.setReadOnly(!this.readOnly), disabled: empty },
       '-',
       { label: t('Split Right'), key: '⌘D', action: () => this.app.action('split', 'right', this) },
       { label: t('Split Down'), key: '⇧⌘D', action: () => this.app.action('split', 'down', this) },
@@ -1466,14 +1478,14 @@ export class TermPane {
       // while MultiExec is on: the same switch as the box under the terminal, as a checkable item
       this.app.multiexec && this.multiexecCandidate() ? { label: t('Exclude from MultiExec'), checked: this.multiexecExcluded, action: () => this.setMultiexecExcluded(!this.multiexecExcluded) } : null,
       '-',
-      { label: this.logging ? t('Stop Session Log') : t('Start Session Log…'), action: () => this.toggleLog() },
+      empty ? null : { label: this.logging ? t('Stop Session Log') : t('Start Session Log'), action: () => this.toggleLog() }, // no ellipsis: it starts at once, to the log folder
       this.monitorAllowed() ? { label: this.monitorEnabled() ? t('Hide Remote Monitoring Bar') : t('Show Remote Monitoring Bar'), action: () => this.toggleMonitor() } : null,
       this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? t('Open file browser') : t('Open SFTP Browser'), action: () => this.app.sftpPanel.show(this.termId) } : null,
       this.kind === 'mosh' ? { label: t('Open SFTP Browser'), action: () => this.openSftpCompanion(), disabled: this.dead } : null,
-      this.kind !== 'local' ? { label: this.dead ? t('Reconnect') : t('Disconnect'), action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
+      this.kind !== 'local' && !empty ? { label: this.dead ? t('Reconnect') : t('Disconnect'), action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
       '-',
       { label: t('Close Pane'), key: '⇧⌘W', action: () => this.app.closePane(this) },
-    ]);
+    ], opts);
   }
 
   // ---------- moving to another window (app.js detachTab / adoptTabs) ----------

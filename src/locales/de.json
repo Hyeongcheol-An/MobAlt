@@ -1283,7 +1283,7 @@
   "stale": "veraltet",
   "stale ({n} s)": "veraltet ({n} s)",
   "Start folder": "Startordner",
-  "Start Session Log…": "Sitzungsprotokoll starten…",
+  "Start Session Log": "Sitzungsprotokoll starten",
   "Start Tunnel via this Session…": "Tunnel über diese Sitzung starten…",
   "Start/Stop Session Log": "Sitzungsprotokoll starten/stoppen",
   "starting": "startet",

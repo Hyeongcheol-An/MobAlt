@@ -1151,7 +1151,7 @@
   "stale": "古い",
   "stale ({n} s)": "古い（{n}秒）",
   "Start folder": "開始フォルダ",
-  "Start Session Log…": "セッションログを開始…",
+  "Start Session Log": "セッションログを開始",
   "Start Tunnel via this Session…": "このセッション経由でトンネルを開始…",
   "Start/Stop Session Log": "セッションログを開始/停止",
   "starting": "開始中",

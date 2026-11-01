@@ -1136,7 +1136,7 @@
   "stale": "오래됨",
   "stale ({n} s)": "오래됨({n}초)",
   "Start folder": "시작 폴더",
-  "Start Session Log…": "세션 로그 시작…",
+  "Start Session Log": "세션 로그 시작",
   "Start Tunnel via this Session…": "이 세션으로 터널 시작…",
   "Start/Stop Session Log": "세션 로그 시작/중지",
   "starting": "시작 중",

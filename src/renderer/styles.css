@@ -92,7 +92,7 @@ input, select, textarea { user-select: text; }
 .strip-btn { position: relative; width: 30px; min-height: 84px; border: 0; background: transparent; color: var(--fg-dim); padding: 0; border-bottom: 1px solid var(--divider); }
 .strip-btn span { display: block; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 12px; letter-spacing: .5px; }
 /* CJK labels stand upright and read top-down (the Latin ones read bottom-up, rotated): the 180° turn would print them upside down */
-.strip-btn span:lang(ko), .strip-btn span:lang(ja), .strip-btn span:lang(zh) { text-orientation: upright; transform: none; letter-spacing: 0; }
+.strip-btn span:lang(ko), .strip-btn span:lang(ja), .strip-btn span:lang(zh) { text-orientation: mixed; transform: none; letter-spacing: 0; } /* CJK glyphs upright; a label that stays English ("Sftp") rotated as a word instead of stacked letter by letter */
 .strip-btn:hover { color: var(--fg); background: var(--bg-3); }
 .strip-btn.active { color: var(--fg); background: var(--bg); }
 .strip-btn.active::before { content: ""; position: absolute; inset-inline-start: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
@@ -137,6 +137,7 @@ input, select, textarea { user-select: text; }
 /* The name is the identity: it keeps its width (up to 72%) and the grey user@host text yields first. */
 .tree-row .label { overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; min-width: 0; max-width: 72%; }
 .tree-row .sub { color: var(--fg-faint); font-size: 11px; flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; text-align: start; }
+html[dir="rtl"] .tree-row .sub { direction: ltr; unicode-bidi: isolate; text-align: end; } /* a user@host, a device path: read left to right and cut at its end ("tty.usbserial-0001 @ 1…"), not at its start */
 .tree-row.folder .sub { flex: none; margin-inline-start: auto; }
 .tree-row.selected .sub { color: var(--selection-fg-dim); }
 .tree-row .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex: none; }
@@ -282,7 +283,7 @@ input, select, textarea { user-select: text; }
 .tool-output { flex: 1; margin: 0; padding: 8px; overflow: auto; font: 11.5px/1.45 var(--font-mono); color: var(--fg); white-space: pre-wrap; user-select: text; }
 
 /* ---------- context menu / modal / toast ---------- */
-.ctx { position: fixed; z-index: 1000; min-width: 180px; padding: 4px; background: var(--bg-elev); border: 1px solid var(--divider); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / calc(var(--shadow-a) * 1.25)); }
+.ctx { position: fixed; z-index: 1000; min-width: 180px; max-height: calc(100vh - 12px); overflow-y: auto; padding: 4px; background: var(--bg-elev); border: 1px solid var(--divider); border-radius: var(--radius); box-shadow: 0 8px 24px rgb(0 0 0 / calc(var(--shadow-a) * 1.25)); } /* taller than the window (a live SSH pane's menu at 900×560): it scrolls, every item reachable */
 .ctx-item { padding-block: 5px; padding-inline: 12px 24px; border-radius: var(--radius-s); white-space: nowrap; display: flex; gap: 10px; }
 .ctx-item:hover { background: var(--selection); color: var(--selection-fg); }
 .ctx-item.disabled { opacity: .4; pointer-events: none; }
@@ -451,6 +452,11 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 .tab .close { display: inline-flex; align-items: center; justify-content: center; }
 .pane-head button { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 18px; border-radius: var(--radius-s); }
 .pane-head button:hover { background: var(--bg-4); }
+/* a narrow pane (four side by side in the 900 px minimum window): the split buttons go first, then zoom and the monitoring
+   toggle — ⚙ holds every one of them — so the title and × are never clipped */
+.pane-head { container-type: inline-size; }
+@container (max-width: 230px) { .pane-head .split-right, .pane-head .split-down { display: none; } }
+@container (max-width: 160px) { .pane-head .zoom, .pane-head .monitor { display: none; } }
 .modal-title .close svg.i { width: 14px; height: 14px; }
 .modal-title .close { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--radius-s); }
 #tab-add svg.i, #tab-list svg.i { width: 14px; height: 14px; }

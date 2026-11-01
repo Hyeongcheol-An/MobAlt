@@ -1223,7 +1223,7 @@
   "stale": "périmé",
   "stale ({n} s)": "périmé ({n} s)",
   "Start folder": "Dossier de démarrage",
-  "Start Session Log…": "Démarrer le journal de session…",
+  "Start Session Log": "Démarrer le journal de session",
   "Start Tunnel via this Session…": "Démarrer un tunnel via cette session…",
   "Start/Stop Session Log": "Démarrer/Arrêter le journal de session",
   "starting": "démarrage",

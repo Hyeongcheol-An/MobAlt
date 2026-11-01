@@ -5558,7 +5558,7 @@
         "src/renderer/dialogs.js"
       ]
     },
-    "Start Session Log…": {
+    "Start Session Log": {
       "refs": [
         "src/renderer/terminal.js"
       ]
