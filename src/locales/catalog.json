@@ -4212,6 +4212,11 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "Pane menu": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Pane Settings — {title}": {
       "refs": [
         "src/renderer/dialogs.js"

@@ -70,6 +70,23 @@
     await openMenu(b, { ctrlKey: true });
     results.ctrlRightClickOpensMenu = !!ctx();
     await esc();
+    // the ⚙ button of the pane header opens the same menu, under the button; a keyboard user Tabs to it, the menu's
+    // first item takes the focus and Escape gives it back to the button
+    const gear = b.menuBtn;
+    results.headerGearShown = !!gear && b.el.classList.contains('show-head') && gear.getBoundingClientRect().width > 0 && gear.title === 'Pane menu' && accName(gear) === 'Pane menu' && gear.getAttribute('aria-haspopup') === 'menu' && b.headEl.querySelector('button') === gear;
+    gear.focus();
+    gear.click();
+    await sleep(120);
+    const gr = gear.getBoundingClientRect(), mr = ctx() && ctx().getBoundingClientRect();
+    results.headerGearOpensMenu = !!ctx() && ['Rename Pane…', 'Pane Settings…', 'Background Label', 'Font Size', 'Read-Only', 'Close Pane'].every((l) => labelsOf(ctx()).includes(l));
+    // under the button, its left edge at the button's — or, for a button near the window's right edge, pushed left just enough to stay on screen (ui.js placeMenu)
+    results.headerGearMenuUnderButton = !!mr && mr.top >= gr.bottom - 1 && mr.top <= gr.bottom + 8 && (Math.abs(mr.left - gr.left) <= 8 || (mr.left < gr.left && mr.right >= gr.right - 2 && mr.right >= window.innerWidth - 12));
+    results.headerGearMenuTakesFocus = !!ctx() && ctx().contains(document.activeElement);
+    await shot('00-header-gear-menu');
+    await esc();
+    results.headerGearFocusBack = !ctx() && document.activeElement === gear;
+    log('header gear', JSON.stringify({ gr: [Math.round(gr.left), Math.round(gr.bottom)], mr: mr && [Math.round(mr.left), Math.round(mr.top)] }));
+    await esc();
     await openMenu(b);
     const L = labelsOf(ctx());
     log('pane menu:', L.join(' | '));

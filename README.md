@@ -130,7 +130,7 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
   that direction; drop in the centre to replace. Drag a tab onto a pane to move that terminal.
   A folder's context menu can open all of its sessions in a grid. ⇧⌘⏎ zooms the focused pane to
   fill the tab and back.
-- **Pane menu**: right-click a terminal for *Rename Pane…*, *Pane Settings…* (theme, font, cursor, scrollback,
+- **Pane menu**: the ⚙ button of the pane header or a right-click on a terminal for *Rename Pane…*, *Pane Settings…* (theme, font, cursor, scrollback,
   keyword highlighting, monitoring bar and read-only for that pane — applied to it alone or saved to its session),
   *Font Size ▸*, *Read-Only* and *Background Label ▸*: a large, dim name behind the text (the session name by
   default, also set per session in the editor's Terminal tab) so you can tell the server at a glance.

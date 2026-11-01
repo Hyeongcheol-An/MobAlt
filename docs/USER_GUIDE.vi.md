@@ -168,7 +168,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   ẩn; đầu ngăn hiện nhãn *phóng to* và thẻ hiện một dấu ⤢ nhỏ. Nhấn lại (hoặc ⤡ ở đầu ngăn)
   để đưa bố cục trở lại. Chia ngăn, đóng một ngăn, chọn bố cục lưới hoặc chuyển tới một ngăn đang ẩn (⌘])
   sẽ khôi phục bố cục trước. Mỗi thẻ giữ trạng thái phóng to riêng, kể cả sau khi khởi động lại.
-- **Menu ngăn** (nhấp chuột phải vào terminal; ⇧- hoặc ⌃-chuột phải khi *Chuột phải để dán* đang bật): ngoài sao chép,
+- **Menu ngăn** (nút ⚙ ở đầu ngăn, hoặc nhấp chuột phải vào terminal; ⇧- hoặc ⌃-chuột phải khi *Chuột phải để dán* đang bật): ngoài sao chép,
   dán, tìm, xóa màn hình, chia và phóng to, menu còn có các mục theo từng terminal của menu terminal trong MobaXterm.
   *Đổi tên ngăn…* (*Rename Terminal* của MobaXterm) đặt tên cho chính ngăn: đầu ngăn hiện tên đó, thẻ lấy tên đó khi
   ngăn quyết định tên thẻ, và các chuỗi đặt tiêu đề của shell không còn thay đổi được nó; để trống tên thì quay về

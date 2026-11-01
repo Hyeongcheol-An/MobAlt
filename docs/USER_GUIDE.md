@@ -171,7 +171,7 @@ folder dialog and leaves the field as it was when you cancel.
   hidden; the pane head shows a *zoomed* chip and the tab a small ⤢. Press again (or ⤡ in the head)
   to bring the layout back. Splitting, closing a pane, a grid layout or focusing a hidden pane (⌘])
   restores the layout first. Each tab keeps its own zoom, also across a restart.
-- **Pane menu** (right-click a terminal; ⇧- or ⌃-right-click while *Right-click pastes* is on): besides copy,
+- **Pane menu** (the ⚙ button of the pane header, or right-click a terminal — ⇧- or ⌃-right-click while *Right-click pastes* is on): besides copy,
   paste, find, clear, split and zoom it has the per-terminal items of MobaXterm's terminal menu. *Rename Pane…*
   (MobaXterm's *Rename Terminal*) names the pane itself: the pane head shows the name, the tab takes it when the
   pane names the tab, and the shell's own title sequences no longer change it; an empty name goes back to the

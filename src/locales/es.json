@@ -1011,6 +1011,7 @@
   "Pane settings need a terminal pane": "Los ajustes del panel requieren un panel de terminal",
   "Pane settings saved to session \"{name}\"": "Ajustes del panel guardados en la sesión «{name}»",
   "Pane Settings…": "Ajustes del panel…",
+  "Pane menu": "Menú del panel",
   "Panels": "Paneles laterales",
   "Panes & terminal": "Paneles y terminal",
   "paragraph separator": "separador de párrafo",

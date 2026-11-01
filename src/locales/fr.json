@@ -956,6 +956,7 @@
   "Pane settings need a terminal pane": "Les réglages du volet exigent un volet de terminal",
   "Pane settings saved to session \"{name}\"": "Réglages du volet enregistrés dans la session « {name} »",
   "Pane Settings…": "Réglages du volet…",
+  "Pane menu": "Menu du volet",
   "Panels": "Panneaux",
   "Panes & terminal": "Volets et terminal",
   "paragraph separator": "séparateur de paragraphe",

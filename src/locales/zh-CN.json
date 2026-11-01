@@ -1386,6 +1386,7 @@
   "Pane settings need a terminal pane": "窗格设置仅适用于终端窗格",
   "Pane settings saved to session \"{name}\"": "窗格设置已存储到会话“{name}”",
   "Pane Settings…": "窗格设置…",
+  "Pane menu": "窗格菜单",
   "read-only": "只读",
   "Read-Only": "只读",
   "Read-only: keystrokes and pastes to this pane are dropped": "只读：发往此窗格的按键和粘贴内容将被丢弃",

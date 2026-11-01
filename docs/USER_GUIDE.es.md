@@ -176,7 +176,7 @@ carpetas y deja el campo como estaba si cancelas.
   cabecera) para recuperar la disposición. Dividir, cerrar un panel, una disposición en cuadrícula o dar el foco a un
   panel oculto (⌘]) restauran la disposición primero. Cada pestaña conserva su propio estado de maximizado, también
   tras un reinicio.
-- **Menú del panel** (clic derecho sobre un terminal; ⇧-clic derecho o ⌃-clic derecho mientras *El clic derecho pega*
+- **Menú del panel** (el botón ⚙ de la cabecera del panel, o clic derecho sobre un terminal; ⇧-clic derecho o ⌃-clic derecho mientras *El clic derecho pega*
   está activado): además de copiar, pegar, buscar, borrar, dividir y maximizar, tiene las opciones por terminal del menú
   de terminal de MobaXterm. *Renombrar panel…* (el *Rename Terminal* de MobaXterm) da nombre al propio panel: la cabecera
   del panel muestra el nombre, la pestaña lo adopta cuando es el panel el que le da título, y las secuencias de título

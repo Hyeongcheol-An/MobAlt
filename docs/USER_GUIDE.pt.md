@@ -171,7 +171,7 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
   ocultos; o cabeçalho do painel mostra uma etiqueta *maximizado* e a aba um pequeno ⤢. Pressione de novo (ou ⤡ no cabeçalho)
   para restaurar o layout. Dividir, fechar um painel, um layout em grade ou pôr o foco num painel oculto (⌘])
   restaura o layout antes. Cada aba mantém o seu próprio estado de maximização, inclusive após reiniciar.
-- **Menu do painel** (clique direito num terminal; ⇧- ou ⌃-clique direito enquanto *Clique direito cola* estiver ativado): além de
+- **Menu do painel** (o botão ⚙ no cabeçalho do painel, ou clique direito num terminal; ⇧- ou ⌃-clique direito enquanto *Clique direito cola* estiver ativado): além de
   copiar, colar, buscar, limpar, dividir e maximizar, ele traz os itens por terminal do menu de terminal do MobaXterm. *Renomear
   Painel…* (o *Rename Terminal* do MobaXterm) dá nome ao próprio painel: o cabeçalho do painel mostra o nome, a aba o adota quando é
   esse painel que dá nome à aba, e as sequências de título do próprio shell deixam de alterá-lo; um nome vazio volta ao

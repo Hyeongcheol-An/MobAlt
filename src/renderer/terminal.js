@@ -1,5 +1,5 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
-import { h, contextMenu, toast, icon, promptDialog } from './ui.js';
+import { h, contextMenu, toast, icon, promptDialog, isRtl } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
@@ -148,6 +148,8 @@ export class TermPane {
         (this.headTitle = h('span', { class: 'title' }, this.title)),
         (this.zoomBadge = h('span', { class: 'zoom-badge', hidden: true }, t('zoomed'))),
         (this.roBadge = h('span', { class: 'zoom-badge ro-badge', hidden: true, title: t('Read-only: keystrokes and pastes to this pane are dropped') }, t('read-only'))),
+        // ⚙: the pane menu (what ⇧- / ⌃-right-click opens) under the button — Rename Pane…, Pane Settings…, the label, the font size, Read-Only, split, zoom, close
+        (this.menuBtn = h('button', { class: 'pane-menu', title: t('Pane menu'), 'aria-label': t('Pane menu'), 'aria-haspopup': 'menu', onclick: () => this.openHeaderMenu() }, icon('settings'))),
         (this.zoomBtn = h('button', { class: 'zoom', title: t('Zoom pane (⇧⌘⏎)'), 'aria-label': t('Zoom pane'), 'aria-pressed': 'false', onclick: () => app.action('zoom-pane', undefined, this) }, icon('zoom'))),
         // the monitoring bar toggle: an ARIA toggle like ⤢ (a stable name, aria-pressed carries the state); SSH / Mosh panes only
         (this.monBtn = h('button', { class: 'monitor', title: t('Show remote monitoring bar'), 'aria-label': t('Remote monitoring bar'), 'aria-pressed': 'false', hidden: !this.monitorAllowed(), onclick: () => app.action('toggle-monitor', undefined, this) }, icon('monitor'))),
@@ -468,7 +470,7 @@ export class TermPane {
     this.zoomBtn.setAttribute('aria-label', t('Zoom pane'));
     this.monBtn.setAttribute('aria-label', t('Remote monitoring bar'));
     this.monBtn.title = this.monitorEnabled() ? t('Hide remote monitoring bar') : t('Show remote monitoring bar');
-    for (const [btn, label] of [[this.splitRightBtn, t('Split right')], [this.splitDownBtn, t('Split down')], [this.closeBtn, t('Close pane')]]) {
+    for (const [btn, label] of [[this.menuBtn, t('Pane menu')], [this.splitRightBtn, t('Split right')], [this.splitDownBtn, t('Split down')], [this.closeBtn, t('Close pane')]]) {
       btn.title = label;
       btn.setAttribute('aria-label', label);
     }
@@ -1420,8 +1422,19 @@ export class TermPane {
       } else this.paste();
       return;
     }
+    this.openPaneMenu(e.clientX, e.clientY);
+  }
+
+  /** The ⚙ button of the pane header: the pane menu under the button, its left edge at the button's (the right edge in a right-to-left interface). */
+  openHeaderMenu() {
+    const r = this.menuBtn.getBoundingClientRect();
+    this.openPaneMenu(isRtl() ? r.right : r.left, r.bottom + 2);
+  }
+
+  /** The pane menu at a window point (x: the menu's left edge, or its right edge in a right-to-left interface): ⇧- / ⌃-right-click, the ⚙ button. */
+  openPaneMenu(x, y) {
     const badge = this.badgeState();
-    contextMenu(e.clientX, e.clientY, [
+    contextMenu(x, y, [
       { label: t('Copy'), key: '⌘C', action: () => this.copy(), disabled: !this.term.hasSelection() },
       { label: t('Paste'), key: '⌘V', action: () => this.paste() },
       { label: t('Select All'), action: () => this.term.selectAll() },
