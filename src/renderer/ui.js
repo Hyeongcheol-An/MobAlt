@@ -307,10 +307,11 @@ export function contextMenu(x, y, items, opts = {}) {
   ctxOnClose = typeof opts.onClose === 'function' ? opts.onClose : null;
   const r = menu.getBoundingClientRect();
   let top = y;
-  if (opts.above != null && y + r.height > window.innerHeight - 6) {
-    // no room below the button: upwards when the menu fits there, else on the roomier side, shortened to it (it scrolls)
+  if (opts.above != null && y + r.height > window.innerHeight) {
+    // no room below the button (a few px into the window's margin is fine, placeMenu nudges it): upwards when the menu
+    // fits there, else on the roomier side, shortened to it (it scrolls)
     const below = window.innerHeight - 6 - y, aboveRoom = opts.above - 6;
-    if (r.height <= aboveRoom) top = opts.above - r.height;
+    if (r.height <= opts.above) top = Math.max(0, opts.above - r.height);
     else if (aboveRoom > below) { menu.style.maxHeight = aboveRoom + 'px'; top = 6; }
     else menu.style.maxHeight = below + 'px';
   }

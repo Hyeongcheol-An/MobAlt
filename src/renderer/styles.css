@@ -455,7 +455,7 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 /* a narrow pane (four side by side in the 900 px minimum window): the split buttons go first, then zoom and the monitoring
    toggle — ⚙ holds every one of them — so the title and × are never clipped */
 .pane-head { container-type: inline-size; }
-@container (max-width: 230px) { .pane-head .split-right, .pane-head .split-down { display: none; } }
+@container (max-width: 230px) { .pane-head .split-right, .pane-head .split-down, .pane-head .ro-badge { display: none; } } /* the READ-ONLY chip too: the ⚙ menu's ✓ Read-Only carries the state */
 @container (max-width: 160px) { .pane-head .zoom, .pane-head .monitor { display: none; } }
 .modal-title .close svg.i { width: 14px; height: 14px; }
 .modal-title .close { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: var(--radius-s); }
