@@ -8,8 +8,12 @@ const crypto = require('crypto');
 const EventEmitter = require('events');
 const { spawn } = require('child_process');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const t_ = t; // where a transfer is called t
 
 const S_IFMT = 0o170000, S_IFDIR = 0o040000, S_IFLNK = 0o120000;
+const SFTP_EOF = 1; // SSH_FX_EOF: what READDIR answers once a directory handle is exhausted
+const READDIR_DEPTH = 8; // READDIR requests kept in flight on one handle (list)
+const LINK_LOOKUPS = 16; // readlink + stat of symlinks resolved at a time (list)
 
 function modeStr(mode) {
   const t = (mode & S_IFMT) === S_IFDIR ? 'd' : (mode & S_IFMT) === S_IFLNK ? 'l' : '-';
@@ -50,38 +54,77 @@ class SftpManager extends EventEmitter {
     return this.realpath(connId, '.');
   }
 
+  /**
+   * Read a directory with READDIR requests pipelined: ssh2's readdir(path) sends one READDIR at a time and waits for
+   * each answer (≈100 entries per packet: 20 000 entries were 200 round trips, 1.8 s at 12 ms RTT), so the handle is
+   * opened here and READDIR_DEPTH requests are kept in flight until EOF — the answers arrive in order, so the entries
+   * come out in the server's order as before.
+   */
+  _readdirAll(sftp, abs) {
+    return new Promise((resolve, reject) => {
+      sftp.opendir(abs, (err, handle) => {
+        if (err) return reject(err);
+        const out = [];
+        let inflight = 0, eof = false, failed = null;
+        const done = () => sftp.close(handle, () => (failed ? reject(failed) : resolve(out)));
+        const pump = () => {
+          while (!eof && !failed && inflight < READDIR_DEPTH) {
+            inflight++;
+            sftp.readdir(handle, (err, list) => {
+              inflight--;
+              if (err && err.code === SFTP_EOF) eof = true;
+              else if (err) failed = failed || err;
+              else if (list === false) eof = true;
+              else for (const e of list) out.push(e);
+              if ((eof || failed) && inflight === 0) done();
+              else pump();
+            });
+          }
+        };
+        pump();
+      });
+    });
+  }
+
   async list(connId, dir) {
     const sftp = await this._sftp(connId);
     const abs = await this._p(sftp, 'realpath', dir || '.');
-    const raw = await this._p(sftp, 'readdir', abs);
+    const raw = await this._readdirAll(sftp, abs);
     const entries = [];
+    // a symlink's target and what it points at: readlink first (it works for a dangling link too), then stat — when
+    // that fails the link is broken and the panel says so; the lookups run a few at a time, not one after the other
+    const links = [];
     for (const e of raw) {
       const a = e.attrs;
       const isLink = (a.mode & S_IFMT) === S_IFLNK;
-      let isDir = (a.mode & S_IFMT) === S_IFDIR;
-      let target;
-      if (isLink) {
-        try {
-          const st = await this._p(sftp, 'stat', posixJoin(abs, e.filename));
-          isDir = (st.mode & S_IFMT) === S_IFDIR;
-          target = await this._p(sftp, 'readlink', posixJoin(abs, e.filename)).catch(() => undefined);
-        } catch {}
-      }
       // owner/group names from longname ("-rw-r--r-- 1 user group size date name")
       const cols = (e.longname || '').split(/\s+/);
-      entries.push({
+      const entry = {
         name: e.filename,
-        type: isDir ? 'd' : 'f',
+        type: (a.mode & S_IFMT) === S_IFDIR ? 'd' : 'f',
         link: isLink,
-        target,
+        target: undefined,
         size: a.size,
         mtime: a.mtime * 1000,
         mode: a.mode & 0o7777,
         modeStr: modeStr(a.mode),
         owner: cols[2] || String(a.uid),
         group: cols[3] || String(a.gid),
-      });
+      };
+      entries.push(entry);
+      if (isLink) links.push(entry);
     }
+    const resolveLink = async (entry) => {
+      const p = posixJoin(abs, entry.name);
+      entry.target = await this._p(sftp, 'readlink', p).catch(() => undefined);
+      try {
+        const st = await this._p(sftp, 'stat', p);
+        entry.type = (st.mode & S_IFMT) === S_IFDIR ? 'd' : 'f';
+      } catch {
+        entry.broken = true;
+      }
+    };
+    for (let i = 0; i < links.length; i += LINK_LOOKUPS) await Promise.all(links.slice(i, i + LINK_LOOKUPS).map(resolveLink));
     entries.sort((x, y) => (x.type === y.type ? x.name.localeCompare(y.name) : x.type === 'd' ? -1 : 1));
     return { path: abs, entries };
   }
@@ -146,7 +189,7 @@ class SftpManager extends EventEmitter {
     this.emit('transfer', {
       id: t.id, connId: t.connId, kind: t.kind, name: t.name, remote: t.remote, local: t.local,
       transferred: t.transferred, total: t.total, status: t.status, error: t.error, startedAt: t.startedAt,
-      filesDone: t.filesDone, filesTotal: t.filesTotal,
+      filesDone: t.filesDone, filesTotal: t.filesTotal, resumedFrom: t.resumedFrom || 0,
     });
   }
 
@@ -165,33 +208,72 @@ class SftpManager extends EventEmitter {
     if (t) t.cancelled = true;
   }
 
-  /** Download a single file with concurrent reads; supports cancel. */
-  _getFile(sftp, t, remote, local) {
+  /**
+   * The connection is being ended on purpose (Session → Disconnect, a closed pane, quit): its running transfers end as
+   * "cancelled (disconnected)" instead of the "No response from server" the dying channel would report, and a download
+   * keeps its .part for a resume (a user's Cancel removes it). Called before the client is ended.
+   */
+  abortForConnection(connId) {
+    for (const t of this.transfers.values()) {
+      if (t.connId === connId && t.status === 'running') {
+        t.cancelled = true;
+        t.disconnected = true;
+      }
+    }
+  }
+
+  /** The partial file a download writes beside its destination; the final name is taken only once every byte is in. */
+  static partOf(local) {
+    return local + '.part';
+  }
+
+  /** Size of the .part an earlier download of `local` left behind (0 when there is none). */
+  static partSize(local) {
+    try { return fs.statSync(SftpManager.partOf(local)).size; } catch { return 0; }
+  }
+
+  /**
+   * Download a single file with concurrent reads; supports cancel. The bytes land in `<local>.part`, renamed to `local`
+   * on completion, so a download that dies with the connection never leaves a truncated file under the final name: the
+   * .part stays (a user's Cancel removes it) and `resume` continues it from its end — the remote is read from that
+   * offset, t.transferred starts there and t.resumedFrom tells the row. A .part as long as the remote or longer is
+   * not this download's and is replaced.
+   */
+  _getFile(sftp, t, remote, local, { resume = false } = {}) {
     return new Promise(async (resolve, reject) => {
-      let handle, fd;
+      const part = SftpManager.partOf(local);
+      let handle, fd, offset = 0;
       try {
         const st = await this._p(sftp, 'stat', remote);
         const size = st.size;
+        if (resume) {
+          const have = SftpManager.partSize(local);
+          if (have > 0 && have < size) offset = have;
+        }
         handle = await this._p(sftp, 'open', remote, 'r');
         fs.mkdirSync(path.dirname(local), { recursive: true });
-        fd = fs.openSync(local, 'w');
+        fd = fs.openSync(part, offset ? 'r+' : 'w');
+        if (offset) {
+          fs.ftruncateSync(fd, offset);
+          t.transferred += offset;
+          t.resumedFrom = offset;
+          t._lastEmit = 0;
+          this._emitTransfer(t);
+        }
         const CHUNK = 32768, CONC = 32;
-        let next = 0, inflight = 0, failed = null, done = 0;
+        let next = offset, inflight = 0, failed = null;
         const finish = () => {
-          const cleanup = () => {
-            try { fs.closeSync(fd); } catch {}
-            sftp.close(handle, () => {});
-          };
-          cleanup();
-          if (failed) return reject(failed);
-          if (t.cancelled) {
-            try { fs.unlinkSync(local); } catch {}
-            return reject(new Error('cancelled'));
+          try { fs.closeSync(fd); } catch {}
+          sftp.close(handle, () => {});
+          if (failed || t.cancelled) {
+            if (t.cancelled && !t.disconnected) { try { fs.unlinkSync(part); } catch {} } // Cancel: nothing left behind; an error or a disconnect keeps the .part for a resume
+            return reject(t.cancelled ? new Error('cancelled') : failed);
           }
+          try { fs.renameSync(part, local); } catch (e) { return reject(e); }
           try { fs.utimesSync(local, new Date(), new Date(st.mtime * 1000)); } catch {}
           resolve();
         };
-        if (size === 0) return finish();
+        if (size === 0 || next >= size) return finish();
         const pump = () => {
           if (failed || t.cancelled) {
             if (inflight === 0) finish();
@@ -208,7 +290,6 @@ class SftpManager extends EventEmitter {
               if (err) failed = err;
               else {
                 try { fs.writeSync(fd, buf, 0, nread, pos); } catch (e) { failed = e; }
-                done += nread;
                 t.transferred += nread;
                 this._emitTransfer(t);
               }
@@ -221,6 +302,7 @@ class SftpManager extends EventEmitter {
         pump();
       } catch (e) {
         try { if (fd !== undefined) fs.closeSync(fd); } catch {}
+        if (fd !== undefined && !offset) { try { fs.unlinkSync(part); } catch {} } // nothing was read into it
         if (handle) sftp.close(handle, () => {});
         reject(e);
       }
@@ -321,8 +403,11 @@ class SftpManager extends EventEmitter {
     return out;
   }
 
-  /** Download remote file or directory to a local path. Returns transfer id immediately. */
-  download(connId, remote, local) {
+  /**
+   * Download remote file or directory to a local path. Returns transfer id immediately. `resume` continues the .part an
+   * earlier download of the same file left (see _getFile; main.js asks when one is there).
+   */
+  download(connId, remote, local, { resume = false } = {}) {
     const t = this._newTransfer(connId, 'download', path.posix.basename(remote), remote, local);
     (async () => {
       const sftp = await this._sftp(connId);
@@ -334,20 +419,17 @@ class SftpManager extends EventEmitter {
         for (const d of plan.dirs) fs.mkdirSync(path.join(local, path.posix.relative(remote, d)), { recursive: true });
         for (const f of plan.files) {
           if (t.cancelled) throw new Error('cancelled');
-          await this._getFile(sftp, t, f.path, path.join(local, path.posix.relative(remote, f.path)));
+          await this._getFile(sftp, t, f.path, path.join(local, path.posix.relative(remote, f.path)), { resume });
           t.filesDone++;
         }
       } else {
         t.total = st.size;
-        await this._getFile(sftp, t, remote, local);
+        await this._getFile(sftp, t, remote, local, { resume });
         t.filesDone = 1;
       }
       t.status = 'done';
     })()
-      .catch((e) => {
-        t.status = t.cancelled ? 'cancelled' : 'error';
-        t.error = e.message;
-      })
+      .catch((e) => this._failed(t, e))
       .finally(() => {
         t._lastEmit = 0;
         this._emitTransfer(t);
@@ -383,16 +465,19 @@ class SftpManager extends EventEmitter {
       }
       t.status = 'done';
     })()
-      .catch((e) => {
-        t.status = t.cancelled ? 'cancelled' : 'error';
-        t.error = e.message;
-      })
+      .catch((e) => this._failed(t, e))
       .finally(() => {
         t._lastEmit = 0;
         this._emitTransfer(t);
         setTimeout(() => this.transfers.delete(t.id), 60000);
       });
     return t.id;
+  }
+
+  /** A transfer that did not finish: cancelled (by the user, or by a Disconnect — the row says which), else an error. */
+  _failed(t, e) {
+    t.status = t.cancelled ? 'cancelled' : 'error';
+    t.error = t.disconnected ? t_('disconnected') : t.cancelled ? null : e.message;
   }
 
   listTransfers() {

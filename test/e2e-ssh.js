@@ -134,6 +134,64 @@
     const st = await window.api.sftp.stat(connId, '/tmp/mobalt-e2e/hello2.txt');
     results.chmod = st.mode.toString(8);
     results.tunnels = (await window.api.tunnels.list()).map((t) => `${t.type}:${t.bindPort}->${t.destHost}:${t.destPort}=${t.status}`);
+    // 3b. the connection's TCP socket runs with TCP_NODELAY (ssh2 never sets it, Electron's Node leaves Nagle on: a
+    //     sequential SFTP round trip cost 54 ms and a keystroke echo 65 ms on a 12 ms RTT); the socket flag is the check —
+    //     loopback never delays an ACK, so 50 sequential stats take 10–22 ms here with Nagle on or off — and the timing
+    //     a latency guard (100 ms: five times the slowest run seen, a tenth of a Nagle-bound round trip over a network)
+    const sockInfo = await window.api.app.testConnSocket(connId);
+    results.tcpNoDelay = !!sockInfo && sockInfo.noDelay === true && sockInfo.remotePort === 2222;
+    {
+      const t0 = performance.now();
+      for (let i = 0; i < 50; i++) await window.api.sftp.stat(connId, '/tmp/mobalt-e2e/hello2.txt');
+      results.stat50Ms = Math.round(performance.now() - t0);
+      results.stat50Fast = results.stat50Ms < 100;
+    }
+    log('socket', JSON.stringify(sockInfo), '| 50 sequential stats', results.stat50Ms, 'ms');
+    // 3c. the folder the panel shows is deleted underneath it: one warning, a line in the list, and the panel climbs to
+    //     the nearest parent that still exists — a further refresh is quiet (no stale rows, no repeated "Path not found")
+    {
+      const seen = [];
+      const mo = new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seen.push(n.textContent); });
+      mo.observe(document.getElementById('toast-root'), { childList: true });
+      await window.api.sftp.mkdir(connId, '/tmp/mobalt-e2e/gone');
+      await window.api.sftp.mkdir(connId, '/tmp/mobalt-e2e/gone/deeper');
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e/gone/deeper');
+      const deep = app.sftpPanel.state().path;
+      await window.api.sftp.remove(connId, '/tmp/mobalt-e2e/gone', true);
+      await app.sftpPanel.cmd('refresh');
+      await waitFor(() => app.sftpPanel.state().path !== deep && !app.sftpPanel.state().loading, 5000, 'panel climbed');
+      const parent = app.sftpPanel.state().path;
+      results.goneFolderClimbs = parent === deep.replace(/\/gone\/deeper$/, '') && document.querySelector('#sftp-list .sftp-notice')?.textContent === `"${deep}" no longer exists`;
+      results.goneFolderToastOnce = seen.filter((x) => /no longer exists/.test(x)).length === 1 && !seen.some((x) => /Path not found/.test(x));
+      await app.sftpPanel.cmd('refresh');
+      await sleep(300);
+      results.goneFolderQuietAfter = seen.filter((x) => /no longer exists|Path not found/.test(x)).length === 1 && app.sftpPanel.state().path === parent && !document.querySelector('#sftp-list .sftp-notice');
+      log('folder deleted underneath:', deep, '→', parent, '| toasts', JSON.stringify(seen));
+      mo.disconnect();
+    }
+    // 3d. a dangling symlink lists with its target and is marked broken (readlink before stat); the row's tooltip starts
+    //     with the full name and ends "→ target (broken)"; the filter box above the list narrows the rows to the names
+    //     containing the text, Esc clears it
+    {
+      await window.api.ssh.exec(connId, 'ln -sfn /nonexistent/nowhere /tmp/mobalt-e2e/dangling && ln -sfn /tmp/mobalt-e2e/package.json /tmp/mobalt-e2e/link-ok');
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e');
+      const entries = app.sftpPanel.state().entries;
+      const dangling = entries.find((e) => e.name === 'dangling'), ok = entries.find((e) => e.name === 'link-ok');
+      results.danglingLink = !!dangling && dangling.link && dangling.broken === true && dangling.target === '/nonexistent/nowhere' && !!ok && ok.link && !ok.broken && ok.type === 'f';
+      const title = app.sftpPanel.rowFor('dangling')?.title || '';
+      results.rowTooltip = title.startsWith('dangling\n') && /→ \/nonexistent\/nowhere \(broken\)$/.test(title) && (app.sftpPanel.rowFor('package.json')?.title || '').startsWith('package.json\n');
+      const filter = document.getElementById('sftp-filter');
+      filter.value = 'ING';
+      filter.dispatchEvent(new Event('input'));
+      results.filterRows = app.sftpPanel.rows().map((r) => r.dataset.name).join(',') === 'dangling'; // "ING" in dangling only, case-insensitive
+      filter.value = 'zzz';
+      filter.dispatchEvent(new Event('input'));
+      results.filterEmptyText = app.sftpPanel.rows().length === 0 && /No names contain "zzz"/.test(document.getElementById('sftp-list').textContent);
+      filter.focus();
+      filter.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      results.filterEscClears = filter.value === '' && app.sftpPanel.rows().length === entries.length && document.activeElement !== filter;
+      log('dangling:', JSON.stringify(dangling), '| tooltip', JSON.stringify(title), '| filter rows ok:', results.filterRows);
+    }
 
     // 4. encrypted key -> passphrase prompt
     const p2 = app.openSession(s2);
@@ -147,6 +205,43 @@
     results.encKey = true;
     await app.reloadSessions();
     results.passphraseSaved = !!app.sessions.sessions.find((s) => s.id === s2.id)?.hasPassphrase;
+
+    // 4b. a Finder drop on an SSH terminal whose session does not follow the terminal (enc-key: no cwd hook, so the
+    //     shell's folder is unknown) uploads to the folder the Sftp panel shows for that connection — never silently to
+    //     the home folder — and the toast names the destination; with the panel not bound to the connection it asks,
+    //     naming the home folder, and Cancel uploads nothing
+    {
+      const seen = [];
+      const mo = new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seen.push(n.textContent); });
+      mo.observe(document.getElementById('toast-root'), { childList: true });
+      const c2 = pane2.termId;
+      results.dropNoCwd = pane2.remoteCwd === null;
+      app.sftpPanel.show(c2);
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e');
+      const folder = app.sftpPanel.state().path; // as the server resolves it (/private/tmp/… on macOS)
+      app.focusPane(pane2);
+      await sleep(200);
+      const r2 = pane2.termEl.getBoundingClientRect();
+      await window.api.app.testDropFiles([root + '/LICENSE'], { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 });
+      await waitFor(() => [...app.sftpPanel.transfers.values()].some((t) => t.name === 'LICENSE' && t.status === 'done'), 15000, 'dropped file uploaded');
+      const dropped = await window.api.sftp.stat(c2, folder + '/LICENSE').catch(() => null);
+      results.dropToPanelFolder = !!dropped && !dropped.isDir && dropped.size > 100;
+      results.dropToastNamesFolder = seen.some((x) => x === `Uploading 1 item to ${folder}`);
+      log('drop with Follow terminal off → panel folder', folder, '| stat', JSON.stringify(dropped), '| toasts', JSON.stringify(seen));
+      // the panel not bound to this connection: a confirm names the home folder; Cancel
+      app.sftpPanel.dropConnection(c2);
+      await window.api.app.testDropFiles([root + '/LICENSE'], { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 });
+      const ask = await waitFor(() => document.querySelector('.modal'), 5000, 'drop confirm');
+      const homeDir = await window.api.sftp.home(c2);
+      results.dropAsksNamingHome = new RegExp('Upload 1 item to ' + homeDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\?').test(ask.textContent);
+      await shot('05b-drop-asks');
+      ask.querySelector('.btn:not(.primary)').click(); // Cancel
+      await sleep(400);
+      results.dropCancelUploadsNothing = !document.querySelector('.modal') && seen.includes('Upload cancelled') && ![...app.sftpPanel.transfers.values()].some((t) => t.name === 'LICENSE' && t.remote === homeDir.replace(/\/$/, '') + '/LICENSE');
+      log('drop ask', JSON.stringify(ask.textContent), '| cancel →', results.dropCancelUploadsNothing);
+      mo.disconnect();
+      app.sftpPanel.show(c2);
+    }
 
     // 5. split -> empty pane -> "drop" the enc-key session onto it (saved passphrase means no prompt) + multiexec
     await app.action('split', 'down');
@@ -221,7 +316,7 @@
       new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seenToasts.push(n.textContent); }).observe(document.getElementById('toast-root'), { childList: true });
       // killing the sshd child ends the TCP connection with a clean EOF ("closed by the server") or, when the Mac is busy
       // and the reset arrives first, with ECONNRESET ("lost: read ECONNRESET"): the server dropped us either way
-      const lostRe = /^Connection to enc-key was (closed by the server|lost: .+)$/;
+      const lostRe = /^Connection to enc-key was (closed by the server|lost: .+?) 1 tunnel started from the Tunnels dialog was stopped\.$/; // one ad-hoc tunnel is on this connection when it drops (below)
       const sp = await app.openSession(app.sessions.sessions.find((x) => x.id === s2.id)); // saved passphrase: no prompt
       await waitFor(() => sp.status === 'connected', 15000, 'drop-test session connected');
       await sleep(1500);
@@ -230,11 +325,31 @@
       const childPid = await waitFor(() => (/SSHD_CHILD=(\d+)/.exec(textOf(sp)) || [])[1], 8000, 'sshd child pid');
       const local = await app.newLocalTab();
       await waitFor(() => /[$%#>] ?$/.test(textOf(local).trimEnd()), 8000, 'local prompt');
-      local.term.input(`kill ${childPid} && echo KILLED_OK\r`);
+      // 9a. a download under way on that connection when it drops: no truncated file under the final name, the bytes
+      //     so far in <name>.part (the sshd child is killed from the other connection the moment the transfer runs, so
+      //     the loopback download cannot finish first)
+      const spId = sp.termId;
+      // the panel browses a folder on this connection: a reconnect brings it back there (9b), not to the home folder
+      app.sftpPanel.show(spId);
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e/src');
+      const browsed = app.sftpPanel.state().path;
+      const big = '/tmp/mobalt-e2e/big.bin', bigLocal = '/tmp/mobalt-e2e-dl/big.bin', bigLocal2 = '/tmp/mobalt-e2e-dl/big2.bin';
+      const sizeOf = async (p) => parseInt((await window.api.ssh.exec(pane.termId, `stat -f %z ${p} 2>/dev/null || echo -1`)).stdout.trim(), 10);
+      await window.api.ssh.exec(pane.termId, `head -c 300000000 /dev/urandom > ${big}`);
+      for (const f of [bigLocal, bigLocal + '.part', bigLocal2, bigLocal2 + '.part']) await window.api.app.testFs('rm', f);
+      await window.api.tunnels.start({ type: 'local', bindHost: '127.0.0.1', bindPort: 2224, destHost: '127.0.0.1', destPort: 2222, connId: spId, adhoc: true }); // as the Tunnels dialog starts one
+      const dl1 = await window.api.sftp.download(spId, big, bigLocal, false);
+      await waitFor(() => (app.sftpPanel.transfers.get(dl1)?.transferred || 0) > 2000000, 15000, 'download under way');
+      await window.api.ssh.exec(pane.termId, `kill ${childPid}`);
       app.focusPane(sp); // the status bar shows the pane the drop lands on
-      await waitFor(() => /KILLED_OK/.test(textOf(local)), 8000, 'kill ran');
       await waitFor(() => sp.dead, 15000, 'ssh pane noticed the drop');
+      await waitFor(() => app.sftpPanel.transfers.get(dl1)?.status !== 'running', 15000, 'download ended with the drop');
       await sleep(300);
+      const x1 = app.sftpPanel.transfers.get(dl1);
+      const partSize = await sizeOf(bigLocal + '.part');
+      results.dropDownloadNoFinalFile = !(await window.api.app.testFs('exists', bigLocal)) && x1.status === 'error';
+      results.dropDownloadKeepsPart = partSize > 0 && partSize < 300000000;
+      log('download killed with the connection:', x1.status, x1.error, '| .part', partSize, 'bytes of 300000000');
       results.dropToast = seenToasts.some((x) => lostRe.test(x));
       results.dropLine = /── Connection to enc-key was (closed by the server|lost: [^\n]+?)\. Press Enter to reconnect/.test(textOf(sp));
       results.dropStatus = sp.status === 'disconnected' && /Connection lost\./.test(sp.overlay?.textContent || '') && /disconnected \(connection lost\)/.test(document.getElementById('st-session').textContent);
@@ -245,15 +360,45 @@
       await sp.reconnect();
       await waitFor(() => sp.status === 'connected', 15000, 'reconnected after the drop');
       await sleep(1200);
+      // 9b. the panel of the reconnected session opens on the folder it showed before the drop; the next download of the
+      //     same file offers Resume (a sheet: Resume / Start over / Cancel), which continues from the .part's end — the
+      //     row says "resuming at …" meanwhile and the result's checksum is the remote file's
+      {
+        app.sftpPanel.show(sp.termId);
+        await waitFor(() => app.sftpPanel.state()?.path && !app.sftpPanel.state().loading, 5000, 'panel back after reconnect');
+        results.reconnectKeepsFolder = app.sftpPanel.state().path === browsed;
+        log('panel after reconnect:', app.sftpPanel.state().path, '(was', browsed + ')');
+        await window.api.app.testNextDialog({ response: 0 }); // Resume
+        const dl2 = await window.api.sftp.download(sp.termId, big, bigLocal, false);
+        let rowSeen = '';
+        await waitFor(() => { const r = document.querySelector('#sftp-transfers .xfer.running'); if (r && /resuming at/.test(r.textContent)) rowSeen = r.textContent; return app.sftpPanel.transfers.get(dl2)?.status === 'done'; }, 60000, 'resumed download done');
+        const x2 = app.sftpPanel.transfers.get(dl2);
+        results.resumeOffered = (await window.api.app.testNextDialog()).pending === 0 && x2.resumedFrom === partSize && x2.transferred === 300000000;
+        results.resumeRowSaysSo = new RegExp('resuming at \\d+(\\.\\d)? MB').test(rowSeen);
+        const sums = await window.api.ssh.exec(pane.termId, `shasum -a 256 ${big} ${bigLocal} | cut -d' ' -f1 | uniq | wc -l`);
+        results.resumedChecksumMatches = sums.stdout.trim() === '1' && !(await window.api.app.testFs('exists', bigLocal + '.part'));
+        log('resumed from', x2.resumedFrom, '| row', JSON.stringify(rowSeen), '| checksums equal:', sums.stdout.trim() === '1');
+      }
       sp.write('exit\r');
       await waitFor(() => sp.dead, 10000, 'exit ended the session');
       await sp.reconnect();
       await waitFor(() => sp.status === 'connected', 15000, 'reconnected after exit');
       await sleep(800);
+      // 9c. Session → Disconnect while a download runs: the transfer ends "cancelled (disconnected)" — not with the
+      //     "No response from server" of the dying channel —, its .part stays for a resume, and no error toast
+      const dl3 = await window.api.sftp.download(sp.termId, big, bigLocal2, false);
+      await waitFor(() => (app.sftpPanel.transfers.get(dl3)?.transferred || 0) > 2000000, 15000, 'third download under way');
       await sp.disconnect();
       await waitFor(() => sp.dead, 10000, 'disconnect ended the session');
+      await waitFor(() => app.sftpPanel.transfers.get(dl3)?.status !== 'running', 10000, 'third download ended');
       await sleep(300);
+      const x3 = app.sftpPanel.transfers.get(dl3);
+      const row3 = [...document.querySelectorAll('#sftp-transfers .xfer.cancelled')].map((x) => x.textContent).join(' | ');
+      results.disconnectCancelsTransfer = x3.status === 'cancelled' && x3.error === 'disconnected' && /cancelled \(disconnected\)/.test(row3) && (await sizeOf(bigLocal2 + '.part')) > 0 && !(await window.api.app.testFs('exists', bigLocal2));
+      log('disconnect during a download:', x3.status, x3.error, '| rows', JSON.stringify(row3));
       results.quietEndsNoToast = seenToasts.length === toastsBefore && (textOf(sp).match(/── Connection to enc-key was (closed by the server|lost: )/g) || []).length === 1 && (textOf(sp).match(/── Session ended\./g) || []).length === 2;
+      for (const f of [bigLocal, bigLocal2, bigLocal2 + '.part']) await window.api.app.testFs('rm', f);
+      await window.api.ssh.exec(pane.termId, `rm -f ${big}`);
       await app.closeTab(local.tab);
     }
     log('RESULTS ' + JSON.stringify(results));

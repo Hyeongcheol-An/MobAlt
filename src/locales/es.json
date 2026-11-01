@@ -1424,10 +1424,6 @@
   "Upload to {dir}": "Subir a {dir}",
   "Upload…": "Subir…",
   "Uploaded {name}": "{name} subido",
-  "Uploading {n} item": [
-    "Subiendo {n} elemento",
-    "Subiendo {n} elementos"
-  ],
   "Uptime": "Tiempo encendido",
   "Use in this session": "Usar en esta sesión",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://": "Usa usuario@host[:puerto], opcionalmente con ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://",
@@ -1502,5 +1498,32 @@
   "SFTP unavailable on {session}: {error}": "SFTP no disponible en {session}: {error}",
   "ssh-agent not reachable at SSH_AUTH_SOCK": "ssh-agent no accesible en SSH_AUTH_SOCK",
   "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: ninguna clave cargada (ssh-add -l)",
-  "The saved password was rejected. Enter {account}'s password": "La contraseña guardada fue rechazada. Introduce la contraseña de {account}"
+  "The saved password was rejected. Enter {account}'s password": "La contraseña guardada fue rechazada. Introduce la contraseña de {account}",
+  "\"{path}\" no longer exists": "«{path}» ya no existe",
+  "\"{path}\" no longer exists — showing the nearest folder that does": "«{path}» ya no existe — se muestra la carpeta existente más cercana",
+  "(broken)": "(roto)",
+  "{n} tunnel started from the Tunnels dialog was stopped.": [
+    "Se detuvo {n} túnel iniciado desde el diálogo de túneles.",
+    "Se detuvieron {n} túneles iniciados desde el diálogo de túneles."
+  ],
+  "{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.": "{size} ya están en {file}. «Reanudar» continúa desde ahí; «Empezar de nuevo» lo descarga otra vez desde el principio.",
+  "cancelled ({why})": "cancelado ({why})",
+  "Filter files": "Filtrar archivos",
+  "Filter files…": "Filtrar archivos…",
+  "No names contain \"{text}\"": "Ningún nombre contiene «{text}»",
+  "Port {port} is already in use on the server": "El puerto {port} ya está en uso en el servidor",
+  "Port {port} is already in use on this Mac": "El puerto {port} ya está en uso en este Mac",
+  "Resume": "Reanudar",
+  "Resume the download of \"{name}\"?": "¿Reanudar la descarga de «{name}»?",
+  "resuming at {size}": "reanudando en {size}",
+  "Start over": "Empezar de nuevo",
+  "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": [
+    "No se conoce la carpeta del shell (la sesión no sigue al terminal). ¿Subir {n} elemento a {dir}?",
+    "No se conoce la carpeta del shell (la sesión no sigue al terminal). ¿Subir {n} elementos a {dir}?"
+  ],
+  "Upload": "Subir",
+  "Uploading {n} item to {dir}": [
+    "Subiendo {n} elemento a {dir}",
+    "Subiendo {n} elementos a {dir}"
+  ]
 }

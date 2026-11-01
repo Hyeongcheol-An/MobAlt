@@ -18,6 +18,12 @@ function pipe(a, b) {
   b.on('close', kill);
 }
 
+/** A local bind that failed, in the user's words when the port is taken (the usual case); other errors as Node words them. */
+function bindError(e, port) {
+  if (e && e.code === 'EADDRINUSE') return Object.assign(new Error(i18n.t('Port {port} is already in use on this Mac', { port })), { code: e.code });
+  return e;
+}
+
 class TunnelManager extends EventEmitter {
   constructor(sshManager, store) {
     super();
@@ -47,7 +53,7 @@ class TunnelManager extends EventEmitter {
     t.connections = 0;
     if (t.type === 'local') {
       await new Promise((resolve, reject) => {
-        const server = net.createServer((sock) => {
+        const server = net.createServer({ noDelay: true }, (sock) => { // TCP_NODELAY on the local leg too: an interactive protocol through the tunnel is not held for delayed ACKs
           t.connections++;
           this._emit();
           client.forwardOut(sock.remoteAddress || '127.0.0.1', sock.remotePort || 0, t.destHost, t.destPort, (err, stream) => {
@@ -61,7 +67,7 @@ class TunnelManager extends EventEmitter {
             sock.on('close', () => { t.connections--; this._emit(); });
           });
         });
-        server.on('error', reject);
+        server.on('error', (e) => reject(bindError(e, t.bindPort)));
         server.listen(t.bindPort, t.bindHost || '127.0.0.1', () => {
           t.bindPort = server.address().port;
           resolve();
@@ -72,7 +78,7 @@ class TunnelManager extends EventEmitter {
       if (!info) throw new Error(i18n.t('Remote forwards need a connection context'));
       await new Promise((resolve, reject) => {
         client.forwardIn(t.bindHost || '127.0.0.1', t.bindPort, (err, port) => {
-          if (err) return reject(err);
+          if (err) return reject(/^Unable to bind to /.test(err.message) ? Object.assign(new Error(i18n.t('Port {port} is already in use on the server', { port: t.bindPort })), { code: 'EADDRINUSE' }) : err);
           if (port) t.bindPort = port;
           resolve();
         });
@@ -81,7 +87,7 @@ class TunnelManager extends EventEmitter {
         const stream = accept();
         t.connections++;
         this._emit();
-        const sock = net.connect(t.destPort, t.destHost);
+        const sock = net.connect({ port: t.destPort, host: t.destHost, noDelay: true });
         this._counter(t, sock);
         sock.on('connect', () => pipe(sock, stream));
         sock.on('error', () => stream.close());
@@ -94,8 +100,8 @@ class TunnelManager extends EventEmitter {
       };
     } else if (t.type === 'dynamic') {
       await new Promise((resolve, reject) => {
-        const server = net.createServer((sock) => this._socks5(sock, client, t));
-        server.on('error', reject);
+        const server = net.createServer({ noDelay: true }, (sock) => this._socks5(sock, client, t));
+        server.on('error', (e) => reject(bindError(e, t.bindPort)));
         server.listen(t.bindPort, t.bindHost || '127.0.0.1', () => {
           t.bindPort = server.address().port;
           resolve();
@@ -234,8 +240,15 @@ class TunnelManager extends EventEmitter {
     this._emit();
   }
 
+  /** Stop the tunnels of a connection that ended; returns how many of them were started from the Tunnels dialog (not the session's own), for the lost-connection toast. */
   stopForConnection(connId) {
-    for (const [id, t] of this.tunnels) if (t.connId === connId) this.stop(id);
+    let adhoc = 0;
+    for (const [id, t] of this.tunnels) {
+      if (t.connId !== connId) continue;
+      if (t.adhoc) adhoc++;
+      this.stop(id);
+    }
+    return adhoc;
   }
 
   stopAll() {
@@ -243,4 +256,4 @@ class TunnelManager extends EventEmitter {
   }
 }
 
-module.exports = { TunnelManager };
+module.exports = { TunnelManager, bindError };

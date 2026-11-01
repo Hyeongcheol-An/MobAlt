@@ -6,6 +6,7 @@
 let ssh2Lib = null;
 const ssh2 = () => ssh2Lib || (ssh2Lib = require('ssh2'));
 const fs = require('fs');
+const net = require('net');
 const os = require('os');
 const path = require('path');
 const { StringDecoder } = require('string_decoder');
@@ -24,6 +25,21 @@ const RESET = '\x1b[0m';
 const DEFAULT_IDENTITY_FILES = ['id_ed25519', 'id_ecdsa', 'id_rsa'];
 /** The rejection of sftp() / exec() on a connection that is gone; the code lets monitor.js classify it whatever the language. */
 const notConnected = () => Object.assign(new Error(t('Not connected')), { code: 'ENOTCONN' });
+
+/**
+ * The TCP socket of an SSH connection, with TCP_NODELAY: ssh2 (1.17) never sets it and Electron's Node (24) does not
+ * default it on (Node 26 does), so every socket ran with Nagle on — each small packet sent while an earlier one is
+ * unacknowledged waits for the peer's delayed ACK: a sequential SFTP round trip cost 54 ms and a keystroke echo 65 ms
+ * on a 12 ms RTT, a 20 000-entry listing 11 s. ssh2 takes the socket as `sock` and connects it like its own (its
+ * 'connect' starts the handshake; a socket error reaches the client as a 'client-socket' error with its code intact,
+ * so ECONNREFUSED / ETIMEDOUT read as before). A jump hop's forwarded stream is an SSH channel, not a socket: the
+ * first hop's socket, made here, carries it.
+ */
+function tcpSocket(host, port) {
+  const sock = net.connect({ host, port, noDelay: true });
+  sock.setMaxListeners(0); // as ssh2 does on its own socket
+  return sock;
+}
 
 let agentKeysCache = null;
 /**
@@ -427,6 +443,7 @@ class SshManager {
         client.connect({
           host: cfg.host,
           port: cfg.port || 22,
+          sock: tcpSocket(cfg.host, cfg.port || 22),
           username: cfg.username || os.userInfo().username,
           hostVerifier: (key, cb) => verifier(key, (ok) => {
             if (ok) {
@@ -521,7 +538,12 @@ class SshManager {
           ctx.out(`${GREY}${t('Jump established, connecting to {target}...', { target: `${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
         } catch (e) {
           if (jump) jump.end();
-          return fail(ctx.cancelled ? cancelledError() : new Error(t('Jump host failed: {error}', { error: e.message })));
+          if (ctx.cancelled) return fail(cancelledError());
+          // the failure is the jump hop's: explained against the jump host — the "nc -vz" hint names its host and port,
+          // never the target's — and marked, so the caller's _explainError leaves it as it is
+          const err = new Error(t('Jump host failed: {error}', { error: e.explained ? e.message : this._explainError(e, ctx, jumpCfg) }));
+          err.explained = true;
+          return fail(err);
         }
       }
       if (ctx.cancelled) return fail(cancelledError());
@@ -569,7 +591,7 @@ class SshManager {
         algorithms: this._algorithms(cfg),
         debug: this._debugHook(ctx),
       };
-      if (sock) connectCfg.sock = sock;
+      connectCfg.sock = sock || tcpSocket(cfg.host, cfg.port || 22); // the jump's forwarded channel, else a TCP socket with TCP_NODELAY (see tcpSocket)
       try {
         client.connect(connectCfg);
       } catch (e) {
@@ -721,6 +743,7 @@ class SshManager {
 
   /** Turn a connect/auth failure into the message shown to the user (hints for the usual causes). */
   _explainError(e, ctx, cfg) {
+    if (e.explained) return e.message; // a jump hop's failure, explained against the jump host in connectClient
     let msg = e.message;
     const limit = () => Math.round((this.store.getSettings().readyTimeout || 20000) / 1000);
     // the regexes classify ssh2's own (English) messages; the hints are composed around them as {error}
@@ -865,6 +888,7 @@ class SshManager {
     const info = this.conns.get(id);
     if (!info) return;
     info.closing = true;
+    if (this.beforeDisconnect) try { this.beforeDisconnect(id); } catch {} // main.js: the connection's transfers end as cancelled, not as a lost channel
     try {
       if (info.stream) info.stream.end();
     } catch {}

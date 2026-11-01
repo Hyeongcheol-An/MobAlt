@@ -319,7 +319,7 @@ class App {
       if (!p) return;
       const lost = info && info.reason === 'lost' && p.termId === id; // the server or the network ended it (never a Disconnect, ⌘W or `exit`)
       p.onExit(info);
-      if (lost) toast(p.lostMessage(info.detail), 'warn', 6000); // the pane may be in another tab, or its terminal full-screen
+      if (lost) toast(p.lostMessage(info.detail, false, info.tunnelsStopped), 'warn', 6000); // the pane may be in another tab, or its terminal full-screen
     });
     window.api.on('ssh:status', ({ id, state, msg }) => {
       const p = this.panesByTerm.get(id);
@@ -1218,14 +1218,16 @@ class App {
       }
     }
     if (!list.length) return;
-    // start() resolves even when the bind failed; report what actually came up
+    // start() resolves even when the bind failed; report what actually came up — for the session by name (the pane's
+    // title is the shell's by then, "user@host: ~", and after a reconnect that is not what the user restarted)
+    const title = pane.session?.name || pane.title;
     const all = await window.api.tunnels.list().catch(() => []);
     const mine = all.filter((x) => ids.includes(x.id));
     const failed = mine.filter((x) => x.status === 'error');
     const ok = mine.length - failed.length;
     if (failed.length) toast(tn('{failed} of {n} tunnel failed for {title}: {list}', '{failed} of {n} tunnels failed for {title}: {list}', failed.length, // the plural form follows how many failed (the verb agrees with that)
-       { failed: failed.length, title: pane.title, list: failed.map((x) => `${x.bindPort} (${x.error || t('error')})`).join('; ') }), 'error', 7000);
-    if (ok) toast(tn('{n} tunnel started for {title}', '{n} tunnels started for {title}', ok, { title: pane.title }), 'success');
+       { failed: failed.length, title, list: failed.map((x) => `${x.bindPort} (${x.error || t('error')})`).join('; ') }), 'error', 7000);
+    if (ok) toast(tn('{n} tunnel started for {title}', '{n} tunnels started for {title}', ok, { title }), 'success');
   }
 
   // ---------- sessions / settings persistence ----------

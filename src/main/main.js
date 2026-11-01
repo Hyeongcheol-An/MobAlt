@@ -27,7 +27,7 @@ const dialogs = require('./dialogs'); // native dialogs; answered from the queue
 const i18n = require('./i18n'); // interface language: t() for every label built here, the dictionary for the windows
 const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
-const { ZmodemManager } = require('./zmodem');
+const { ZmodemManager, fmtBytes } = require('./zmodem');
 
 const pkg = require('../../package.json');
 bootTimes.mainLoaded = Date.now();
@@ -153,6 +153,7 @@ const prompter = {
 const ssh = new SshManager(registry, store, prompter);
 const monitor = new RemoteMonitor(ssh); // the monitoring bar's polls; keeps the previous sample per connection for the rates
 const sftp = new SftpManager(ssh, store);
+ssh.beforeDisconnect = (id) => sftp.abortForConnection(id); // Session → Disconnect while a transfer runs: "cancelled (disconnected)", never "No response from server"
 const ftp = new FtpManager(store, prompter);
 // rz / sz inside a terminal: a sentry on every byte stream the registry registers; its dialogs go through dialogs.js
 const zmodem = new ZmodemManager(registry, store, { dialogs, getWin: () => win, downloadsDir: () => app.getPath('downloads') });
@@ -179,10 +180,10 @@ registry.on('exit', (id, code, reason, detail) => {
   const wc = ownerOf(id), text = outBuf.get(id);
   if (text && wc) wc.send('term:data', id, text);
   outBuf.delete(id);
-  tunnels.stopForConnection(id);
+  const tunnelsStopped = tunnels.stopForConnection(id); // the ones from the Tunnels dialog: the lost-connection toast counts them
   sftp.stopEdits(id);
   monitor.forget(id); // the next connection starts its rates afresh
-  if (wc) wc.send('term:exit', id, { code, reason, detail });
+  if (wc) wc.send('term:exit', id, { code, reason, detail, tunnelsStopped });
   owners.delete(id);
 });
 // transfers and synced edits belong to the window showing their connection (every window's panel would list them otherwise)
@@ -888,6 +889,17 @@ function registerIpc() {
       });
     });
   });
+  // Test-only: the TCP socket of an SSH connection as Node sees it — { noDelay, remoteAddress, remotePort } (noDelay
+  // null when the connection is gone or rides a jump hop's channel): what test/e2e-ssh.js checks TCP_NODELAY with,
+  // since on loopback the ACK is never delayed and Nagle costs nothing measurable. Node keeps the flag under a symbol.
+  ipcMain.handle('test:conn-socket', (_e, id) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const info = ssh.conns.get(id);
+    const sock = info && info.client && info.client._sock;
+    if (!sock || typeof sock.setNoDelay !== 'function' || !('remoteAddress' in sock)) return { noDelay: null };
+    const sym = Object.getOwnPropertySymbols(sock).find((x) => x.description === 'kSetNoDelay');
+    return { noDelay: sym ? !!sock[sym] : null, remoteAddress: sock.remoteAddress, remotePort: sock.remotePort };
+  });
   // Test-only: the open windows, code run inside one of them (its resolved value comes back) and closing one — the
   // test script lives in the main window; a detached window is driven through these.
   ipcMain.handle('test:windows', () => {
@@ -971,7 +983,9 @@ function registerIpc() {
   ipcMain.handle('app:screenshot', async (e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
-    const img = await wof(e).webContents.capturePage(); // the calling window (a detached window's script shoots itself)
+    const wc = wof(e).webContents; // the calling window (a detached window's script shoots itself)
+    await wc.executeJavaScript('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))').catch(() => {}); // two frames: what the script just changed has painted
+    const img = await wc.capturePage();
     const file = path.join(dir, `${name}.png`);
     fs.writeFileSync(file, img.toPNG());
     console.log('screenshot', file);
@@ -1079,7 +1093,21 @@ function registerIpc() {
         local = r.filePath;
       }
     }
-    return files(id).download(id, remote, local);
+    // a .part of an earlier download of this file beside the destination (it died with the connection, or a
+    // Disconnect ended it): resume it from where it stopped, start over, or leave it
+    let resume = false;
+    const have = !isDir && !ftp.has(id) ? SftpManager.partSize(local) : 0;
+    if (have > 0) {
+      const name = path.posix.basename(remote);
+      const r = await dialogs.showMessageBox(wof(e), {
+        type: 'question', buttons: [t('Resume'), t('Start over'), t('Cancel')], defaultId: 0, cancelId: 2,
+        message: t('Resume the download of "{name}"?', { name }),
+        detail: t('{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.', { size: fmtBytes(have), file: SftpManager.partOf(local) }),
+      });
+      if (r.response === 2) return null;
+      resume = r.response === 0;
+    }
+    return files(id).download(id, remote, local, { resume });
   });
   ipcMain.handle('sftp:upload', async (e, id, locals, remoteDir) => {
     if (!locals || !locals.length) {

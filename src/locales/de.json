@@ -1429,10 +1429,6 @@
   "Upload to {dir}": "Hochladen nach {dir}",
   "Upload…": "Hochladen…",
   "Uploaded {name}": "{name} hochgeladen",
-  "Uploading {n} item": [
-    "{n} Objekt wird hochgeladen",
-    "{n} Objekte werden hochgeladen"
-  ],
   "Uptime": "Betriebszeit",
   "Use in this session": "In dieser Sitzung verwenden",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://": "Verwenden Sie user@host[:port], optional mit ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://",
@@ -1507,5 +1503,32 @@
   "SFTP unavailable on {session}: {error}": "SFTP auf {session} nicht verfügbar: {error}",
   "ssh-agent not reachable at SSH_AUTH_SOCK": "ssh-agent unter SSH_AUTH_SOCK nicht erreichbar",
   "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: keine Schlüssel geladen (ssh-add -l)",
-  "The saved password was rejected. Enter {account}'s password": "Das gesicherte Passwort wurde abgelehnt. Passwort für {account} eingeben"
+  "The saved password was rejected. Enter {account}'s password": "Das gesicherte Passwort wurde abgelehnt. Passwort für {account} eingeben",
+  "\"{path}\" no longer exists": "„{path}“ existiert nicht mehr",
+  "\"{path}\" no longer exists — showing the nearest folder that does": "„{path}“ existiert nicht mehr — der nächste noch vorhandene Ordner wird angezeigt",
+  "(broken)": "(defekt)",
+  "{n} tunnel started from the Tunnels dialog was stopped.": [
+    "{n} im Tunnel-Dialog gestarteter Tunnel wurde gestoppt.",
+    "{n} im Tunnel-Dialog gestartete Tunnel wurden gestoppt."
+  ],
+  "{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.": "{size} davon liegen bereits in {file}. „Fortsetzen“ macht dort weiter, „Von vorn“ lädt die Datei noch einmal von Anfang an.",
+  "cancelled ({why})": "abgebrochen ({why})",
+  "Filter files": "Dateien filtern",
+  "Filter files…": "Dateien filtern…",
+  "No names contain \"{text}\"": "Kein Name enthält „{text}“",
+  "Port {port} is already in use on the server": "Port {port} wird auf dem Server bereits verwendet",
+  "Port {port} is already in use on this Mac": "Port {port} wird auf diesem Mac bereits verwendet",
+  "Resume": "Fortsetzen",
+  "Resume the download of \"{name}\"?": "Download von „{name}“ fortsetzen?",
+  "resuming at {size}": "fortgesetzt ab {size}",
+  "Start over": "Von vorn",
+  "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": [
+    "Der Ordner der Shell ist unbekannt (die Sitzung folgt dem Terminal nicht). {n} Objekt nach {dir} hochladen?",
+    "Der Ordner der Shell ist unbekannt (die Sitzung folgt dem Terminal nicht). {n} Objekte nach {dir} hochladen?"
+  ],
+  "Upload": "Hochladen",
+  "Uploading {n} item to {dir}": [
+    "{n} Objekt wird nach {dir} hochgeladen",
+    "{n} Objekte werden nach {dir} hochgeladen"
+  ]
 }

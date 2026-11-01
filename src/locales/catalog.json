@@ -21,6 +21,16 @@
         "src/renderer/sftp.js"
       ]
     },
+    "\"{path}\" no longer exists": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
+    "\"{path}\" no longer exists — showing the nearest folder that does": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "\"{pattern}\" is not a valid regular expression: {error}": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -34,6 +44,11 @@
     "\"{word}\" mixes {script} letters {letters} into a Latin word: it is not the name it looks like": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "(broken)": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "(default login shell)": {
@@ -402,6 +417,12 @@
         "src/renderer/app.js"
       ]
     },
+    "{n} tunnel started from the Tunnels dialog was stopped.": {
+      "plural": "{n} tunnels started from the Tunnels dialog were stopped.",
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "{name} copy": {
       "refs": [
         "src/renderer/sidebar.js"
@@ -476,6 +497,11 @@
     "{sent} / {size} · {done}/{total} files": {
       "refs": [
         "src/renderer/sftp.js"
+      ]
+    },
+    "{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "{size}/s": {
@@ -1083,6 +1109,11 @@
     "cancelled": {
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "cancelled ({why})": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "cancelled by the remote side": {
@@ -2299,6 +2330,16 @@
     "Files are browsed over a separate SSH connection to this host": {
       "refs": [
         "src/renderer/sftp.js"
+      ]
+    },
+    "Filter files": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
+    "Filter files…": {
+      "refs": [
+        "src/renderer/index.html"
       ]
     },
     "Filter sessions": {
@@ -3811,6 +3852,11 @@
         "src/main/importers.js"
       ]
     },
+    "No names contain \"{text}\"": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "no open ports found": {
       "refs": [
         "src/renderer/panels.js"
@@ -4505,6 +4551,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Port {port} is already in use on the server": {
+      "refs": [
+        "src/main/tunnels.js"
+      ]
+    },
+    "Port {port} is already in use on this Mac": {
+      "refs": [
+        "src/main/tunnels.js"
+      ]
+    },
     "Port forwards started automatically when this session connects.": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -4935,6 +4991,21 @@
     "Restore tabs & split layout at startup": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Resume": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
+    "Resume the download of \"{name}\"?": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
+    "resuming at {size}": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "Right-click": {
@@ -5662,6 +5733,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Start over": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Start Session Log": {
       "refs": [
         "src/renderer/terminal.js"
@@ -6025,6 +6101,12 @@
         "src/renderer/terminal.js"
       ]
     },
+    "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": {
+      "plural": "The shell's folder is not known (the session does not follow the terminal). Upload {n} items to {dir}?",
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "the top level is not an object": {
       "refs": [
         "src/main/importers.js"
@@ -6157,7 +6239,8 @@
     },
     "Tunnel {port}: {error}": {
       "refs": [
-        "src/renderer/app.js"
+        "src/renderer/app.js",
+        "src/renderer/dialogs.js"
       ]
     },
     "Tunneling": {
@@ -6327,6 +6410,11 @@
         "src/main/zmodem.js"
       ]
     },
+    "Upload": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "upload {name}: {error}": {
       "refs": [
         "src/renderer/sftp.js"
@@ -6334,7 +6422,8 @@
     },
     "Upload cancelled": {
       "refs": [
-        "src/renderer/sftp.js"
+        "src/renderer/sftp.js",
+        "src/renderer/terminal.js"
       ]
     },
     "Upload failed: {error}": {
@@ -6367,8 +6456,8 @@
         "src/renderer/app.js"
       ]
     },
-    "Uploading {n} item": {
-      "plural": "Uploading {n} items",
+    "Uploading {n} item to {dir}": {
+      "plural": "Uploading {n} items to {dir}",
       "refs": [
         "src/renderer/sftp.js"
       ]

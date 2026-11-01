@@ -758,7 +758,10 @@ export async function tunnelsDialog(app, preset = {}) {
       if (!tf) return;
       const [kind, id] = via.value.split(':');
       try {
-        await window.api.tunnels.start(kind === 'conn' ? { ...tf, connId: id } : { ...tf, sessionId: id });
+        // start() resolves with the id even when the bind failed (the table shows the error): say so in a toast too
+        const tid = await window.api.tunnels.start(kind === 'conn' ? { ...tf, connId: id, adhoc: true } : { ...tf, sessionId: id, adhoc: true });
+        const tu = (await window.api.tunnels.list()).find((x) => x.id === tid);
+        if (tu && tu.status === 'error') toast(t('Tunnel {port}: {error}', { port: tf.bindPort, error: tu.error || t('error') }), 'error', 6000);
       } catch (e) {
         toast(e.message, 'error');
       }

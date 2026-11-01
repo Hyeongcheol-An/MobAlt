@@ -32,6 +32,12 @@ export function errMsg(e) {
   return m;
 }
 
+/** A listing error that says the folder is not there (SFTP's "No such file", an FTP 550 of that kind). */
+export function isNotFound(e) {
+  const m = ((e && e.message) || String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, '').replace(/^FTPError:\s*/, '');
+  return /^No such file$/i.test(m) || /^Path not found/i.test(m) || /^(550|553)\b.*(no such|not found|failed to open|does not exist)/i.test(m);
+}
+
 /** Overwrite / Skip existing / Cancel for an upload that would replace `names` in `dir` (null = cancel the whole upload). */
 function overwriteDialog(names, dir) {
   const what = names.length === 1 ? t('"{name}" already exists in {dir}.', { name: names[0], dir }) : tn('{n} item already exists in {dir}.', '{n} items already exist in {dir}.', names.length, { dir });
@@ -62,10 +68,34 @@ export class SftpPanel {
     this.wanted = new Set(); // connIds whose listing was asked for (show(), navigate()): a session with the SFTP browser off is listed only then
     this.connId = null;
     this.transfers = new Map();
+    // the folder last shown for a session (by id) or a pane without one: a reconnected connection starts there again
+    // when it still exists, instead of at the home folder
+    this.lastPaths = new Map();
+    this.lastPathsByPane = new WeakMap();
     this.els = {
       empty: $('#sftp-empty'), ui: $('#sftp-ui'), conn: $('#sftp-conn'), path: $('#sftp-path'), pathForm: $('#sftp-path-form'),
-      follow: $('#sftp-follow'), hidden: $('#sftp-hidden'), list: $('#sftp-list'), transfers: $('#sftp-transfers'),
+      follow: $('#sftp-follow'), hidden: $('#sftp-hidden'), filter: $('#sftp-filter'), list: $('#sftp-list'), transfers: $('#sftp-transfers'),
     };
+    // the filter box above the list (like the one over the sessions): names containing the text, per connection;
+    // Enter / ↓ move to the first match, Esc clears and goes back to the terminal
+    this.els.filter.addEventListener('input', () => {
+      const st = this.state();
+      if (!st) return;
+      st.filter = this.els.filter.value;
+      this.renderList();
+    });
+    this.els.filter.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+        const row = this.rows()[0];
+        if (row) { e.preventDefault(); this.select(this.state().entries.find((x) => x.name === row.dataset.name)); }
+      } else if (e.key === 'Escape') {
+        const st = this.state();
+        this.els.filter.value = '';
+        if (st) { st.filter = ''; this.renderList(); }
+        this.els.filter.blur();
+        this.app.activePane()?.focus();
+      }
+    });
     for (const b of document.querySelectorAll('[data-sftp]')) b.addEventListener('click', () => this.cmd(b.dataset.sftp));
     this.els.pathForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -90,11 +120,27 @@ export class SftpPanel {
       }
     });
     const list = this.els.list;
+    // the rows carry no listeners of their own (20 000 of them would): click, double-click and the context menu are
+    // read off the list and resolved to the row under the pointer
+    const rowOf = (e) => e.target.closest('.sftp-row[data-name]');
+    const entryOf = (row) => { const st = this.state(); return st && row.dataset.name !== '..' ? st.entries.find((x) => x.name === row.dataset.name) || null : null; };
     list.addEventListener('contextmenu', (e) => {
-      if (e.target === list || e.target.classList.contains('sftp-msg')) {
+      const row = rowOf(e), entry = row && entryOf(row);
+      if (entry) {
+        e.preventDefault();
+        if (!this.state().selected.has(entry.name)) this.select(entry, e);
+        this.menu(e.clientX, e.clientY, entry);
+      } else if (e.target === list || e.target.classList.contains('sftp-msg')) {
         e.preventDefault();
         this.menu(e.clientX, e.clientY, null);
       }
+    });
+    list.addEventListener('dblclick', (e) => {
+      const row = rowOf(e);
+      if (!row) return;
+      if (row.dataset.name === '..') return this.cmd('up');
+      const entry = entryOf(row);
+      if (entry) this.open(entry);
     });
     // keyboard: the rows are options of a multi-select listbox with one Tab stop (roving tabindex), see onKey()
     list.setAttribute('role', 'listbox');
@@ -107,7 +153,9 @@ export class SftpPanel {
     });
     this._typeAhead = typeAhead(); // letters typed on a row jump to the next entry whose name starts with them
     list.addEventListener('click', (e) => {
-      if (e.target === list) this.clearSelection();
+      const row = rowOf(e), entry = row && entryOf(row);
+      if (entry) this.select(entry, e);
+      else if (e.target === list) this.clearSelection();
     });
     list.addEventListener('dragover', (e) => {
       if (e.dataTransfer.types.includes('Files')) {
@@ -174,14 +222,28 @@ export class SftpPanel {
     const cdBtn = document.querySelector('[data-sftp="terminal-cd"]');
     if (cdBtn) cdBtn.hidden = noTerminal; // nothing to cd in
     this.els.hidden.checked = st.hidden;
+    this.els.filter.value = st.filter || '';
     if (st.path === null && !st.loading) {
       // a session whose "Open SFTP browser automatically" is off is not listed until asked for (Open SFTP Browser in
       // the pane menu, Refresh): a server without the sftp subsystem would otherwise report an error on every pane switch
       if (st.pane.session?.sftpAuto === false && !this.wanted.has(connId)) {
         st.off = true; // the note is drawn again on a language switch (relabel)
         this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('SFTP browser is off for this session — Refresh lists its files anyway')));
-      } else this.navigate(st.pane.remoteCwd || '.');
+      } else {
+        const remembered = st.pane.remoteCwd ? null : this.remembered(st.pane);
+        this.navigate(st.pane.remoteCwd || remembered || '.', { remembered: !!remembered });
+      }
     } else this.renderList();
+  }
+
+  /** The folder this pane (its session) showed last, if any. */
+  remembered(pane) {
+    return (pane.session?.id && this.lastPaths.get(pane.session.id)) || this.lastPathsByPane.get(pane) || null;
+  }
+
+  _remember(pane, path) {
+    if (pane.session?.id) this.lastPaths.set(pane.session.id, path);
+    this.lastPathsByPane.set(pane, path);
   }
 
   /** The connection line above the toolbar: session name, the "via SSH" badge of a Mosh companion, user@host[:port]. */
@@ -235,7 +297,13 @@ export class SftpPanel {
     }
   }
 
-  async navigate(path) {
+  /**
+   * Show `path`. `remembered`: the folder a reconnected session showed last — when it is gone the home folder is shown
+   * without a word. `walkUp`: a step of the climb below. A folder that no longer exists under the panel (a refresh,
+   * a listing after an operation) is announced once — a toast and a line in the list — and the panel climbs to the
+   * nearest parent that still exists instead of keeping stale rows and repeating "Path not found".
+   */
+  async navigate(path, { remembered = false, walkUp = false } = {}) {
     const connId = this.connId;
     const st = this.state();
     if (!st || !connId) return;
@@ -254,12 +322,25 @@ export class SftpPanel {
       st.path = r.path;
       st.entries = r.entries;
       st.selected.clear();
+      if (!walkUp) st.notice = null; // the "no longer exists" line stays over the parent it led to, until the next folder
+      if (from !== r.path && st.filter) { st.filter = ''; this.els.filter.value = ''; } // the filter was about the folder just left
       this.els.path.value = r.path;
       this.els.path.scrollLeft = this.els.path.scrollWidth; // long paths: keep the tail visible
       this.renderList();
       this.app.setStatusCwd(r.path);
+      this._remember(st.pane, r.path);
     } catch (e) {
       if (this.connId !== connId) return;
+      st.loading = false;
+      if (remembered && isNotFound(e)) return this.navigate('.'); // the remembered folder is gone: home, quietly
+      const gone = isNotFound(e) && (walkUp || st.path === null || path === st.path) && path && path !== '/' && path !== '.' && !path.startsWith('~');
+      if (gone) {
+        if (!walkUp) {
+          st.notice = t('"{path}" no longer exists', { path });
+          toast(t('"{path}" no longer exists — showing the nearest folder that does', { path }), 'warn');
+        }
+        return this.navigate(parentPath(path), { walkUp: true });
+      }
       // the first listing failing is the connection's problem (no sftp subsystem, a shell that talks): name the session
       if (st.path === null) toast(t('SFTP unavailable on {session}: {error}', { session: st.pane.session?.name || st.pane.title, error: errMsg(e) }), 'error');
       else toast(t('{path}: {error}', { path: path || '.', error: errMsg(e) }), 'error');
@@ -279,21 +360,30 @@ export class SftpPanel {
   visibleEntries(st = this.state()) {
     if (!st) return [];
     st.sort = st.sort || { key: 'name', dir: 1 };
+    const byName = new Intl.Collator().compare; // localeCompare's order, without its per-call cost (20 000 entries sort in a few ms)
     const cmp = (a, b) => {
       if (a.type !== b.type) return a.type === 'd' ? -1 : 1; // folders first, whatever the sort key
       const k = st.sort.key;
-      const d = k === 'size' ? a.size - b.size : k === 'mtime' ? a.mtime - b.mtime : a.name.localeCompare(b.name);
-      return (d || a.name.localeCompare(b.name)) * st.sort.dir;
+      const d = k === 'size' ? a.size - b.size : k === 'mtime' ? a.mtime - b.mtime : byName(a.name, b.name);
+      return (d || byName(a.name, b.name)) * st.sort.dir;
     };
-    return st.entries.filter((e) => st.hidden || !e.name.startsWith('.')).sort(cmp);
+    const q = (st.filter || '').trim().toLowerCase();
+    return st.entries.filter((e) => (st.hidden || !e.name.startsWith('.')) && (!q || e.name.toLowerCase().includes(q))).sort(cmp);
   }
 
+  /**
+   * Draw the listing. The first screenful of rows is appended now, the rest in animation frames of a few milliseconds
+   * each: 20 000 entries are 100 000 nodes — 770 ms in one go, which a sort click or a refresh must not cost. What
+   * needs every row (keyboard navigation, a dialog looking for its row) calls rows() / rowFor(), which finish the fill
+   * first; the keyboard cursor moves to its row once that row is in.
+   */
   renderList() {
     const st = this.state();
     if (!st) return;
     const list = this.els.list;
     const hadFocus = list.contains(document.activeElement); // keep the keyboard in the list across a re-render
     const headFocus = document.activeElement?.closest('.sftp-head button')?.dataset.sort; // …or on the header cell that sorted
+    this._stopFill();
     list.replaceChildren();
     const entries = this.visibleEntries(st);
     // sortable header cells are buttons: Tab reaches them, Enter / Space sort (a click re-renders, so a focused
@@ -309,31 +399,46 @@ export class SftpPanel {
         } }, label + (active ? (st.sort.dir > 0 ? ' ▲' : ' ▼') : ''));
     };
     list.append(h('div', { class: 'sftp-row sftp-head', role: 'presentation' }, h('span', {}), headCell('name', t('Name'), t('Sort by name'), 'name'), headCell('size', t('Size'), t('Sort by size'), 'size'), headCell('mtime', t('Modified'), t('Sort by modified'), 'date')));
-    if (st.path !== '/') {
-      const up = h('div', { class: 'sftp-row dir', dataset: { name: '..' }, role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' }));
-      up.addEventListener('dblclick', () => this.cmd('up'));
-      list.append(up);
-    }
-    if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, t('Empty folder')));
-    for (const e of entries) {
-      const row = h('div', {
-        class: 'sftp-row' + (e.type === 'd' ? ' dir' : '') + (e.link ? ' link' : '') + (e.name.startsWith('.') ? ' hidden-file' : '') + (st.selected.has(e.name) ? ' selected' : ''),
-        dataset: { name: e.name }, title: `${e.modeStr} ${e.owner}:${e.group}${e.target ? ' → ' + e.target : ''}`,
-        role: 'option', tabindex: -1, 'aria-selected': String(st.selected.has(e.name)),
-      },
-        h('span', {}, e.type === 'd' ? '📁' : fileGlyph(e.name)),
-        h('span', { class: 'name' }, e.name),
-        h('span', { class: 'size' }, e.type === 'd' ? '' : fmtSize(e.size)),
-        h('span', { class: 'date' }, fmtDate(e.mtime))
-      );
-      row.addEventListener('click', (ev) => this.select(e, ev));
-      row.addEventListener('dblclick', () => this.open(e));
-      row.addEventListener('contextmenu', (ev) => {
-        ev.preventDefault();
-        if (!st.selected.has(e.name)) this.select(e, ev);
-        this.menu(ev.clientX, ev.clientY, e);
-      });
-      list.append(row);
+    if (st.path !== '/') list.append(h('div', { class: 'sftp-row dir', dataset: { name: '..' }, role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' })));
+    if (st.notice) list.append(h('div', { class: 'sftp-msg sftp-notice' }, st.notice)); // the folder that vanished under the panel (navigate)
+    if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, (st.filter || '').trim() ? t('No names contain "{text}"', { text: st.filter.trim() }) : t('Empty folder')));
+    const makeRow = (e) => {
+      const sel = st.selected.has(e.name);
+      const row = ROW.cloneNode(true);
+      row.className = 'sftp-row' + (e.type === 'd' ? ' dir' : '') + (e.link ? ' link' : '') + (e.name.startsWith('.') ? ' hidden-file' : '') + (sel ? ' selected' : '');
+      row.dataset.name = e.name;
+      // the tooltip: the full name first (the column clips long ones), then mode, owner and a link's target
+      row.title = `${e.name}\n${e.modeStr} ${e.owner}:${e.group}${e.target ? ' → ' + e.target + (e.broken ? ' ' + t('(broken)') : '') : ''}`;
+      if (sel) row.setAttribute('aria-selected', 'true');
+      const c = row.children;
+      c[0].textContent = e.type === 'd' ? '📁' : fileGlyph(e.name);
+      c[1].textContent = e.name;
+      c[2].textContent = e.type === 'd' ? '' : fmtSize(e.size);
+      c[3].textContent = fmtDate(e.mtime);
+      return row;
+    };
+    const first = Math.min(entries.length, Math.max(80, Math.ceil(list.clientHeight / 24) * 2)); // two screens: scrolling a little never shows a gap
+    const frag = document.createDocumentFragment();
+    for (let i = 0; i < first; i++) frag.append(makeRow(entries[i]));
+    list.append(frag);
+    if (first < entries.length) {
+      let i = first;
+      const step = (budgetMs) => {
+        const t0 = performance.now();
+        const f = document.createDocumentFragment();
+        while (i < entries.length) {
+          f.append(makeRow(entries[i++]));
+          if ((i & 127) === 0 && performance.now() - t0 > budgetMs) break;
+        }
+        list.append(f);
+        if (i < entries.length) this._fillRaf = requestAnimationFrame(() => step(6));
+        else {
+          this._fill = null;
+          this._syncRoving(document.activeElement === list); // the cursor row may have arrived with a late batch: the Tab stop (and the focus, while it still waits on the list) moves to it
+        }
+      };
+      this._fill = { step };
+      this._fillRaf = requestAnimationFrame(() => step(6));
     }
     this._syncRoving(hadFocus);
     if (headFocus) list.querySelector(`.sftp-head button[data-sort="${headFocus}"]`)?.focus({ preventScroll: true });
@@ -342,19 +447,57 @@ export class SftpPanel {
     repointOpeners((o) => (o.classList?.contains('sftp-row') && o.dataset.name ? this.rowFor(o.dataset.name) : null));
   }
 
-  /** Rows the keyboard cursor moves over, in display order (".." is focusable but outside the sequence). */
+  /** A chunked fill still running (renderList) is dropped: the listing is being drawn again. */
+  _stopFill() {
+    if (!this._fill) return;
+    cancelAnimationFrame(this._fillRaf);
+    this._fill = null;
+  }
+
+  /** Finish a chunked fill now, so every row is in the DOM for whoever asked. */
+  _flushFill() {
+    if (!this._fill) return;
+    const f = this._fill;
+    this._fill = null;
+    cancelAnimationFrame(this._fillRaf);
+    f.step(Infinity);
+  }
+
+  /** Rows the keyboard cursor moves over, in display order (".." is focusable but outside the sequence); a fill in progress is completed first. */
   rows() {
+    this._flushFill();
+    return this._rowsNow();
+  }
+
+  _rowsNow() {
     return [...this.els.list.querySelectorAll('.sftp-row[data-name]')].filter((r) => r.dataset.name !== '..');
   }
 
   rowFor(name) {
-    return name == null ? null : this.els.list.querySelector(`.sftp-row[data-name="${CSS.escape(name)}"]`);
+    if (name == null) return null;
+    const sel = `.sftp-row[data-name="${CSS.escape(name)}"]`;
+    let row = this.els.list.querySelector(sel);
+    if (!row && this._fill) { // not drawn yet: the rest of the listing is, then
+      this._flushFill();
+      row = this.els.list.querySelector(sel);
+    }
+    return row;
   }
 
-  /** The keyboard cursor's row: the last selected entry while it is shown, else the first entry. */
+  /**
+   * The keyboard cursor's row: the last selected entry while it is shown, else the first entry. Null while the last
+   * selected entry's row is still to be drawn by a fill in progress (the list itself takes the Tab stop meanwhile).
+   */
   cursorRow() {
     const st = this.state();
-    return (st && this.rows().find((r) => r.dataset.name === st.lastSel)) || this.rows()[0] || null;
+    if (!st) return null;
+    const rows = this._rowsNow();
+    if (st.lastSel != null) {
+      const row = rows.find((r) => r.dataset.name === st.lastSel);
+      if (row) return row;
+      if (this._fill && st.entries.some((e) => e.name === st.lastSel)) return null;
+    }
+    return rows[0] || null;
   }
 
   /** Roving tabindex: `row` is the list's single Tab stop; the list itself is one only while it has no rows. */
@@ -569,7 +712,7 @@ export class SftpPanel {
     if (!paths || !paths.length) {
       try {
         const ids = await window.api.sftp.upload(connId, [], dir); // native picker
-        if (ids && ids.length) toast(tn('Uploading {n} item', 'Uploading {n} items', ids.length), 'info');
+        if (ids && ids.length) toast(tn('Uploading {n} item to {dir}', 'Uploading {n} items to {dir}', ids.length, { dir }), 'info');
       } catch (e) {
         toast(errMsg(e), 'error');
       }
@@ -588,7 +731,7 @@ export class SftpPanel {
         if (!todo.length) return toast(t('Nothing to upload: every item already exists'), 'info');
       }
       const ids = await window.api.sftp.upload(connId, todo, dir);
-      if (ids && ids.length) toast(tn('Uploading {n} item', 'Uploading {n} items', ids.length), 'info');
+      if (ids && ids.length) toast(tn('Uploading {n} item to {dir}', 'Uploading {n} items to {dir}', ids.length, { dir }), 'info');
     } catch (e) {
       toast(errMsg(e), 'error');
     }
@@ -798,10 +941,13 @@ export class SftpPanel {
     for (const x of list) {
       const pct = x.total ? Math.min(100, Math.round((x.transferred / x.total) * 100)) : x.status === 'done' ? 100 : 0;
       const elapsed = (x.finishedAt || Date.now()) - x.startedAt;
-      const speed = elapsed > 300 ? t('{size}/s', { size: fmtSize((x.transferred / elapsed) * 1000) }) : '';
+      const speed = elapsed > 300 ? t('{size}/s', { size: fmtSize(((x.transferred - (x.resumedFrom || 0)) / elapsed) * 1000) }) : ''; // the bytes of this run, not of the .part resumed
       const sizes = { sent: fmtSize(x.transferred), size: fmtSize(x.total), done: x.filesDone, total: x.filesTotal };
-      const progress = x.filesTotal > 1 ? t('{sent} / {size} · {done}/{total} files', sizes) : t('{sent} / {size}', sizes);
-      const status = x.status === 'done' ? t('done') : x.status === 'error' ? x.error : x.status;
+      let progress = x.filesTotal > 1 ? t('{sent} / {size} · {done}/{total} files', sizes) : t('{sent} / {size}', sizes);
+      if (x.resumedFrom) progress = t('resuming at {size}', { size: fmtSize(x.resumedFrom) }) + ' · ' + progress; // a .part continued
+      // a cancelled transfer says why when a Disconnect ended it (main marks those; a plain cancel carries no reason, or
+      // "cancelled" itself from the FTP manager); an error shows its message
+      const status = x.status === 'done' ? t('done') : x.status === 'error' ? x.error : x.status === 'cancelled' && x.error && x.error !== 'cancelled' ? t('cancelled ({why})', { why: x.error }) : x.status;
       el.append(h('div', { class: 'xfer ' + x.status },
         h('div', { class: 'l1' }, h('span', { class: 'xfer-kind' }, icon(x.kind === 'upload' ? 'upload' : 'download')), h('span', { class: 'n', title: x.remote }, x.name),
           x.proto === 'zmodem' ? h('span', { class: 'xfer-proto', title: t('Zmodem transfer in the terminal (rz / sz)') }, 'zmodem') : null, // from a terminal, not the Sftp panel
@@ -813,6 +959,9 @@ export class SftpPanel {
     }
   }
 }
+
+/** The row every entry is cloned from (renderList): cloning beats building five elements through h() 20 000 times over. */
+const ROW = h('div', { class: 'sftp-row', role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span'), h('span', { class: 'name' }), h('span', { class: 'size' }), h('span', { class: 'date' }));
 
 function fileGlyph(name) {
   // U+FE0F forces colour-emoji presentation for the two glyphs that default to text style
