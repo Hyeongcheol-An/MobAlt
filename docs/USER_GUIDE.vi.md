@@ -67,7 +67,7 @@ rồi điền thẻ Cơ bản. Nhấp đúp vào phiên để kết nối; nhấ
 | SSH | Terminal qua SSH, kèm trình duyệt SFTP, đường hầm, chuyển tiếp X11 và agent |
 | Mosh | Terminal chuyển vùng qua client `mosh` (khởi động qua SSH) |
 | Cục bộ (Local) | Shell đăng nhập macOS của bạn (zsh/bash), có theo dõi thư mục |
-| Telnet | Telnet cổ điển với thương lượng NAWS/TTYPE |
+| Telnet | Telnet cổ điển với thương lượng NAWS/TTYPE; tên người dùng của phiên được gửi tại dấu nhắc `login:` |
 | Serial | Console USB-serial (baud, khung, điều khiển luồng, echo cục bộ) |
 | FTP | Trình duyệt tệp FTP / FTPS (TLS tường minh) trong bảng Sftp |
 | RDP / VNC | Chuyển sang Windows App hoặc Chia sẻ màn hình của macOS |
@@ -315,7 +315,8 @@ kết nối, và bạn được báo nếu có đường hầm không lắng ngh
   khi SSH kết nối" trong Cài đặt → Chung), nếu không thì mở từ nút "Mở SFTP cho máy chủ này (qua SSH)" của bảng hoặc
   mục "Mở trình duyệt SFTP" trong menu ngăn; kết nối bị đóng cùng với ngăn.
 - **Serial**: trình sửa phiên liệt kê các thiết bị USB-serial; đặt baud, bit dữ liệu/bit dừng, chẵn lẻ, điều khiển luồng,
-  echo cục bộ và ký tự Enter gửi đi (CR, LF, CRLF).
+  echo cục bộ và ký tự Enter gửi đi (CR, LF, CRLF). *Gửi Break* trong menu ngăn giữ đường truyền ở trạng thái break
+  trong 250 ms; thiết bị bị rút sẽ kết thúc ngăn với "Thiết bị … đã ngắt kết nối".
 - **RDP / VNC**: MobAlt ghi một tệp `.rdp` và mở Windows App, hoặc mở `vnc://` trong Chia sẻ
   màn hình. Phiên giữ máy chủ, người dùng và thư mục như mọi dấu trang khác.
 

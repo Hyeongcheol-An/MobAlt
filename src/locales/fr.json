@@ -1432,5 +1432,20 @@
   "Zoom pane (fill the tab) / restore": "Agrandir le volet (remplir l'onglet) / rétablir",
   "Zoom text": "Zoom du texte",
   "zoomed": "agrandi",
-  "zsh/bash integration (folder following)": "Intégration zsh/bash (suivi du dossier)"
+  "zsh/bash integration (folder following)": "Intégration zsh/bash (suivi du dossier)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — aucune connexion TCP en {s} s. En général, l'hôte ou le port est injoignable depuis ce réseau (essayez « nc -vz {host} {port} » dans un terminal local).",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — le serveur a répondu mais la négociation ne s'est pas terminée en {s} s.",
+  "{error} — the server closed the connection during the handshake.": "{error} — le serveur a fermé la connexion pendant la négociation.",
+  "{key} (passphrase)": "{key} (phrase secrète)",
+  "Connection attempt cancelled.": "Tentative de connexion annulée.",
+  "Device {path} disconnected": "Périphérique {path} déconnecté",
+  "Device {path} disconnected.": "Périphérique {path} déconnecté.",
+  "Resource busy — the port is open in another pane or program": "Ressource occupée — le port est ouvert dans un autre volet ou programme",
+  "Send Break": "Envoyer un Break",
+  "Sent at the login: prompt": "Envoyé à l'invite login:",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "Le navigateur SFTP est désactivé pour cette session — Actualiser liste quand même ses fichiers",
+  "SFTP unavailable on {session}: {error}": "SFTP indisponible sur {session} : {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "ssh-agent injoignable via SSH_AUTH_SOCK",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent : aucune clé chargée (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "Le mot de passe enregistré a été refusé. Saisissez le mot de passe de {account}"
 }

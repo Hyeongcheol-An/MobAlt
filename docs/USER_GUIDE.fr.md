@@ -69,7 +69,7 @@ et remplissez l'onglet Base. Double-cliquez sur une session pour vous connecter�
 | SSH | Terminal via SSH avec navigateur SFTP, tunnels, transfert X11 et transfert d'agent |
 | Mosh | Terminal itinérant via le client `mosh` (amorcé par SSH) |
 | Local | Votre shell de connexion macOS (zsh/bash) avec suivi du dossier |
-| Telnet | Telnet classique avec négociation NAWS/TTYPE |
+| Telnet | Telnet classique avec négociation NAWS/TTYPE ; le nom d'utilisateur de la session est envoyé à l'invite `login:` |
 | Série | Console série USB (débit, trame, contrôle de flux, écho local) |
 | FTP | Navigateur de fichiers FTP / FTPS (TLS explicite) dans le panneau Sftp |
 | RDP / VNC | Délègue à Windows App ou au Partage d'écran de macOS |
@@ -322,7 +322,8 @@ et vous êtes prévenu si l'un d'eux ne parvient pas à se lier à son port.
   dans Réglages → Général), sinon depuis le bouton « Ouvrir SFTP pour cet hôte (via SSH) » du panneau ou depuis
   « Ouvrir le navigateur SFTP » dans le menu du volet ; elle est fermée en même temps que le volet.
 - **Série** : l'éditeur liste les périphériques série USB ; réglez le débit, les bits de données et d'arrêt, la parité, le contrôle de flux,
-  l'écho local et ce qu'envoie Entrée (CR, LF, CRLF).
+  l'écho local et ce qu'envoie Entrée (CR, LF, CRLF). *Envoyer un Break* dans le menu du volet maintient la ligne en
+  état de break pendant 250 ms ; un périphérique débranché termine le volet par « Périphérique … déconnecté ».
 - **RDP / VNC** : MobAlt écrit un fichier `.rdp` et ouvre Windows App, ou ouvre `vnc://` dans le Partage
   d'écran. La session conserve l'hôte, l'utilisateur et le dossier comme n'importe quel autre signet.
 

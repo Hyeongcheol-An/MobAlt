@@ -503,6 +503,7 @@ export class TermPane {
       else if (this.monitorSample) this._monitorRender(this.monitorSample);
     }
     if (this.overlay) this.showOverlay(this._overlayReason);
+    if (this.connectingEl) this._syncConnecting();
     if (this.placeholder) {
       if (this.kind === 'ftp' && this._ftpInfo) this.showFtpInfo(this._ftpInfo.state, this._ftpInfo.msg);
       else if (this.kind === 'empty') this.showPlaceholder();
@@ -699,6 +700,7 @@ export class TermPane {
       this.dead = false;
       this.hideOverlay();
     }
+    this._syncConnecting();
     this.headEl.querySelector('.dot').className = 'dot ' + status;
     if (status === 'connected') this.monitorFailed = false; // a new connection gets a new try
     this.syncMonitor(); // the bar polls a connected pane and hides on anything else
@@ -806,7 +808,7 @@ export class TermPane {
         this.app.registerPane(this);
       } else if (this.kind === 'telnet') {
         this.setStatus('connecting');
-        const r = await window.api.term.spawnTelnet({ host: this.session.host, port: this.session.port || 23, ...size });
+        const r = await window.api.term.spawnTelnet({ host: this.session.host, port: this.session.port || 23, username: this.session.username || '', ...size });
         this.termId = r.id;
         this.app.registerPane(this);
         this.setStatus('connected');
@@ -899,6 +901,7 @@ export class TermPane {
   /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'); `sentence`: with its full stop (the dead line). */
   lostMessage(detail, sentence = false) {
     const s = this.session || {};
+    if (this.kind === 'serial') return sentence ? t('Device {path} disconnected.', { path: s.serialPath }) : t('Device {path} disconnected', { path: s.serialPath });
     const where = s.name || `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
     if (sentence) return detail ? t('Connection to {where} was lost: {detail}.', { where, detail }) : t('Connection to {where} was closed by the server.', { where });
     return detail ? t('Connection to {where} was lost: {detail}', { where, detail }) : t('Connection to {where} was closed by the server', { where });
@@ -920,27 +923,34 @@ export class TermPane {
       this.term.write(`\r\n\x1b[31m${t('Mosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?')}\x1b[0m\r\n`);
     }
     const lost = reason === 'lost'; // not a Disconnect, ⌘W or `exit`: say so in the terminal (app.js toasts it too)
+    const cancelled = reason === 'cancelled'; // Disconnect (the pane's Cancel) while it was still connecting
     this.setStatus(failed ? 'failed' : 'disconnected', lost ? t('connection lost') : msg);
     if (this.kind === 'local' && code === 0 && !wasConnecting) {
       this.app.closePane(this, true);
       return;
     }
-    this.markDead(lost ? this.lostMessage(detail, true) : null);
+    this.markDead(lost ? this.lostMessage(detail, true) : cancelled ? t('Connection attempt cancelled.') : null, lost ? 'lost' : cancelled ? 'cancelled' : null);
   }
 
-  /** The pane is over: a dim line (what = why, a sentence; default "Session ended.") and the Reconnect / Close overlay. */
-  markDead(what) {
+  /**
+   * The pane is over: a dim line (what = why, a sentence; default "Session ended.") and the Reconnect / Close overlay,
+   * whose caption follows `reason` ('lost' | 'cancelled' | null — see showOverlay).
+   */
+  markDead(what, reason) {
     this.dead = true;
     this.term.write(`\r\n\x1b[2m${t('── {what} Press Enter to reconnect, ⌘W to close. ──', { what: what || t('Session ended.') })}\x1b[0m\r\n`);
-    this.showOverlay(what ? 'lost' : null);
+    this.showOverlay(reason || (what ? 'lost' : null));
   }
 
-  /** The Reconnect / Close overlay; reason 'lost' says the connection was lost, anything else that the session (or the shell) ended. */
+  /**
+   * The Reconnect / Close overlay; reason 'lost' says the connection was lost, 'cancelled' that the attempt was
+   * cancelled, anything else that the session (or the shell) ended.
+   */
   showOverlay(reason) {
     this.hideOverlay();
     this._overlayReason = reason || null; // drawn again in the new language on a switch (_relabel)
     this.overlay = h('div', { class: 'pane-overlay' },
-      h('span', {}, reason === 'lost' ? t('Connection lost.') : this.kind === 'local' ? t('Shell exited.') : t('Session ended.')),
+      h('span', {}, reason === 'lost' ? t('Connection lost.') : reason === 'cancelled' ? t('Connection attempt cancelled.') : this.kind === 'local' ? t('Shell exited.') : t('Session ended.')),
       h('button', { onclick: () => this.reconnect() }, t('↻ Reconnect')),
       h('button', { onclick: () => this.app.closePane(this) }, t('Close'))
     );
@@ -954,6 +964,30 @@ export class TermPane {
     }
   }
 
+  /**
+   * While an SSH pane is connecting (the handshake, a host-key or password dialog, a jump host, a server that answers
+   * late): a strip in the overlay's style with a Cancel button — Disconnect for a pane that has nothing to disconnect
+   * yet; the attempt behind it is aborted in the main process and the pane ends with "Connection attempt cancelled."
+   */
+  _syncConnecting() {
+    const show = this.status === 'connecting' && this.kind === 'ssh' && !this.disposed;
+    if (!show) {
+      if (this.connectingEl) {
+        this.connectingEl.remove();
+        this.connectingEl = null;
+      }
+      return;
+    }
+    const s = this.session || {};
+    const where = `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
+    const el = h('div', { class: 'pane-overlay connecting' },
+      h('span', {}, t('Connecting to {where}…', { where })),
+      h('button', { onclick: () => this.disconnect() }, t('Cancel')));
+    if (this.connectingEl) this.connectingEl.replaceWith(el);
+    else this.el.append(el);
+    this.connectingEl = el;
+  }
+
   async reconnect() {
     if (this.termId) {
       await this.disconnect();
@@ -965,6 +999,18 @@ export class TermPane {
     this.term.write('\r\n');
     await this.start();
     this.focus();
+  }
+
+  /** Send Break on a serial pane (the pane menu): 250 ms of break on the line; the driver's refusal (a pty has none) is toasted. */
+  async sendBreak() {
+    if (this.kind !== 'serial' || !this.termId || this.dead) return false;
+    try {
+      await window.api.term.serialBreak(this.termId);
+      return true;
+    } catch (e) {
+      toast(t('Serial error: {error}', { error: errMsg(e) }), 'error');
+      return false;
+    }
   }
 
   async disconnect() {
@@ -1504,6 +1550,8 @@ export class TermPane {
       this.monitorAllowed() ? { label: this.monitorEnabled() ? t('Hide Remote Monitoring Bar') : t('Show Remote Monitoring Bar'), action: () => this.toggleMonitor() } : null,
       this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? t('Open file browser') : t('Open SFTP Browser'), action: () => this.app.sftpPanel.show(this.termId) } : null,
       this.kind === 'mosh' ? { label: t('Open SFTP Browser'), action: () => this.openSftpCompanion(), disabled: this.dead } : null,
+      // a serial console's break condition (250 ms on the line): what some boards and consoles take as an attention key
+      this.kind === 'serial' ? { label: t('Send Break'), action: () => this.sendBreak(), disabled: this.dead || !this.termId } : null,
       this.kind !== 'local' && !empty ? { label: this.dead ? t('Reconnect') : t('Disconnect'), action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
       '-',
       { label: t('Close Pane'), key: '⇧⌘W', action: () => this.app.closePane(this) },

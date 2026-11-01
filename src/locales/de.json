@@ -1492,5 +1492,20 @@
   "Zoom pane (fill the tab) / restore": "Bereich maximieren (Tab füllen) / wiederherstellen",
   "Zoom text": "Textgröße",
   "zoomed": "maximiert",
-  "zsh/bash integration (folder following)": "zsh/bash-Integration (Ordner folgen)"
+  "zsh/bash integration (folder following)": "zsh/bash-Integration (Ordner folgen)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — keine TCP-Verbindung innerhalb von {s} s. Meist ist Host/Port aus diesem Netz nicht erreichbar (prüfen Sie mit „nc -vz {host} {port}“ in einem lokalen Terminal).",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — der Server hat geantwortet, aber der Handshake war nach {s} s nicht abgeschlossen.",
+  "{error} — the server closed the connection during the handshake.": "{error} — der Server hat die Verbindung während des Handshakes geschlossen.",
+  "{key} (passphrase)": "{key} (Passphrase)",
+  "Connection attempt cancelled.": "Verbindungsversuch abgebrochen.",
+  "Device {path} disconnected": "Gerät {path} getrennt",
+  "Device {path} disconnected.": "Gerät {path} getrennt.",
+  "Resource busy — the port is open in another pane or program": "Ressource belegt — der Port ist in einem anderen Bereich oder Programm geöffnet",
+  "Send Break": "Break senden",
+  "Sent at the login: prompt": "Wird am login:-Prompt gesendet",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "Der SFTP-Browser ist für diese Sitzung aus — Aktualisieren listet die Dateien trotzdem",
+  "SFTP unavailable on {session}: {error}": "SFTP auf {session} nicht verfügbar: {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "ssh-agent unter SSH_AUTH_SOCK nicht erreichbar",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: keine Schlüssel geladen (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "Das gesicherte Passwort wurde abgelehnt. Passwort für {account} eingeben"
 }

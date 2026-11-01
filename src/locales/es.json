@@ -1487,5 +1487,20 @@
   "Zoom pane (fill the tab) / restore": "Maximizar panel (ocupar la pestaña) / restaurar",
   "Zoom text": "Tamaño del texto",
   "zoomed": "maximizado",
-  "zsh/bash integration (folder following)": "Integración con zsh/bash (seguir la carpeta)"
+  "zsh/bash integration (folder following)": "Integración con zsh/bash (seguir la carpeta)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — sin conexión TCP en {s} s. Normalmente el host o el puerto no es accesible desde esta red (prueba \"nc -vz {host} {port}\" en un terminal local).",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — el servidor respondió, pero el handshake no terminó en {s} s.",
+  "{error} — the server closed the connection during the handshake.": "{error} — el servidor cerró la conexión durante el handshake.",
+  "{key} (passphrase)": "{key} (frase de contraseña)",
+  "Connection attempt cancelled.": "Intento de conexión cancelado.",
+  "Device {path} disconnected": "Dispositivo {path} desconectado",
+  "Device {path} disconnected.": "Dispositivo {path} desconectado.",
+  "Resource busy — the port is open in another pane or program": "Recurso ocupado — el puerto está abierto en otro panel o programa",
+  "Send Break": "Enviar Break",
+  "Sent at the login: prompt": "Se envía en el indicador login:",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "El explorador SFTP está desactivado para esta sesión — Actualizar lista sus archivos de todos modos",
+  "SFTP unavailable on {session}: {error}": "SFTP no disponible en {session}: {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "ssh-agent no accesible en SSH_AUTH_SOCK",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: ninguna clave cargada (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "La contraseña guardada fue rechazada. Introduce la contraseña de {account}"
 }

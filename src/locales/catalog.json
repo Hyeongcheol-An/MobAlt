@@ -98,7 +98,8 @@
     },
     "(none)": {
       "refs": [
-        "src/renderer/dialogs.js"
+        "src/renderer/dialogs.js",
+        "src/main/ssh.js"
       ]
     },
     "(root)": {
@@ -182,12 +183,27 @@
         "src/main/ssh.js"
       ]
     },
+    "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
     "{error} — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.": {
       "refs": [
         "src/main/ssh.js"
       ]
     },
     "{error} — the host is reachable but nothing listens on that port.": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
+    "{error} — the server answered but the handshake did not finish within {s}s.": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
+    "{error} — the server closed the connection during the handshake.": {
       "refs": [
         "src/main/ssh.js"
       ]
@@ -259,6 +275,11 @@
       ]
     },
     "{kex} (post-quantum)": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
+    "{key} (passphrase)": {
       "refs": [
         "src/main/ssh.js"
       ]
@@ -1049,6 +1070,7 @@
         "src/renderer/panels.js",
         "src/renderer/sftp.js",
         "src/renderer/sidebar.js",
+        "src/renderer/terminal.js",
         "src/renderer/ui.js",
         "src/main/main.js"
       ]
@@ -1417,6 +1439,11 @@
     "Connecting via SSH…": {
       "refs": [
         "src/renderer/sftp.js"
+      ]
+    },
+    "Connection attempt cancelled.": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "connection closed during the host key check": {
@@ -1801,6 +1828,16 @@
     "Detach to New Window": {
       "refs": [
         "src/renderer/layout.js"
+      ]
+    },
+    "Device {path} disconnected": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Device {path} disconnected.": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Device path": {
@@ -3977,6 +4014,7 @@
     },
     "Not connected": {
       "refs": [
+        "src/main/main.js",
         "src/main/ssh.js"
       ]
     },
@@ -4859,6 +4897,11 @@
         "src/renderer/panels.js"
       ]
     },
+    "Resource busy — the port is open in another pane or program": {
+      "refs": [
+        "src/main/terminals.js"
+      ]
+    },
     "Restart now": {
       "refs": [
         "src/main/updater.js"
@@ -5145,6 +5188,11 @@
         "src/main/zmodem.js"
       ]
     },
+    "Send Break": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
     "Send files with Zmodem (rz)": {
       "refs": [
         "src/main/zmodem.js"
@@ -5160,6 +5208,11 @@
         "src/main/wol.js"
       ]
     },
+    "Sent at the login: prompt": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Serial": {
       "refs": [
         "src/renderer/ui.js"
@@ -5172,6 +5225,7 @@
     },
     "Serial error: {error}": {
       "refs": [
+        "src/renderer/terminal.js",
         "src/main/terminals.js"
       ]
     },
@@ -5308,6 +5362,11 @@
         "src/renderer/index.html"
       ]
     },
+    "SFTP browser is off for this session — Refresh lists its files anyway": {
+      "refs": [
+        "src/renderer/sftp.js"
+      ]
+    },
     "SFTP follows terminal folder (injects prompt hook)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -5341,6 +5400,11 @@
     "SFTP Panel": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "SFTP unavailable on {session}: {error}": {
+      "refs": [
+        "src/renderer/sftp.js"
       ]
     },
     "SFTP: {state}": {
@@ -5558,9 +5622,19 @@
         "src/main/ssh.js"
       ]
     },
+    "ssh-agent not reachable at SSH_AUTH_SOCK": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
     "ssh-agent: {error}": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "ssh-agent: no keys loaded (ssh-add -l)": {
+      "refs": [
+        "src/main/ssh.js"
       ]
     },
     "ssh-keygen failed: {error}": {
@@ -5894,6 +5968,11 @@
       ]
     },
     "The saved passphrase does not match. Enter passphrase for key {key}": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
+    "The saved password was rejected. Enter {account}'s password": {
       "refs": [
         "src/main/ssh.js"
       ]

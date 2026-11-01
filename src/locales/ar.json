@@ -1483,5 +1483,20 @@
   "Zoom pane (fill the tab) / restore": "تكبير الجزء (ملء علامة التبويب) / استعادة",
   "Zoom text": "تكبير/تصغير النص",
   "zoomed": "مكبّر",
-  "zsh/bash integration (folder following)": "تكامل zsh/bash (تتبّع المجلد)"
+  "zsh/bash integration (folder following)": "تكامل zsh/bash (تتبّع المجلد)",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — لم يُنشأ اتصال TCP خلال {s} ث. غالبًا يتعذر الوصول إلى المضيف/المنفذ من هذه الشبكة (جرّب \"nc -vz {host} {port}\" في طرفية محلية).",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — أجاب الخادم لكن المصافحة لم تكتمل خلال {s} ث.",
+  "{error} — the server closed the connection during the handshake.": "{error} — أغلق الخادم الاتصال أثناء المصافحة.",
+  "{key} (passphrase)": "{key} (عبارة المرور)",
+  "Connection attempt cancelled.": "أُلغيت محاولة الاتصال.",
+  "Device {path} disconnected": "الجهاز {path} مفصول",
+  "Device {path} disconnected.": "الجهاز {path} مفصول.",
+  "Resource busy — the port is open in another pane or program": "المورد مشغول — المنفذ مفتوح في جزء أو برنامج آخر",
+  "Send Break": "إرسال Break",
+  "Sent at the login: prompt": "يُرسل عند مطالبة login:",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "متصفح SFTP متوقف لهذه الجلسة — التحديث يسرد ملفاتها على أي حال",
+  "SFTP unavailable on {session}: {error}": "SFTP غير متاح على {session}: {error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "تعذر الوصول إلى ssh-agent عبر SSH_AUTH_SOCK",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent: لا مفاتيح محمّلة (ssh-add -l)",
+  "The saved password was rejected. Enter {account}'s password": "رُفضت كلمة السر المحفوظة. أدخل كلمة سر {account}"
 }

@@ -1354,5 +1354,20 @@
   "Zoom pane (fill the tab) / restore": "ペインをズーム（タブ全体に表示） / 元に戻す",
   "Zoom text": "文字の拡大/縮小",
   "zoomed": "ズーム中",
-  "zsh/bash integration (folder following)": "zsh/bash連携（フォルダの追従）"
+  "zsh/bash integration (folder following)": "zsh/bash連携（フォルダの追従）",
+  "{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try \"nc -vz {host} {port}\" in a local terminal).": "{error} — {s}秒以内にTCP接続が確立しませんでした。通常はこのネットワークからホスト/ポートに到達できません（ローカルターミナルで“nc -vz {host} {port}”を試してください）。",
+  "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — サーバは応答しましたが、{s}秒以内にハンドシェイクが完了しませんでした。",
+  "{error} — the server closed the connection during the handshake.": "{error} — ハンドシェイク中にサーバが接続を閉じました。",
+  "{key} (passphrase)": "{key}（パスフレーズ）",
+  "Connection attempt cancelled.": "接続の試行がキャンセルされました。",
+  "Device {path} disconnected": "デバイス{path}が切断されました",
+  "Device {path} disconnected.": "デバイス{path}が切断されました。",
+  "Resource busy — the port is open in another pane or program": "リソースが使用中です — このポートは別のペインかプログラムが開いています",
+  "Send Break": "Breakを送信",
+  "Sent at the login: prompt": "login: プロンプトで送信されます",
+  "SFTP browser is off for this session — Refresh lists its files anyway": "このセッションではSFTPブラウザがオフです — 更新するとファイルを一覧します",
+  "SFTP unavailable on {session}: {error}": "{session}でSFTPを利用できません：{error}",
+  "ssh-agent not reachable at SSH_AUTH_SOCK": "SSH_AUTH_SOCKのssh-agentに接続できません",
+  "ssh-agent: no keys loaded (ssh-add -l)": "ssh-agent：鍵が読み込まれていません（ssh-add -l）",
+  "The saved password was rejected. Enter {account}'s password": "保存したパスワードが拒否されました。{account}のパスワードを入力してください"
 }

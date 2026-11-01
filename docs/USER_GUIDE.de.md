@@ -71,7 +71,7 @@ diesem Ordner).
 | SSH | Terminal über SSH mit SFTP-Browser, Tunneln, X11- und Agent-Weiterleitung |
 | Mosh | Roaming-Terminal über den `mosh`-Client (per SSH gestartet) |
 | Lokal | Ihre macOS-Login-Shell (zsh/bash) mit Ordnerverfolgung |
-| Telnet | Klassisches Telnet mit NAWS/TTYPE-Aushandlung |
+| Telnet | Klassisches Telnet mit NAWS/TTYPE-Aushandlung; der Benutzername der Sitzung wird am `login:`-Prompt gesendet |
 | Seriell | USB-Seriell-Konsole (Baudrate, Datenformat, Flusskontrolle, lokales Echo) |
 | FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „Sftp“ |
 | RDP / VNC | Übergibt an Windows App oder die macOS-Bildschirmfreigabe |
@@ -343,7 +343,8 @@ diese Sitzung verbindet, und Sie erfahren es, wenn einer sich nicht binden läss
   wechseln“ unter „Einstellungen“ → „Allgemein“), sonst über die Taste „SFTP für diesen Host öffnen (über SSH)“ im Panel
   oder „SFTP-Browser öffnen“ im Menü des Bereichs; sie wird zusammen mit dem Bereich getrennt.
 - **Seriell**: Der Editor listet USB-Seriell-Geräte; stellen Sie Baudrate, Daten-/Stoppbits, Parität, Flusskontrolle,
-  lokales Echo und das ein, was die Eingabetaste sendet (CR, LF, CRLF).
+  lokales Echo und das ein, was die Eingabetaste sendet (CR, LF, CRLF). *Break senden* im Bereichsmenü hält die
+  Leitung 250 ms im Break-Zustand; ein abgezogenes Gerät beendet den Bereich mit „Gerät … getrennt“.
 - **RDP / VNC**: MobAlt schreibt eine `.rdp`-Datei und öffnet Windows App oder öffnet `vnc://` in der
   Bildschirmfreigabe. Die Sitzung behält Host, Benutzer und Ordner wie jedes andere Lesezeichen.
 

@@ -69,7 +69,7 @@ derecha/hacia abajo, editar, duplicar, eliminar, iniciar un túnel, nueva sesió
 | SSH | Terminal por SSH con explorador SFTP, túneles, X11 y reenvío del agente |
 | Mosh | Terminal itinerante mediante el cliente `mosh` (arrancado por SSH) |
 | Local | Tu shell de inicio de sesión de macOS (zsh/bash) con seguimiento de carpeta |
-| Telnet | Telnet clásico con negociación NAWS/TTYPE |
+| Telnet | Telnet clásico con negociación NAWS/TTYPE; el nombre de usuario de la sesión se envía en el indicador `login:` |
 | Serie | Consola USB-serie (baudios, trama, control de flujo, eco local) |
 | FTP | Explorador de archivos FTP / FTPS (TLS explícito) en el panel Sftp |
 | RDP / VNC | Delega en Windows App o en Compartir Pantalla de macOS |
@@ -332,7 +332,8 @@ avisa si alguno no consigue enlazar su puerto.
   «Abrir SFTP para este host (vía SSH)» del panel o «Abrir explorador SFTP» en el menú del panel; se cierra junto con el
   panel.
 - **Serie**: el editor enumera los dispositivos USB-serie; configura baudios, bits de datos/parada, paridad, control
-  de flujo, eco local y lo que envía Intro (CR, LF, CRLF).
+  de flujo, eco local y lo que envía Intro (CR, LF, CRLF). *Enviar Break* en el menú del panel mantiene la línea en
+  estado de break durante 250 ms; un dispositivo desconectado termina el panel con «Dispositivo … desconectado».
 - **RDP / VNC**: MobAlt escribe un archivo `.rdp` y abre Windows App, o abre `vnc://` en Compartir Pantalla. La sesión
   guarda host, usuario y carpeta como cualquier otro marcador.
 

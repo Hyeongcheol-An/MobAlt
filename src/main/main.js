@@ -631,6 +631,12 @@ function applyMenuState() {
 app.on('browser-window-focus', () => applyMenuState());
 
 // ---------- IPC ----------
+/** A session log's file-name stamp, in local time: 2026-11-01T21-05-09 (the ISO form, with the clock as the user reads it). */
+function localStamp(d = new Date()) {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+}
+
 function sizeOf(size) {
   return { cols: Math.max(2, (size && size.cols) || 80), rows: Math.max(1, (size && size.rows) || 24) };
 }
@@ -1006,10 +1012,16 @@ function registerIpc() {
   ipcMain.on('term:kill', (_e, id) => registry.kill(id));
   ipcMain.handle('term:log-start', (_e, id, name) => {
     const s = store.getSettings();
-    const dir = s.logDir || path.join(app.getPath('documents'), 'MobAlt Logs');
+    // the default folder is ~/Documents/MobAlt Logs — except for a test run (MOBALT_TEST_SCRIPT), which logs under its
+    // own user-data folder: the harness never writes into the real Documents (test/qa/README.md)
+    const dir = s.logDir || path.join(process.env.MOBALT_TEST_SCRIPT ? app.getPath('userData') : app.getPath('documents'), 'MobAlt Logs');
     const safe = String(name || '').replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '') || 'session';
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    return registry.startLog(id, path.join(dir, `${safe}_${stamp}.log`), { plain: !!s.logPlainText });
+    return registry.startLog(id, path.join(dir, `${safe}_${localStamp()}.log`), { plain: !!s.logPlainText });
+  });
+  ipcMain.handle('serial:break', async (_e, id) => {
+    const h = registry.get(id);
+    if (!h || !h.sendBreak) throw new Error(t('Not connected'));
+    return h.sendBreak();
   });
   ipcMain.handle('term:log-stop', (_e, id) => registry.stopLog(id));
 
