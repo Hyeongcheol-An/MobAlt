@@ -1,7 +1,8 @@
 'use strict';
 // What app.asar ships (scripts/perf-size.sh, test/qa/perf.js): the size by top-level folder, by package, by kind of
 // file that need not be in a release (foreign-platform prebuilds, TypeScript sources, C++ headers and build files,
-// documentation), from the archive's header — nothing is extracted.
+// documentation), from the archive's header — nothing is extracted. (@serialport/binding-mock looks like one but is
+// not: serialport's index requires it.)
 //   node test/qa/perf-asar.js [app.asar]
 const path = require('path');
 const asar = require('@electron/asar');
@@ -24,7 +25,6 @@ const cats = [
   ['C/C++ headers, sources, gyp and build files', /\.(h|hpp|cc|cpp|c|gyp|gypi|mk|a|o|d|stamp)$|\/Makefile$|\/obj\.target\//],
   ['Markdown documentation', /\.md$/],
   ['i18n catalog and locale readme (dev only)', /^src\/locales\/(catalog\.json|README\.md)$/],
-  ['serialport mock binding', /\/@serialport\/binding-mock\//],
 ];
 for (const [name, re] of cats) { const m = files.filter((f) => re.test(f.p)); console.log(`| ${name} | ${mb(sum(m))} | ${m.length} |`); }
 const all = new Set(); for (const [, re] of cats) for (const f of files) if (re.test(f.p)) all.add(f);
