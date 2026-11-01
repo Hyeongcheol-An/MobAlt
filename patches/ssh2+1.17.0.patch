@@ -1,8 +1,8 @@
 diff --git a/node_modules/ssh2/lib/protocol/constants.js b/node_modules/ssh2/lib/protocol/constants.js
-index ad77592..4a1be1e 100644
+index ad77592..bf13467 100644
 --- a/node_modules/ssh2/lib/protocol/constants.js
 +++ b/node_modules/ssh2/lib/protocol/constants.js
-@@ -53,6 +53,11 @@ if (curve25519Supported) {
+@@ -53,6 +53,12 @@ if (curve25519Supported) {
    DEFAULT_KEX.unshift('curve25519-sha256@libssh.org');
  }
  const SUPPORTED_KEX = DEFAULT_KEX.concat([
@@ -10,20 +10,23 @@ index ad77592..4a1be1e 100644
 +  // never in the defaults, a client opts in through `algorithms.kex`
 +  'mlkem768x25519-sha256',
 +  'sntrup761x25519-sha512@openssh.com',
++  'sntrup761x25519-sha512',
 +
    // https://tools.ietf.org/html/rfc4419#section-4
    'diffie-hellman-group-exchange-sha1',
  
 diff --git a/node_modules/ssh2/lib/protocol/kex-pq.js b/node_modules/ssh2/lib/protocol/kex-pq.js
 new file mode 100644
-index 0000000..e356a69
+index 0000000..3178da0
 --- /dev/null
 +++ b/node_modules/ssh2/lib/protocol/kex-pq.js
-@@ -0,0 +1,180 @@
+@@ -0,0 +1,187 @@
 +'use strict';
 +// Post-quantum hybrid key exchange (client side): ML-KEM-768 + X25519 (`mlkem768x25519-sha256`, OpenSSH 9.9+, the
 +// default of OpenSSH 10) and Streamlined NTRU Prime 761 + X25519 (`sntrup761x25519-sha512@openssh.com`, OpenSSH
-+// 8.9+). Wire format as OpenSSH's kexmlkem768x25519.c / kexsntrup761x25519.c and draft-kampanakis-curdle-ssh-pq-ke:
++// 8.5+, on by default from 9.0; its IANA name `sntrup761x25519-sha512`, offered by OpenSSH 9.9+ and TinySSH, is
++// the same exchange). Wire format as OpenSSH's kexmlkem768x25519.c / kexsntrup761x25519.c and
++// draft-kampanakis-curdle-ssh-pq-ke:
 +//
 +//   client → SSH_MSG_KEX_ECDH_INIT (30)   string Q_C = KEM public key ‖ client X25519 public key
 +//   server → SSH_MSG_KEX_ECDH_REPLY (31)  string K_S, string Q_S = KEM ciphertext ‖ server X25519 public key,
@@ -50,9 +53,11 @@ index 0000000..e356a69
 +// SubjectPublicKeyInfo prefix of a raw X25519 public key (RFC 8410): what Node's createPublicKey() takes
 +const X25519_SPKI_PREFIX = Buffer.from('302a300506032b656e032100', 'hex');
 +
++const SNTRUP761 = Object.freeze({ kem: 'sntrup761', hash: 'sha512' });
 +const METHODS = Object.freeze({
 +  'mlkem768x25519-sha256': Object.freeze({ kem: 'mlkem768', hash: 'sha256' }),
-+  'sntrup761x25519-sha512@openssh.com': Object.freeze({ kem: 'sntrup761', hash: 'sha512' }),
++  'sntrup761x25519-sha512@openssh.com': SNTRUP761,
++  'sntrup761x25519-sha512': SNTRUP761,
 +});
 +const KEX_NAMES = Object.freeze(Object.keys(METHODS));
 +
@@ -118,18 +123,21 @@ index 0000000..e356a69
 +        format: 'der',
 +      }),
 +    });
++    let zero = 0;
++    for (let i = 0; i < xSecret.length; ++i)
++      zero |= xSecret[i];
++    if (xSecret.length !== X25519_SIZE || zero === 0)
++      return new Error('Invalid X25519 shared secret');
++    return createHash(hashName).update(kemSecret).update(xSecret).digest();
 +  } catch (ex) {
 +    return (ex instanceof Error ? ex : new Error(String(ex)));
++  } finally {
++    // on every path, as OpenSSH's explicit_bzero at `out:` does
++    if (kemSecret)
++      kemSecret.fill(0);
++    if (xSecret)
++      xSecret.fill(0);
 +  }
-+  let zero = 0;
-+  for (let i = 0; i < xSecret.length; ++i)
-+    zero |= xSecret[i];
-+  if (xSecret.length !== X25519_SIZE || zero === 0)
-+    return new Error('Invalid X25519 shared secret');
-+  const secret = createHash(hashName).update(kemSecret).update(xSecret).digest();
-+  kemSecret.fill(0);
-+  xSecret.fill(0);
-+  return secret;
 +}
 +
 +let Hybrid;
@@ -201,7 +209,7 @@ index 0000000..e356a69
 +  x25519Raw,
 +};
 diff --git a/node_modules/ssh2/lib/protocol/kex.js b/node_modules/ssh2/lib/protocol/kex.js
-index 811e631..47ca123 100644
+index 811e631..87a0088 100644
 --- a/node_modules/ssh2/lib/protocol/kex.js
 +++ b/node_modules/ssh2/lib/protocol/kex.js
 @@ -31,6 +31,7 @@ const {
@@ -212,12 +220,13 @@ index 811e631..47ca123 100644
  const {
    bufferFill,
    bufferParser,
-@@ -1587,6 +1588,15 @@ const createKeyExchange = (() => {
+@@ -1587,6 +1588,16 @@ const createKeyExchange = (() => {
      if (typeof kexType === 'string') {
        args = [negotiated, ...args];
        switch (kexType) {
 +        case 'mlkem768x25519-sha256':
-+        case 'sntrup761x25519-sha512@openssh.com': {
++        case 'sntrup761x25519-sha512@openssh.com':
++        case 'sntrup761x25519-sha512': {
 +          // post-quantum hybrids (kex-pq.js): only with a registered KEM
 +          const pq = kexPQ.create(KeyExchange, kexType, args);
 +          if (!pq)

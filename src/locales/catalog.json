@@ -3965,6 +3965,11 @@
         "src/main/algorithms.js"
       ]
     },
+    "Not available in this build: its ssh2 is missing the post-quantum patch": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "not connected": {
       "refs": [
         "src/main/ssh.js"
@@ -4025,7 +4030,7 @@
         "src/renderer/dialogs.js"
       ]
     },
-    "Offers the ML-KEM and sntrup761 hybrid key exchanges first; the server needs OpenSSH 8.9 or newer (ML-KEM: 9.9 or newer). Off, the key exchange is as before.": {
+    "Offers the ML-KEM and sntrup761 hybrid key exchanges first — sntrup761: OpenSSH 8.5 or newer on the server (on by default from 9.0); ML-KEM: 9.9 or newer. Off, the key exchange is as before.": {
       "refs": [
         "src/renderer/dialogs.js"
       ]

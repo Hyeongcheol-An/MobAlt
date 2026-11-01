@@ -5,7 +5,8 @@
 // the option on, a session forced to each hybrid connects to the test sshd (OpenSSH 10.5) and the grey handshake
 // line names the method "(post-quantum)"; left to its own list — or the legacy preset — the session negotiates
 // ML-KEM (the hybrids go first); with the option off the previous default (curve25519) is back and the line never
-// says post-quantum. Local sshd only: no remote server in CI.
+// says post-quantum. A Mosh session's host-key check runs with the option and prints its line into the pane; its
+// SFTP companion connects over the same settings. Local sshd only (and the Mac's mosh): no remote server in CI.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -22,8 +23,8 @@
     throw new Error('timeout waiting for ' + what);
   };
   // terminal text with wrapped rows joined back into their line (the handshake line can wrap at 80 columns)
-  const text = (pane) => {
-    const b = pane.term.buffer.active;
+  const text = (pane, buffer) => {
+    const b = buffer || pane.term.buffer.active;
     let out = '';
     for (let i = 0; i < b.length; i++) {
       const l = b.getLine(i);
@@ -71,7 +72,7 @@
     await sleep(300);
     return { status, line: m ? m[0] : '', kex: m ? m[1] : '', pq: !!(m && m[2]), hostKey: m ? m[3] : '', cipher: m ? m[4] : '', saysPq: /\(post-quantum\)/.test(txt) };
   };
-  const MLKEM = 'mlkem768x25519-sha256', SNTRUP = 'sntrup761x25519-sha512@openssh.com';
+  const MLKEM = 'mlkem768x25519-sha256', SNTRUP = 'sntrup761x25519-sha512@openssh.com', SNTRUP_IANA = 'sntrup761x25519-sha512';
   try {
     await app.saveSettings({ confirmClose: false });
     const user = app.info.home.split('/').pop();
@@ -83,11 +84,12 @@
     let m = await openAdvanced(s);
     const cb = cbOf(m, 'Post-quantum key exchange');
     results.checkboxOffByDefault = !!cb && cb.checked === false && session(s.id).pqKex !== true;
-    results.helpLine = [...m.querySelectorAll('.form-help')].some((e) => visible(e) && /ML-KEM and sntrup761/.test(e.textContent) && /OpenSSH 8\.9 or newer \(ML-KEM: 9\.9 or newer\)/.test(e.textContent));
+    results.helpLine = [...m.querySelectorAll('.form-help')].some((e) => visible(e) && /ML-KEM and sntrup761/.test(e.textContent) && /sntrup761: OpenSSH 8\.5 or newer on the server \(on by default from 9\.0\); ML-KEM: 9\.9 or newer/.test(e.textContent));
+    results.checkboxEnabled = !cb.disabled;
     // the hybrid names are valid in the key-exchange list (and the list keeps what it had: the option is separate)
     const kexArea = fieldOf(m, 'Key exchange');
     const before = kexArea.value;
-    setVal(kexArea, `${MLKEM}, ${SNTRUP}, curve25519-sha256`);
+    setVal(kexArea, `${MLKEM}, ${SNTRUP}, ${SNTRUP_IANA}, curve25519-sha256`);
     results.hybridNamesAccepted = !errorsShown(m).length && !kexArea.classList.contains('invalid');
     setVal(kexArea, before);
     cb.click();
@@ -106,6 +108,8 @@
     results.mlkemForced = r1.status === 'connected' && r1.kex === MLKEM && r1.pq && r1.hostKey === 'ssh-ed25519' && /^aes|^chacha/.test(r1.cipher);
     const r2 = await connectAndRead(await app.saveSession({ ...base, name: 'pq-sntrup', algorithms: { kex: [SNTRUP] } }), 'forced sntrup761', '42-pqkex-sntrup761');
     results.sntrupForced = r2.status === 'connected' && r2.kex === SNTRUP && r2.pq;
+    const r2i = await connectAndRead(await app.saveSession({ ...base, name: 'pq-sntrup-iana', algorithms: { kex: [SNTRUP_IANA] } }), 'forced sntrup761 (IANA name)');
+    results.sntrupIanaForced = r2i.status === 'connected' && r2i.kex === SNTRUP_IANA && r2i.pq;
     // the option puts both hybrids in front of an explicit list too, so ML-KEM wins even over a list of sntrup761 alone
     const r2b = await connectAndRead(await app.saveSession({ ...base, name: 'pq-sntrup-option', pqKex: true, algorithms: { kex: [SNTRUP] } }), 'option on + list of sntrup761');
     results.optionPrependsToExplicitList = r2b.status === 'connected' && r2b.kex === MLKEM && r2b.pq;
@@ -121,6 +125,26 @@
     const r5 = await connectAndRead(await app.saveSession({ ...base, name: 'pq-off' }), 'option off', '43-pqkex-off');
     results.offIsCurve25519 = r5.status === 'connected' && /^curve25519-sha256(@libssh\.org)?$/.test(r5.kex) && !r5.pq && !r5.saysPq;
     results.lineShowsHostKeyAndCipher = r5.hostKey === 'ssh-ed25519' && !!r5.cipher;
+
+    // 6. mosh: the host-key check runs over the session's lists with the option, and its line is printed into the
+    //    pane before the mosh client takes over (the normal buffer keeps it); the SFTP companion connects over the
+    //    same settings (its exchange is not shown; the unit test reads the cfg the pane sends)
+    const moshS = await app.saveSession({ ...base, type: 'mosh', name: 'pq-mosh', pqKex: true, sftpAuto: false, moshServer: '/opt/homebrew/bin/mosh-server' });
+    const moshPane = await app.openSession(session(moshS.id));
+    const normal = () => text(moshPane, moshPane.term.buffer.normal);
+    await waitFor(() => LINE.test(normal()) || moshPane.status === 'failed' || moshPane.status === 'disconnected', 20000, 'mosh host-key check line').catch(() => {});
+    const mm = LINE.exec(normal());
+    log('mosh host-key check:', moshPane.status, '|', mm ? mm[0] : '(no line)');
+    results.moshHostCheckPostQuantum = !!mm && mm[1] === MLKEM && !!mm[2];
+    await sleep(1500);
+    await shot('44-pqkex-mosh');
+    if (moshPane.status === 'connected') {
+      await moshPane.openSftpCompanion().catch(() => {});
+      await waitFor(() => moshPane.sftpStatus === 'connected' || moshPane.sftpError, 15000, 'sftp companion').catch(() => {});
+      results.moshCompanionConnects = moshPane.sftpStatus === 'connected' || 'FAILED: ' + (moshPane.sftpError || moshPane.sftpStatus);
+    } else results.moshCompanionConnects = 'skipped: mosh ' + moshPane.status;
+    await moshPane.disconnect();
+    await sleep(500);
   } catch (e) {
     results.error = e.message;
     console.error('[e2e-pqkex] FAIL', e.message, e.stack);

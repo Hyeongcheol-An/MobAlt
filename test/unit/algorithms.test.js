@@ -18,7 +18,7 @@ test('the tables are ssh2 1.x\'s own lists minus the DH groups this crypto lacks
   assert.deepEqual(A.SUPPORTED.kex, usable([...C.SUPPORTED_KEX]));
   for (const cat of A.CATEGORIES) for (const a of A.LEGACY[cat]) assert.ok(A.SUPPORTED[cat].includes(a), `${a} is supported`);
   const d = A.describe();
-  assert.deepEqual(Object.keys(d).sort(), ['categories', 'defaults', 'labels', 'legacy', 'supported', 'unavailable']);
+  assert.deepEqual(Object.keys(d).sort(), ['categories', 'defaults', 'labels', 'legacy', 'postQuantum', 'supported', 'unavailable']);
   assert.deepEqual(d.defaults.kex, usable([...C.DEFAULT_KEX]));
   assert.deepEqual(d.unavailable.kex, [...A.UNAVAILABLE.kex]);
 });

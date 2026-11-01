@@ -69,7 +69,8 @@ const LEGACY = Object.freeze({
 const uniq = (list) => [...new Set(list)];
 
 // The post-quantum hybrids (pqkex.js): in ssh2's supported list through the patch, never in its defaults; a session
-// that ticks "Post-quantum key exchange" offers them first.
+// that ticks "Post-quantum key exchange" offers them first. Empty when the patch is not applied (the option is then
+// inert and the editor says so).
 const POST_QUANTUM_KEX = pq.KEX;
 /** Whether a (negotiated) key-exchange name is a post-quantum hybrid. */
 const isPostQuantum = (name) => pq.isHybrid(name);
@@ -144,7 +145,7 @@ function connectOption(cfg) {
     if (own.length) out[cat] = own;
     else if (cfg.legacyAlgorithms && LEGACY[cat].length) out[cat] = { append: [...LEGACY[cat]] };
   }
-  if (cfg.pqKex) {
+  if (cfg.pqKex && POST_QUANTUM_KEX.length) {
     const kex = out.kex;
     if (Array.isArray(kex)) out.kex = uniq([...POST_QUANTUM_KEX, ...kex]);
     else out.kex = { prepend: [...POST_QUANTUM_KEX], ...(kex || {}) };
@@ -213,10 +214,10 @@ function explainDhGroup(message) {
   return t('{error} — this build cannot do {names} (1024-bit Diffie-Hellman was removed from its crypto); Advanced SSH → Algorithms: take it out of the key exchange list or Reset to defaults', { error: message, names });
 }
 
-/** What the renderer needs to build the editor section: the defaults, every supported name, the legacy additions, the names this build lacks. */
+/** What the renderer needs to build the editor section: the defaults, every supported name, the legacy additions, the names this build lacks, the post-quantum hybrids (empty when this build lacks them). */
 function describe() {
   const copy = (o) => Object.fromEntries(CATEGORIES.map((c) => [c, [...o[c]]]));
-  return { categories: CATEGORIES.slice(), labels: Object.fromEntries(CATEGORIES.map((c) => [c, labelOf(c)])), defaults: copy(DEFAULTS), supported: copy(SUPPORTED), legacy: copy(LEGACY), unavailable: copy(UNAVAILABLE) };
+  return { categories: CATEGORIES.slice(), labels: Object.fromEntries(CATEGORIES.map((c) => [c, labelOf(c)])), defaults: copy(DEFAULTS), supported: copy(SUPPORTED), legacy: copy(LEGACY), unavailable: copy(UNAVAILABLE), postQuantum: [...POST_QUANTUM_KEX] };
 }
 
 module.exports = { CATEGORIES, LABELS, DEFAULTS, SUPPORTED, LEGACY, UNAVAILABLE, POST_QUANTUM_KEX, isPostQuantum, parseList, presetLists, validate, normalize, connectOption, offered, noteRemote, explainHandshake, explainDhGroup, unavailableMessage, describe };

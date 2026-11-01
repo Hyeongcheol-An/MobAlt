@@ -340,7 +340,7 @@ class SshManager {
    * The grey line after the handshake: the negotiated key exchange — "(post-quantum)" after an ML-KEM / sntrup761
    * hybrid — the host key type and the cipher (both directions, when they differ), from ssh2's `handshake` event.
    */
-  _handshakeLine(neg) {
+  handshakeLine(neg) {
     const kex = algorithms.isPostQuantum(neg.kex) ? t('{kex} (post-quantum)', { kex: neg.kex }) : neg.kex;
     const cipher = neg.cs.cipher === neg.sc.cipher ? neg.cs.cipher : `${neg.cs.cipher} / ${neg.sc.cipher}`;
     return t('Key exchange {kex}, host key {hostKey}, cipher {cipher}', { kex, hostKey: neg.serverHostKey, cipher });
@@ -356,10 +356,11 @@ class SshManager {
 
   /**
    * Check cfg.host's key through the app's own known-hosts flow (same prompt as a connection) without
-   * authenticating: the handshake stops right after the key exchange. An accepted or already-known key is
+   * authenticating: the connection ends once the key exchange is complete. An accepted or already-known key is
    * also written to the app's known_hosts file (OpenSSH format), so an external ssh — the bootstrap of a
    * Mosh session — can run with StrictHostKeyChecking=yes against that file and ~/.ssh/known_hosts stays
-   * untouched. Resolves {ok: true} or {ok: false, error}; a cancelled prompt trusts nothing.
+   * untouched. Resolves {ok: true, handshakeLine} — the grey "Key exchange …" line of that check, for the Mosh pane
+   * to show as an SSH pane shows its own — or {ok: false, error}; a cancelled prompt trusts nothing.
    */
   verifyHost(cfg) {
     return new Promise((resolve) => {
@@ -370,10 +371,11 @@ class SshManager {
         if (settled) return;
         settled = true;
         try { client.end(); } catch {}
-        resolve(ok ? { ok: true } : { ok: false, error: error || t('host key check failed') });
+        resolve(ok ? { ok: true, handshakeLine: ctx.handshake ? `${GREY}${this.handshakeLine(ctx.handshake)}${RESET}\r\n` : '' } : { ok: false, error: error || t('host key check failed') });
       };
       const ctx = {};
       const verifier = this._hostVerifier(cfg, ctx);
+      client.once('handshake', (negotiated) => { ctx.handshake = negotiated; });
       client.on('error', (e) => finish(false, this._explainError(e, ctx, cfg)));
       client.on('close', () => finish(false, t('connection closed during the host key check')));
       client.on('ready', () => finish(true));
@@ -391,9 +393,13 @@ class SshManager {
               try { knownhosts.ensure(cfg.host, cfg.port || 22, key); } catch {}
             }
             cb(ok);
-            finish(ok, t('host key not accepted'));
+            if (!ok) return finish(false, t('host key not accepted'));
+            // accepted: the exchange completes (NEWKEYS, ssh2's `handshake` with what was negotiated), then the
+            // connection is ended before any authentication; a server that drops it first ends in error / close
+            if (ctx.handshake) finish(true);
+            else client.once('handshake', () => finish(true));
           }),
-          authHandler: (_methods, _partial, cb) => cb(false), // never reached: the check ends with the key exchange
+          authHandler: (_methods, _partial, cb) => cb(false), // not reached: the check ends with the key exchange
           readyTimeout: 0, // ctx.readyTimer: the same limit, paused while the host-key dialog is open
           algorithms: this._algorithms(cfg),
           debug: this._debugHook(ctx),
@@ -561,7 +567,7 @@ class SshManager {
       .then(async ({ client, jump }) => {
         info.client = client;
         info.jump = jump;
-        if (ctx.handshake) this._out(id, `${GREY}${this._handshakeLine(ctx.handshake)}${RESET}\r\n`);
+        if (ctx.handshake) this._out(id, `${GREY}${this.handshakeLine(ctx.handshake)}${RESET}\r\n`);
         // Remember a prompted password if the user asked to save it.
         if (ctx.lastPrompted && ctx.lastPrompted.save && cfg.id && ctx.currentAuth === 'password') {
           cfg.password = ctx.lastPrompted.password;

@@ -868,7 +868,9 @@ function registerIpc() {
     // the session's Advanced SSH algorithm settings apply to this check (and to the SFTP companion), not to mosh's own ssh
     const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms, pqKex: opts.pqKex, algorithms: opts.algorithms });
     if (!v.ok) throw new Error(v.error || t('host key not accepted'));
-    return own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
+    const r = own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
+    // the check's key exchange, for the pane to show as an SSH pane shows its own (the mosh client's output follows)
+    return { ...r, handshakeLine: v.handshakeLine || '' };
   });
   ipcMain.handle('ftp:connect', async (e, cfg) => own(e, await ftp.connect(await mergeSecrets(cfg))));
   // A window takes over a live terminal (a detached tab, or one coming back): from now on its output goes there; the
