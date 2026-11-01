@@ -251,7 +251,8 @@ carpetas y deja el campo como estaba si cancelas.
   segundos. Una segunda descarga con el mismo nombre se guarda como `name (1).ext` y se lista con ese nombre.
 - **Portapapeles**: seleccionar copia (Ajustes → Terminal → Copiar al seleccionar); el clic derecho pega (⇧-clic
   derecho abre el menú). Soltar archivos desde el Finder sobre un terminal SSH los sube; sobre un terminal local, pega
-  las rutas.
+  las rutas. Si no se conoce la carpeta del shell (la sesión no sigue al terminal), van a la carpeta que el panel Sftp muestra
+  para esa conexión; si el panel aún no está abierto, se pregunta primero.
 - **Protección de pegado**: un pegado de más de una línea (o de más de 1000 caracteres) pregunta primero: *¿Pegar N
   líneas en …?* muestra el texto en una vista previa editable; ⌘⏎ pega, Esc cancela. Cada pegado se revisa además en
   busca de lo que el portapapeles no muestra: caracteres de ancho cero y bidireccionales, espacios de no separación (un
@@ -295,12 +296,16 @@ El panel **Sftp** sigue al panel SSH o FTP activo. Se abre automáticamente al c
 - Navega haciendo doble clic en las carpetas, escribiendo una ruta (`~` funciona) o con ⬆ / 🏠 / ⟳.
   «Seguir al terminal» mantiene el panel en el directorio actual del shell (necesita la opción de la sesión, que
   inyecta un pequeño hook en el prompt). `>_` envía `cd` al terminal.
+- El cuadro sobre la lista («Filtrar archivos…») filtra por nombre mientras escribes; Intro o ↓ va a la primera coincidencia,
+  Esc lo vacía.
 - Barra de herramientas y menú contextual: nueva carpeta, renombrar, permisos, eliminar, descargar, subir. Selección
   múltiple con ⌘ / ⇧. Arrastra archivos desde el Finder sobre la lista para subirlos; los nombres existentes preguntan
   antes de sobrescribir.
 - Doble clic en un archivo de texto para editarlo en el editor integrado (⌘S guarda de vuelta). «Editar en el editor
   externo» lo abre en tu editor (Ajustes → General → Editor externo) y lo vuelve a subir con cada guardado.
-- Las transferencias muestran progreso, velocidad y un botón de cancelar; «Mostrar en el Finder» tras una descarga.
+- Las transferencias muestran progreso, velocidad y un botón de cancelar; «Mostrar en el Finder» tras una descarga. Una descarga se escribe en `<nombre>.part` y
+  toma su nombre al completarse; si se interrumpe (conexión perdida, Desconectar), la siguiente descarga del mismo archivo ofrece
+  *Reanudar* o *Empezar de nuevo*.
 - Las cabeceras de columna ordenan por nombre, tamaño o fecha. Cuando la barra lateral es estrecha, la columna de fecha
   se oculta.
 
@@ -316,7 +321,8 @@ El panel **Sftp** sigue al panel SSH o FTP activo. Se abre automáticamente al c
 
 Inicia un túnel sobre una conexión abierta o deja que MobAlt abra una conexión dedicada a una sesión guardada. Los
 túneles listados en la pestaña **Túneles** de una sesión se inician automáticamente cuando esa sesión conecta, y se te
-avisa si alguno no consigue enlazar su puerto.
+avisa si alguno no consigue enlazar su puerto. Un puerto ocupado se indica como tal: *El puerto 8080 ya está en uso en este Mac* (o *en el
+servidor* para un reenvío remoto).
 
 ## X11, Mosh, serie, RDP/VNC
 

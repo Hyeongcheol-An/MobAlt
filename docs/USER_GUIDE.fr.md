@@ -243,7 +243,8 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   du même nom arrive sous `name (1).ext` et est listé sous ce nom.
 - **Presse-papiers** : sélectionner copie (Réglages → Terminal → Copier à la sélection) ; le clic droit colle
   (⇧ clic droit ouvre le menu). Déposer des fichiers du Finder sur un terminal SSH les envoie ;
-  sur un terminal local, cela colle leurs chemins.
+  sur un terminal local, cela colle leurs chemins. Si le dossier du shell est inconnu (la session ne suit pas le terminal), ils vont dans le dossier
+  que le panneau Sftp affiche pour cette connexion ; si le panneau n'est pas encore ouvert, une question vous est posée d'abord.
 - **Garde-collage** : un collage de plus d'une ligne (ou de plus de 1000 caractères) demande d'abord confirmation — *Coller N
   lignes dans … ?* montre le texte dans un aperçu modifiable ; ⌘⏎ colle, Échap annule. Chaque collage est aussi
   inspecté pour ce que le presse-papiers ne montre pas : caractères sans chasse et bidi, espaces insécables (une espace
@@ -287,11 +288,15 @@ Le panneau **Sftp** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement �
 - Naviguez en double-cliquant sur les dossiers, en saisissant un chemin (`~` fonctionne) ou avec ⬆ / 🏠 / ⟳.
   « Suivre le terminal » garde le panneau sur le dossier actuel du shell (nécessite l'option de session,
   qui injecte un petit hook d'invite). `>_` envoie `cd` au terminal.
+- Le champ au-dessus de la liste (« Filtrer les fichiers… ») filtre par nom à mesure de la saisie ; Entrée ou ↓ va au premier résultat,
+  Échap l'efface.
 - Barre d'outils et menu contextuel : nouveau dossier, renommer, permissions, supprimer, télécharger, envoyer. Sélection multiple
   avec ⌘ / ⇧. Faites glisser des fichiers du Finder sur la liste pour les envoyer ; les noms existants demandent confirmation avant d'être écrasés.
 - Double-cliquez sur un fichier texte pour le modifier dans l'éditeur intégré (⌘S l'enregistre sur le serveur). « Modifier dans un éditeur
   externe » l'ouvre dans votre éditeur (Réglages → Général → Éditeur externe) et le renvoie à chaque enregistrement.
-- Les transferts affichent la progression, la vitesse et un bouton d'annulation ; « Afficher dans le Finder » après un téléchargement.
+- Les transferts affichent la progression, la vitesse et un bouton d'annulation ; « Afficher dans le Finder » après un téléchargement. Un téléchargement est écrit dans `<nom>.part` et ne prend
+  son nom qu'une fois complet ; s'il s'interrompt (connexion perdue, déconnexion), le téléchargement suivant du même fichier propose
+  *Reprendre* ou *Recommencer*.
 - Les en-têtes de colonne trient par nom, taille ou date. Quand la barre latérale est étroite, la colonne de date se masque.
 
 ## Tunnels (redirection de port)
@@ -306,7 +311,8 @@ Le panneau **Sftp** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement �
 
 Démarrez un tunnel sur une connexion ouverte, ou laissez MobAlt ouvrir une connexion dédiée vers une session
 enregistrée. Les tunnels listés dans l'onglet **Tunnels** d'une session démarrent automatiquement à la connexion de cette session,
-et vous êtes prévenu si l'un d'eux ne parvient pas à se lier à son port.
+et vous êtes prévenu si l'un d'eux ne parvient pas à se lier à son port. Un port déjà pris est nommé comme tel : *Le port 8080 est déjà utilisé
+sur ce Mac* (ou *sur le serveur* pour une redirection distante).
 
 ## X11, Mosh, série, RDP/VNC
 
