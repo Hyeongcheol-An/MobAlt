@@ -14,7 +14,7 @@
   const PROMPT = (host) => `cd /Users/Shared 2>/dev/null && export HOME=/Users/Shared || cd /tmp; export PS1='demo@${host}:%~$ '; export PROMPT='demo@${host}:%~$ '; clear`; // a neutral cwd: the status bar shows the active pane's folder
   try {
     await window.api.app.testResize(1360, 860);
-    await app.saveSettings({ confirmClose: false, restoreWorkspace: false, sftpAutoOpen: true });
+    await app.saveSettings({ confirmClose: false, restoreWorkspace: false, sftpAutoOpen: true, cursorBlink: false }); // a steady cursor: the pictures do not depend on the blink's phase
 
     // --- a believable session tree (nothing connects to these hosts)
     const mk = (o) => app.saveSession({ type: 'ssh', port: 22, authMethod: 'auto', sftpAuto: true, ...o });
