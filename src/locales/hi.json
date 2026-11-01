@@ -1473,10 +1473,6 @@
   "Upload to {dir}": "{dir} में अपलोड करें",
   "Upload…": "अपलोड करें…",
   "Uploaded {name}": "{name} अपलोड हो गई",
-  "Uploading {n} item": [
-    "{n} आइटम अपलोड हो रहा है",
-    "{n} आइटम अपलोड हो रहे हैं"
-  ],
   "Uptime": "अपटाइम",
   "Use in this session": "इस सेशन में उपयोग करें",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://": "user@host[:port] लिखें, चाहें तो ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc:// के साथ",
@@ -1536,5 +1532,32 @@
   "Zoom pane (fill the tab) / restore": "पेन ज़ूम करें (टैब भरें) / रीस्टोर",
   "Zoom text": "टेक्स्ट ज़ूम",
   "zoomed": "ज़ूम किया",
-  "zsh/bash integration (folder following)": "zsh/bash इंटीग्रेशन (फ़ोल्डर फ़ॉलो)"
+  "zsh/bash integration (folder following)": "zsh/bash इंटीग्रेशन (फ़ोल्डर फ़ॉलो)",
+  "\"{path}\" no longer exists": "\"{path}\" अब मौजूद नहीं है",
+  "\"{path}\" no longer exists — showing the nearest folder that does": "\"{path}\" अब मौजूद नहीं है — सबसे नज़दीकी मौजूद फ़ोल्डर दिखाया जा रहा है",
+  "(broken)": "(टूटा हुआ)",
+  "{n} tunnel started from the Tunnels dialog was stopped.": [
+    "टनल डायलॉग से शुरू हुआ {n} टनल रोक दिया गया।",
+    "टनल डायलॉग से शुरू हुए {n} टनल रोक दिए गए।"
+  ],
+  "{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.": "इसका {size} पहले से {file} में है। जारी रखें वहीं से आगे बढ़ाता है; फिर से शुरू करें इसे शुरू से दोबारा डाउनलोड करता है।",
+  "cancelled ({why})": "रद्द ({why})",
+  "Filter files": "फ़ाइलें फ़िल्टर करें",
+  "Filter files…": "फ़ाइलें फ़िल्टर करें…",
+  "No names contain \"{text}\"": "किसी नाम में \"{text}\" नहीं है",
+  "Port {port} is already in use on the server": "पोर्ट {port} सर्वर पर पहले से उपयोग में है",
+  "Port {port} is already in use on this Mac": "पोर्ट {port} इस Mac पर पहले से उपयोग में है",
+  "Resume": "जारी रखें",
+  "Resume the download of \"{name}\"?": "\"{name}\" का डाउनलोड जारी रखें?",
+  "resuming at {size}": "{size} से जारी",
+  "Start over": "फिर से शुरू करें",
+  "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": [
+    "शेल का फ़ोल्डर ज्ञात नहीं है (सेशन टर्मिनल को फ़ॉलो नहीं करता)। {n} आइटम {dir} में अपलोड करें?",
+    "शेल का फ़ोल्डर ज्ञात नहीं है (सेशन टर्मिनल को फ़ॉलो नहीं करता)। {n} आइटम {dir} में अपलोड करें?"
+  ],
+  "Upload": "अपलोड करें",
+  "Uploading {n} item to {dir}": [
+    "{n} आइटम {dir} में अपलोड हो रहा है",
+    "{n} आइटम {dir} में अपलोड हो रहे हैं"
+  ]
 }

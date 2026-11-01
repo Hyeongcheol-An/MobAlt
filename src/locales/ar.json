@@ -1414,10 +1414,6 @@
   "Upload to {dir}": "رفع إلى {dir}",
   "Upload…": "رفع…",
   "Uploaded {name}": "تم رفع {name}",
-  "Uploading {n} item": [
-    "جارٍ رفع {n} عنصر",
-    "جارٍ رفع {n} عناصر"
-  ],
   "Uptime": "مدة التشغيل",
   "Use in this session": "الاستخدام في هذه الجلسة",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://": "استخدم user@host[:port]، اختياريًا مع ⁦ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://⁩",
@@ -1477,5 +1473,32 @@
   "Zoom pane (fill the tab) / restore": "تكبير الجزء (ملء علامة التبويب) / استعادة",
   "Zoom text": "تكبير/تصغير النص",
   "zoomed": "مكبّر",
-  "zsh/bash integration (folder following)": "تكامل zsh/bash (تتبّع المجلد)"
+  "zsh/bash integration (folder following)": "تكامل zsh/bash (تتبّع المجلد)",
+  "\"{path}\" no longer exists": "\"{path}\" لم يعد موجودًا",
+  "\"{path}\" no longer exists — showing the nearest folder that does": "\"{path}\" لم يعد موجودًا — يُعرض أقرب مجلد موجود",
+  "(broken)": "(معطوب)",
+  "{n} tunnel started from the Tunnels dialog was stopped.": [
+    "تم إيقاف {n} نفق بدأ من مربع حوار الأنفاق.",
+    "تم إيقاف {n} أنفاق بدأت من مربع حوار الأنفاق."
+  ],
+  "{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.": "{size} منه موجود بالفعل في {file}. «استئناف» يكمل من هناك؛ «البدء من جديد» ينزّله مرة أخرى من البداية.",
+  "cancelled ({why})": "تم الإلغاء ({why})",
+  "Filter files": "تصفية الملفات",
+  "Filter files…": "تصفية الملفات…",
+  "No names contain \"{text}\"": "لا يوجد اسم يحتوي على \"{text}\"",
+  "Port {port} is already in use on the server": "المنفذ {port} مستخدم بالفعل على الخادم",
+  "Port {port} is already in use on this Mac": "المنفذ {port} مستخدم بالفعل على هذا الـ Mac",
+  "Resume": "استئناف",
+  "Resume the download of \"{name}\"?": "هل تريد استئناف تنزيل \"{name}\"؟",
+  "resuming at {size}": "استئناف من {size}",
+  "Start over": "البدء من جديد",
+  "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": [
+    "مجلد الصدفة غير معروف (الجلسة لا تتبّع الطرفية). هل تريد رفع {n} عنصر إلى {dir}؟",
+    "مجلد الصدفة غير معروف (الجلسة لا تتبّع الطرفية). هل تريد رفع {n} عناصر إلى {dir}؟"
+  ],
+  "Upload": "رفع",
+  "Uploading {n} item to {dir}": [
+    "جارٍ رفع {n} عنصر إلى {dir}",
+    "جارٍ رفع {n} عناصر إلى {dir}"
+  ]
 }

@@ -1363,10 +1363,6 @@
   "Upload to {dir}": "Envoyer vers {dir}",
   "Upload…": "Envoyer…",
   "Uploaded {name}": "{name} envoyé",
-  "Uploading {n} item": [
-    "Envoi de {n} élément",
-    "Envoi de {n} éléments"
-  ],
   "Uptime": "Durée d'activité",
   "Use in this session": "Utiliser dans cette session",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://": "Utilisez user@host[:port], éventuellement avec ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://",
@@ -1426,5 +1422,32 @@
   "Zoom pane (fill the tab) / restore": "Agrandir le volet (remplir l'onglet) / rétablir",
   "Zoom text": "Zoom du texte",
   "zoomed": "agrandi",
-  "zsh/bash integration (folder following)": "Intégration zsh/bash (suivi du dossier)"
+  "zsh/bash integration (folder following)": "Intégration zsh/bash (suivi du dossier)",
+  "\"{path}\" no longer exists": "« {path} » n'existe plus",
+  "\"{path}\" no longer exists — showing the nearest folder that does": "« {path} » n'existe plus — affichage du dossier existant le plus proche",
+  "(broken)": "(rompu)",
+  "{n} tunnel started from the Tunnels dialog was stopped.": [
+    "{n} tunnel démarré depuis la fenêtre Tunnels a été arrêté.",
+    "{n} tunnels démarrés depuis la fenêtre Tunnels ont été arrêtés."
+  ],
+  "{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.": "{size} sont déjà dans {file}. « Reprendre » continue à partir de là ; « Recommencer » télécharge tout depuis le début.",
+  "cancelled ({why})": "annulé ({why})",
+  "Filter files": "Filtrer les fichiers",
+  "Filter files…": "Filtrer les fichiers…",
+  "No names contain \"{text}\"": "Aucun nom ne contient « {text} »",
+  "Port {port} is already in use on the server": "Le port {port} est déjà utilisé sur le serveur",
+  "Port {port} is already in use on this Mac": "Le port {port} est déjà utilisé sur ce Mac",
+  "Resume": "Reprendre",
+  "Resume the download of \"{name}\"?": "Reprendre le téléchargement de « {name} » ?",
+  "resuming at {size}": "reprise à {size}",
+  "Start over": "Recommencer",
+  "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": [
+    "Le dossier du shell est inconnu (la session ne suit pas le terminal). Envoyer {n} élément vers {dir} ?",
+    "Le dossier du shell est inconnu (la session ne suit pas le terminal). Envoyer {n} éléments vers {dir} ?"
+  ],
+  "Upload": "Envoyer",
+  "Uploading {n} item to {dir}": [
+    "Envoi de {n} élément vers {dir}",
+    "Envoi de {n} éléments vers {dir}"
+  ]
 }
