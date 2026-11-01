@@ -1,3 +1,17 @@
+diff --git a/node_modules/ssh2/lib/protocol/Protocol.js b/node_modules/ssh2/lib/protocol/Protocol.js
+index 7302488..39ed427 100644
+--- a/node_modules/ssh2/lib/protocol/Protocol.js
++++ b/node_modules/ssh2/lib/protocol/Protocol.js
+@@ -295,6 +295,9 @@ class Protocol {
+     this._packetRW.write.cleanup();
+     this._cipher && this._cipher.free();
+     this._decipher && this._decipher.free();
++    // a key exchange still in flight drops its secret material (the post-quantum hybrids of kex-pq.js)
++    if (this._kex && typeof this._kex.dispose === 'function')
++      this._kex.dispose();
+     if (typeof reason !== 'string' || reason.length === 0)
+       reason = 'fatal error';
+     this.parse = () => {
 diff --git a/node_modules/ssh2/lib/protocol/constants.js b/node_modules/ssh2/lib/protocol/constants.js
 index ad77592..bf13467 100644
 --- a/node_modules/ssh2/lib/protocol/constants.js
@@ -17,10 +31,10 @@ index ad77592..bf13467 100644
  
 diff --git a/node_modules/ssh2/lib/protocol/kex-pq.js b/node_modules/ssh2/lib/protocol/kex-pq.js
 new file mode 100644
-index 0000000..3178da0
+index 0000000..4678629
 --- /dev/null
 +++ b/node_modules/ssh2/lib/protocol/kex-pq.js
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,203 @@
 +'use strict';
 +// Post-quantum hybrid key exchange (client side): ML-KEM-768 + X25519 (`mlkem768x25519-sha256`, OpenSSH 9.9+, the
 +// default of OpenSSH 10) and Streamlined NTRU Prime 761 + X25519 (`sntrup761x25519-sha512@openssh.com`, OpenSSH
@@ -183,6 +197,22 @@ index 0000000..3178da0
 +        this._kemSecret = null;
 +        this._x25519 = null;
 +      }
++    }
++    /**
++     * An exchange that will not finish — the connection torn down while it was in flight (an abort, a rejected
++     * host key, a fatal error before finish()) — drops its secret material now rather than at GC: the KEM secret
++     * key is zeroed, the X25519 KeyObject released, Q_C / Q_S and the reply dropped. Protocol's teardown calls it
++     * (doFatalError goes through the same); idempotent.
++     */
++    dispose() {
++      if (this._kemSecret)
++        this._kemSecret.fill(0);
++      this._kemSecret = null;
++      this._x25519 = null;
++      this._clientPublic = null;
++      this._dhData = undefined;
++      this._hostKey = undefined;
++      this._sig = undefined;
 +    }
 +  };
 +  return Hybrid;

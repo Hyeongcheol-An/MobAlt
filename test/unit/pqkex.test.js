@@ -8,6 +8,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const crypto = require('crypto');
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 const { ml_kem768 } = require('@noble/post-quantum/ml-kem.js');
 const { parseDERKey } = require('ssh2/lib/protocol/keyParser');
@@ -236,6 +237,108 @@ for (const fx of HANDSHAKES) {
     h2.update(sshString(mp[0] & 0x80 ? Buffer.concat([Buffer.from([0]), mp]) : mp.subarray(mp.findIndex((b) => b !== 0))));
     if (mp[0] & 0x80 || mp[0] === 0) assert.notEqual(h2.digest().toString('hex'), fx.H, 'an mpint K would give another H');
     assert.equal(fx.negotiated.kex, fx.kex);
+  });
+}
+
+// ---------- an exchange that never finishes drops its secrets ----------
+
+const nameList = (arr) => sshString(Buffer.from(arr.join(',')));
+const packet = (payload) => { let pad = 8 - ((payload.length + 5) % 8); if (pad < 4) pad += 8; const out = Buffer.alloc(5 + payload.length + pad); out.writeUInt32BE(1 + payload.length + pad, 0); out[4] = pad; payload.copy(out, 5); return out; };
+/**
+ * A server that negotiates `kexName` and then — `mode` — never answers the client's KEX_ECDH_INIT ('hang-before-reply'),
+ * answers it but withholds NEWKEYS ('hang-after-reply': the client holds Q_S and its secrets, finish() never runs), or
+ * answers with a reply one byte short and NEWKEYS ('short': finish() fails in computeSecret → doFatalError). The host
+ * key and the signature are placeholders: they are only read in finish(), which these modes never reach or which
+ * fails before them.
+ */
+function fakeServer(kexName, mode, seen) {
+  return net.createServer((sock) => {
+    let buf = Buffer.alloc(0), stage = 'ident';
+    sock.write('SSH-2.0-pqtest\r\n');
+    sock.on('error', () => {});
+    sock.on('data', (d) => {
+      buf = Buffer.concat([buf, d]);
+      for (;;) {
+        if (stage === 'ident') { const i = buf.indexOf('\r\n'); if (i < 0) return; buf = buf.subarray(i + 2); stage = 'kexinit'; continue; }
+        if (buf.length < 4) return;
+        const len = buf.readUInt32BE(0);
+        if (buf.length < 4 + len) return;
+        const payload = buf.subarray(5, 4 + len - buf[4]);
+        buf = buf.subarray(4 + len);
+        if (payload[0] === 20 && stage === 'kexinit') {
+          sock.write(packet(Buffer.concat([Buffer.from([20]), crypto.randomBytes(16), nameList([kexName]), nameList(['ssh-ed25519']), nameList(['aes128-ctr']), nameList(['aes128-ctr']), nameList(['hmac-sha2-256']), nameList(['hmac-sha2-256']), nameList(['none']), nameList(['none']), nameList([]), nameList([]), Buffer.from([0]), Buffer.alloc(4)])));
+          stage = 'ecdh';
+        } else if (payload[0] === 30 && stage === 'ecdh') {
+          seen.init = true;
+          if (mode === 'hang-before-reply') { stage = 'hang'; return; }
+          const kem = pq.kems[kexPQ.METHODS[kexName].kem];
+          const qs = crypto.randomBytes(kem.ciphertextBytes + 32 - (mode === 'short' ? 1 : 0));
+          const ks = Buffer.concat([sshString(Buffer.from('ssh-ed25519')), sshString(Buffer.alloc(32))]);
+          const sig = Buffer.concat([sshString(Buffer.from('ssh-ed25519')), sshString(Buffer.alloc(64))]);
+          sock.write(packet(Buffer.concat([Buffer.from([31]), sshString(ks), sshString(qs), sshString(sig)])));
+          if (mode === 'short') sock.write(packet(Buffer.from([21])));
+          seen.reply = true;
+          stage = 'done';
+        }
+      }
+    });
+  });
+}
+const settle = (ms) => new Promise((r) => setTimeout(r, ms));
+const until = async (fn, what) => { for (let i = 0; i < 300 && !fn(); i++) await settle(10); assert.ok(fn(), what); };
+/** The exchange object's secret-bearing fields: the KEM secret key, the X25519 KeyObject, Q_C, Q_S, the reply's host key and signature. */
+const holds = (kex) => ({ kemSecret: kex._kemSecret, x25519: kex._x25519, clientPublic: kex._clientPublic, dhData: kex._dhData, hostKey: kex._hostKey, sig: kex._sig });
+const assertDisposed = (kex, secretRef) => {
+  assert.equal(kex._kemSecret, null, 'KEM secret key reference dropped');
+  assert.ok(secretRef.every((b) => b === 0), 'the KEM secret key bytes are zero');
+  assert.equal(kex._x25519, null, 'X25519 key released');
+  assert.equal(kex._clientPublic, null, 'Q_C dropped');
+  assert.equal(kex._dhData, undefined, 'Q_S dropped');
+  assert.equal(kex._hostKey, undefined);
+  assert.equal(kex._sig, undefined);
+};
+
+for (const [kexName, mode, how] of [[MLKEM_NAME, 'hang-before-reply', 'dispose'], [SNTRUP_NAME, 'hang-before-reply', 'destroy'], [MLKEM_NAME, 'hang-after-reply', 'destroy'], [SNTRUP_IANA, 'hang-after-reply', 'dispose'], [MLKEM_NAME, 'short', 'fatal'], [SNTRUP_NAME, 'short', 'fatal']]) {
+  test(`${kexName}, ${mode}: ${how === 'dispose' ? 'dispose() as ctx.abort calls it' : how === 'destroy' ? 'client.destroy() alone (Protocol teardown)' : 'a fatal error in finish() (doFatalError)'} leaves no secret in the exchange object`, async () => {
+    const seen = {};
+    const server = fakeServer(kexName, mode, seen);
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    const { Client } = require('ssh2');
+    const client = new Client();
+    const errors = [];
+    client.on('error', (e) => errors.push(e.message));
+    const closed = new Promise((r) => client.once('close', r));
+    client.connect({ host: '127.0.0.1', port: server.address().port, username: 'u', password: 'p', algorithms: { kex: [kexName] }, hostVerifier: () => true, readyTimeout: 5000 });
+    let kex, secretRef;
+    try {
+      if (how === 'fatal') {
+        await closed;
+        kex = client._protocol._kex;
+        assert.equal(kex.type, 'pq-hybrid');
+        assert.match(errors.join('; '), /Error while computing DH secret \(pq-hybrid\): Server reply is \d+ bytes, expected \d+/);
+        secretRef = Buffer.alloc(1); // computeSecret's own finally zeroed and dropped the key before dispose() ran
+        secretRef[0] = 0;
+      } else {
+        await until(() => (mode === 'hang-before-reply' ? seen.init : seen.reply), 'the exchange in flight');
+        await settle(80); // the client has parsed the reply (hang-after-reply) and sent its NEWKEYS
+        kex = client._protocol._kex;
+        assert.equal(kex.type, 'pq-hybrid');
+        const h = holds(kex);
+        secretRef = h.kemSecret;
+        assert.ok(Buffer.isBuffer(h.kemSecret) && h.kemSecret.some((b) => b !== 0), 'the KEM secret key is held while the exchange waits');
+        assert.ok(h.x25519 && h.clientPublic, 'the X25519 key and Q_C are held');
+        if (mode === 'hang-after-reply') assert.ok(h.dhData && h.dhData.length === pq.kems[kexPQ.METHODS[kexName].kem].ciphertextBytes + 32 && h.hostKey && h.sig, 'Q_S, K_S and the signature are held after the reply');
+        if (how === 'dispose') { if (client._protocol && client._protocol._kex && typeof client._protocol._kex.dispose === 'function') client._protocol._kex.dispose(); } // ssh.js ctx.abort
+        client.destroy();
+        await closed;
+      }
+      assertDisposed(kex, secretRef);
+      kex.dispose(); // idempotent
+      assertDisposed(kex, secretRef);
+    } finally {
+      try { client.destroy(); } catch {}
+      await new Promise((r) => server.close(r));
+    }
   });
 }
 

@@ -520,6 +520,8 @@ class SshManager {
         if (ctx.readyTimer) ctx.readyTimer.stop();
         fail(err || cancelledError());
         try { client.destroy(); } catch {}
+        // a post-quantum exchange still in flight drops its secrets now (Protocol's teardown does the same on close)
+        try { if (client._protocol && client._protocol._kex && typeof client._protocol._kex.dispose === 'function') client._protocol._kex.dispose(); } catch {}
         if (outerAbort) outerAbort(err);
       };
 
