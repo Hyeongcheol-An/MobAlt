@@ -73,8 +73,28 @@ export class SftpPanel {
     this.lastPathsByPane = new WeakMap();
     this.els = {
       empty: $('#sftp-empty'), ui: $('#sftp-ui'), conn: $('#sftp-conn'), path: $('#sftp-path'), pathForm: $('#sftp-path-form'),
-      follow: $('#sftp-follow'), hidden: $('#sftp-hidden'), list: $('#sftp-list'), transfers: $('#sftp-transfers'),
+      follow: $('#sftp-follow'), hidden: $('#sftp-hidden'), filter: $('#sftp-filter'), list: $('#sftp-list'), transfers: $('#sftp-transfers'),
     };
+    // the filter box above the list (like the one over the sessions): names containing the text, per connection;
+    // Enter / ↓ move to the first match, Esc clears and goes back to the terminal
+    this.els.filter.addEventListener('input', () => {
+      const st = this.state();
+      if (!st) return;
+      st.filter = this.els.filter.value;
+      this.renderList();
+    });
+    this.els.filter.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+        const row = this.rows()[0];
+        if (row) { e.preventDefault(); this.select(this.state().entries.find((x) => x.name === row.dataset.name)); }
+      } else if (e.key === 'Escape') {
+        const st = this.state();
+        this.els.filter.value = '';
+        if (st) { st.filter = ''; this.renderList(); }
+        this.els.filter.blur();
+        this.app.activePane()?.focus();
+      }
+    });
     for (const b of document.querySelectorAll('[data-sftp]')) b.addEventListener('click', () => this.cmd(b.dataset.sftp));
     this.els.pathForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -200,6 +220,7 @@ export class SftpPanel {
     const cdBtn = document.querySelector('[data-sftp="terminal-cd"]');
     if (cdBtn) cdBtn.hidden = noTerminal; // nothing to cd in
     this.els.hidden.checked = st.hidden;
+    this.els.filter.value = st.filter || '';
     if (st.path === null && !st.loading) {
       const remembered = st.pane.remoteCwd ? null : this.remembered(st.pane);
       this.navigate(st.pane.remoteCwd || remembered || '.', { remembered: !!remembered });
@@ -289,6 +310,7 @@ export class SftpPanel {
       st.entries = r.entries;
       st.selected.clear();
       if (!walkUp) st.notice = null; // the "no longer exists" line stays over the parent it led to, until the next folder
+      if (from !== r.path && st.filter) { st.filter = ''; this.els.filter.value = ''; } // the filter was about the folder just left
       this.els.path.value = r.path;
       this.els.path.scrollLeft = this.els.path.scrollWidth; // long paths: keep the tail visible
       this.renderList();
@@ -330,7 +352,8 @@ export class SftpPanel {
       const d = k === 'size' ? a.size - b.size : k === 'mtime' ? a.mtime - b.mtime : byName(a.name, b.name);
       return (d || byName(a.name, b.name)) * st.sort.dir;
     };
-    return st.entries.filter((e) => st.hidden || !e.name.startsWith('.')).sort(cmp);
+    const q = (st.filter || '').trim().toLowerCase();
+    return st.entries.filter((e) => (st.hidden || !e.name.startsWith('.')) && (!q || e.name.toLowerCase().includes(q))).sort(cmp);
   }
 
   /**
@@ -363,13 +386,14 @@ export class SftpPanel {
     list.append(h('div', { class: 'sftp-row sftp-head', role: 'presentation' }, h('span', {}), headCell('name', t('Name'), t('Sort by name'), 'name'), headCell('size', t('Size'), t('Sort by size'), 'size'), headCell('mtime', t('Modified'), t('Sort by modified'), 'date')));
     if (st.path !== '/') list.append(h('div', { class: 'sftp-row dir', dataset: { name: '..' }, role: 'option', tabindex: -1, 'aria-selected': 'false' }, h('span', {}, '📁'), h('span', { class: 'name' }, '..'), h('span', { class: 'size' }), h('span', { class: 'date' })));
     if (st.notice) list.append(h('div', { class: 'sftp-msg sftp-notice' }, st.notice)); // the folder that vanished under the panel (navigate)
-    if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, t('Empty folder')));
+    if (!entries.length) list.append(h('div', { class: 'sftp-msg' }, (st.filter || '').trim() ? t('No names contain "{text}"', { text: st.filter.trim() }) : t('Empty folder')));
     const makeRow = (e) => {
       const sel = st.selected.has(e.name);
       const row = ROW.cloneNode(true);
       row.className = 'sftp-row' + (e.type === 'd' ? ' dir' : '') + (e.link ? ' link' : '') + (e.name.startsWith('.') ? ' hidden-file' : '') + (sel ? ' selected' : '');
       row.dataset.name = e.name;
-      row.title = `${e.modeStr} ${e.owner}:${e.group}${e.target ? ' → ' + e.target : ''}`;
+      // the tooltip: the full name first (the column clips long ones), then mode, owner and a link's target
+      row.title = `${e.name}\n${e.modeStr} ${e.owner}:${e.group}${e.target ? ' → ' + e.target + (e.broken ? ' ' + t('(broken)') : '') : ''}`;
       if (sel) row.setAttribute('aria-selected', 'true');
       const c = row.children;
       c[0].textContent = e.type === 'd' ? '📁' : fileGlyph(e.name);

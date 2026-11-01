@@ -178,10 +178,10 @@ registry.on('exit', (id, code, reason, detail) => {
   const wc = ownerOf(id), text = outBuf.get(id);
   if (text && wc) wc.send('term:data', id, text);
   outBuf.delete(id);
-  tunnels.stopForConnection(id);
+  const tunnelsStopped = tunnels.stopForConnection(id); // the ones from the Tunnels dialog: the lost-connection toast counts them
   sftp.stopEdits(id);
   monitor.forget(id); // the next connection starts its rates afresh
-  if (wc) wc.send('term:exit', id, { code, reason, detail });
+  if (wc) wc.send('term:exit', id, { code, reason, detail, tunnelsStopped });
   owners.delete(id);
 });
 // transfers and synced edits belong to the window showing their connection (every window's panel would list them otherwise)
@@ -864,7 +864,9 @@ function registerIpc() {
   ipcMain.handle('app:screenshot', async (e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
-    const img = await wof(e).webContents.capturePage(); // the calling window (a detached window's script shoots itself)
+    const wc = wof(e).webContents; // the calling window (a detached window's script shoots itself)
+    await wc.executeJavaScript('new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)))').catch(() => {}); // two frames: what the script just changed has painted
+    const img = await wc.capturePage();
     const file = path.join(dir, `${name}.png`);
     fs.writeFileSync(file, img.toPNG());
     console.log('screenshot', file);

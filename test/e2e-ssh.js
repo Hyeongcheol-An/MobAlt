@@ -169,6 +169,29 @@
       log('folder deleted underneath:', deep, '→', parent, '| toasts', JSON.stringify(seen));
       mo.disconnect();
     }
+    // 3d. a dangling symlink lists with its target and is marked broken (readlink before stat); the row's tooltip starts
+    //     with the full name and ends "→ target (broken)"; the filter box above the list narrows the rows to the names
+    //     containing the text, Esc clears it
+    {
+      await window.api.ssh.exec(connId, 'ln -sfn /nonexistent/nowhere /tmp/mobalt-e2e/dangling && ln -sfn /tmp/mobalt-e2e/package.json /tmp/mobalt-e2e/link-ok');
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e');
+      const entries = app.sftpPanel.state().entries;
+      const dangling = entries.find((e) => e.name === 'dangling'), ok = entries.find((e) => e.name === 'link-ok');
+      results.danglingLink = !!dangling && dangling.link && dangling.broken === true && dangling.target === '/nonexistent/nowhere' && !!ok && ok.link && !ok.broken && ok.type === 'f';
+      const title = app.sftpPanel.rowFor('dangling')?.title || '';
+      results.rowTooltip = title.startsWith('dangling\n') && /→ \/nonexistent\/nowhere \(broken\)$/.test(title) && (app.sftpPanel.rowFor('package.json')?.title || '').startsWith('package.json\n');
+      const filter = document.getElementById('sftp-filter');
+      filter.value = 'ING';
+      filter.dispatchEvent(new Event('input'));
+      results.filterRows = app.sftpPanel.rows().map((r) => r.dataset.name).join(',') === 'dangling'; // "ING" in dangling only, case-insensitive
+      filter.value = 'zzz';
+      filter.dispatchEvent(new Event('input'));
+      results.filterEmptyText = app.sftpPanel.rows().length === 0 && /No names contain "zzz"/.test(document.getElementById('sftp-list').textContent);
+      filter.focus();
+      filter.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      results.filterEscClears = filter.value === '' && app.sftpPanel.rows().length === entries.length && document.activeElement !== filter;
+      log('dangling:', JSON.stringify(dangling), '| tooltip', JSON.stringify(title), '| filter rows ok:', results.filterRows);
+    }
 
     // 4. encrypted key -> passphrase prompt
     const p2 = app.openSession(s2);
@@ -293,7 +316,7 @@
       new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seenToasts.push(n.textContent); }).observe(document.getElementById('toast-root'), { childList: true });
       // killing the sshd child ends the TCP connection with a clean EOF ("closed by the server") or, when the Mac is busy
       // and the reset arrives first, with ECONNRESET ("lost: read ECONNRESET"): the server dropped us either way
-      const lostRe = /^Connection to enc-key was (closed by the server|lost: .+)$/;
+      const lostRe = /^Connection to enc-key was (closed by the server|lost: .+?) 1 tunnel started from the Tunnels dialog was stopped\.$/; // one ad-hoc tunnel is on this connection when it drops (below)
       const sp = await app.openSession(app.sessions.sessions.find((x) => x.id === s2.id)); // saved passphrase: no prompt
       await waitFor(() => sp.status === 'connected', 15000, 'drop-test session connected');
       await sleep(1500);
@@ -314,6 +337,7 @@
       const sizeOf = async (p) => parseInt((await window.api.ssh.exec(pane.termId, `stat -f %z ${p} 2>/dev/null || echo -1`)).stdout.trim(), 10);
       await window.api.ssh.exec(pane.termId, `head -c 300000000 /dev/urandom > ${big}`);
       for (const f of [bigLocal, bigLocal + '.part', bigLocal2, bigLocal2 + '.part']) await window.api.app.testFs('rm', f);
+      await window.api.tunnels.start({ type: 'local', bindHost: '127.0.0.1', bindPort: 2224, destHost: '127.0.0.1', destPort: 2222, connId: spId, adhoc: true }); // as the Tunnels dialog starts one
       const dl1 = await window.api.sftp.download(spId, big, bigLocal, false);
       await waitFor(() => (app.sftpPanel.transfers.get(dl1)?.transferred || 0) > 2000000, 15000, 'download under way');
       await window.api.ssh.exec(pane.termId, `kill ${childPid}`);

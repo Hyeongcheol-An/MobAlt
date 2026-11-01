@@ -890,11 +890,13 @@ export class TermPane {
   }
 
   /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'); `sentence`: with its full stop (the dead line). */
-  lostMessage(detail, sentence = false) {
+  lostMessage(detail, sentence = false, tunnelsStopped = 0) {
     const s = this.session || {};
     const where = s.name || `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
     if (sentence) return detail ? t('Connection to {where} was lost: {detail}.', { where, detail }) : t('Connection to {where} was closed by the server.', { where });
-    return detail ? t('Connection to {where} was lost: {detail}', { where, detail }) : t('Connection to {where} was closed by the server', { where });
+    const msg = detail ? t('Connection to {where} was lost: {detail}', { where, detail }) : t('Connection to {where} was closed by the server', { where });
+    // the tunnels started from the Tunnels dialog on this connection went with it (the session's own come back with a reconnect)
+    return tunnelsStopped > 0 ? msg + ' ' + tn('{n} tunnel started from the Tunnels dialog was stopped.', '{n} tunnels started from the Tunnels dialog were stopped.', tunnelsStopped) : msg;
   }
 
   onExit({ id, code, reason, detail }) {

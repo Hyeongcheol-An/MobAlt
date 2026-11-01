@@ -241,6 +241,8 @@ html[dir="rtl"] .tree-row .sub { direction: ltr; unicode-bidi: isolate; text-ali
 .sftp-path input:focus { border-color: var(--accent); }
 .sftp-opts { display: flex; gap: 12px; padding: 2px 8px 4px; font-size: 11px; color: var(--fg-dim); border-bottom: 1px solid var(--divider); }
 .sftp-opts label { display: flex; gap: 4px; align-items: center; }
+.sftp-filter { margin: 4px 8px; height: 24px; padding: 0 8px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--bg-input); outline: none; min-width: 0; font-size: 12px; }   /* like #session-filter: names containing the text */
+.sftp-filter:focus { border-color: var(--accent); }
 .sftp-list { flex: 1; overflow: auto; outline: none; position: relative; container-type: inline-size; }
 .sftp-list.drop-hover { outline: 2px dashed var(--accent); outline-offset: -4px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .sftp-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) 60px 86px; gap: 6px; align-items: center; height: 24px; padding: 0 8px; white-space: nowrap; font-size: 12px; }
