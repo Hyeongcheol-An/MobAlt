@@ -26,7 +26,7 @@ const dialogs = require('./dialogs'); // native dialogs; answered from the queue
 const i18n = require('./i18n'); // interface language: t() for every label built here, the dictionary for the windows
 const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
-const { ZmodemManager } = require('./zmodem');
+const { ZmodemManager, fmtBytes } = require('./zmodem');
 
 const pkg = require('../../package.json');
 const scans = new Map(); // running network scans: id → { cancel, promise } (netscan.js); quitting cancels them
@@ -151,6 +151,7 @@ const prompter = {
 const ssh = new SshManager(registry, store, prompter);
 const monitor = new RemoteMonitor(ssh); // the monitoring bar's polls; keeps the previous sample per connection for the rates
 const sftp = new SftpManager(ssh, store);
+ssh.beforeDisconnect = (id) => sftp.abortForConnection(id); // Session → Disconnect while a transfer runs: "cancelled (disconnected)", never "No response from server"
 const ftp = new FtpManager(store, prompter);
 // rz / sz inside a terminal: a sentry on every byte stream the registry registers; its dialogs go through dialogs.js
 const zmodem = new ZmodemManager(registry, store, { dialogs, getWin: () => win, downloadsDir: () => app.getPath('downloads') });
@@ -963,7 +964,21 @@ function registerIpc() {
         local = r.filePath;
       }
     }
-    return files(id).download(id, remote, local);
+    // a .part of an earlier download of this file beside the destination (it died with the connection, or a
+    // Disconnect ended it): resume it from where it stopped, start over, or leave it
+    let resume = false;
+    const have = !isDir && !ftp.has(id) ? SftpManager.partSize(local) : 0;
+    if (have > 0) {
+      const name = path.posix.basename(remote);
+      const r = await dialogs.showMessageBox(wof(e), {
+        type: 'question', buttons: [t('Resume'), t('Start over'), t('Cancel')], defaultId: 0, cancelId: 2,
+        message: t('Resume the download of "{name}"?', { name }),
+        detail: t('{size} of it is already in {file}. Resume continues from there; Start over downloads it again from the beginning.', { size: fmtBytes(have), file: SftpManager.partOf(local) }),
+      });
+      if (r.response === 2) return null;
+      resume = r.response === 0;
+    }
+    return files(id).download(id, remote, local, { resume });
   });
   ipcMain.handle('sftp:upload', async (e, id, locals, remoteDir) => {
     if (!locals || !locals.length) {

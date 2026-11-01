@@ -786,6 +786,7 @@ class SshManager {
     const info = this.conns.get(id);
     if (!info) return;
     info.closing = true;
+    if (this.beforeDisconnect) try { this.beforeDisconnect(id); } catch {} // main.js: the connection's transfers end as cancelled, not as a lost channel
     try {
       if (info.stream) info.stream.end();
     } catch {}

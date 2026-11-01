@@ -280,11 +280,26 @@
       const childPid = await waitFor(() => (/SSHD_CHILD=(\d+)/.exec(textOf(sp)) || [])[1], 8000, 'sshd child pid');
       const local = await app.newLocalTab();
       await waitFor(() => /[$%#>] ?$/.test(textOf(local).trimEnd()), 8000, 'local prompt');
-      local.term.input(`kill ${childPid} && echo KILLED_OK\r`);
+      // 9a. a download under way on that connection when it drops: no truncated file under the final name, the bytes
+      //     so far in <name>.part (the sshd child is killed from the other connection the moment the transfer runs, so
+      //     the loopback download cannot finish first)
+      const spId = sp.termId;
+      const big = '/tmp/mobalt-e2e/big.bin', bigLocal = '/tmp/mobalt-e2e-dl/big.bin', bigLocal2 = '/tmp/mobalt-e2e-dl/big2.bin';
+      const sizeOf = async (p) => parseInt((await window.api.ssh.exec(pane.termId, `stat -f %z ${p} 2>/dev/null || echo -1`)).stdout.trim(), 10);
+      await window.api.ssh.exec(pane.termId, `head -c 300000000 /dev/urandom > ${big}`);
+      for (const f of [bigLocal, bigLocal + '.part', bigLocal2, bigLocal2 + '.part']) await window.api.app.testFs('rm', f);
+      const dl1 = await window.api.sftp.download(spId, big, bigLocal, false);
+      await waitFor(() => (app.sftpPanel.transfers.get(dl1)?.transferred || 0) > 2000000, 15000, 'download under way');
+      await window.api.ssh.exec(pane.termId, `kill ${childPid}`);
       app.focusPane(sp); // the status bar shows the pane the drop lands on
-      await waitFor(() => /KILLED_OK/.test(textOf(local)), 8000, 'kill ran');
       await waitFor(() => sp.dead, 15000, 'ssh pane noticed the drop');
+      await waitFor(() => app.sftpPanel.transfers.get(dl1)?.status !== 'running', 15000, 'download ended with the drop');
       await sleep(300);
+      const x1 = app.sftpPanel.transfers.get(dl1);
+      const partSize = await sizeOf(bigLocal + '.part');
+      results.dropDownloadNoFinalFile = !(await window.api.app.testFs('exists', bigLocal)) && x1.status === 'error';
+      results.dropDownloadKeepsPart = partSize > 0 && partSize < 300000000;
+      log('download killed with the connection:', x1.status, x1.error, '| .part', partSize, 'bytes of 300000000');
       results.dropToast = seenToasts.some((x) => lostRe.test(x));
       results.dropLine = /── Connection to enc-key was (closed by the server|lost: [^\n]+?)\. Press Enter to reconnect/.test(textOf(sp));
       results.dropStatus = sp.status === 'disconnected' && /Connection lost\./.test(sp.overlay?.textContent || '') && /disconnected \(connection lost\)/.test(document.getElementById('st-session').textContent);
@@ -295,15 +310,40 @@
       await sp.reconnect();
       await waitFor(() => sp.status === 'connected', 15000, 'reconnected after the drop');
       await sleep(1200);
+      // 9b. the next download of the same file offers Resume (a sheet: Resume / Start over / Cancel), which continues
+      //     from the .part's end — the row says "resuming at …" meanwhile and the result's checksum is the remote file's
+      {
+        await window.api.app.testNextDialog({ response: 0 }); // Resume
+        const dl2 = await window.api.sftp.download(sp.termId, big, bigLocal, false);
+        let rowSeen = '';
+        await waitFor(() => { const r = document.querySelector('#sftp-transfers .xfer.running'); if (r && /resuming at/.test(r.textContent)) rowSeen = r.textContent; return app.sftpPanel.transfers.get(dl2)?.status === 'done'; }, 60000, 'resumed download done');
+        const x2 = app.sftpPanel.transfers.get(dl2);
+        results.resumeOffered = (await window.api.app.testNextDialog()).pending === 0 && x2.resumedFrom === partSize && x2.transferred === 300000000;
+        results.resumeRowSaysSo = new RegExp('resuming at \\d+(\\.\\d)? MB').test(rowSeen);
+        const sums = await window.api.ssh.exec(pane.termId, `shasum -a 256 ${big} ${bigLocal} | cut -d' ' -f1 | uniq | wc -l`);
+        results.resumedChecksumMatches = sums.stdout.trim() === '1' && !(await window.api.app.testFs('exists', bigLocal + '.part'));
+        log('resumed from', x2.resumedFrom, '| row', JSON.stringify(rowSeen), '| checksums equal:', sums.stdout.trim() === '1');
+      }
       sp.write('exit\r');
       await waitFor(() => sp.dead, 10000, 'exit ended the session');
       await sp.reconnect();
       await waitFor(() => sp.status === 'connected', 15000, 'reconnected after exit');
       await sleep(800);
+      // 9c. Session → Disconnect while a download runs: the transfer ends "cancelled (disconnected)" — not with the
+      //     "No response from server" of the dying channel —, its .part stays for a resume, and no error toast
+      const dl3 = await window.api.sftp.download(sp.termId, big, bigLocal2, false);
+      await waitFor(() => (app.sftpPanel.transfers.get(dl3)?.transferred || 0) > 2000000, 15000, 'third download under way');
       await sp.disconnect();
       await waitFor(() => sp.dead, 10000, 'disconnect ended the session');
+      await waitFor(() => app.sftpPanel.transfers.get(dl3)?.status !== 'running', 10000, 'third download ended');
       await sleep(300);
+      const x3 = app.sftpPanel.transfers.get(dl3);
+      const row3 = [...document.querySelectorAll('#sftp-transfers .xfer.cancelled')].map((x) => x.textContent).join(' | ');
+      results.disconnectCancelsTransfer = x3.status === 'cancelled' && x3.error === 'disconnected' && /cancelled \(disconnected\)/.test(row3) && (await sizeOf(bigLocal2 + '.part')) > 0 && !(await window.api.app.testFs('exists', bigLocal2));
+      log('disconnect during a download:', x3.status, x3.error, '| rows', JSON.stringify(row3));
       results.quietEndsNoToast = seenToasts.length === toastsBefore && (textOf(sp).match(/── Connection to enc-key was (closed by the server|lost: )/g) || []).length === 1 && (textOf(sp).match(/── Session ended\./g) || []).length === 2;
+      for (const f of [bigLocal, bigLocal2, bigLocal2 + '.part']) await window.api.app.testFs('rm', f);
+      await window.api.ssh.exec(pane.termId, `rm -f ${big}`);
       await app.closeTab(local.tab);
     }
     log('RESULTS ' + JSON.stringify(results));
