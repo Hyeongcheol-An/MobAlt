@@ -451,8 +451,9 @@
     results.uploadCancelQuiet = toastsSince(n).length === 0 && transfers().length === tBefore && !entries().some((e) => /^up[12]\.txt$/.test(e.name)) && (await pendingAnswers()) === 0;
     n = toasts.length;
     await answer({ canceled: false, filePaths: [scratch + '/local/up1.txt', scratch + '/local/up2.txt'] });
+    const dir = app.sftpPanel.state().path; // the toast names the destination as the server resolves it
     await app.sftpPanel.upload([]);
-    results.uploadToast = toastsSince(n).some((t) => t.text === 'Uploading 2 items' && !t.error); // QA4-09: a real plural, not "item(s)"
+    results.uploadToast = toastsSince(n).some((t) => t.text === `Uploading 2 items to ${dir}` && !t.error); // QA4-09: a real plural, not "item(s)"
     await waitFor(() => ['up1.txt', 'up2.txt'].every((f) => transfers().some((t) => t.name === f && t.status === 'done')), 10000, 'uploads done');
     await app.sftpPanel.navigate(remote);
     await waitFor(() => entries().some((e) => e.name === 'up2.txt'), 5000, 'uploads listed');
