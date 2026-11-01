@@ -1425,7 +1425,7 @@
   "{error} — the server answered but the handshake did not finish within {s}s.": "{error} — máy chủ đã trả lời nhưng bắt tay không hoàn tất trong {s} giây.",
   "{error} — the server closed the connection during the handshake.": "{error} — máy chủ đã đóng kết nối trong lúc bắt tay.",
   "{key} (passphrase)": "{key} (cụm mật khẩu)",
-  "Connection attempt cancelled.": "Đã hủy lần kết nối.",
+  "Connection attempt cancelled.": "Đã hủy lần thử kết nối.",
   "Device {path} disconnected": "Thiết bị {path} đã ngắt kết nối",
   "Device {path} disconnected.": "Thiết bị {path} đã ngắt kết nối.",
   "Resource busy — the port is open in another pane or program": "Tài nguyên đang bận — cổng đang được mở trong ngăn hoặc chương trình khác",

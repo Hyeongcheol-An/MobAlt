@@ -1493,7 +1493,7 @@
   "Device {path} disconnected.": "Dispositivo {path} desconectado.",
   "Resource busy — the port is open in another pane or program": "Recurso ocupado — el puerto está abierto en otro panel o programa",
   "Send Break": "Enviar Break",
-  "Sent at the login: prompt": "Se envía en el indicador login:",
+  "Sent at the login: prompt": "Se envía en el prompt login:",
   "SFTP browser is off for this session — Refresh lists its files anyway": "El explorador SFTP está desactivado para esta sesión — Actualizar lista sus archivos de todos modos",
   "SFTP unavailable on {session}: {error}": "SFTP no disponible en {session}: {error}",
   "ssh-agent not reachable at SSH_AUTH_SOCK": "ssh-agent no accesible en SSH_AUTH_SOCK",
@@ -1515,7 +1515,7 @@
   "Port {port} is already in use on this Mac": "El puerto {port} ya está en uso en este Mac",
   "Resume": "Reanudar",
   "Resume the download of \"{name}\"?": "¿Reanudar la descarga de «{name}»?",
-  "resuming at {size}": "reanudando en {size}",
+  "resuming at {size}": "reanudando desde {size}",
   "Start over": "Empezar de nuevo",
   "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": [
     "No se conoce la carpeta del shell (la sesión no sigue al terminal). ¿Subir {n} elemento a {dir}?",

@@ -1510,7 +1510,7 @@
   "Port {port} is already in use on this Mac": "A porta {port} já está em uso neste Mac",
   "Resume": "Retomar",
   "Resume the download of \"{name}\"?": "Retomar o download de “{name}”?",
-  "resuming at {size}": "retomando em {size}",
+  "resuming at {size}": "retomando a partir de {size}",
   "Start over": "Recomeçar",
   "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": [
     "A pasta do shell é desconhecida (a sessão não segue o terminal). Enviar {n} item para {dir}?",

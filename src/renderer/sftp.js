@@ -956,7 +956,7 @@ export class SftpPanel {
       if (x.resumedFrom) progress = t('resuming at {size}', { size: fmtSize(x.resumedFrom) }) + ' · ' + progress; // a .part continued
       // a cancelled transfer says why when a Disconnect ended it (main marks those; a plain cancel carries no reason, or
       // "cancelled" itself from the FTP manager); an error shows its message
-      const status = x.status === 'done' ? t('done') : x.status === 'error' ? x.error : x.status === 'cancelled' && x.error && x.error !== 'cancelled' ? t('cancelled ({why})', { why: x.error }) : x.status;
+      const status = x.status === 'done' ? t('done') : x.status === 'error' ? x.error : x.status === 'cancelled' && x.error && x.error !== 'cancelled' ? t('cancelled ({why})', { why: x.error }) : x.status === 'cancelled' ? t('cancelled') : x.status;
       el.append(h('div', { class: 'xfer ' + x.status },
         h('div', { class: 'l1' }, h('span', { class: 'xfer-kind' }, icon(x.kind === 'upload' ? 'upload' : 'download')), h('span', { class: 'n', title: x.remote }, x.name),
           x.proto === 'zmodem' ? h('span', { class: 'xfer-proto', title: t('Zmodem transfer in the terminal (rz / sz)') }, 'zmodem') : null, // from a terminal, not the Sftp panel

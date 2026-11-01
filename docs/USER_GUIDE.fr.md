@@ -69,7 +69,7 @@ et remplissez l'onglet Base. Double-cliquez sur une session pour vous connecter�
 | SSH | Terminal via SSH avec navigateur SFTP, tunnels, transfert X11 et transfert d'agent |
 | Mosh | Terminal itinérant via le client `mosh` (amorcé par SSH) |
 | Local | Votre shell de connexion macOS (zsh/bash) avec suivi du dossier |
-| Telnet | Telnet classique avec négociation NAWS/TTYPE ; le nom d'utilisateur de la session est envoyé à l'invite `login:` |
+| Telnet | Telnet classique avec négociation NAWS/TTYPE ; le nom d'utilisateur de la session est envoyé à l'invite `login:` |
 | Série | Console série USB (débit, trame, contrôle de flux, écho local) |
 | FTP | Navigateur de fichiers FTP / FTPS (TLS explicite) dans le panneau Sftp |
 | RDP / VNC | Délègue à Windows App ou au Partage d'écran de macOS |
@@ -124,12 +124,12 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   (les noms inconnus sont refusés sur place), *Rétablir les valeurs par défaut* remet les listes en l'état, et « Algorithmes
   hérités (anciens appareils) » est un préréglage qui ajoute les échanges de clés SHA-1, les chiffrements CBC et les clés d'hôte DSA
   dont les vieux équipements ont encore besoin. Seules les listes qui diffèrent des valeurs par défaut sont enregistrées.
-- **Échange de clés post-quantique** : SSH avancé → Post-quantique propose les hybrides ML-KEM-768 + X25519 et
+- **Échange de clés post-quantique** : SSH avancé → Post-quantique propose les hybrides ML-KEM-768 + X25519 et
   sntrup761 + X25519 (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) avant la liste d'échange
-  de clés de la session : un serveur qui les connaît en prend un, un serveur plus ancien retombe sur la liste
-  comme avant. Désactivé par défaut ; le serveur doit avoir OpenSSH 8.5 ou plus récent pour sntrup761 (activé par défaut à partir
+  de clés de la session : un serveur qui les connaît en prend un, un serveur plus ancien retombe sur la liste
+  comme avant. Désactivé par défaut ; le serveur doit avoir OpenSSH 8.5 ou plus récent pour sntrup761 (activé par défaut à partir
   de 9.0), 9.9 ou plus récent pour ML-KEM.
-  La ligne grise après la négociation nomme ce qui a été convenu, avec « (post-quantique) » après un hybride.
+  La ligne grise après la négociation nomme ce qui a été convenu, avec « (post-quantique) » après un hybride.
 - **Hôtes de rebond** : SSH avancé → Hôte de rebond choisit une autre session enregistrée comme bastion (ProxyJump).
 - **En cas d'échec** : le terminal affiche ce qui s'est passé, par exemple
   `échec de l'authentification — le serveur accepte : publickey ; essayé : ~/.ssh/id_ed25519`, ou indique que
@@ -244,7 +244,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
 - **Presse-papiers** : sélectionner copie (Réglages → Terminal → Copier à la sélection) ; le clic droit colle
   (⇧ clic droit ouvre le menu). Déposer des fichiers du Finder sur un terminal SSH les envoie ;
   sur un terminal local, cela colle leurs chemins. Si le dossier du shell est inconnu (la session ne suit pas le terminal), ils vont dans le dossier
-  que le panneau Sftp affiche pour cette connexion ; si le panneau n'est pas encore ouvert, une question vous est posée d'abord.
+  que le panneau Sftp affiche pour cette connexion ; si le panneau n'a pas encore affiché cette connexion, une question vous est posée d'abord.
 - **Garde-collage** : un collage de plus d'une ligne (ou de plus de 1000 caractères) demande d'abord confirmation — *Coller N
   lignes dans … ?* montre le texte dans un aperçu modifiable ; ⌘⏎ colle, Échap annule. Chaque collage est aussi
   inspecté pour ce que le presse-papiers ne montre pas : caractères sans chasse et bidi, espaces insécables (une espace
@@ -295,7 +295,7 @@ Le panneau **Sftp** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement �
 - Double-cliquez sur un fichier texte pour le modifier dans l'éditeur intégré (⌘S l'enregistre sur le serveur). « Modifier dans un éditeur
   externe » l'ouvre dans votre éditeur (Réglages → Général → Éditeur externe) et le renvoie à chaque enregistrement.
 - Les transferts affichent la progression, la vitesse et un bouton d'annulation ; « Afficher dans le Finder » après un téléchargement. Un téléchargement est écrit dans `<nom>.part` et ne prend
-  son nom qu'une fois complet ; s'il s'interrompt (connexion perdue, déconnexion), le téléchargement suivant du même fichier propose
+  son nom qu'une fois complet ; s'il s'interrompt (connexion perdue, Déconnecter), le téléchargement suivant du même fichier propose
   *Reprendre* ou *Recommencer*.
 - Les en-têtes de colonne trient par nom, taille ou date. Quand la barre latérale est étroite, la colonne de date se masque.
 
@@ -329,7 +329,7 @@ sur ce Mac* (ou *sur le serveur* pour une redirection distante).
   « Ouvrir le navigateur SFTP » dans le menu du volet ; elle est fermée en même temps que le volet.
 - **Série** : l'éditeur liste les périphériques série USB ; réglez le débit, les bits de données et d'arrêt, la parité, le contrôle de flux,
   l'écho local et ce qu'envoie Entrée (CR, LF, CRLF). *Envoyer un Break* dans le menu du volet maintient la ligne en
-  état de break pendant 250 ms ; un périphérique débranché termine le volet par « Périphérique … déconnecté ».
+  état de break pendant 250 ms ; un périphérique débranché termine le volet par « Périphérique … déconnecté ».
 - **RDP / VNC** : MobAlt écrit un fichier `.rdp` et ouvre Windows App, ou ouvre `vnc://` dans le Partage
   d'écran. La session conserve l'hôte, l'utilisateur et le dossier comme n'importe quel autre signet.
 

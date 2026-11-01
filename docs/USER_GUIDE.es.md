@@ -69,7 +69,7 @@ derecha/hacia abajo, editar, duplicar, eliminar, iniciar un túnel, nueva sesió
 | SSH | Terminal por SSH con explorador SFTP, túneles, X11 y reenvío del agente |
 | Mosh | Terminal itinerante mediante el cliente `mosh` (arrancado por SSH) |
 | Local | Tu shell de inicio de sesión de macOS (zsh/bash) con seguimiento de carpeta |
-| Telnet | Telnet clásico con negociación NAWS/TTYPE; el nombre de usuario de la sesión se envía en el indicador `login:` |
+| Telnet | Telnet clásico con negociación NAWS/TTYPE; el nombre de usuario de la sesión se envía en el prompt `login:` |
 | Serie | Consola USB-serie (baudios, trama, control de flujo, eco local) |
 | FTP | Explorador de archivos FTP / FTPS (TLS explícito) en el panel Sftp |
 | RDP / VNC | Delega en Windows App o en Compartir Pantalla de macOS |
@@ -132,7 +132,7 @@ carpetas y deja el campo como estaba si cancelas.
   intercambio de claves de la sesión: un servidor que los tenga toma uno y un servidor más antiguo vuelve a la
   lista como antes. Desactivado por omisión; el servidor necesita OpenSSH 8.5 o posterior para sntrup761 (activado por omisión desde 9.0),
   9.9 o posterior para ML-KEM. La
-  línea gris tras el saludo indica lo acordado, con «(poscuántico)» tras un híbrido.
+  línea gris tras el handshake indica lo acordado, con «(poscuántico)» tras un híbrido.
 - **Hosts de salto**: SSH avanzado → Host de salto elige otra sesión guardada como bastión (ProxyJump).
 - **Cuando falla**: el terminal explica qué ha pasado, por ejemplo
   `autenticación fallida — el servidor acepta: publickey; se probó: ~/.ssh/id_ed25519`, o una pista de que nada
