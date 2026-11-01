@@ -74,5 +74,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # CSC_LINK / CSC_KEY_PASSWORD / APPLE_API_* come from the step above (only when the secrets exist).
-          # Deploy key with write access to Hyeongcheol-An/homebrew-tap → scripts/update-cask.sh pushes the cask
+          # Deploy key with write access to Hyeongcheol-An/homebrew-tap → scripts/update-cask.sh pushes the cask — only in
+          # semantic-release's success step (.releaserc.json), once the GitHub release and its DMGs exist; the prepare step
+          # writes Casks/mobalt.rb for the release commit with the key blanked, so a run that fails after prepare (a push to
+          # main meanwhile, say) never leaves the tap pointing at a download that is not there.
           HOMEBREW_TAP_DEPLOY_KEY: ${{ secrets.HOMEBREW_TAP_DEPLOY_KEY }}
