@@ -313,7 +313,8 @@ se conecta, e você é avisado se algum não conseguir escutar na porta.
   Sftp” em Ajustes → Geral); caso contrário, pelo botão “Abrir SFTP para este host (via SSH)” do painel ou por
   “Abrir Navegador SFTP” no menu do painel; ela é encerrada junto com o painel.
 - **Serial**: o editor lista os dispositivos USB-serial; defina baud, bits de dados/parada, paridade, controle de fluxo,
-  eco local e o que o Enter envia (CR, LF, CRLF).
+  eco local e o que o Enter envia (CR, LF, CRLF). *Enviar Break* no menu do painel mantém a linha em estado de break
+  por 250 ms; um dispositivo desconectado encerra o painel com "Dispositivo … desconectado".
 - **RDP / VNC**: o MobAlt grava um arquivo `.rdp` e abre o Windows App, ou abre `vnc://` no Compartilhamento
   de Tela. A sessão guarda host, usuário e pasta como qualquer outro favorito.
 

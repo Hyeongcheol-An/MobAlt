@@ -310,7 +310,8 @@ kết nối, và bạn được báo nếu có đường hầm không lắng ngh
   khi SSH kết nối" trong Cài đặt → Chung), nếu không thì mở từ nút "Mở SFTP cho máy chủ này (qua SSH)" của bảng hoặc
   mục "Mở trình duyệt SFTP" trong menu ngăn; kết nối bị đóng cùng với ngăn.
 - **Serial**: trình sửa phiên liệt kê các thiết bị USB-serial; đặt baud, bit dữ liệu/bit dừng, chẵn lẻ, điều khiển luồng,
-  echo cục bộ và ký tự Enter gửi đi (CR, LF, CRLF).
+  echo cục bộ và ký tự Enter gửi đi (CR, LF, CRLF). *Gửi Break* trong menu ngăn giữ đường truyền ở trạng thái break
+  trong 250 ms; thiết bị bị rút sẽ kết thúc ngăn với "Thiết bị … đã ngắt kết nối".
 - **RDP / VNC**: MobAlt ghi một tệp `.rdp` và mở Windows App, hoặc mở `vnc://` trong Chia sẻ
   màn hình. Phiên giữ máy chủ, người dùng và thư mục như mọi dấu trang khác.
 

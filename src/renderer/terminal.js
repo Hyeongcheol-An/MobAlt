@@ -884,6 +884,7 @@ export class TermPane {
   /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'); `sentence`: with its full stop (the dead line). */
   lostMessage(detail, sentence = false) {
     const s = this.session || {};
+    if (this.kind === 'serial') return sentence ? t('Device {path} disconnected.', { path: s.serialPath }) : t('Device {path} disconnected', { path: s.serialPath });
     const where = s.name || `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
     if (sentence) return detail ? t('Connection to {where} was lost: {detail}.', { where, detail }) : t('Connection to {where} was closed by the server.', { where });
     return detail ? t('Connection to {where} was lost: {detail}', { where, detail }) : t('Connection to {where} was closed by the server', { where });
@@ -981,6 +982,18 @@ export class TermPane {
     this.term.write('\r\n');
     await this.start();
     this.focus();
+  }
+
+  /** Send Break on a serial pane (the pane menu): 250 ms of break on the line; the driver's refusal (a pty has none) is toasted. */
+  async sendBreak() {
+    if (this.kind !== 'serial' || !this.termId || this.dead) return false;
+    try {
+      await window.api.term.serialBreak(this.termId);
+      return true;
+    } catch (e) {
+      toast(t('Serial error: {error}', { error: errMsg(e) }), 'error');
+      return false;
+    }
   }
 
   async disconnect() {
@@ -1520,6 +1533,8 @@ export class TermPane {
       this.monitorAllowed() ? { label: this.monitorEnabled() ? t('Hide Remote Monitoring Bar') : t('Show Remote Monitoring Bar'), action: () => this.toggleMonitor() } : null,
       this.kind === 'ssh' || this.kind === 'ftp' ? { label: this.kind === 'ftp' ? t('Open file browser') : t('Open SFTP Browser'), action: () => this.app.sftpPanel.show(this.termId) } : null,
       this.kind === 'mosh' ? { label: t('Open SFTP Browser'), action: () => this.openSftpCompanion(), disabled: this.dead } : null,
+      // a serial console's break condition (250 ms on the line): what some boards and consoles take as an attention key
+      this.kind === 'serial' ? { label: t('Send Break'), action: () => this.sendBreak(), disabled: this.dead || !this.termId } : null,
       this.kind !== 'local' && !empty ? { label: this.dead ? t('Reconnect') : t('Disconnect'), action: () => (this.dead ? this.reconnect() : this.disconnect()) } : null,
       '-',
       { label: t('Close Pane'), key: '⇧⌘W', action: () => this.app.closePane(this) },

@@ -461,7 +461,6 @@ function spawnTelnet(registry, { host, port = 23, cols = 80, rows = 24 }) {
     const b = Buffer.from([IAC, SB, OPT_NAWS, (curCols >> 8) & 255, curCols & 255, (curRows >> 8) & 255, curRows & 255, IAC, SE]);
     sock.write(b);
   };
-
   sock.on('connect', () => registry.data(id, `\x1b[90m${t('Connected to {target}', { target: `${host}:${port}` })}\x1b[0m\r\n`));
   sock.on('data', (buf) => {
     const out = [];
@@ -558,28 +557,83 @@ function spawnSerial(registry, opts) {
   });
   const nl = { cr: '\r', lf: '\n', crlf: '\r\n' }[opts.newline || 'cr'];
   let closed = false;
-  const finish = (code, reason) => {
+  let lostError = null; // the error that said the device is gone: the close that follows is reported as a drop, not an end
+  const finish = (code, reason, detail) => {
     if (closed) return;
     closed = true;
-    registry.exit(id, code, reason);
+    stopProbe();
+    registry.exit(id, code, reason, detail);
+  };
+  /** An error that means the device went away (unplugged adapter, the other side of a pty closed). */
+  const isGone = (e) => !!e && (e.disconnected === true || /\b(EIO|ENXIO|EBADF)\b/.test(String(e.code || e.message || '')));
+  /** The device vanished: close what is left of the port; the exit reason 'lost' makes the pane and a toast say so. */
+  const lost = (why) => {
+    if (closed || lostError) return;
+    lostError = why || new Error('disconnected');
+    if (port.isOpen) port.close(() => finish(0, 'lost', lostError.message));
+    else finish(0, 'lost', lostError.message);
+  };
+  // serialport reports an unplugged adapter when a read or write fails (EIO / ENXIO → a close with err.disconnected),
+  // but not always: a pty whose other side went away answers every read with zero bytes and serialport reads on, and
+  // the device node of a USB adapter may be gone before anything is written. So while the port is open, every 3 s:
+  // stat the path (ENOENT: the node is gone) and write zero bytes to the descriptor (EIO: hung up) — two cheap
+  // syscalls per serial pane, nothing on the line itself — and the pane notices without a keystroke.
+  const PROBE_MS = 3000;
+  let probe = null;
+  const stopProbe = () => { if (probe) clearInterval(probe); probe = null; };
+  const startProbe = () => {
+    stopProbe();
+    probe = setInterval(() => {
+      if (closed || !port.isOpen) return;
+      fs.stat(opts.path, (err) => {
+        if (closed) return;
+        if (err && err.code === 'ENOENT') return lost(err);
+        const fd = port.port && port.port.fd; // the binding's descriptor (serialport keeps it on port.port)
+        if (typeof fd !== 'number') return;
+        fs.write(fd, Buffer.alloc(0), 0, 0, (e) => { if (!closed && isGone(e)) lost(e); });
+      });
+    }, PROBE_MS);
+  };
+  /**
+   * serialport's driver messages read "Error: Resource busy, cannot open /dev/x", "Error Resource temporarily
+   * unavailable Cannot lock port", "Error: Inappropriate ioctl for device, cannot set": the reason alone — the line
+   * already names the port and what was attempted — and the usual one (another opener holds the port) explained.
+   */
+  const driverReason = (e) => {
+    const m = String(e.message || e).replace(/^Error:?\s+/, '').replace(/,? cannot (open|set|lock)\b.*$/is, '').trim();
+    return /resource busy|resource temporarily unavailable|cannot lock|EBUSY|EAGAIN/i.test(String(e.message || e)) ? t('Resource busy — the port is open in another pane or program') : m;
   };
   port.open((err) => {
     if (err) {
-      registry.data(id, `\r\n\x1b[31m${t('Cannot open {path}: {error}', { path: opts.path, error: err.message })}\x1b[0m\r\n`);
+      registry.data(id, `\r\n\x1b[31m${t('Cannot open {path}: {error}', { path: opts.path, error: driverReason(err) })}\x1b[0m\r\n`);
       return finish(1, 'failed');
     }
     registry.data(id, `\x1b[90m${t('Connected to {path} @ {baud} {mode}', { path: opts.path, baud: baudRate, mode: `${port.settings.dataBits}${(port.settings.parity || 'none')[0].toUpperCase()}${port.settings.stopBits}` })}\x1b[0m\r\n`);
+    startProbe();
   });
   port.on('data', (b) => registry.bytes(id, b));
-  port.on('error', (e) => registry.data(id, `\r\n\x1b[31m${t('Serial error: {error}', { error: e.message })}\x1b[0m\r\n`));
-  port.on('close', () => finish(0, 'closed'));
+  port.on('error', (e) => {
+    if (isGone(e)) return lost(e); // the device is gone: the drop is announced, not the EIO behind it
+    registry.data(id, `\r\n\x1b[31m${t('Serial error: {error}', { error: e.message })}\x1b[0m\r\n`);
+  });
+  port.on('close', (err) => finish(0, (err && err.disconnected) || lostError ? 'lost' : 'closed', (err && err.disconnected && err.message) || (lostError && lostError.message) || undefined));
   registry.register(id, {
     kind: 'serial',
     write: (d) => {
       if (!port.isOpen) return;
-      if (opts.localEcho) registry.data(id, d.replace(/\r/g, '\r\n'));
+      // local echo: Enter starts a new line, Backspace / Delete erase the character before the cursor
+      if (opts.localEcho) registry.data(id, d.replace(/[\x7f\x08]/g, '\b \b').replace(/\r/g, '\r\n'));
       port.write(d.replace(/\r/g, nl));
     },
+    // the pane menu's Send Break: the line held in the break condition for 250 ms (port.set, every other flag at
+    // its default). Resolves when the break is over; rejects with the driver's error (a pty has no break).
+    sendBreak: () => new Promise((resolve, reject) => {
+      if (!port.isOpen) return reject(new Error(t('the port is closed')));
+      port.set({ brk: true }, (e) => {
+        if (e) return reject(new Error(driverReason(e)));
+        setTimeout(() => port.set({ brk: false }, (e2) => (e2 ? reject(new Error(driverReason(e2))) : resolve(true))), 250);
+      });
+    }),
     // ZMODEM bytes: as they are (no newline mapping, no local echo), paced by the port's own transmit buffer
     writeRaw: (buf) => new Promise((resolve, reject) => {
       if (!port.isOpen) return reject(new Error(t('the port is closed')));

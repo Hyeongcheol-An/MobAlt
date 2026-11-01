@@ -119,6 +119,7 @@ contextBridge.exposeInMainWorld('api', {
     spawnSerial: (opts) => invoke('term:spawn-serial', opts),
     spawnMosh: (opts) => invoke('term:spawn-mosh', opts),
     listSerialPorts: () => invoke('serial:list'),
+    serialBreak: (id) => invoke('serial:break', id), // Send Break on a serial pane: the line in the break condition for 250 ms
     write: (id, data) => send('term:write', id, data),
     resize: (id, cols, rows) => send('term:resize', id, cols, rows),
     kill: (id) => send('term:kill', id),

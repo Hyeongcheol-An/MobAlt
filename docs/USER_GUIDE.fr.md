@@ -316,7 +316,8 @@ et vous êtes prévenu si l'un d'eux ne parvient pas à se lier à son port.
   dans Réglages → Général), sinon depuis le bouton « Ouvrir SFTP pour cet hôte (via SSH) » du panneau ou depuis
   « Ouvrir le navigateur SFTP » dans le menu du volet ; elle est fermée en même temps que le volet.
 - **Série** : l'éditeur liste les périphériques série USB ; réglez le débit, les bits de données et d'arrêt, la parité, le contrôle de flux,
-  l'écho local et ce qu'envoie Entrée (CR, LF, CRLF).
+  l'écho local et ce qu'envoie Entrée (CR, LF, CRLF). *Envoyer un Break* dans le menu du volet maintient la ligne en
+  état de break pendant 250 ms ; un périphérique débranché termine le volet par « Périphérique … déconnecté ».
 - **RDP / VNC** : MobAlt écrit un fichier `.rdp` et ouvre Windows App, ou ouvre `vnc://` dans le Partage
   d'écran. La session conserve l'hôte, l'utilisateur et le dossier comme n'importe quel autre signet.
 

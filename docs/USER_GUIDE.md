@@ -313,7 +313,8 @@ connects, and you are told if one fails to bind.
   panel" in Settings → General), otherwise from the panel's "Open SFTP for this host (via SSH)" button or the
   pane menu's "Open SFTP Browser"; it is dropped together with the pane.
 - **Serial**: the editor lists USB-serial devices; set baud, data/stop bits, parity, flow control,
-  local echo and what Enter sends (CR, LF, CRLF).
+  local echo and what Enter sends (CR, LF, CRLF). The pane menu's *Send Break* holds the line in the
+  break condition for 250 ms; an unplugged device ends the pane with "Device … disconnected".
 - **RDP / VNC**: MobAlt writes an `.rdp` file and opens Windows App, or opens `vnc://` in Screen
   Sharing. The session keeps host, user and folder like any other bookmark.
 

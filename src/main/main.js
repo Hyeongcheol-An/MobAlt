@@ -896,6 +896,11 @@ function registerIpc() {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
     return registry.startLog(id, path.join(dir, `${safe}_${stamp}.log`), { plain: !!s.logPlainText });
   });
+  ipcMain.handle('serial:break', async (_e, id) => {
+    const h = registry.get(id);
+    if (!h || !h.sendBreak) throw new Error(t('Not connected'));
+    return h.sendBreak();
+  });
   ipcMain.handle('term:log-stop', (_e, id) => registry.stopLog(id));
 
   ipcMain.handle('ssh:connect', async (e, cfg, size) => own(e, await ssh.openShell(await mergeSecrets(cfg), sizeOf(size))));
