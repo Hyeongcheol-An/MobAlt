@@ -7,7 +7,7 @@ terminaux en onglets et en volets au centre, et un navigateur SFTP, des outils r
 
 Voir aussi : [Parité fonctionnelle avec MobaXterm 26.6](MOBAXTERM_PARITY.md) — ce que MobAlt propose, ce qui lui manque et ce qu'il fait autrement, avec la feuille de route.
 
-![MobAlt avec deux shells distants côte à côte](images/hero.png)
+![MobAlt avec deux shells distants côte à côte](images/fr/hero.png)
 
 Sommaire : [Installation](#installation) · [Mises à jour](#mises-à-jour) · [Sessions](#sessions) · [Connexion](#connexion) ·
 [Terminal](#terminal) · [Fichiers (SFTP / FTP)](#fichiers-sftp--ftp) · [Tunnels](#tunnels-redirection-de-port) ·
@@ -62,7 +62,7 @@ Le panneau **Sessions** est votre arborescence de signets. Créez une session av
 et remplissez l'onglet Base. Double-cliquez sur une session pour vous connecter ; le clic droit ouvre le menu contextuel
 (ouvrir, ouvrir dans un volet à droite / en dessous, modifier, dupliquer, supprimer, démarrer un tunnel, nouvelle session dans ce dossier).
 
-![Éditeur de session](images/session-editor.png)
+![Éditeur de session](images/fr/session-editor.png)
 
 | Type | Rôle |
 |---|---|
@@ -131,7 +131,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
 
 ## Terminal
 
-![Grille de volets](images/split-grid.png)
+![Grille de volets](images/fr/split-grid.png)
 
 - **Onglets** : chaque session ouvre un onglet. Faites glisser les onglets pour les réordonner, double-cliquez pour renommer, clic du milieu
   pour fermer. Les onglets locaux portent le nom de leur dossier actuel. Le menu contextuel de l'onglet (clic droit, ou
@@ -273,7 +273,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
 
 ## Fichiers (SFTP / FTP)
 
-![Panneau SFTP](images/sftp-panel.png)
+![Panneau SFTP](images/fr/sftp-panel.png)
 
 Le panneau **Sftp** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement à la connexion
 (Réglages → Général → « Afficher SFTP à la connexion SSH »).
@@ -290,7 +290,7 @@ Le panneau **Sftp** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement �
 
 ## Tunnels (redirection de port)
 
-![Tunnels](images/tunnels.png)
+![Tunnels](images/fr/tunnels.png)
 
 `Tunnels` (⇧⌘U) gère les redirections de port SSH :
 
@@ -344,7 +344,7 @@ et vous êtes prévenu si l'un d'eux ne parvient pas à se lier à son port.
 MobAlt restaure vos onglets, divisions et sessions (les onglets détachés dans leur propre fenêtre reviennent sous forme de fenêtres) au lancement suivant et reconnecte les sessions SSH
 (les shells locaux se rouvrent dans leur dernier dossier). Désactivez cela dans Réglages → Général → Comportement.
 
-![Réglages](images/settings.png)
+![Réglages](images/fr/settings.png)
 
 Les Réglages comptent cinq onglets, chacun tenant dans la plus petite fenêtre sans défilement : **Général**
 (la langue de l'interface, la confirmation à la fermeture, le passage au panneau SFTP, la restauration de l'espace de travail, le shell local et son intégration

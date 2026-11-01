@@ -7,7 +7,7 @@ terminais em abas e divididos no centro, e um navegador SFTP, ferramentas de red
 
 Veja também: [Paridade de recursos com o MobaXterm 26.6](MOBAXTERM_PARITY.md) — o que o MobAlt tem, o que lhe falta e o que faz de outro jeito, com o roteiro.
 
-![MobAlt com dois shells remotos lado a lado](images/hero.png)
+![MobAlt com dois shells remotos lado a lado](images/pt/hero.png)
 
 Conteúdo: [Instalação](#instalação) · [Atualização](#atualização) · [Sessões](#sessões) · [Conexão](#conexão) ·
 [Terminal](#terminal) · [Arquivos (SFTP / FTP)](#arquivos-sftp--ftp) · [Túneis](#túneis-encaminhamento-de-portas) ·
@@ -62,7 +62,7 @@ O painel **Sessões** é a sua árvore de favoritos. Crie uma sessão com `＋ S
 e preencha a aba Básico. Clique duas vezes numa sessão para conectar; clique com o botão direito para abrir o menu de contexto
 (abrir, dividir à direita/abaixo, editar, duplicar, apagar, iniciar um túnel, nova sessão nesta pasta).
 
-![Editor de sessão](images/session-editor.png)
+![Editor de sessão](images/pt/session-editor.png)
 
 | Tipo | O que faz |
 |---|---|
@@ -131,7 +131,7 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
 
 ## Terminal
 
-![Grade de divisões](images/split-grid.png)
+![Grade de divisões](images/pt/split-grid.png)
 
 - **Abas**: cada sessão abre uma aba. Arraste as abas para reordená-las, clique duas vezes para renomear, clique com o botão do meio
   para fechar. As abas locais recebem o nome da pasta atual. O menu de contexto da aba (clique direito, ou
@@ -270,7 +270,7 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
 
 ## Arquivos (SFTP / FTP)
 
-![Painel SFTP](images/sftp-panel.png)
+![Painel SFTP](images/pt/sftp-panel.png)
 
 O painel **Sftp** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente ao conectar
 (Ajustes → Geral → “Abrir o painel Sftp ao conectar via SSH”).
@@ -287,7 +287,7 @@ O painel **Sftp** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente 
 
 ## Túneis (encaminhamento de portas)
 
-![Túneis](images/tunnels.png)
+![Túneis](images/pt/tunnels.png)
 
 `Túneis` (⇧⌘U) gerencia os encaminhamentos de porta SSH:
 
@@ -341,7 +341,7 @@ se conecta, e você é avisado se algum não conseguir escutar na porta.
 O MobAlt restaura as suas abas, divisões e sessões (as abas movidas para janelas próprias voltam como janelas) na próxima inicialização e reconecta as sessões SSH
 (os shells locais reabrem na última pasta). Desative isso em Ajustes → Geral → Comportamento.
 
-![Ajustes](images/settings.png)
+![Ajustes](images/pt/settings.png)
 
 Os Ajustes têm cinco abas, e cada uma cabe na menor janela sem rolagem: **Geral**
 (o idioma da interface, a confirmação ao encerrar, a mudança para o painel SFTP, a restauração do espaço de trabalho, o shell local e a sua

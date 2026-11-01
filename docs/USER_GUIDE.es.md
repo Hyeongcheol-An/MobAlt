@@ -7,7 +7,7 @@ en pestañas y paneles divididos en el centro, y un explorador SFTP, herramienta
 
 Ver también: [Paridad de funciones con MobaXterm 26.6](MOBAXTERM_PARITY.md) — lo que MobAlt tiene, lo que le falta y lo que hace de otra manera, con la hoja de ruta.
 
-![MobAlt con dos shells remotos lado a lado](images/hero.png)
+![MobAlt con dos shells remotos lado a lado](images/es/hero.png)
 
 Contenido: [Instalación](#instalación) · [Actualización](#actualización) · [Sesiones](#sesiones) · [Conexión](#conexión) ·
 [Terminal](#terminal) · [Archivos (SFTP / FTP)](#archivos-sftp--ftp) · [Túneles](#túneles-reenvío-de-puertos) ·
@@ -62,7 +62,7 @@ El panel **Sesiones** es tu árbol de marcadores. Crea una sesión con `＋ Sesi
 pestaña Básico. Haz doble clic en una sesión para conectar; el clic derecho abre el menú contextual (abrir, dividir a la
 derecha/hacia abajo, editar, duplicar, eliminar, iniciar un túnel, nueva sesión en esta carpeta).
 
-![Editor de sesiones](images/session-editor.png)
+![Editor de sesiones](images/es/session-editor.png)
 
 | Tipo | Qué hace |
 |---|---|
@@ -134,7 +134,7 @@ carpetas y deja el campo como estaba si cancelas.
 
 ## Terminal
 
-![Cuadrícula dividida](images/split-grid.png)
+![Cuadrícula dividida](images/es/split-grid.png)
 
 - **Pestañas**: cada sesión abre una pestaña. Arrastra las pestañas para reordenarlas, doble clic para renombrar,
   clic central para cerrar. Las pestañas locales llevan el nombre de su carpeta actual. El menú contextual de la
@@ -281,7 +281,7 @@ carpetas y deja el campo como estaba si cancelas.
 
 ## Archivos (SFTP / FTP)
 
-![Panel SFTP](images/sftp-panel.png)
+![Panel SFTP](images/es/sftp-panel.png)
 
 El panel **Sftp** sigue al panel SSH o FTP activo. Se abre automáticamente al conectar
 (Ajustes → General → «Cambiar al panel Sftp al conectar por SSH»).
@@ -300,7 +300,7 @@ El panel **Sftp** sigue al panel SSH o FTP activo. Se abre automáticamente al c
 
 ## Túneles (reenvío de puertos)
 
-![Túneles](images/tunnels.png)
+![Túneles](images/es/tunnels.png)
 
 `Túneles` (⇧⌘U) gestiona los reenvíos de puertos SSH:
 
@@ -354,7 +354,7 @@ MobAlt restaura tus pestañas, divisiones y sesiones (las pestañas separadas en
 en el siguiente arranque y reconecta las sesiones SSH (los shells locales se reabren en su última carpeta).
 Desactívalo en Ajustes → General → Comportamiento.
 
-![Ajustes](images/settings.png)
+![Ajustes](images/es/settings.png)
 
 Ajustes tiene cinco pestañas, y cada una cabe en la ventana más pequeña sin desplazamiento: **General** (el idioma de la
 interfaz, la confirmación al salir, el cambio al panel SFTP, la restauración del espacio de trabajo, el shell local y su

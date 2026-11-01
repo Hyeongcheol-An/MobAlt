@@ -7,7 +7,7 @@ MobAlt는 macOS용 MobaXterm 스타일 작업 환경입니다. 왼쪽에 세션 
 
 함께 보기: [MobaXterm 26.6 기능 대응표](MOBAXTERM_PARITY.ko.md) — MobAlt에 있는 것, 없는 것, 다르게 하는 것과 로드맵.
 
-![원격 셸 두 개를 나란히 띄운 MobAlt](images/hero.png)
+![원격 셸 두 개를 나란히 띄운 MobAlt](images/ko/hero.png)
 
 목차: [설치](#설치) · [업데이트](#업데이트) · [세션](#세션) · [접속](#접속) · [터미널](#터미널) · [파일 (SFTP / FTP)](#파일-sftp--ftp) ·
 [터널 (포트 포워딩)](#터널-포트-포워딩) · [X11, Mosh, 시리얼, RDP/VNC](#x11-mosh-시리얼-rdpvnc) ·
@@ -62,7 +62,7 @@ MobAlt가 실행 중인 채로 업그레이드해도 괜찮습니다 — MobAlt�
 채웁니다. 더블클릭하면 접속하고, 우클릭 메뉴에서 열기, 오른쪽/아래로 분할해 열기, 편집, 복제, 삭제,
 이 세션으로 터널 시작, 여기에 새 세션 만들기를 할 수 있습니다.
 
-![세션 편집기](images/session-editor.png)
+![세션 편집기](images/ko/session-editor.png)
 
 | 종류 | 설명 |
 |---|---|
@@ -129,7 +129,7 @@ MobAlt가 실행 중인 채로 업그레이드해도 괜찮습니다 — MobAlt�
 
 ## 터미널
 
-![분할 격자](images/split-grid.png)
+![분할 격자](images/ko/split-grid.png)
 
 - **탭**: 세션마다 탭이 열립니다. 드래그로 순서를 바꾸고, 더블클릭으로 이름을 바꾸고, 가운데 클릭으로
   닫습니다. 로컬 탭은 현재 폴더 이름이 제목이 됩니다. 탭의 컨텍스트 메뉴(우클릭, 또는 포커스된 탭에서
@@ -255,7 +255,7 @@ MobAlt가 실행 중인 채로 업그레이드해도 괜찮습니다 — MobAlt�
 
 ## 파일 (SFTP / FTP)
 
-![SFTP 패널](images/sftp-panel.png)
+![SFTP 패널](images/ko/sftp-panel.png)
 
 **Sftp** 패널은 활성 SSH 또는 FTP 페인을 따라갑니다. 접속하면 자동으로 열립니다(설정 → 일반 → "SSH 연결 시
 SFTP 패널로 전환").
@@ -272,7 +272,7 @@ SFTP 패널로 전환").
 
 ## 터널 (포트 포워딩)
 
-![터널](images/tunnels.png)
+![터널](images/ko/tunnels.png)
 
 `터널링`(⇧⌘U)에서 SSH 포트 포워딩을 관리합니다.
 
@@ -323,7 +323,7 @@ SFTP 패널로 전환").
 재접속합니다(로컬 셸은 마지막 폴더에서 다시 열림). 설정 → 일반 → 동작에서 끌 수 있습니다("시작할 때 탭과
 분할 배치 복원").
 
-![설정](images/settings.png)
+![설정](images/ko/settings.png)
 
 설정은 다섯 개의 탭으로 나뉘고 어느 탭이든 최소 창 크기에서 스크롤 없이 들어갑니다. **일반**(인터페이스
 언어, 종료 확인, SFTP 패널 전환, 작업 공간 복원, 로컬 셸과 폴더 연동, 외부 편집기, 다운로드 폴더, SSH

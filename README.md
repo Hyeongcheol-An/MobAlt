@@ -165,6 +165,9 @@ npm test               # unit tests
 npm run pack           # dist/mac-arm64/MobAlt.app (unsigned)
 npm run dist           # DMG + zip for arm64 and x64
 npm run install:local  # build arm64, sign if a Developer ID identity is available, install to /Applications
+npm run i18n           # refresh src/locales/catalog.json after adding or rewording interface strings
+npm run i18n:status    # what each language's dictionary still owes (-- --list prints the strings)
+npm run docs:shots     # the user-guide screenshots in every interface language (docs/images/<code>/)
 ```
 
 In shells that export `ELECTRON_RUN_AS_NODE=1` (VS Code's integrated terminal), run
@@ -196,6 +199,7 @@ src/renderer/    renderer (plain ES modules, no framework)
   sftp.js        SFTP panel
   panels.js      Tools / Macros panels
   dialogs.js     session editor, settings, tunnels, host key and password prompts
+src/locales/     the catalog of interface strings and one dictionary per language — src/locales/README.md
 test/
   unit/          node --test unit tests
   start-sshd.sh  user-level test sshd on port 2222 (keys, SFTP, X11, forwarding)

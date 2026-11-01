@@ -7,7 +7,7 @@ chia ngăn ở giữa, còn trình duyệt SFTP, công cụ mạng và macro n�
 
 Xem thêm: [Mức tương đương tính năng với MobaXterm 26.6](MOBAXTERM_PARITY.md) — những gì MobAlt có, còn thiếu và làm khác đi, kèm lộ trình phát triển.
 
-![MobAlt với hai shell từ xa đặt cạnh nhau](images/hero.png)
+![MobAlt với hai shell từ xa đặt cạnh nhau](images/vi/hero.png)
 
 Mục lục: [Tải về và cài đặt](#tải-về-và-cài-đặt) · [Cập nhật](#cập-nhật) · [Phiên](#phiên) · [Kết nối](#kết-nối) ·
 [Terminal](#terminal) · [Tệp (SFTP / FTP)](#tệp-sftp--ftp) · [Đường hầm](#đường-hầm-chuyển-tiếp-cổng) ·
@@ -60,7 +60,7 @@ Bảng **Phiên** (Sessions) là cây dấu trang của bạn. Tạo phiên bằ
 rồi điền thẻ Cơ bản. Nhấp đúp vào phiên để kết nối; nhấp chuột phải để mở menu ngữ cảnh
 (mở, chia phải/xuống, sửa, nhân bản, xóa, khởi động đường hầm, tạo phiên mới trong thư mục này).
 
-![Trình sửa phiên](images/session-editor.png)
+![Trình sửa phiên](images/vi/session-editor.png)
 
 | Loại | Chức năng |
 |---|---|
@@ -128,7 +128,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
 
 ## Terminal
 
-![Lưới chia ngăn](images/split-grid.png)
+![Lưới chia ngăn](images/vi/split-grid.png)
 
 - **Thẻ**: mỗi phiên mở trong một thẻ. Kéo thẻ để sắp xếp lại, nhấp đúp để đổi tên, nhấp chuột giữa
   để đóng. Thẻ cục bộ được đặt tên theo thư mục hiện tại. Menu ngữ cảnh của thẻ (nhấp chuột phải, hoặc
@@ -267,7 +267,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
 
 ## Tệp (SFTP / FTP)
 
-![Bảng SFTP](images/sftp-panel.png)
+![Bảng SFTP](images/vi/sftp-panel.png)
 
 Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự mở khi kết nối
 (Cài đặt → Chung → "Chuyển sang bảng SFTP khi SSH kết nối").
@@ -284,7 +284,7 @@ Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự 
 
 ## Đường hầm (chuyển tiếp cổng)
 
-![Đường hầm](images/tunnels.png)
+![Đường hầm](images/vi/tunnels.png)
 
 `Đường hầm` (⇧⌘U) quản lý các chuyển tiếp cổng SSH:
 
@@ -338,7 +338,7 @@ kết nối, và bạn được báo nếu có đường hầm không lắng ngh
 MobAlt khôi phục các thẻ, bố cục chia và phiên của bạn (các thẻ đã tách ra cửa sổ riêng quay lại thành cửa sổ) ở lần khởi chạy sau và kết nối lại các phiên SSH
 (shell cục bộ mở lại ở thư mục cuối cùng). Tắt tính năng này trong Cài đặt → Chung → Hành vi.
 
-![Cài đặt](images/settings.png)
+![Cài đặt](images/vi/settings.png)
 
 Cài đặt có năm thẻ, thẻ nào cũng vừa với cửa sổ nhỏ nhất mà không cần cuộn: **Chung**
 (ngôn ngữ giao diện, xác nhận khi thoát, chuyển sang bảng SFTP, khôi phục không gian làm việc, shell cục bộ và tích hợp

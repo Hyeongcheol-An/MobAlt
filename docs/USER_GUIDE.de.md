@@ -7,7 +7,7 @@ Terminals in Tabs und geteilten Ansichten, in den Seitenpanels ein SFTP-Browser,
 
 Siehe auch: [MobaXterm 26.6 feature parity](MOBAXTERM_PARITY.md) (Englisch) — was MobAlt bietet, was fehlt und was es anders macht, samt Roadmap.
 
-![MobAlt mit zwei entfernten Shells nebeneinander](images/hero.png)
+![MobAlt mit zwei entfernten Shells nebeneinander](images/de/hero.png)
 
 Inhalt: [Installation](#installation) · [Aktualisieren](#aktualisieren) · [Sitzungen](#sitzungen) · [Verbinden](#verbinden) ·
 [Terminal](#terminal) · [Dateien (SFTP / FTP)](#dateien-sftp--ftp) · [Tunnel](#tunnel-portweiterleitung) ·
@@ -64,7 +64,7 @@ Typ und füllen Sie den Tab „Allgemein“ aus. Ein Doppelklick auf eine Sitzun
 Kontextmenü (öffnen, geteilt rechts/unten öffnen, bearbeiten, duplizieren, löschen, Tunnel starten, neue Sitzung in
 diesem Ordner).
 
-![Sitzungseditor](images/session-editor.png)
+![Sitzungseditor](images/de/session-editor.png)
 
 | Typ | Funktion |
 |---|---|
@@ -139,7 +139,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 
 ## Terminal
 
-![Geteiltes Raster](images/split-grid.png)
+![Geteiltes Raster](images/de/split-grid.png)
 
 - **Tabs**: Jede Sitzung öffnet einen Tab. Ziehen Sie Tabs, um sie umzuordnen; ein Doppelklick benennt um, ein
   Mittelklick schließt. Lokale Tabs tragen den Namen ihres aktuellen Ordners. Das Kontextmenü des Tabs (Rechtsklick
@@ -291,7 +291,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 
 ## Dateien (SFTP / FTP)
 
-![Panel „Sftp“](images/sftp-panel.png)
+![Panel „Sftp“](images/de/sftp-panel.png)
 
 Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim Verbinden automatisch
 („Einstellungen“ → „Allgemein“ → „Bei SSH-Verbindung zu ‚Sftp‘ wechseln“).
@@ -311,7 +311,7 @@ Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim
 
 ## Tunnel (Portweiterleitung)
 
-![Tunnel](images/tunnels.png)
+![Tunnel](images/de/tunnels.png)
 
 `Tunnel` (⇧⌘U) verwaltet SSH-Portweiterleitungen:
 
@@ -366,7 +366,7 @@ MobAlt stellt beim nächsten Start Ihre Tabs, Teilungen und Sitzungen wieder her
 kehren als Fenster zurück) und verbindet SSH-Sitzungen neu (lokale Shells öffnen sich in ihrem letzten Ordner).
 Abschalten lässt sich das unter „Einstellungen“ → „Allgemein“ → „Verhalten“.
 
-![Einstellungen](images/settings.png)
+![Einstellungen](images/de/settings.png)
 
 Die Einstellungen haben fünf Tabs, von denen jeder ohne Scrollen ins kleinste Fenster passt: **Allgemein** (die
 Sprache der Oberfläche, die Bestätigung beim Beenden, der Wechsel zum Panel „Sftp“, die Wiederherstellung des

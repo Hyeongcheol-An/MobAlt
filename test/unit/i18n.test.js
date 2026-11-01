@@ -12,6 +12,7 @@ const i18n = require('../../src/main/i18n');
 // relaxes them while a new language is being written).
 const strict = process.env.I18N_STRICT !== '0';
 const extractor = require('../../scripts/i18n-extract');
+const status = require('../../scripts/i18n-status'); // the dictionary checks, shared with `npm run i18n:status`
 
 test('resolveLocale: the setting wins, then the macOS language list, by tag and by language, else English', () => {
   delete process.env.MOBALT_LANG;
@@ -108,8 +109,17 @@ test('catalog: the strings the Language setting itself uses are there', () => {
 });
 
 // ---------- the dictionaries ----------
-const placeholders = (s) => [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort();
-const words = (s) => String(s).split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length;
+test('scripts/i18n-status: check() reports missing, stale, placeholder and left-in-English problems', () => {
+  const cat = { strings: { 'Close Tab': {}, '{n} tab': { plural: '{n} tabs' }, 'Open the file {name}': {}, 'Ping': {}, 'Keep this one': {} } };
+  const r = status.check({ '@keep': ['Keep this one'], 'Close Tab': 'x', 'Gone': 'y', '{n} tab': ['{n} a', 'b'], 'Open the file {name}': 'Open the file {name}', 'Ping': 'Ping', 'Keep this one': 'Keep this one' }, cat);
+  assert.deepEqual(r.missing, []);
+  assert.deepEqual(r.stale, ['Gone']);
+  assert.ok(r.other.some((m) => m.startsWith('placeholders differ: "{n} tab" → "b"')), r.other.join('\n'));
+  assert.ok(r.other.includes('left in English: "Open the file {name}"'));
+  assert.ok(!r.other.some((m) => /Ping|Keep this one/.test(m))); // one word may stay; @keep lists the rest
+  assert.deepEqual(status.check({}, cat).missing, Object.keys(cat.strings));
+  assert.deepEqual(status.problems({ 'Close Tab': '' }, { strings: { 'Close Tab': {} } }), ['empty: "Close Tab"']);
+});
 
 for (const lang of i18n.LANGUAGES) {
   if (lang.code === 'en') continue;
@@ -118,29 +128,10 @@ for (const lang of i18n.LANGUAGES) {
     if (!fs.existsSync(file)) return ctx.skip('not written yet'); // every language is required once the dictionaries land (see the test below)
     const dict = JSON.parse(fs.readFileSync(file, 'utf8'));
     assert.equal(typeof dict, 'object');
-    const keep = new Set(Array.isArray(dict['@keep']) ? dict['@keep'] : []); // strings that stay as in English on purpose (names, acronyms)
-    const problems = [];
-    const entries = Object.keys(dict).filter((k) => !k.startsWith('@'));
-    for (const k of entries) if (!catalog.strings[k]) problems.push(`stale key (not in the catalog any more): ${JSON.stringify(k)}`);
-    for (const k of keys) {
-      const v = dict[k];
-      const spec = catalog.strings[k];
-      if (v === undefined) { problems.push(`missing: ${JSON.stringify(k)}`); continue; }
-      const forms = Array.isArray(v) ? v : [v];
-      if (!forms.length || forms.some((f) => typeof f !== 'string' || !f.trim())) { problems.push(`empty: ${JSON.stringify(k)}`); continue; }
-      if (Array.isArray(v) && !spec.plural) problems.push(`plural forms for a string without tn(): ${JSON.stringify(k)}`);
-      if (Array.isArray(v) && v.length !== 2) problems.push(`plural forms must be [one, other]: ${JSON.stringify(k)}`);
-      // every placeholder of the source must be there; a tn() pair whose English forms differ (the singular without
-      // {n}, say) lets a translated form drop what only one English form has
-      const one = placeholders(k), other = spec.plural ? placeholders(spec.plural) : one;
-      const allowed = new Set([...one, ...other]), required = one.filter((x) => other.includes(x));
-      for (const f of forms) {
-        const got = placeholders(f);
-        if (!required.every((x) => got.includes(x)) || !got.every((x) => allowed.has(x))) problems.push(`placeholders differ: ${JSON.stringify(k)} → ${JSON.stringify(f)} (want {${required.join('} {')}}${allowed.size > required.length ? ', may also use {' + [...allowed].filter((x) => !required.includes(x)).join('} {') + '}' : ''})`);
-      }
-      if (words(k) >= 3 && forms.every((f) => f === k) && !keep.has(k)) problems.push(`left in English: ${JSON.stringify(k)}`);
-    }
-    assert.deepEqual(problems, [], `${problems.length} problem(s):\n${problems.slice(0, 40).join('\n')}`);
+    // every catalog string present and non-empty, no stale key, the placeholders of the source, [one, other] only for
+    // a tn() pair, nothing of three words or more left in English unless @keep lists it (scripts/i18n-status.js)
+    const problems = status.problems(dict, catalog);
+    assert.deepEqual(problems, [], `${problems.length} problem(s) — npm run i18n:status -- --list ${lang.code}:\n${problems.slice(0, 40).join('\n')}`);
   });
 }
 
