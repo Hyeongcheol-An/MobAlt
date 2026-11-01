@@ -67,6 +67,7 @@
       "!src/locales/{catalog.json,README.md}",
       "!**/node_modules/node-pty/{deps,src,prebuilds/win32-*}/**",
       "!**/node_modules/@serialport/bindings-cpp/{src,prebuilds/android-*,prebuilds/linux-*,prebuilds/win32-*}/**",
+      "!**/node_modules/**/*.{ts,mts,cts}",
       "!**/node_modules/@xterm/*/src/**",
       "!**/node_modules/@xterm/xterm/lib/xterm.mjs",
       "!**/node_modules/{nan,node-addon-api}/**",
