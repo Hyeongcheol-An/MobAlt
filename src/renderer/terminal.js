@@ -1,5 +1,5 @@
 // A terminal pane: xterm.js instance bound to a backend terminal (local pty, ssh shell, telnet).
-import { h, contextMenu, closeContextMenu, contextMenuAnchor, toast, icon, promptDialog, isRtl } from './ui.js';
+import { h, contextMenu, closeContextMenu, contextMenuAnchor, toast, icon, promptDialog, confirmDialog, isRtl } from './ui.js';
 import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
@@ -301,8 +301,18 @@ export class TermPane {
         const paths = files.map((f) => window.api.getPathForFile(f)).filter(Boolean);
         const connId = connIdOf(this);
         if (connId) {
-          const dir = this.remoteCwd || (this.kind === 'mosh' && this.app.sftpPanel.states.get(connId)?.path) || (await window.api.sftp.home(connId).catch(() => null));
-          if (!dir) return toast(t('Remote folder unknown'), 'warn');
+          // the shell's folder is known only while the cwd hook runs ("Follow terminal"): without it the files go to
+          // the folder the Sftp panel shows for this connection, and when the panel has not browsed it yet, to the
+          // home folder — asked first, naming it (a drop must never land in a folder the user did not see)
+          let dir = this.remoteCwd || this.app.sftpPanel.states.get(connId)?.path || null;
+          if (!dir) {
+            const home = await window.api.sftp.home(connId).catch(() => null);
+            if (!home) return toast(t('Remote folder unknown'), 'warn');
+            const n = paths.length;
+            const ok = await confirmDialog(tn('The shell\'s folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?', 'The shell\'s folder is not known (the session does not follow the terminal). Upload {n} items to {dir}?', n, { dir: home }), { title: t('Upload'), okLabel: t('Upload') });
+            if (!ok) return toast(t('Upload cancelled'), 'info');
+            dir = home;
+          }
           await this.app.sftpPanel.uploadTo(connId, paths, dir);
           this.app.sftpPanel.show(connId);
         } else if (this.kind === 'mosh' && this.status === 'connected') {

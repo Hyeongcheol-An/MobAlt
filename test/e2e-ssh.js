@@ -161,6 +161,43 @@
     await app.reloadSessions();
     results.passphraseSaved = !!app.sessions.sessions.find((s) => s.id === s2.id)?.hasPassphrase;
 
+    // 4b. a Finder drop on an SSH terminal whose session does not follow the terminal (enc-key: no cwd hook, so the
+    //     shell's folder is unknown) uploads to the folder the Sftp panel shows for that connection — never silently to
+    //     the home folder — and the toast names the destination; with the panel not bound to the connection it asks,
+    //     naming the home folder, and Cancel uploads nothing
+    {
+      const seen = [];
+      const mo = new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seen.push(n.textContent); });
+      mo.observe(document.getElementById('toast-root'), { childList: true });
+      const c2 = pane2.termId;
+      results.dropNoCwd = pane2.remoteCwd === null;
+      app.sftpPanel.show(c2);
+      await app.sftpPanel.navigate('/tmp/mobalt-e2e');
+      const folder = app.sftpPanel.state().path; // as the server resolves it (/private/tmp/… on macOS)
+      app.focusPane(pane2);
+      await sleep(200);
+      const r2 = pane2.termEl.getBoundingClientRect();
+      await window.api.app.testDropFiles([root + '/LICENSE'], { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 });
+      await waitFor(() => [...app.sftpPanel.transfers.values()].some((t) => t.name === 'LICENSE' && t.status === 'done'), 15000, 'dropped file uploaded');
+      const dropped = await window.api.sftp.stat(c2, folder + '/LICENSE').catch(() => null);
+      results.dropToPanelFolder = !!dropped && !dropped.isDir && dropped.size > 100;
+      results.dropToastNamesFolder = seen.some((x) => x === `Uploading 1 item to ${folder}`);
+      log('drop with Follow terminal off → panel folder', folder, '| stat', JSON.stringify(dropped), '| toasts', JSON.stringify(seen));
+      // the panel not bound to this connection: a confirm names the home folder; Cancel
+      app.sftpPanel.dropConnection(c2);
+      await window.api.app.testDropFiles([root + '/LICENSE'], { x: r2.left + r2.width / 2, y: r2.top + r2.height / 2 });
+      const ask = await waitFor(() => document.querySelector('.modal'), 5000, 'drop confirm');
+      const homeDir = await window.api.sftp.home(c2);
+      results.dropAsksNamingHome = new RegExp('Upload 1 item to ' + homeDir.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\?').test(ask.textContent);
+      await shot('05b-drop-asks');
+      ask.querySelector('.btn:not(.primary)').click(); // Cancel
+      await sleep(400);
+      results.dropCancelUploadsNothing = !document.querySelector('.modal') && seen.includes('Upload cancelled') && ![...app.sftpPanel.transfers.values()].some((t) => t.name === 'LICENSE' && t.remote === homeDir.replace(/\/$/, '') + '/LICENSE');
+      log('drop ask', JSON.stringify(ask.textContent), '| cancel →', results.dropCancelUploadsNothing);
+      mo.disconnect();
+      app.sftpPanel.show(c2);
+    }
+
     // 5. split -> empty pane -> "drop" the enc-key session onto it (saved passphrase means no prompt) + multiexec
     await app.action('split', 'down');
     const emptyPane = app.workspace.active.panes().find((p) => p.kind === 'empty');

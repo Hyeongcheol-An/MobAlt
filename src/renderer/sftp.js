@@ -555,7 +555,7 @@ export class SftpPanel {
     if (!paths || !paths.length) {
       try {
         const ids = await window.api.sftp.upload(connId, [], dir); // native picker
-        if (ids && ids.length) toast(tn('Uploading {n} item', 'Uploading {n} items', ids.length), 'info');
+        if (ids && ids.length) toast(tn('Uploading {n} item to {dir}', 'Uploading {n} items to {dir}', ids.length, { dir }), 'info');
       } catch (e) {
         toast(errMsg(e), 'error');
       }
@@ -574,7 +574,7 @@ export class SftpPanel {
         if (!todo.length) return toast(t('Nothing to upload: every item already exists'), 'info');
       }
       const ids = await window.api.sftp.upload(connId, todo, dir);
-      if (ids && ids.length) toast(tn('Uploading {n} item', 'Uploading {n} items', ids.length), 'info');
+      if (ids && ids.length) toast(tn('Uploading {n} item to {dir}', 'Uploading {n} items to {dir}', ids.length, { dir }), 'info');
     } catch (e) {
       toast(errMsg(e), 'error');
     }
