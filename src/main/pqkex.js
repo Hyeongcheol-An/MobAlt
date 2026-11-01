@@ -9,8 +9,12 @@
 // before. Loading this module is the registration (algorithms.js requires it before any connection). The exchange
 // lives in the ssh2 patch: a build whose postinstall did not apply it (an ssh2 bump, say) still starts — the option
 // is then unavailable (KEX empty, the editor says so) and a warning is logged.
-const { ml_kem768 } = require('@noble/post-quantum/ml-kem.js');
 const sntrup761 = require('./pq/sntrup761');
+
+// @noble/post-quantum is loaded by the first ML-KEM key generation, not at startup (algorithms.js requires this
+// module while the app comes up; the library costs ~10 ms to load)
+let mlkem = null;
+const mlKem768 = () => mlkem || (mlkem = require('@noble/post-quantum/ml-kem.js').ml_kem768);
 
 let kexPQ = null;
 try {
@@ -22,8 +26,8 @@ try {
 const mlkem768 = Object.freeze({
   publicKeyBytes: 1184,
   ciphertextBytes: 1088,
-  keygen: () => ml_kem768.keygen(),
-  decapsulate: (cipherText, secretKey) => ml_kem768.decapsulate(cipherText, secretKey),
+  keygen: () => mlKem768().keygen(),
+  decapsulate: (cipherText, secretKey) => mlKem768().decapsulate(cipherText, secretKey),
 });
 
 if (kexPQ) {
