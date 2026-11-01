@@ -419,12 +419,28 @@ export class TermPane {
     return !!this.webgl;
   }
 
+  /**
+   * Dispose the WebGL addon and the cursor-blink timer it leaves behind. addon-webgl 0.19 keeps its
+   * CursorBlinkStateManager in a MutableDisposable the renderer never registers for disposal, so the 600 ms blink
+   * interval survives dispose() and, through its callback, pins the renderer, its canvases and the texture atlas:
+   * about 2 MB of renderer memory and one more timer for every pane closed (test/qa/perf-memory.js found 105 MB after
+   * 50 open / close cycles). The manager is disposed here through its own dispose(); a version of the addon that does
+   * it itself makes this a no-op.
+   */
+  static disposeWebgl(webgl) {
+    try { webgl.dispose(); } catch (e) { console.warn('WebGL addon dispose failed', e); }
+    try {
+      const blink = webgl._renderer && webgl._renderer._cursorBlinkStateManager;
+      if (blink && typeof blink.dispose === 'function') blink.dispose();
+    } catch {}
+  }
+
   /** Back to the DOM renderer at once: it has the buffer and repaints in this pane's palette (no blank frame). */
   _dropWebgl() {
     const webgl = this.webgl;
     if (!webgl) return;
     this.webgl = null;
-    try { webgl.dispose(); } catch (e) { console.warn('WebGL addon dispose failed', e); }
+    TermPane.disposeWebgl(webgl);
     this.fit(); // back on the DOM renderer's cell size
     if (this.disposed) return;
     this.applyTheme(); // the DOM renderer that takes over must paint with this pane's palette, not a stale one
@@ -1585,7 +1601,7 @@ export class TermPane {
     }
     const webgl = this.webgl; // its GPU context goes back to the budget
     this.webgl = null;
-    try { webgl && webgl.dispose(); } catch {}
+    if (webgl) TermPane.disposeWebgl(webgl);
     try { this.highlighter.dispose(); } catch {}
     try {
       this.term.dispose();
