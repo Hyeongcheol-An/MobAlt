@@ -1,0 +1,230 @@
+diff --git a/node_modules/ssh2/lib/protocol/constants.js b/node_modules/ssh2/lib/protocol/constants.js
+index ad77592..4a1be1e 100644
+--- a/node_modules/ssh2/lib/protocol/constants.js
++++ b/node_modules/ssh2/lib/protocol/constants.js
+@@ -53,6 +53,11 @@ if (curve25519Supported) {
+   DEFAULT_KEX.unshift('curve25519-sha256@libssh.org');
+ }
+ const SUPPORTED_KEX = DEFAULT_KEX.concat([
++  // post-quantum hybrids (kex-pq.js, the KEMs registered by the application):
++  // never in the defaults, a client opts in through `algorithms.kex`
++  'mlkem768x25519-sha256',
++  'sntrup761x25519-sha512@openssh.com',
++
+   // https://tools.ietf.org/html/rfc4419#section-4
+   'diffie-hellman-group-exchange-sha1',
+ 
+diff --git a/node_modules/ssh2/lib/protocol/kex-pq.js b/node_modules/ssh2/lib/protocol/kex-pq.js
+new file mode 100644
+index 0000000..e356a69
+--- /dev/null
++++ b/node_modules/ssh2/lib/protocol/kex-pq.js
+@@ -0,0 +1,180 @@
++'use strict';
++// Post-quantum hybrid key exchange (client side): ML-KEM-768 + X25519 (`mlkem768x25519-sha256`, OpenSSH 9.9+, the
++// default of OpenSSH 10) and Streamlined NTRU Prime 761 + X25519 (`sntrup761x25519-sha512@openssh.com`, OpenSSH
++// 8.9+). Wire format as OpenSSH's kexmlkem768x25519.c / kexsntrup761x25519.c and draft-kampanakis-curdle-ssh-pq-ke:
++//
++//   client → SSH_MSG_KEX_ECDH_INIT (30)   string Q_C = KEM public key ‖ client X25519 public key
++//   server → SSH_MSG_KEX_ECDH_REPLY (31)  string K_S, string Q_S = KEM ciphertext ‖ server X25519 public key,
++//                                         string signature of H
++//   K = HASH(KEM shared secret ‖ X25519 shared secret), HASH the method's own hash (SHA-256 / SHA-512)
++//
++// K is an SSH *string*, not an mpint, wherever it enters the exchange hash and the key derivation (kex.js hashes
++// `secret` as a string and length-prefixes it for generateKEXVal, so computeSecret() returns the raw digest with no
++// mpint conversion); Q_C and Q_S are hashed as the raw strings sent on the wire (no leading-zero stripping).
++//
++// The KEM primitives are not part of ssh2: the application registers them — register('mlkem768', kem) and
++// register('sntrup761', kem) with kem = { publicKeyBytes, ciphertextBytes, keygen() → { publicKey, secretKey },
++// decapsulate(ciphertext, secretKey) → shared secret } over Buffers / Uint8Arrays. A method whose KEM is not
++// registered is not created (kex.js then reports it unsupported).
++
++const {
++  createHash,
++  createPublicKey,
++  diffieHellman,
++  generateKeyPairSync,
++} = require('crypto');
++
++const X25519_SIZE = 32;
++// SubjectPublicKeyInfo prefix of a raw X25519 public key (RFC 8410): what Node's createPublicKey() takes
++const X25519_SPKI_PREFIX = Buffer.from('302a300506032b656e032100', 'hex');
++
++const METHODS = Object.freeze({
++  'mlkem768x25519-sha256': Object.freeze({ kem: 'mlkem768', hash: 'sha256' }),
++  'sntrup761x25519-sha512@openssh.com': Object.freeze({ kem: 'sntrup761', hash: 'sha512' }),
++});
++const KEX_NAMES = Object.freeze(Object.keys(METHODS));
++
++const KEMS = Object.create(null);
++
++function register(name, kem) {
++  if (typeof name !== 'string' || !name)
++    throw new TypeError('Invalid KEM name');
++  if (typeof kem !== 'object' || kem === null
++      || !Number.isInteger(kem.publicKeyBytes) || kem.publicKeyBytes <= 0
++      || !Number.isInteger(kem.ciphertextBytes) || kem.ciphertextBytes <= 0
++      || typeof kem.keygen !== 'function'
++      || typeof kem.decapsulate !== 'function') {
++    throw new TypeError(`Invalid KEM implementation for ${name}`);
++  }
++  KEMS[name] = kem;
++}
++
++function available(kexName) {
++  const method = METHODS[kexName];
++  return !!(method && KEMS[method.kem]);
++}
++
++const toBuffer = (v) => (Buffer.isBuffer(v)
++                         ? v
++                         : Buffer.from(v.buffer, v.byteOffset, v.byteLength));
++
++/** Q_C for a KEM public key and an X25519 public key (raw 32 bytes). */
++function clientPublic(kem, kemPublicKey, x25519PublicKey) {
++  kemPublicKey = toBuffer(kemPublicKey);
++  if (kemPublicKey.length !== kem.publicKeyBytes)
++    throw new Error(`KEM public key is ${kemPublicKey.length} bytes, expected ${kem.publicKeyBytes}`);
++  if (x25519PublicKey.length !== X25519_SIZE)
++    throw new Error('X25519 public key must be 32 bytes');
++  return Buffer.concat([kemPublicKey, x25519PublicKey]);
++}
++
++/** The raw 32-byte X25519 public key of a Node KeyObject. */
++function x25519Raw(publicKey) {
++  return publicKey.export({ type: 'spki', format: 'der' }).subarray(-X25519_SIZE);
++}
++
++/**
++ * K for the server's Q_S: HASH(decapsulate(ciphertext) ‖ X25519(client private, server public)). Returns the raw
++ * digest (the caller encodes it as a string), or an Error for a malformed reply or an all-zero X25519 secret (a
++ * low-order point, rejected as OpenSSH does).
++ */
++function sharedSecret(hashName, kem, kemSecretKey, x25519PrivateKey, serverPublic) {
++  const ctLen = kem.ciphertextBytes;
++  if (serverPublic.length !== ctLen + X25519_SIZE) {
++    return new Error(`Server reply is ${serverPublic.length} bytes, expected ${ctLen + X25519_SIZE}`);
++  }
++  let kemSecret;
++  let xSecret;
++  try {
++    kemSecret = toBuffer(kem.decapsulate(serverPublic.subarray(0, ctLen), kemSecretKey));
++    // a low-order point makes the derivation fail in Node (or gives all zeros): either way no key
++    xSecret = diffieHellman({
++      privateKey: x25519PrivateKey,
++      publicKey: createPublicKey({
++        key: Buffer.concat([X25519_SPKI_PREFIX, serverPublic.subarray(ctLen)]),
++        type: 'spki',
++        format: 'der',
++      }),
++    });
++  } catch (ex) {
++    return (ex instanceof Error ? ex : new Error(String(ex)));
++  }
++  let zero = 0;
++  for (let i = 0; i < xSecret.length; ++i)
++    zero |= xSecret[i];
++  if (xSecret.length !== X25519_SIZE || zero === 0)
++    return new Error('Invalid X25519 shared secret');
++  const secret = createHash(hashName).update(kemSecret).update(xSecret).digest();
++  kemSecret.fill(0);
++  xSecret.fill(0);
++  return secret;
++}
++
++let Hybrid;
++/** The exchange class, built once around kex.js's KeyExchange (not exported from there). */
++function classFor(KeyExchange) {
++  if (Hybrid)
++    return Hybrid;
++  Hybrid = class PQHybridExchange extends KeyExchange {
++    constructor(method, kem, ...args) {
++      super(...args);
++
++      this.type = 'pq-hybrid'; // kex.js: KEXECDH_INIT / KEXECDH_REPLY in its debug output, no groupex parameters
++      this.hashName = method.hash;
++      this._kem = kem;
++      this._kemSecret = null;
++      this._x25519 = null;
++      this._clientPublic = null;
++    }
++    generateKeys() {
++      if (this._clientPublic)
++        return;
++      const keys = this._kem.keygen();
++      this._kemSecret = toBuffer(keys.secretKey);
++      this._x25519 = generateKeyPairSync('x25519');
++      this._clientPublic = clientPublic(this._kem, keys.publicKey, x25519Raw(this._x25519.publicKey));
++    }
++    getPublicKey() {
++      this.generateKeys();
++      return this._clientPublic;
++    }
++    convertPublicKey(key) {
++      return key; // Q_S is hashed exactly as received
++    }
++    computeSecret(serverPublic) {
++      this.generateKeys();
++      try {
++        return sharedSecret(this.hashName, this._kem, this._kemSecret, this._x25519.privateKey, serverPublic);
++      } catch (ex) {
++        return ex;
++      } finally {
++        if (this._kemSecret)
++          this._kemSecret.fill(0);
++        this._kemSecret = null;
++        this._x25519 = null;
++      }
++    }
++  };
++  return Hybrid;
++}
++
++/** The exchange for a negotiated hybrid method, or undefined when the method is unknown or its KEM is not registered (or on a server). */
++function create(KeyExchange, kexName, args) {
++  const method = METHODS[kexName];
++  const kem = method && KEMS[method.kem];
++  if (!kem || (args[1] && args[1]._server))
++    return undefined;
++  return new (classFor(KeyExchange))(method, kem, ...args);
++}
++
++module.exports = {
++  METHODS,
++  KEX_NAMES,
++  X25519_SIZE,
++  available,
++  clientPublic,
++  create,
++  register,
++  sharedSecret,
++  x25519Raw,
++};
+diff --git a/node_modules/ssh2/lib/protocol/kex.js b/node_modules/ssh2/lib/protocol/kex.js
+index 811e631..47ca123 100644
+--- a/node_modules/ssh2/lib/protocol/kex.js
++++ b/node_modules/ssh2/lib/protocol/kex.js
+@@ -31,6 +31,7 @@ const {
+   MAC_INFO,
+ } = require('./crypto.js');
+ const { parseDERKey } = require('./keyParser.js');
++const kexPQ = require('./kex-pq.js');
+ const {
+   bufferFill,
+   bufferParser,
+@@ -1587,6 +1588,15 @@ const createKeyExchange = (() => {
+     if (typeof kexType === 'string') {
+       args = [negotiated, ...args];
+       switch (kexType) {
++        case 'mlkem768x25519-sha256':
++        case 'sntrup761x25519-sha512@openssh.com': {
++          // post-quantum hybrids (kex-pq.js): only with a registered KEM
++          const pq = kexPQ.create(KeyExchange, kexType, args);
++          if (!pq)
++            break;
++          return pq;
++        }
++
+         case 'curve25519-sha256':
+         case 'curve25519-sha256@libssh.org':
+           if (!curve25519Supported)
