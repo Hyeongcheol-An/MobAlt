@@ -9,11 +9,14 @@ const dialogs = require('./dialogs'); // sheets go through the wrapper so that t
 const { compareVersions } = require('./bundlewatch');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 
+// electron-updater is loaded on the first check, 15 s after start or from the menu: its require (~25 ms warm, more
+// from a cold disk) is nothing the window should wait for. null until then; false when the module is missing.
 let autoUpdater = null;
-try {
-  ({ autoUpdater } = require('electron-updater'));
-} catch {
-  autoUpdater = null;
+function loadAutoUpdater() {
+  if (autoUpdater === null) {
+    try { ({ autoUpdater } = require('electron-updater')); } catch { autoUpdater = false; }
+  }
+  return autoUpdater || null;
 }
 
 /**
@@ -33,20 +36,18 @@ function setupUpdater(store, getWin, hooks = {}) {
     const w = getWin();
     return w && !w.isDestroyed() ? w : undefined;
   };
-  if (!autoUpdater || !app.isPackaged) {
-    return {
-      check: async (manual, { quiet = false } = {}) => {
-        const message = t('Updates are only checked in packaged builds');
-        if (manual && !quiet) {
-          await dialogs.showMessageBox(win(), {
-            type: 'info', message,
-            detail: t('This is MobAlt {version} running from source.', { version: app.getVersion() }),
-          });
-        }
-        return { status: 'source', version: app.getVersion(), message };
-      },
-    };
-  }
+  // Running from source (or, in a packaged build, without the electron-updater module): no check, only the answer.
+  const sourceCheck = async (manual, { quiet = false } = {}) => {
+    const message = t('Updates are only checked in packaged builds');
+    if (manual && !quiet) {
+      await dialogs.showMessageBox(win(), {
+        type: 'info', message,
+        detail: t('This is MobAlt {version} running from source.', { version: app.getVersion() }),
+      });
+    }
+    return { status: 'source', version: app.getVersion(), message };
+  };
+  if (!app.isPackaged) return { check: sourceCheck };
 
   const state = { manual: false, quiet: false, pending: null, done: null };
   const loud = () => state.manual && !state.quiet; // this check's outcome is reported in a sheet (read before finish() resets it)
@@ -63,6 +64,12 @@ function setupUpdater(store, getWin, hooks = {}) {
   const onDisk = async () => {
     try { return hooks.diskVersion ? await hooks.diskVersion() : null; } catch { return null; }
   };
+  // The module and its listeners, on the first check (the updater is never needed before that).
+  let wired = false;
+  const wire = () => {
+    const autoUpdater = loadAutoUpdater();
+    if (!autoUpdater || wired) return autoUpdater;
+    wired = true;
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.logger = null;
@@ -120,9 +127,13 @@ function setupUpdater(store, getWin, hooks = {}) {
     finish({ status: 'error', message: t('Update check failed: {error}', { error: e.message }) });
     if (manual) dialogs.showMessageBox(win(), { type: 'error', message: t('Update check failed'), detail: e.message });
   });
+    return autoUpdater;
+  };
 
   const check = (manual, { quiet = false } = {}) => {
     if (state.pending) return state.pending; // a check is under way: share its outcome (and its loudness)
+    const autoUpdater = wire();
+    if (!autoUpdater) return sourceCheck(manual, { quiet });
     state.manual = !!manual;
     state.quiet = !!quiet;
     state.pending = new Promise((resolve) => { state.done = resolve; });

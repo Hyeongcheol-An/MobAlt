@@ -9,7 +9,8 @@ const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const { Readable, Writable } = require('stream');
 const { spawn } = require('child_process');
-const { Client } = require('basic-ftp');
+let basicFtp = null; // loaded on the first FTP connection (nothing the window should wait for)
+const ftpClient = () => (basicFtp || (basicFtp = require('basic-ftp'))).Client;
 const i18n = require('./i18n'); // interface language: every message shown to the user goes through i18n.t() (`t` names the transfer in this file)
 
 const FILE = 1, DIR = 2, LINK = 3; // basic-ftp FileType
@@ -108,7 +109,7 @@ class FtpManager extends EventEmitter {
   }
 
   async _newClient(cfg) {
-    const client = new Client(30000);
+    const client = new (ftpClient())(30000);
     client.ftp.verbose = false;
     try {
       await client.access(this._accessOptions(cfg));

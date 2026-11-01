@@ -1,7 +1,10 @@
 'use strict';
 // SSH connection manager: one ssh2 Client per terminal (like MobaXterm),
 // with shell, SFTP channel, X11 forwarding, jump hosts and tunnels attached.
-const { Client, utils } = require('ssh2');
+// ssh2 is loaded on the first connection or key parse (~10 ms warm on top of the constants algorithms.js needs at
+// start, more from a cold disk): nothing the window should wait for.
+let ssh2Lib = null;
+const ssh2 = () => ssh2Lib || (ssh2Lib = require('ssh2'));
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -100,7 +103,7 @@ class SshManager {
       }
       let passphrase = savePassphrase ? cfg.passphrase || undefined : undefined;
       const hadSaved = !!passphrase;
-      let parsed = utils.parseKey(raw, passphrase);
+      let parsed = ssh2().utils.parseKey(raw, passphrase);
       let tries = 0;
       while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
         // only a retry (or a saved passphrase that no longer fits) is blamed on the passphrase
@@ -111,7 +114,7 @@ class SshManager {
         const ans = await prompter.password({ kind: 'passphrase', title: t('Private key passphrase'), message, session: cfg });
         if (!ans) return null;
         passphrase = ans.password;
-        parsed = utils.parseKey(raw, passphrase);
+        parsed = ssh2().utils.parseKey(raw, passphrase);
         if (!(parsed instanceof Error) && ans.save && cfg.id && savePassphrase) {
           this.store.upsertSession({ ...cfg, passphrase }).catch(() => {});
         }
@@ -354,7 +357,7 @@ class SshManager {
   verifyHost(cfg) {
     return new Promise((resolve) => {
       const settings = this.store.getSettings();
-      const client = new Client();
+      const client = new (ssh2().Client)();
       let settled = false;
       const finish = (ok, error) => {
         if (settled) return;
@@ -425,7 +428,7 @@ class SshManager {
   connectClient(cfg, ctx, depth = 0) {
     return new Promise(async (resolve, reject) => {
       const settings = this.store.getSettings();
-      const client = new Client();
+      const client = new (ssh2().Client)();
       let settled = false;
       const fail = (e) => {
         if (settled) return;
