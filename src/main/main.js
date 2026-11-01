@@ -915,7 +915,8 @@ function registerIpc() {
   // the app ready, the main window loaded), its memory, every process of the app with Chromium's CPU share since the
   // previous call and its working set (app.getAppMetrics) — and on request { gc: true } a full garbage collection
   // first, in main and in the calling window, so heaps can be compared; { domCounters: true } the window's documents,
-  // nodes and listeners; { profile: ms } a CPU profile of both JS threads over that long (profileSummary).
+  // nodes and listeners; { detached: true } the detached DOM trees JS still holds; { heapSnapshot: path } the window's
+  // heap snapshot written there; { profile: ms } a CPU profile of both JS threads over that long (profileSummary).
   ipcMain.handle('test:perf', async (e, opts) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const o = opts && typeof opts === 'object' ? opts : {};
@@ -927,6 +928,31 @@ function registerIpc() {
       try { await cdp('HeapProfiler.collectGarbage'); } catch {}
     }
     if (o.domCounters) { try { out.dom = await cdp('Memory.getDOMCounters'); } catch {} }
+    if (o.detached) { // the nodes no longer in the document that JS still holds — a leak's shape: the roots by tag and class
+      try {
+        const r = await cdp('DOM.getDetachedDomNodes');
+        const roots = {};
+        let nodes = 0;
+        const count = (n) => { nodes++; for (const c of n.children || []) count(c); };
+        for (const d of r.detachedNodes || []) {
+          const n = d.treeNode, a = n.attributes || [], i = a.indexOf('class');
+          const key = n.nodeName.toLowerCase() + (i >= 0 ? '.' + String(a[i + 1]).trim().split(/\s+/).slice(0, 2).join('.') : '');
+          roots[key] = (roots[key] || 0) + 1;
+          count(n);
+        }
+        out.detached = { trees: (r.detachedNodes || []).length, nodes, roots: Object.entries(roots).sort((x, y) => y[1] - x[1]).slice(0, 12) };
+      } catch (e) { out.detached = { error: e.message }; }
+    }
+    if (o.heapSnapshot) { // the window's heap as DevTools' .heapsnapshot at that path, for an offline retainer search
+      try {
+        const chunks = [];
+        const onMsg = (_ev, method, params) => { if (method === 'HeapProfiler.addHeapSnapshotChunk') chunks.push(params.chunk); };
+        dbg.on('message', onMsg);
+        try { await cdp('HeapProfiler.takeHeapSnapshot', { reportProgress: false, treatGlobalObjectsAsRoots: true }); } finally { dbg.off('message', onMsg); }
+        fs.writeFileSync(String(o.heapSnapshot), chunks.join(''));
+        out.heapSnapshot = String(o.heapSnapshot);
+      } catch (e) { out.heapSnapshot = { error: e.message }; }
+    }
     if (o.profile > 0) {
       const ms = Math.min(60000, o.profile | 0);
       const [renderer, main] = await Promise.all([rendererProfile(e.sender, ms).catch(() => null), mainProfile(ms)]);

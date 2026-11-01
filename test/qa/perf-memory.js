@@ -16,9 +16,9 @@
     const settle = sc.settleMs || 2500;
     const measure = async (label) => {
       await sleep(settle);
-      const r = await window.api.app.testPerf({ gc: true, domCounters: true });
+      const r = await window.api.app.testPerf({ gc: true, domCounters: true, detached: true });
       const m = performance.memory;
-      const step = { label, ...scene(), processes: r.processes, mainHeapUsedKB: Math.round(r.main.memory.heapUsed / 1024), mainRssKB: Math.round(r.main.memory.rss / 1024), heapUsedKB: Math.round(m.usedJSHeapSize / 1024), heapTotalKB: Math.round(m.totalJSHeapSize / 1024), dom: r.dom, attachedNodes: document.getElementsByTagName('*').length, panesByTerm: app.panesByTerm.size, paneEls: document.querySelectorAll('.pane').length, xtermEls: document.querySelectorAll('.xterm').length };
+      const step = { label, ...scene(), processes: r.processes, mainHeapUsedKB: Math.round(r.main.memory.heapUsed / 1024), mainRssKB: Math.round(r.main.memory.rss / 1024), heapUsedKB: Math.round(m.usedJSHeapSize / 1024), heapTotalKB: Math.round(m.totalJSHeapSize / 1024), dom: r.dom, detached: r.detached, attachedNodes: document.getElementsByTagName('*').length, panesByTerm: app.panesByTerm.size, paneEls: document.querySelectorAll('.pane').length, xtermEls: document.querySelectorAll('.xterm').length };
       log('PERF-MEMORY-STEP ' + JSON.stringify({ label }));
       await sleep(1500); // the runner's ps snapshot
       out.steps.push(step);
@@ -47,7 +47,7 @@
     }
     const loopMs = Date.now() - t0;
     const after = await measure('after loop');
-    out.loop = { n: sc.loop || 50, ms: loopMs, before: { heapUsedKB: before.heapUsedKB, dom: before.dom, attachedNodes: before.attachedNodes, mainHeapUsedKB: before.mainHeapUsedKB }, after: { heapUsedKB: after.heapUsedKB, dom: after.dom, attachedNodes: after.attachedNodes, mainHeapUsedKB: after.mainHeapUsedKB }, leftovers: { panesByTerm: after.panesByTerm, paneEls: after.paneEls, xtermEls: after.xtermEls } };
+    out.loop = { n: sc.loop || 50, ms: loopMs, before: { heapUsedKB: before.heapUsedKB, dom: before.dom, detached: before.detached, attachedNodes: before.attachedNodes, mainHeapUsedKB: before.mainHeapUsedKB }, after: { heapUsedKB: after.heapUsedKB, dom: after.dom, detached: after.detached, attachedNodes: after.attachedNodes, mainHeapUsedKB: after.mainHeapUsedKB }, leftovers: { panesByTerm: after.panesByTerm, paneEls: after.paneEls, xtermEls: after.xtermEls } };
     log('PERF-MEMORY ' + JSON.stringify(out));
   } catch (e) {
     log('PERF-MEMORY-ERROR ' + JSON.stringify({ error: e.message, stack: e.stack }));

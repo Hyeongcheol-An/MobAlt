@@ -258,6 +258,7 @@ async function memory(kind) {
   if (d.loop) {
     const L = d.loop;
     say(`\nopen / close loop: ${L.n} local tabs in ${(L.ms / 1000).toFixed(1)} s — renderer heap ${mb(L.before.heapUsedKB)} → ${mb(L.after.heapUsedKB)} MB, main heap ${mb(L.before.mainHeapUsedKB)} → ${mb(L.after.mainHeapUsedKB)} MB, DOM nodes ${L.before.dom && L.before.dom.nodes} → ${L.after.dom && L.after.dom.nodes} (attached ${L.before.attachedNodes} → ${L.after.attachedNodes}), listeners ${L.before.dom && L.before.dom.jsEventListeners} → ${L.after.dom && L.after.dom.jsEventListeners}; left over: ${JSON.stringify(L.leftovers)}`);
+    if (L.after.detached) say(`detached DOM trees held by JS after the loop: ${L.after.detached.trees} trees, ${L.after.detached.nodes} nodes (before: ${L.before.detached ? L.before.detached.trees + ' trees, ' + L.before.detached.nodes + ' nodes' : '—'}); roots: ${JSON.stringify(L.after.detached.roots)}`);
   }
   return d;
 }
