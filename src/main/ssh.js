@@ -337,6 +337,16 @@ class SshManager {
   }
 
   /**
+   * The grey line after the handshake: the negotiated key exchange — "(post-quantum)" after an ML-KEM / sntrup761
+   * hybrid — the host key type and the cipher (both directions, when they differ), from ssh2's `handshake` event.
+   */
+  _handshakeLine(neg) {
+    const kex = algorithms.isPostQuantum(neg.kex) ? t('{kex} (post-quantum)', { kex: neg.kex }) : neg.kex;
+    const cipher = neg.cs.cipher === neg.sc.cipher ? neg.cs.cipher : `${neg.cs.cipher} / ${neg.sc.cipher}`;
+    return t('Key exchange {kex}, host key {hostKey}, cipher {cipher}', { kex, hostKey: neg.serverHostKey, cipher });
+  }
+
+  /**
    * ssh2's debug hook, used for one thing: remembering what the server offered in its KEXINIT (key exchanges, host
    * key formats, ciphers, MACs), so a handshake that finds nothing in common can say what the server does speak.
    */
@@ -456,6 +466,8 @@ class SshManager {
         settled = true;
         resolve({ client, jump });
       });
+      // what the first key exchange of the session's own connection agreed on (a jump host's is not shown)
+      if (depth === 0) client.once('handshake', (negotiated) => { ctx.handshake = negotiated; });
       client.on('error', (e) => {
         if (!settled) fail(e);
         else if (ctx.onError) ctx.onError(e);
@@ -549,6 +561,7 @@ class SshManager {
       .then(async ({ client, jump }) => {
         info.client = client;
         info.jump = jump;
+        if (ctx.handshake) this._out(id, `${GREY}${this._handshakeLine(ctx.handshake)}${RESET}\r\n`);
         // Remember a prompted password if the user asked to save it.
         if (ctx.lastPrompted && ctx.lastPrompted.save && cfg.id && ctx.currentAuth === 'password') {
           cfg.password = ctx.lastPrompted.password;

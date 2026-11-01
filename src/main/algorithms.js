@@ -6,6 +6,7 @@
 const crypto = require('crypto');
 const C = require('ssh2/lib/protocol/constants');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const pq = require('./pqkex'); // the post-quantum hybrids (registers their KEMs with ssh2 on load)
 
 const CATEGORIES = ['kex', 'serverHostKey', 'cipher', 'hmac'];
 const LABELS = { kex: 'key exchange', serverHostKey: 'host key', cipher: 'cipher', hmac: 'MAC' };
@@ -67,6 +68,12 @@ const LEGACY = Object.freeze({
 
 const uniq = (list) => [...new Set(list)];
 
+// The post-quantum hybrids (pqkex.js): in ssh2's supported list through the patch, never in its defaults; a session
+// that ticks "Post-quantum key exchange" offers them first.
+const POST_QUANTUM_KEX = pq.KEX;
+/** Whether a (negotiated) key-exchange name is a post-quantum hybrid. */
+const isPostQuantum = (name) => pq.isHybrid(name);
+
 /** "a, b\nc" → ['a', 'b', 'c']: comma, whitespace or newline separated, trimmed, duplicates dropped. */
 function parseList(text) {
   return uniq(String(text || '').split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean));
@@ -124,6 +131,8 @@ function normalize(lists, legacy) {
  * ssh2's `algorithms` connect option for a session: an explicit list wins for its category; otherwise the legacy
  * preset appends its algorithms to ssh2's defaults; a session with neither gets undefined (ssh2's defaults). A name
  * this build cannot run is dropped from a stored list (a session saved by an older build may still carry it).
+ * "Post-quantum key exchange" (`pqKex`) puts the two hybrids in front of whatever key-exchange list the session has
+ * — explicit, legacy-extended or the defaults — and changes nothing else; off, the option is as before.
  */
 function connectOption(cfg) {
   if (!cfg) return undefined;
@@ -135,6 +144,11 @@ function connectOption(cfg) {
     if (own.length) out[cat] = own;
     else if (cfg.legacyAlgorithms && LEGACY[cat].length) out[cat] = { append: [...LEGACY[cat]] };
   }
+  if (cfg.pqKex) {
+    const kex = out.kex;
+    if (Array.isArray(kex)) out.kex = uniq([...POST_QUANTUM_KEX, ...kex]);
+    else out.kex = { prepend: [...POST_QUANTUM_KEX], ...(kex || {}) };
+  }
   return Object.keys(out).length ? out : undefined;
 }
 
@@ -143,7 +157,7 @@ function offered(cfg, cat) {
   const opt = connectOption(cfg);
   const v = opt && opt[cat];
   if (Array.isArray(v)) return v;
-  if (v && Array.isArray(v.append)) return uniq([...DEFAULTS[cat], ...v.append]);
+  if (v && (Array.isArray(v.append) || Array.isArray(v.prepend))) return uniq([...(v.prepend || []), ...DEFAULTS[cat], ...(v.append || [])]);
   return [...DEFAULTS[cat]];
 }
 
@@ -205,4 +219,4 @@ function describe() {
   return { categories: CATEGORIES.slice(), labels: Object.fromEntries(CATEGORIES.map((c) => [c, labelOf(c)])), defaults: copy(DEFAULTS), supported: copy(SUPPORTED), legacy: copy(LEGACY), unavailable: copy(UNAVAILABLE) };
 }
 
-module.exports = { CATEGORIES, LABELS, DEFAULTS, SUPPORTED, LEGACY, UNAVAILABLE, parseList, presetLists, validate, normalize, connectOption, offered, noteRemote, explainHandshake, explainDhGroup, unavailableMessage, describe };
+module.exports = { CATEGORIES, LABELS, DEFAULTS, SUPPORTED, LEGACY, UNAVAILABLE, POST_QUANTUM_KEX, isPostQuantum, parseList, presetLists, validate, normalize, connectOption, offered, noteRemote, explainHandshake, explainDhGroup, unavailableMessage, describe };
