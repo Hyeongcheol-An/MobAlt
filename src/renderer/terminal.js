@@ -409,6 +409,10 @@ export class TermPane {
       webgl.onContextLoss(() => this._onWebglLost()); // the addon's own 3 s path, should the capture listener ever miss the event
       this.term.loadAddon(webgl);
       this.webgl = webgl;
+      // the GPU renderer measures the font itself, and its cell is not the DOM renderer's: the columns follow it now —
+      // without this a pane opened into a split stayed at the DOM renderer's count (64 of 72 columns) until the next
+      // resize, since nothing changed its size afterwards
+      this.fit();
     } catch (e) {
       console.warn('WebGL renderer unavailable, using DOM renderer', e);
     }
@@ -421,6 +425,7 @@ export class TermPane {
     if (!webgl) return;
     this.webgl = null;
     try { webgl.dispose(); } catch (e) { console.warn('WebGL addon dispose failed', e); }
+    this.fit(); // back on the DOM renderer's cell size
     if (this.disposed) return;
     this.applyTheme(); // the DOM renderer that takes over must paint with this pane's palette, not a stale one
     try { this.term.refresh(0, this.term.rows - 1); } catch {}

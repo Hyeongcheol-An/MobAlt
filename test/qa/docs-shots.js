@@ -9,8 +9,8 @@
   const log = (...a) => console.log('[docs-shots]', ...a);
   const closeModal = () => document.querySelector('.modal .close')?.click();
   const clearToasts = () => document.querySelectorAll('#toast-root .toast').forEach((el) => el.remove());
-  /** The pane's shell is up and its column count has stopped changing (the split's fit is done). */
-  const settled = async (p) => { let last = -1; for (let i = 0; i < 60; i++) { await sleep(150); if (p.status === 'connected' && p.term.cols > 40 && p.term.cols === last) return; last = p.term.cols; } };
+  /** The pane's shell is up and its columns are what its box holds (the split's fit, with the final renderer, is done). */
+  const settled = async (p) => { for (let i = 0; i < 60; i++) { await sleep(150); const d = p.fitAddon.proposeDimensions(); if (p.status === 'connected' && d && p.term.cols > 40 && p.term.cols === d.cols) return; } };
   const PROMPT = (host) => `cd /Users/Shared 2>/dev/null && export HOME=/Users/Shared || cd /tmp; export PS1='demo@${host}:%~$ '; export PROMPT='demo@${host}:%~$ '; clear`; // a neutral cwd: the status bar shows the active pane's folder
   try {
     await window.api.app.testResize(1360, 860);
@@ -48,8 +48,10 @@
 
     // --- split grid 2x2 with placeholders
     app.applyLayout('2x2');
-    await sleep(500);
-    clearToasts(); // "2 empty panes added — drag sessions onto them" is not part of the picture
+    await sleep(1500); // the "2 empty panes added — drag sessions onto them" toast has appeared by now…
+    clearToasts(); // …and is not part of the picture
+    await sleep(100);
+    clearToasts();
     await shot('split-grid');
     app.unsplit('active'); // the empty panes close (the default would keep them as tabs, in every later shot)
     await sleep(300);

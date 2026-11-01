@@ -58,6 +58,12 @@
     await prompt(a);
     await prompt(b);
     results.twoPanes = tab.panes().length === 2 && b.session?.id === local2.id && !a.session;
+    // a pane opened into a split (openSession { split }) is fitted to its box once the GPU renderer is in (it used to
+    // keep the DOM renderer's narrower count until the next resize)
+    await sleep(600);
+    const want = b.fitAddon.proposeDimensions();
+    results.splitPaneFitted = !!want && b.term.cols === want.cols && b.term.rows === want.rows && b.term.cols > 40;
+    log('split pane fit', JSON.stringify({ cols: b.term.cols, rows: b.term.rows, want, webgl: !!b.webgl }));
     const baseFont = app.settings.fontSize;
 
     // ---------- the menu: MobaXterm-ordered items, sub-menus by mouse and keyboard, ⌃- or ⇧-right-click while a right-click pastes ----------
