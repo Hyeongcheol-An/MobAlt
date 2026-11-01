@@ -226,12 +226,15 @@ export class SftpPanel {
     if (st.path === null && !st.loading) {
       // a session whose "Open SFTP browser automatically" is off is not listed until asked for (Open SFTP Browser in
       // the pane menu, Refresh): a server without the sftp subsystem would otherwise report an error on every pane switch
-      if (st.pane.session?.sftpAuto === false && !this.wanted.has(connId)) {
+      if (st.pane.kind !== 'ftp' && st.pane.session?.sftpAuto === false && !this.wanted.has(connId)) { // an FTP pane is nothing but this list
         st.off = true; // the note is drawn again on a language switch (relabel)
         this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('SFTP browser is off for this session — Refresh lists its files anyway')));
       } else {
-        const remembered = st.pane.remoteCwd ? null : this.remembered(st.pane);
-        this.navigate(st.pane.remoteCwd || remembered || '.', { remembered: !!remembered });
+        // the folder this pane showed before a reconnect comes back first (the fresh shell starts at home and would
+        // otherwise pull the panel there); a new pane follows the shell's folder when it is known, else the session's
+        const remembered = this.lastPathsByPane.get(st.pane) || (st.pane.remoteCwd ? null : this.remembered(st.pane));
+        if (remembered) { st.lastCwd = st.pane.remoteCwd || null; st.skipFirstCwd = !st.pane.remoteCwd; } // the shell's starting folder is not a cd (onPaneCwd)
+        this.navigate(remembered || st.pane.remoteCwd || '.', { remembered: !!remembered });
       }
     } else this.renderList();
   }
@@ -291,10 +294,15 @@ export class SftpPanel {
   onPaneCwd(pane) {
     const connId = connIdOf(pane);
     const st = connId && this.states.get(connId);
-    if (st && st.follow && pane.remoteCwd && pane.remoteCwd !== st.path) {
-      if (this.connId === connId) this.navigate(pane.remoteCwd);
-      else st.path = null; // reload on next show
-    }
+    if (!st || !pane.remoteCwd) return;
+    // the shell reports its folder at every prompt: only a change is a cd to follow — a folder the user browsed to in
+    // the panel is not pulled back by the next prompt, and the folder a (re)connected shell starts in is not a cd
+    if (st.skipFirstCwd) { st.skipFirstCwd = false; st.lastCwd = pane.remoteCwd; return; }
+    if (pane.remoteCwd === st.lastCwd) return;
+    st.lastCwd = pane.remoteCwd;
+    if (!st.follow || pane.remoteCwd === st.path) return;
+    if (this.connId === connId) this.navigate(pane.remoteCwd);
+    else st.path = null; // reload on next show
   }
 
   /**
@@ -311,11 +319,12 @@ export class SftpPanel {
     st.error = null;
     st.off = false;
     this.wanted.add(connId);
+    const seq = st.navSeq = (st.navSeq || 0) + 1; // a listing still in flight when a newer one starts is dropped when it lands (the last request wins, not the last answer)
     if (st.path === null) this.els.list.replaceChildren(h('div', { class: 'sftp-msg' }, t('Loading…')));
     try {
       if (path === '~' || (path || '').startsWith('~/')) path = (await window.api.sftp.home(connId)) + path.slice(1);
       const r = await window.api.sftp.list(connId, path || '.');
-      if (this.connId !== connId) return;
+      if (this.connId !== connId || st.navSeq !== seq) return;
       const from = st.path;
       // keyboard cursor: stays put on a refresh, lands on the folder just left when going up, else on the first entry
       if (from !== r.path) st.lastSel = from && parentPath(from) === r.path ? from.replace(/\/$/, '').split('/').pop() : null;
@@ -330,7 +339,7 @@ export class SftpPanel {
       this.app.setStatusCwd(r.path);
       this._remember(st.pane, r.path);
     } catch (e) {
-      if (this.connId !== connId) return;
+      if (this.connId !== connId || st.navSeq !== seq) return;
       st.loading = false;
       if (remembered && isNotFound(e)) return this.navigate('.'); // the remembered folder is gone: home, quietly
       const gone = isNotFound(e) && (walkUp || st.path === null || path === st.path) && path && path !== '/' && path !== '.' && !path.startsWith('~');

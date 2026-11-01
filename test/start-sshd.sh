@@ -16,6 +16,9 @@ start() {
   [ -f "$DIR/client_ed25519" ] || ssh-keygen -q -t ed25519 -N "" -C "mobalt-test" -f "$DIR/client_ed25519"
   [ -f "$DIR/client_enc_ed25519" ] || ssh-keygen -q -t ed25519 -N "secret" -C "mobalt-test-enc" -f "$DIR/client_enc_ed25519"
   cat "$DIR/client_ed25519.pub" "$DIR/client_enc_ed25519.pub" > "$DIR/authorized_keys"
+  # the Mac's own default keys too (~/.ssh/id_*.pub): test/e2e-auth.js checks that a session with no key of its own
+  # logs in with them — this sshd listens on 127.0.0.1 only and runs as the same user, so nothing is opened up
+  for pub in "$HOME"/.ssh/id_ed25519.pub "$HOME"/.ssh/id_rsa.pub "$HOME"/.ssh/id_ecdsa.pub; do [ -f "$pub" ] && cat "$pub" >> "$DIR/authorized_keys"; done
   chmod 600 "$DIR/authorized_keys"
   cat > "$DIR/sshd_config" <<EOF
 Port $PORT

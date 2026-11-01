@@ -112,7 +112,7 @@
       await sleep(9000); // the proxy would relay at 6 s: a ghost would do its handshake, host key and login now
       const proxyLog = (await fsx('readText', SERVERS + '/delayproxy.log')).slice(proxyBefore);
       const sshdDelta = (await fsx('readText', sshdLog)).slice(sshdBefore);
-      const r = { during, cancelMs, after, dialogsAfterCancel: dialogs.slice(dialogsBefore).map((d) => d.title), proxyClientGone: /client gone before relay/.test(proxyLog), proxyRelayed: /relaying #/.test(proxyLog), sshdAccepted: /Accepted publickey/.test(sshdDelta), noFailedLine: !/Connection failed/.test(textOf(pane)) };
+      const r = { during, cancelMs, after, dialogsAfterCancel: dialogs.slice(dialogsBefore).map((d) => d.title), proxyClientGone: /client gone before relay/.test(proxyLog), proxyNeverRelayed: !/relaying #/.test(proxyLog), noGhostLogin: !(/relaying #/.test(proxyLog) && /Accepted publickey/.test(sshdDelta)) /* the sshd log is shared with suites that run alongside: only a relayed connection could be this one's */, noFailedLine: !/Connection failed/.test(textOf(pane)) };
       await close(pane);
       return r;
     });
