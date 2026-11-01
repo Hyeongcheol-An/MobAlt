@@ -1,6 +1,6 @@
 # Hướng dẫn sử dụng MobAlt
 
-This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
+Hướng dẫn này bằng: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
 
 MobAlt là một bàn làm việc kiểu MobaXterm cho macOS: cây phiên ở bên trái, các terminal theo thẻ và
 chia ngăn ở giữa, còn trình duyệt SFTP, công cụ mạng và macro nằm trong các bảng bên.
@@ -168,7 +168,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   ẩn; đầu ngăn hiện nhãn *phóng to* và thẻ hiện một dấu ⤢ nhỏ. Nhấn lại (hoặc ⤡ ở đầu ngăn)
   để đưa bố cục trở lại. Chia ngăn, đóng một ngăn, chọn bố cục lưới hoặc chuyển tới một ngăn đang ẩn (⌘])
   sẽ khôi phục bố cục trước. Mỗi thẻ giữ trạng thái phóng to riêng, kể cả sau khi khởi động lại.
-- **Menu ngăn** (nút ⚙ ở đầu ngăn, hoặc nhấp chuột phải vào terminal; ⇧- hoặc ⌃-chuột phải khi *Chuột phải để dán* đang bật): ngoài sao chép,
+- **Menu ngăn** (nút ⚙ ở đầu ngăn của thẻ đã chia, hoặc nhấp chuột phải vào terminal; ⇧- hoặc ⌃-chuột phải khi *Chuột phải để dán* đang bật): ngoài sao chép,
   dán, tìm, xóa màn hình, chia và phóng to, menu còn có các mục theo từng terminal của menu terminal trong MobaXterm.
   *Đổi tên ngăn…* (*Rename Terminal* của MobaXterm) đặt tên cho chính ngăn: đầu ngăn hiện tên đó, thẻ lấy tên đó khi
   ngăn quyết định tên thẻ, và các chuỗi đặt tiêu đề của shell không còn thay đổi được nó; để trống tên thì quay về

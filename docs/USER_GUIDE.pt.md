@@ -1,6 +1,6 @@
 # Guia do Usuário do MobAlt
 
-This guide in: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
+Este guia em: [English](USER_GUIDE.md) · [한국어](USER_GUIDE.ko.md) · [简体中文](USER_GUIDE.zh-CN.md) · [日本語](USER_GUIDE.ja.md) · [Tiếng Việt](USER_GUIDE.vi.md) · [हिन्दी](USER_GUIDE.hi.md) · [Deutsch](USER_GUIDE.de.md) · [Français](USER_GUIDE.fr.md) · [Español](USER_GUIDE.es.md) · [Português](USER_GUIDE.pt.md) · [العربية](USER_GUIDE.ar.md)
 
 O MobAlt é uma bancada de trabalho no estilo do MobaXterm para o macOS: uma árvore de sessões à esquerda,
 terminais em abas e divididos no centro, e um navegador SFTP, ferramentas de rede e macros em painéis laterais.
@@ -171,7 +171,7 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
   ocultos; o cabeçalho do painel mostra uma etiqueta *maximizado* e a aba um pequeno ⤢. Pressione de novo (ou ⤡ no cabeçalho)
   para restaurar o layout. Dividir, fechar um painel, um layout em grade ou pôr o foco num painel oculto (⌘])
   restaura o layout antes. Cada aba mantém o seu próprio estado de maximização, inclusive após reiniciar.
-- **Menu do painel** (o botão ⚙ no cabeçalho do painel, ou clique direito num terminal; ⇧- ou ⌃-clique direito enquanto *Clique direito cola* estiver ativado): além de
+- **Menu do painel** (o botão ⚙ no cabeçalho do painel numa aba dividida, ou clique direito num terminal; ⇧- ou ⌃-clique direito enquanto *Clique direito cola* estiver ativado): além de
   copiar, colar, buscar, limpar, dividir e maximizar, ele traz os itens por terminal do menu de terminal do MobaXterm. *Renomear
   Painel…* (o *Rename Terminal* do MobaXterm) dá nome ao próprio painel: o cabeçalho do painel mostra o nome, a aba o adota quando é
   esse painel que dá nome à aba, e as sequências de título do próprio shell deixam de alterá-lo; um nome vazio volta ao

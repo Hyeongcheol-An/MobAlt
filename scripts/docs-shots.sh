@@ -6,6 +6,8 @@
 # Each language is one run of test/qa/docs-shots.js (a fresh user-data folder, made-up sessions, nothing personal in
 # the pictures) with MOBALT_LANG set. The file-panel picture needs an FTP server on 127.0.0.1:2121 (demo/demo):
 # test/ftpd.py (pip install pyftpdlib) is started on a throwaway folder unless something already listens there.
+# The status bar in the pictures shows the checkout's version (package.json): run this after a release's version bump
+# when the pictures should carry that number.
 # Env: FTPD_PYTHON  the python that has pyftpdlib (default: python3)
 #      DOCS_SHOTS_OUT  where the runs' work files go (default: a temporary folder)
 set -euo pipefail
@@ -13,8 +15,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 LANGS=("$@")
 [ ${#LANGS[@]} -gt 0 ] || LANGS=(en ko zh-CN ja vi hi de fr es pt ar)
-GUIDE_IMAGES=(hero session-editor split-grid sftp-panel tunnels settings)   # the pictures docs/USER_GUIDE*.md show
-EXTRA_IMAGES=(session-editor-tunnels tools)                                   # kept in English only
+GUIDE_IMAGES=(hero session-editor split-grid sftp-panel tunnels settings)   # the pictures docs/USER_GUIDE*.md and README.md show
 OUT="${DOCS_SHOTS_OUT:-$(mktemp -d "${TMPDIR:-/tmp}/mobalt-docs-shots.XXXXXX")}"
 mkdir -p "$OUT"
 
@@ -40,8 +41,7 @@ for code in "${LANGS[@]}"; do
   grep -q '\[docs-shots\] DONE' "$OUT/$code.log" || { echo "docs-shots did not finish for $code: $OUT/$code.log"; exit 1; }
   if [ "$code" = en ]; then dest="docs/images"; else dest="docs/images/$code"; fi
   mkdir -p "$dest"
-  names=("${GUIDE_IMAGES[@]}"); [ "$code" = en ] && names+=("${EXTRA_IMAGES[@]}")
-  for n in "${names[@]}"; do
+  for n in "${GUIDE_IMAGES[@]}"; do
     cp "$OUT/$code/shots/$n.png" "$dest/$n.png"
     # a 255-colour palette: the interface has a few hundred colours, so nothing visible changes and the file is ~60 % smaller
     if command -v magick >/dev/null 2>&1; then magick "$dest/$n.png" -dither None -colors 255 "PNG8:$dest/$n.png"; fi

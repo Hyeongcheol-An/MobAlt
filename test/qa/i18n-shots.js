@@ -30,7 +30,9 @@
       // (vertical strip buttons, picker tiles, icon-only buttons and tabs are sized by design and skipped)
       const lh = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.35;
       const inner = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      const wrapped = el.tagName === 'BUTTON' && /\S\s+\S/.test((el.textContent || '').trim()) && cs.whiteSpace !== 'nowrap' && inner > lh * 1.6 && !el.matches('.strip-btn, .pick, .type-picker button, .icon-btn, .tab, [data-icon]');
+      // a label on two lines: count the line boxes (a button stretched to the height of the input beside it is not wrapped)
+      const lineBoxes = (b) => { const rg = document.createRange(); rg.selectNodeContents(b); return new Set([...rg.getClientRects()].filter((q) => q.width > 0 && q.height > 0).map((q) => Math.round(q.top / 4))).size; };
+      const wrapped = el.tagName === 'BUTTON' && /\S\s+\S/.test((el.textContent || '').trim()) && cs.whiteSpace !== 'nowrap' && inner > lh * 1.6 && !el.matches('.strip-btn, .pick, .type-picker button, .icon-btn, .tab, [data-icon]') && lineBoxes(el) > 1;
       if (clipped || outside || wrapped) overflows.push(`${view}: <${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : ''}> "${(el.textContent || '').trim().slice(0, 60)}" scroll=${el.scrollWidth} client=${el.clientWidth}${outside ? ' OUTSIDE WINDOW' : ''}${wrapped ? ' WRAPPED BUTTON' : ''}`);
       if (nonLatin) {
         const text = (el.textContent || '').trim();

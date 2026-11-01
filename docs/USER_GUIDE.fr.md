@@ -171,7 +171,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   masqués ; l'en-tête du volet affiche une pastille *agrandi* et l'onglet un petit ⤢. Recommencez (ou ⤡ dans l'en-tête)
   pour rétablir la disposition. Diviser, fermer un volet, choisir une disposition en grille ou activer un volet masqué (⌘])
   rétablit d'abord la disposition. Chaque onglet garde son propre agrandissement, y compris après un redémarrage.
-- **Menu du volet** (le bouton ⚙ de l'en-tête du volet, ou clic droit sur un terminal ; ⇧ ou ⌃ clic droit quand *Le clic droit colle* est activé) : en plus de
+- **Menu du volet** (le bouton ⚙ de l'en-tête du volet dans un onglet divisé, ou clic droit sur un terminal ; ⇧ ou ⌃ clic droit quand *Le clic droit colle* est activé) : en plus de
   copier, coller, rechercher, effacer, diviser et agrandir, il reprend les éléments propres au terminal du menu de MobaXterm.
   *Renommer le volet…* (le *Rename Terminal* de MobaXterm) nomme le volet lui-même : l'en-tête du volet affiche ce nom,
   l'onglet le reprend quand c'est ce volet qui donne son titre à l'onglet, et les séquences de titre du shell ne le modifient
