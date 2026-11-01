@@ -113,3 +113,16 @@ test('running from source: the manual check answers on the Settings line; only a
     electron.app.isPackaged = true;
   }
 });
+
+test('electron-updater is wired on the first check, not at setup (its require is off the start-up path), and once only', async () => {
+  const u = fresh();
+  assert.equal(autoUpdater.listenerCount('update-available'), 0, 'nothing registered before a check');
+  let p = u.check(true, { quiet: true });
+  assert.equal(autoUpdater.listenerCount('update-available'), 1, 'wired by the first check');
+  autoUpdater.emit('update-not-available');
+  await p;
+  p = u.check(true, { quiet: true });
+  assert.equal(autoUpdater.listenerCount('update-available'), 1, 'not wired twice');
+  autoUpdater.emit('update-not-available');
+  await p;
+});
