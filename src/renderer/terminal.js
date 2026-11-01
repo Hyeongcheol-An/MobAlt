@@ -913,10 +913,12 @@ export class TermPane {
     const s = this.session || {};
     if (this.kind === 'serial') return sentence ? t('Device {path} disconnected.', { path: s.serialPath }) : t('Device {path} disconnected', { path: s.serialPath });
     const where = s.name || `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
-    if (sentence) return detail ? t('Connection to {where} was lost: {detail}.', { where, detail }) : t('Connection to {where} was closed by the server.', { where });
-    const msg = detail ? t('Connection to {where} was lost: {detail}', { where, detail }) : t('Connection to {where} was closed by the server', { where });
-    // the tunnels started from the Tunnels dialog on this connection went with it (the session's own come back with a reconnect)
-    return tunnelsStopped > 0 ? msg + ' ' + tn('{n} tunnel started from the Tunnels dialog was stopped.', '{n} tunnels started from the Tunnels dialog were stopped.', tunnelsStopped) : msg;
+    const full = detail ? t('Connection to {where} was lost: {detail}.', { where, detail }) : t('Connection to {where} was closed by the server.', { where });
+    if (sentence) return full;
+    // the tunnels started from the Tunnels dialog on this connection went with it (the session's own come back with a
+    // reconnect): a second sentence after the first one's full stop
+    if (tunnelsStopped > 0) return full + ' ' + tn('{n} tunnel started from the Tunnels dialog was stopped.', '{n} tunnels started from the Tunnels dialog were stopped.', tunnelsStopped);
+    return detail ? t('Connection to {where} was lost: {detail}', { where, detail }) : t('Connection to {where} was closed by the server', { where });
   }
 
   onExit({ id, code, reason, detail }) {

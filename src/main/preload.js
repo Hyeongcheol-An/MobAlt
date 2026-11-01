@@ -149,7 +149,7 @@ contextBridge.exposeInMainWorld('api', {
     install: (sessionId, publicKey, remoteFile) => invoke('keygen:install', sessionId, publicKey, remoteFile),
   },
   sftp: {
-    list: (id, dir) => invoke('sftp:list', id, dir),
+    list: (id, dir) => invoke('sftp:list', id, dir).then((r) => (r && r.notFound ? Promise.reject(Object.assign(new Error(r.error), { code: 'ENOENT' })) : r)), // a vanished folder comes back structured (no main-process stack) and rejects here as before
     home: (id) => invoke('sftp:home', id),
     realpath: (id, p) => invoke('sftp:realpath', id, p),
     stat: (id, p) => invoke('sftp:stat', id, p),
