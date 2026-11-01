@@ -69,7 +69,8 @@ contextBridge.exposeInMainWorld('api', {
     testResize: (w, h) => invoke('test:resize', w, h),
     testKey: (key) => invoke('test:key', key), // a key name, or { keyCode, modifiers, char, windowId } for a real press with modifiers (test mode only)
     testClipboardPng: (dataUrl, text) => invoke('test:clipboard-png', dataUrl, text), // a PNG on the clipboard, with text beside it or alone (test mode only)
-    testPaste: (windowId) => invoke('test:paste', windowId), // Edit → Paste (webContents.paste: a real paste event with the clipboard) in that window (test mode only)
+    testPaste: (windowId) => invoke('test:paste', windowId), // Edit → Paste (webContents.paste: a real paste event with the clipboard) in that window (test mode only; needs testClipboardReal(true))
+    testClipboardReal: (on) => invoke('test:clipboard-real', on), // true: this run uses the Mac's clipboard instead of its own in-memory one (test mode only)
     testQuitCheck: (verb) => invoke('test:quit-check', verb),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testNotice: (text) => invoke('test:notice', text),

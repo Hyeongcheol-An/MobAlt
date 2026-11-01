@@ -7,7 +7,8 @@
 // presses Shift+Enter (a real key), types `def`, reads the composer back from the terminal buffer and clears it with
 // Ctrl+C; plain Enter is never pressed while the composer holds text.
 //   test/qa/run.sh test/qa/claude-code-check.js <out-dir> 300000      # screenshots → <out-dir>/shots/*.png
-// The system clipboard is written (a PNG) and put back afterwards.
+// The Mac's clipboard is used (testClipboardReal; a run normally has an in-memory one of its own): a PNG is written
+// to it and it is put back afterwards.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -142,6 +143,7 @@
     g.fillStyle = '#fff'; g.fillRect(8, 8, 16, 16);
     return c.toDataURL('image/png');
   })();
+  await window.api.app.testClipboardReal(true); // Claude Code reads the Mac's clipboard itself
   const clipBefore = await window.api.clipboard.read();
   try {
     await app.saveSettings({ confirmClose: false });

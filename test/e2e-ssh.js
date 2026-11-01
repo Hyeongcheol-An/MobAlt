@@ -219,7 +219,9 @@
       const textOf = (p) => [...Array(p.term.buffer.active.length)].map((_, i) => p.term.buffer.active.getLine(i)?.translateToString(true)).join('\n');
       const seenToasts = [];
       new MutationObserver((muts) => { for (const m of muts) for (const n of m.addedNodes) if (n.classList?.contains('toast')) seenToasts.push(n.textContent); }).observe(document.getElementById('toast-root'), { childList: true });
-      const lostToast = 'Connection to enc-key was closed by the server';
+      // killing the sshd child ends the TCP connection with a clean EOF ("closed by the server") or, when the Mac is busy
+      // and the reset arrives first, with ECONNRESET ("lost: read ECONNRESET"): the server dropped us either way
+      const lostRe = /^Connection to enc-key was (closed by the server|lost: .+)$/;
       const sp = await app.openSession(app.sessions.sessions.find((x) => x.id === s2.id)); // saved passphrase: no prompt
       await waitFor(() => sp.status === 'connected', 15000, 'drop-test session connected');
       await sleep(1500);
@@ -233,8 +235,8 @@
       await waitFor(() => /KILLED_OK/.test(textOf(local)), 8000, 'kill ran');
       await waitFor(() => sp.dead, 15000, 'ssh pane noticed the drop');
       await sleep(300);
-      results.dropToast = seenToasts.includes(lostToast);
-      results.dropLine = /── Connection to enc-key was closed by the server\. Press Enter to reconnect/.test(textOf(sp));
+      results.dropToast = seenToasts.some((x) => lostRe.test(x));
+      results.dropLine = /── Connection to enc-key was (closed by the server|lost: [^\n]+?)\. Press Enter to reconnect/.test(textOf(sp));
       results.dropStatus = sp.status === 'disconnected' && /Connection lost\./.test(sp.overlay?.textContent || '') && /disconnected \(connection lost\)/.test(document.getElementById('st-session').textContent);
       await shot('10-connection-lost');
       log('after the drop: toasts', JSON.stringify(seenToasts), '| status bar', document.getElementById('st-session').textContent);
@@ -251,7 +253,7 @@
       await sp.disconnect();
       await waitFor(() => sp.dead, 10000, 'disconnect ended the session');
       await sleep(300);
-      results.quietEndsNoToast = seenToasts.length === toastsBefore && (textOf(sp).match(/closed by the server/g) || []).length === 1 && (textOf(sp).match(/── Session ended\./g) || []).length === 2;
+      results.quietEndsNoToast = seenToasts.length === toastsBefore && (textOf(sp).match(/── Connection to enc-key was (closed by the server|lost: )/g) || []).length === 1 && (textOf(sp).match(/── Session ended\./g) || []).length === 2;
       await app.closeTab(local.tab);
     }
     log('RESULTS ' + JSON.stringify(results));

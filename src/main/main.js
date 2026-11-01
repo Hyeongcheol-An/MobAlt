@@ -263,6 +263,7 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
       nodeIntegration: false,
       sandbox: false,
       spellcheck: false,
+      ...(process.env.MOBALT_TEST_SCRIPT ? { backgroundThrottling: false } : {}), // a run keeps its timers and frames at full speed behind other windows
     },
   });
   if (isMain) win = w;
@@ -272,7 +273,11 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
   }
   const wcId = w.webContents.id;
   w.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'), detached ? { query: { detached } } : undefined);
-  w.once('ready-to-show', () => w.show());
+  // Test mode (MOBALT_TEST_SCRIPT): the window comes up without taking the keyboard or activating the app — a run never
+  // swallows what the user is typing, and runs side by side do not fight over the front window — and the page is told
+  // to behave as focused instead (emulateFocus), whichever window the Mac has in front.
+  w.once('ready-to-show', () => { if (process.env.MOBALT_TEST_SCRIPT) w.showInactive(); else w.show(); });
+  if (process.env.MOBALT_TEST_SCRIPT) w.webContents.once('dom-ready', () => emulateFocus(w));
   if (isMain) {
     const saveBounds = () => {
       if (!win || win.isDestroyed() || win.isFullScreen()) return;
@@ -328,6 +333,31 @@ function debounce(fn, ms) {
     t = setTimeout(() => fn(...a), ms);
   };
 }
+
+/**
+ * Test mode: the page behaves as focused (Chrome DevTools focus emulation, what headless browsers do) whether or not
+ * the Mac has this window in front: :focus and :focus-visible match, document.hasFocus() is true, key presses sent
+ * with test:key land in the focused element. Attached once per window (createWindow); harmless to repeat.
+ */
+async function emulateFocus(w) {
+  if (!w || w.isDestroyed()) return;
+  try {
+    const dbg = w.webContents.debugger;
+    if (!dbg.isAttached()) dbg.attach('1.3');
+    await dbg.sendCommand('Emulation.setFocusEmulationEnabled', { enabled: true });
+  } catch (e) {
+    console.error('focus emulation failed:', e.message);
+  }
+}
+
+// Test mode: a clipboard of this run's own, in memory. What the app copies (clipboard:write — Copy on select, Copy
+// Path, the key generator's Copy, the scanner's table) and what a script puts there (window.api.clipboard.write,
+// test:clipboard-png) is read back by clipboard:read / clipboard:kinds from here, never from the Mac's clipboard: the
+// user's clipboard survives a run, and runs side by side do not race for the one clipboard. A script that has to
+// exercise the real one (test/e2e-claude-keys.js: a PNG another application put there, Edit → Paste) switches with
+// test:clipboard-real; test:paste always pastes the real clipboard (webContents.paste) and refuses in the virtual mode.
+const testClipboard = process.env.MOBALT_TEST_SCRIPT ? { real: false, text: '', image: null } : null;
+const virtualClipboard = () => testClipboard && !testClipboard.real ? testClipboard : null;
 
 // Headless verification hooks used by the test scripts (never set in normal use).
 function runTestHooks() {
@@ -614,9 +644,7 @@ function registerIpc() {
     const o = key && typeof key === 'object' ? key : { keyCode: key };
     const w = (o.windowId && BrowserWindow.fromId(o.windowId)) || win;
     if (!w || w.isDestroyed()) throw new Error(`no window ${o.windowId}`);
-    const dbg = w.webContents.debugger;
-    if (!dbg.isAttached()) dbg.attach('1.3');
-    await dbg.sendCommand('Emulation.setFocusEmulationEnabled', { enabled: true });
+    await emulateFocus(w);
     const modifiers = Array.isArray(o.modifiers) ? o.modifiers : [];
     w.webContents.sendInputEvent({ type: 'keyDown', keyCode: o.keyCode, modifiers });
     if (o.char) w.webContents.sendInputEvent({ type: 'char', keyCode: o.char, modifiers });
@@ -629,8 +657,16 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const w = (windowId && BrowserWindow.fromId(windowId)) || win;
     if (!w || w.isDestroyed()) throw new Error(`no window ${windowId}`);
+    if (virtualClipboard()) throw new Error('test:paste pastes the real clipboard: switch with testClipboardReal(true) first');
     w.webContents.paste();
     return true;
+  });
+  // Test-only: this run reads and writes the Mac's clipboard (true) instead of its own in-memory one (the default,
+  // see testClipboard). Returns the mode in force.
+  ipcMain.handle('test:clipboard-real', (_e, on) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    testClipboard.real = !!on;
+    return { real: testClipboard.real };
   });
   // Test-only: a PNG (a data: URL) on the clipboard, with `text` beside it or nothing else — what a screenshot or
   // Copy Image leaves there — for the image-paste checks.
@@ -638,6 +674,8 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const { ClipboardItem } = require('electron');
     const buf = Buffer.from(String(dataUrl).replace(/^data:image\/png;base64,/, ''), 'base64');
+    const vc = virtualClipboard();
+    if (vc) { vc.image = buf; vc.text = typeof text === 'string' ? text : ''; return true; }
     const entry = { 'image/png': new Blob([buf], { type: 'image/png' }) };
     if (typeof text === 'string' && text) entry['text/plain'] = text;
     await clipboard.write([new ClipboardItem(entry)]);
@@ -1167,12 +1205,18 @@ function registerIpc() {
     return !!s;
   });
 
-  ipcMain.handle('clipboard:write', (_e, t) => clipboard.writeText(t));
-  ipcMain.handle('clipboard:read', () => clipboard.readText());
+  ipcMain.handle('clipboard:write', (_e, t) => {
+    const vc = virtualClipboard();
+    if (vc) { vc.text = String(t == null ? '' : t); vc.image = null; return; }
+    clipboard.writeText(t);
+  });
+  ipcMain.handle('clipboard:read', () => { const vc = virtualClipboard(); return vc ? vc.text : clipboard.readText(); });
   // What the clipboard holds, for a paste that found no text (terminal.js pasteImage): `image` is true for a picture
   // (a screenshot, a copied image, PNG data put there by a script) — the MIME types the platform clipboard offers,
   // without decoding the image; `text` for a non-empty plain text.
   ipcMain.handle('clipboard:kinds', async () => {
+    const vc = virtualClipboard();
+    if (vc) return { text: vc.text.length > 0, image: !!vc.image, formats: [...(vc.text ? ['text/plain'] : []), ...(vc.image ? ['image/png'] : [])] };
     const items = await clipboard.read();
     const formats = [...new Set(items.flatMap((i) => i.types || []))];
     const text = (await clipboard.readText()).length > 0;

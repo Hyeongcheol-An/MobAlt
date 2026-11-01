@@ -39,8 +39,9 @@
   window.addEventListener('error', (e) => { if (/ResizeObserver/.test(e.message || '')) roErrors++; });
   try {
     await app.saveSettings({ confirmClose: false });
-    // One real key press (F19, on the quick-connect box where it does nothing) puts Chromium into keyboard
-    // mode and raises the window, so :focus-visible checks do not depend on what the mouse did last.
+    // One real key press (F19, on the quick-connect box where it does nothing) puts Chromium into keyboard mode, so
+    // :focus-visible checks do not depend on what the mouse did last (the harness tells the page it is focused,
+    // whichever window the Mac has in front).
     document.getElementById('qc-input').focus();
     await window.api.app.testKey('F19');
     await sleep(300);

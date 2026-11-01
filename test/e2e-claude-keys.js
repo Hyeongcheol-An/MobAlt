@@ -9,8 +9,9 @@
 // modifiers and the char event a key gives the browser), the ⌘V an Edit → Paste (window.api.app.testPaste).
 // No claude binary is needed; test/qa/claude-code-check.js drives the real one.
 //   test/qa/run.sh test/e2e-claude-keys.js <out-dir> 120000
-// The system clipboard is written (a PNG through osascript, then through the test hook, then text) and put back
-// afterwards; it is shared with everything else on the Mac, so a check whose clipboard was taken meanwhile is repeated.
+// This suite is the one that uses the Mac's clipboard (testClipboardReal: a run normally has an in-memory clipboard of
+// its own): it is written (a PNG through osascript, then through the test hook, then text) and put back afterwards; it
+// is shared with everything else on the Mac, so a check whose clipboard was taken meanwhile is repeated.
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -98,6 +99,7 @@
     log(what, 'window ' + id, JSON.stringify(got));
     return got;
   };
+  await window.api.app.testClipboardReal(true); // the real clipboard: what another application put there is the point of this suite
   const clipBefore = await window.api.clipboard.read();
   try {
     await app.saveSettings({ confirmClose: false, pasteConfirmMultiline: true, pasteWarnSuspicious: true });

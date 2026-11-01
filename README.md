@@ -215,7 +215,9 @@ test/start-sshd.sh stop
 ```
 
 Each script prints a `RESULTS {...}` line and saves screenshots to `MOBALT_SHOT_DIR`. The test hooks
-only exist while `MOBALT_TEST_SCRIPT` is set.
+only exist while `MOBALT_TEST_SCRIPT` is set; a run then keeps to itself — the window never takes the
+keyboard, the page is told it is focused, and the run has a clipboard of its own — so several suites can
+run side by side while you keep working (`test/qa/README.md`).
 
 ## Releasing
 

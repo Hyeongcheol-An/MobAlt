@@ -10,6 +10,15 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
 
 - `<out-dir>/userdata` is a fresh user-data folder (sessions/settings start empty), so your real
   sessions are never touched or shown.
+- A run keeps to itself, so several can go at the same time and none disturbs what you are doing meanwhile: the
+  window comes up without taking the keyboard or activating the app, and the page is told it is focused instead
+  (DevTools focus emulation) — `document.hasFocus()`, `:focus` / `:focus-visible` and `testKey` work whichever window
+  the Mac has in front; timers and animation frames are not throttled behind other windows; and the run has an
+  in-memory clipboard of its own (`window.api.clipboard.*`, Copy on select, Copy Path…, `testClipboardPng` write and
+  read it), so the Mac's clipboard is never touched and runs do not race for it —
+  `await window.api.app.testClipboardReal(true)` switches a script to the real one (`test/e2e-claude-keys.js`, which
+  is about what another application put there; `testPaste` needs it). What is still shared: the test sshd on 2222
+  (fine) and port 2121 for the FTP server — one of `e2e-visual`, `e2e-ftp` and `docs-shots` at a time.
 - The interface runs in English (`MOBALT_LANG=en`, whatever the Mac's language is) unless the command sets
   `MOBALT_LANG=<code>` (ko, zh-CN, ja, vi, hi, de, fr, es, pt, ar); a script can also switch at run time with
   `app.saveSettings({ language: 'ko' })` and read the native menu as shown with `window.api.app.testMenuLabels()`.
@@ -17,9 +26,10 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `window.api.app.quit()`; otherwise the app quits after `auto-quit-ms` (default 60 s) and writes
   `shots/final.png`.
 - `console.log` output is echoed to the terminal prefixed with `[renderer:info]`.
-- `test/qa/docs-shots.js` makes the README screenshots and `test/qa/demo-frames.js` the frames of the README demo GIF
-  (`npm run demo` runs it and `scripts/make-demo-gif.sh`); both need the FTP server from their headers, nothing personal
-  appears in the images.
+- `test/qa/docs-shots.js` makes the screenshots of the README and the user guides — `npm run docs:shots` runs it once
+  per interface language into `docs/images/<code>/` (English in `docs/images/`) and starts the FTP server it needs —
+  and `test/qa/demo-frames.js` the frames of the README demo GIF (`npm run demo` runs it and `scripts/make-demo-gif.sh`;
+  start the FTP server from its header first). Nothing personal appears in the images.
 - `testKey(k)` sends keyDown/keyUp only (no char event), so the native Enter activation of a focused button cannot
   be driven with `testKey('Enter')`; use `testKey('Space')` (buttons activate on Space) or `el.click()`. Widgets with
   their own Enter handling (picker rows, lists, menus) do react to it. The object form
@@ -38,10 +48,11 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
 const app = window.app;                     // controller
 await window.api.app.screenshot('name');    // → <out-dir>/shots/name.png (window capture)
 await window.api.app.testResize(1000, 650); // resize the window (test mode only)
-await window.api.app.testKey('F19');        // one real key press: raises the window, enables :focus-visible rings (test mode only)
+await window.api.app.testKey('F19');        // one real key press: keyboard mode, so :focus-visible rings show on programmatic focus (test mode only)
 await window.api.app.testKey({ keyCode: 'Enter', modifiers: ['shift'], char: '\r' }); // a real press with modifiers and its keypress; windowId for another window (test mode only)
-await window.api.app.testPaste(windowId?);               // Edit → Paste: a real paste event with the system clipboard, text or image (test mode only)
-await window.api.app.testClipboardPng(dataUrl, text?);   // a PNG on the clipboard, with text beside it or alone (test mode only)
+await window.api.app.testClipboardReal(true);            // this run uses the Mac's clipboard from now on instead of its own in-memory one (test mode only)
+await window.api.app.testPaste(windowId?);               // Edit → Paste: a real paste event with the Mac's clipboard, text or image (test mode only; needs testClipboardReal)
+await window.api.app.testClipboardPng(dataUrl, text?);   // a PNG on the clipboard (the run's own, or the Mac's after testClipboardReal), with text beside it or alone (test mode only)
 await window.api.app.testDropFiles([path], { x, y }, windowId?); // files dropped at a window point as Finder drops them (test mode only)
 await window.api.clipboard.kinds();                      // { text, image, formats }: what a paste would find on the clipboard
 await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
