@@ -256,6 +256,11 @@ export function sessionEditor(app, initial = {}) {
   const agentFwd = check(t('Agent forwarding'), s.agentForward);
   const compression = check(t('Compression'), s.compression);
   const legacy = check(t('Legacy algorithms (old devices)'), s.legacyAlgorithms);
+  // post-quantum key exchange: off by default; on, the ML-KEM and sntrup761 hybrids go in front of the key-exchange
+  // list below (whatever it is), nothing else changes — the main process (algorithms.js) composes the list. A build
+  // whose ssh2 lost the patch (postinstall) has no hybrids: the box is disabled and the help line says so.
+  const pqAvailable = !!(app.algorithms && Array.isArray(app.algorithms.postQuantum) && app.algorithms.postQuantum.length); // (`algo` below is the same object)
+  const pqKex = check(t('Post-quantum key exchange'), !!s.pqKex, pqAvailable ? {} : { disabled: true });
   // the remote monitoring bar: a session without its own value shows Settings → Features' default and saves it explicitly
   const monitor = check(t('Show remote monitoring bar'), s.monitor ?? app.settings.monitorBar !== false);
   // --- mosh / ftp
@@ -459,6 +464,10 @@ export function sessionEditor(app, initial = {}) {
   pages.advanced.append(
     ...jumpRows,
     h('label', {}, t('Options')), h('div', { class: 'checks' }, x11.el, agentFwd.el, compression.el, legacy.el),
+    h('label', {}, t('Post-quantum')), h('div', { class: 'checks' }, pqKex.el),
+    h('div', { class: 'form-help' }, pqAvailable
+      ? t('Offers the ML-KEM and sntrup761 hybrid key exchanges first — sntrup761: OpenSSH 8.5 or newer on the server (on by default from 9.0); ML-KEM: 9.9 or newer. Off, the key exchange is as before.')
+      : t('Not available in this build: its ssh2 is missing the post-quantum patch')),
     ...keepAliveRows,
     ...(algo ? [
       h('label', { class: 'algo-title' }, t('Algorithms')), h('div', { class: 'algo-head' }, algoReset),
@@ -562,6 +571,7 @@ export function sessionEditor(app, initial = {}) {
       agentForward: agentFwd.cb.checked,
       compression: compression.cb.checked,
       legacyAlgorithms: legacy.cb.checked,
+      pqKex: pqAvailable ? pqKex.cb.checked : !!s.pqKex, // a build without the hybrids keeps what the session had
       keepAliveInterval: parseInt(keepAlive.value, 10) || 0,
       monitor: type === 'ssh' || type === 'mosh' ? monitor.cb.checked : s.monitor,
       startupCommand: startup.value.replace(/\n/g, '\r').trim(),

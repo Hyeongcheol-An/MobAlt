@@ -826,9 +826,10 @@ export class TermPane {
         this.setStatus('connecting');
         const s = this.session;
         // main verifies the host key (app prompt) before the client is spawned; a declined key rejects here
-        const r = await window.api.term.spawnMosh({ name: s.name, host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, legacyAlgorithms: !!s.legacyAlgorithms, algorithms: s.algorithms, ...size });
+        const r = await window.api.term.spawnMosh({ name: s.name, host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, legacyAlgorithms: !!s.legacyAlgorithms, pqKex: !!s.pqKex, algorithms: s.algorithms, ...size });
         this.termId = r.id;
         this.app.registerPane(this);
+        if (r.handshakeLine) this.term.write(this._paint(r.handshakeLine)); // the host-key check's key exchange (post-quantum when the option is on), before the mosh client takes over
         this._moshStartedAt = Date.now();
         this._moshScreen = false; // set once mosh-client takes over the terminal (alternate screen)
         this._killed = false;
@@ -1004,7 +1005,7 @@ export class TermPane {
     // SSH-typed copy can never be written back over the Mosh session
     // the session's Advanced SSH settings (legacy preset, algorithm lists, jump host) travel along, as for the host-key check
     const cfg = { id: s.id, name: s.name, type: 'ssh', host: s.host, port: s.port || 22, username: s.username, authMethod: s.authMethod || 'auto', privateKeyPath: s.privateKeyPath,
-      legacyAlgorithms: !!s.legacyAlgorithms, algorithms: s.algorithms, jumpSessionId: s.jumpSessionId || '', jumpHost: s.jumpHost || '' };
+      legacyAlgorithms: !!s.legacyAlgorithms, pqKex: !!s.pqKex, algorithms: s.algorithms, jumpSessionId: s.jumpSessionId || '', jumpHost: s.jumpHost || '' };
     const gen = (this._sftpGen = (this._sftpGen || 0) + 1);
     this.sftpStatus = 'connecting';
     this.sftpError = null;

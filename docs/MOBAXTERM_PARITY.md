@@ -100,7 +100,7 @@ MobAlt has 54 in full, 39 in a narrower or different form and lacks 32.
 | Follow terminal folder | ✅ | "SFTP follows terminal folder" session option (OSC 7 hook for bash/zsh) plus the panel's Follow checkbox; off by default |
 | Zmodem (rz/sz) | ✅ | In-terminal transfers in SSH, local, telnet and serial panes (zmodem.js Sentry on the byte stream): `sz` downloads, `rz` uploads, progress and cancel in the transfer list; not Mosh |
 | Adapt locales | ❌ | no locale push to the remote shell |
-| Expert SSH settings (ciphers, KEX, MAC, post-quantum) | ✅ | Advanced SSH → Algorithms: per-session key exchange, host key, cipher and MAC lists pre-filled from ssh2's defaults, validated against what ssh2 supports, "Legacy algorithms" as a preset; a mismatch names what both sides offer; ssh2 1.17 has strict KEX (Terrapin) but no ML-KEM (post-quantum waits on ssh2) |
+| Expert SSH settings (ciphers, KEX, MAC, post-quantum) | ✅ | Advanced SSH → Algorithms: per-session key exchange, host key, cipher and MAC lists pre-filled from ssh2's defaults, validated against what ssh2 supports, "Legacy algorithms" as a preset; a mismatch names what both sides offer; ssh2 1.17 has strict KEX (Terrapin); "Post-quantum key exchange" (per session, off by default) offers the ML-KEM-768 + X25519 and sntrup761 + X25519 hybrids first — ML-KEM from @noble/post-quantum, sntrup761 from OpenSSH's reference C as WebAssembly, the exchange added to ssh2 through a patch |
 | Terminal type per session | ❌ | fixed `xterm-256color` |
 | SSH tunnels (MobaSSHTunnel) | 🟡 | Tunneling dialog (⇧⌘U): -L, -R and -D SOCKS5, over an open connection or a dedicated one to a saved session, per-session Tunnels tab auto-starts; no auto-reconnect, reorder or duplicate; no limit |
 | Credentials manager (shared credentials) | ❌ | passwords are per session |
@@ -289,7 +289,7 @@ MobAlt has 54 in full, 39 in a narrower or different form and lacks 32.
 | 25.4 — Windows SSH agent, other PuTTY agents, Windows Hello | ✅ | any agent behind `SSH_AUTH_SOCK`; Hello is Windows-only |
 | 25.4 — macro include, ms log timestamps, "chokes on full KEXINIT", Cisco KEX autodetect, floating popup console | ❌ | none of these (old devices: the "Legacy algorithms" preset or the per-session algorithm lists) |
 | 25.3 — MobaTextEditor / MobaDiff overhaul | 🟡 | plain built-in editor or external editor only |
-| 25.2 — ML-KEM post-quantum KEX, PuTTY engine update | ❌ | ssh2 1.17 has no ML-KEM |
+| 25.2 — ML-KEM post-quantum KEX, PuTTY engine update | ✅ | `mlkem768x25519-sha256` (OpenSSH 9.9+) and `sntrup761x25519-sha512@openssh.com` (OpenSSH 8.5+, on by default from 9.0; also under its IANA name `sntrup761x25519-sha512`) as a per-session option (Advanced SSH → Post-quantum), off by default; the handshake line shows the negotiated one; no PuTTY engine here (ssh2 + patch) |
 | 25.2 — RDP redirection options, tunnel reconnect, 64 icons, follow-path and monitoring on by default, export password | 🟡 | icons ✅; monitoring bar ✅ and on by default; RDP options live in Windows App; no tunnel reconnect; following is opt-in |
 | 25.1 — SSH proxy via netcat/socat, user certificate + host CA, PuTTY import of proxy/certs/Teleport, CyberArk | ❌ | none |
 | 25.0 — PuTTY engine + Unicode 16, dark-mode dialogs, CVE-2025-0714 | 🟡 | Unicode 11 width tables; dialogs follow the chosen theme (dark or light) |

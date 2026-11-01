@@ -99,7 +99,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 터미널 폴더 추종 | ✅ | 세션 옵션 "SFTP follows terminal folder"(bash/zsh용 OSC 7 훅)와 패널의 Follow 체크박스. 기본 꺼짐 |
 | Zmodem(rz/sz) | ✅ | SSH·로컬·텔넷·시리얼 페인의 터미널 안 전송(바이트 스트림에 zmodem.js Sentry). `sz`는 내려받기, `rz`는 올려보내기, 전송 목록에 진행률·취소. Mosh는 미지원 |
 | 로케일 맞추기 | ❌ | 원격 셸에 로케일을 넘기지 않음 |
-| 전문가 SSH 설정(암호, KEX, MAC, 양자내성) | ✅ | Advanced SSH → Algorithms: 세션별 키 교환·호스트 키·암호·MAC 목록(ssh2 기본값으로 채워지고 ssh2가 지원하는 이름만 허용), "Legacy algorithms"는 프리셋. 불일치 시 양쪽이 제시한 목록을 보여 줌. ssh2 1.17은 strict KEX(Terrapin)는 되고 ML-KEM(양자내성)은 ssh2를 기다려야 함 |
+| 전문가 SSH 설정(암호, KEX, MAC, 양자내성) | ✅ | Advanced SSH → Algorithms: 세션별 키 교환·호스트 키·암호·MAC 목록(ssh2 기본값으로 채워지고 ssh2가 지원하는 이름만 허용), "Legacy algorithms"는 프리셋. 불일치 시 양쪽이 제시한 목록을 보여 줌. ssh2 1.17은 strict KEX(Terrapin) 지원. "양자내성 키 교환"(세션별, 기본 꺼짐)은 ML-KEM-768 + X25519·sntrup761 + X25519 하이브리드를 먼저 제시 — ML-KEM은 @noble/post-quantum, sntrup761은 OpenSSH 참조 C를 WebAssembly로, 교환 자체는 ssh2 패치로 추가 |
 | 세션별 터미널 종류 | ❌ | `xterm-256color` 고정 |
 | SSH 터널(MobaSSHTunnel) | 🟡 | Tunneling 대화상자(⇧⌘U): -L, -R, -D SOCKS5를 열린 연결 또는 저장된 세션의 전용 연결로, 세션별 Tunnels 탭은 자동 시작. 자동 재연결, 순서 바꾸기, 복제는 없음. 개수 제한 없음 |
 | 자격 증명 관리자(공유 자격 증명) | ❌ | 비밀번호는 세션마다 따로 |
@@ -288,7 +288,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 25.4 — Windows SSH 에이전트, 다른 PuTTY 에이전트, Windows Hello | ✅ | `SSH_AUTH_SOCK` 뒤의 아무 에이전트나. Hello는 Windows 전용 |
 | 25.4 — 매크로 포함, ms 단위 로그 타임스탬프, "full KEXINIT에 막힘", Cisco KEX 자동 감지, 떠 있는 팝업 콘솔 | ❌ | 모두 없음(구형 장비는 "Legacy algorithms" 프리셋이나 세션별 알고리즘 목록으로) |
 | 25.3 — MobaTextEditor / MobaDiff 개편 | 🟡 | 일반 텍스트 내장 편집기 또는 외부 편집기만 |
-| 25.2 — ML-KEM 양자내성 KEX, PuTTY 엔진 갱신 | ❌ | ssh2 1.17에 ML-KEM 없음 |
+| 25.2 — ML-KEM 양자내성 KEX, PuTTY 엔진 갱신 | ✅ | `mlkem768x25519-sha256`(OpenSSH 9.9+)·`sntrup761x25519-sha512@openssh.com`(OpenSSH 8.5+, 9.0부터 기본; IANA 이름 `sntrup761x25519-sha512`로도)을 세션 옵션(고급 SSH → 양자내성, 기본 꺼짐)으로. 핸드셰이크 줄에 합의된 알고리즘 표시. PuTTY 엔진은 없음(ssh2 + 패치) |
 | 25.2 — RDP 리디렉션 옵션, 터널 재연결, 아이콘 64개, 경로 추종·모니터링 기본 켜짐, 내보내기 비밀번호 | 🟡 | 아이콘 ✅. 모니터링 바 ✅(기본 켜짐). RDP 옵션은 Windows App에. 터널 재연결 없음. 추종은 선택 사항 |
 | 25.1 — netcat/socat 경유 SSH 프록시, 사용자 인증서 + 호스트 CA, PuTTY의 프록시/인증서/Teleport 가져오기, CyberArk | ❌ | 모두 없음 |
 | 25.0 — PuTTY 엔진 + 유니코드 16, 다크 모드 대화상자, CVE-2025-0714 | 🟡 | 유니코드 11 폭 테이블. 대화상자는 고른 테마(다크든 라이트든)를 따름 |

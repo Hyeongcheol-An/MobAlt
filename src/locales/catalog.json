@@ -258,6 +258,11 @@
         "src/renderer/monitor.js"
       ]
     },
+    "{kex} (post-quantum)": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
     "{kind} bookmark (#{num}) not supported": {
       "refs": [
         "src/main/importers.js"
@@ -2904,6 +2909,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Key exchange {kex}, host key {hostKey}, cipher {cipher}": {
+      "refs": [
+        "src/main/ssh.js"
+      ]
+    },
     "Key pair saved: {private} (private, 0600) and {public} (public, 0644)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3955,6 +3965,11 @@
         "src/main/algorithms.js"
       ]
     },
+    "Not available in this build: its ssh2 is missing the post-quantum patch": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "not connected": {
       "refs": [
         "src/main/ssh.js"
@@ -4011,6 +4026,11 @@
       ]
     },
     "Off": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Offers the ML-KEM and sntrup761 hybrid key exchanges first — sntrup761: OpenSSH 8.5 or newer on the server (on by default from 9.0); ML-KEM: 9.9 or newer. Off, the key exchange is as before.": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -4475,6 +4495,16 @@
     "Ports must be between 1 and 65535: {part}": {
       "refs": [
         "src/main/netscan.js"
+      ]
+    },
+    "Post-quantum": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Post-quantum key exchange": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "Prediction": {

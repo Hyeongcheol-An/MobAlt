@@ -121,6 +121,11 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   (tên không rõ bị từ chối ngay tại chỗ), *Đặt lại mặc định* đưa các danh sách về như cũ, và "Thuật toán cũ
   (thiết bị cũ)" là thiết lập sẵn thêm các trao đổi khóa SHA-1, mã hóa CBC và khóa máy chủ DSA mà các thiết bị
   cũ vẫn cần. Chỉ những danh sách khác mặc định mới được lưu.
+- **Trao đổi khóa hậu lượng tử**: SSH nâng cao → Hậu lượng tử đề xuất các cặp lai ML-KEM-768 + X25519 và
+  sntrup761 + X25519 (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) trước danh sách trao đổi
+  khóa của phiên: máy chủ hỗ trợ sẽ chọn một trong hai, máy chủ cũ quay về danh sách như trước. Mặc định tắt;
+  máy chủ cần OpenSSH 8.5 trở lên cho sntrup761 (bật mặc định từ 9.0), 9.9 trở lên cho ML-KEM. Dòng xám sau khi bắt tay nêu thuật toán đã thỏa thuận, kèm
+  "(hậu lượng tử)" sau một cặp lai.
 - **Máy chủ trung gian**: SSH nâng cao → Máy chủ trung gian chọn một phiên đã lưu khác làm bastion (ProxyJump).
 - **Khi kết nối thất bại**: terminal in ra điều đã xảy ra, ví dụ
   `authentication failed — server accepts: publickey; tried: ~/.ssh/id_ed25519`, hoặc gợi ý rằng
