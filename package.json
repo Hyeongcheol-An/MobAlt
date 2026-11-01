@@ -21,7 +21,8 @@
     "demo": "bash test/qa/run.sh test/qa/demo-frames.js test/shots/demo 120000 && bash scripts/make-demo-gif.sh test/shots/demo/shots",
     "i18n": "node scripts/i18n-extract.js",
     "i18n:status": "node scripts/i18n-status.js",
-    "docs:shots": "bash scripts/docs-shots.sh"
+    "docs:shots": "bash scripts/docs-shots.sh",
+    "perf": "node test/qa/perf.js"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",

@@ -79,6 +79,7 @@ class App {
     this.saveWorkspaceSoon();
     setInterval(() => this.saveWorkspaceNow(), 20000);
     window.addEventListener('beforeunload', () => this.saveWorkspaceNow());
+    performance.mark('mobalt:ready'); // the interface is up with its first tab (test/qa/perf-startup.js reads it)
   }
 
   // ---------- workspace persistence (tabs + split layout; survives restarts/updates) ----------
@@ -308,6 +309,7 @@ class App {
   // ---------- main-process events ----------
   wireEvents() {
     window.api.on('term:data', (id, data) => {
+      if (!this._firstOutput) { this._firstOutput = true; performance.mark('mobalt:first-output'); } // the first terminal output of this window — the shell's prompt on a fresh start (test/qa/perf-startup.js)
       const p = this.panesByTerm.get(id);
       if (p) p.onData(data);
     });

@@ -1,4 +1,5 @@
 'use strict';
+const bootTimes = { mainStart: Date.now() }; // when main.js began loading; then the requires done, the app ready, the window loaded (test:perf)
 const { app, BrowserWindow, ipcMain, Menu, dialog, shell, clipboard, nativeTheme, webContents, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -29,6 +30,7 @@ const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: on
 const { ZmodemManager } = require('./zmodem');
 
 const pkg = require('../../package.json');
+bootTimes.mainLoaded = Date.now();
 const scans = new Map(); // running network scans: id → { cancel, promise } (netscan.js); quitting cancels them
 let wolListener = null; // test-only UDP listener for Wake-on-LAN packets (test:wol-listen)
 let silentListener = null; // test-only TCP listener that accepts and never speaks (test:silent-listen)
@@ -316,7 +318,7 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
     shell.openExternal(url);
     return { action: 'deny' };
   });
-  if (isMain) w.webContents.on('did-finish-load', () => runTestHooks());
+  if (isMain) w.webContents.on('did-finish-load', () => { bootTimes.windowLoaded = Date.now(); runTestHooks(); });
   if (process.env.MOBALT_SCREENSHOT || process.env.MOBALT_TEST_SCRIPT) {
     w.webContents.on('console-message', (e) => {
       const d = e.level !== undefined ? e : { level: e, message: arguments[2] };
@@ -348,6 +350,66 @@ async function emulateFocus(w) {
   } catch (e) {
     console.error('focus emulation failed:', e.message);
   }
+}
+
+/**
+ * Test mode (test/qa/perf.js): a CPU profile of one JS thread reduced to what matters — wall time, time not idle, the
+ * functions with the most self time — from a DevTools-protocol profile (Profiler.stop). Self time is the sum of the
+ * sample intervals attributed to each node; '(idle)' is the thread waiting, '(program)' and '(garbage collector)' the
+ * engine's own work.
+ */
+function profileSummary(profile, top = 15) {
+  if (!profile || !Array.isArray(profile.nodes)) return null;
+  const nodes = new Map(profile.nodes.map((n) => [n.id, n]));
+  const self = new Map(); // node id → µs
+  const samples = profile.samples || [], deltas = profile.timeDeltas || [];
+  for (let i = 0; i < samples.length; i++) self.set(samples[i], (self.get(samples[i]) || 0) + Math.max(0, deltas[i] || 0));
+  const wallUs = Math.max(1, (profile.endTime || 0) - (profile.startTime || 0));
+  let idleUs = 0;
+  const fns = new Map();
+  for (const [id, us] of self) {
+    const f = (nodes.get(id) || {}).callFrame || {};
+    if (f.functionName === '(idle)') { idleUs += us; continue; }
+    const where = f.url ? `${f.url.replace(/^.*\//, '')}:${(f.lineNumber || 0) + 1}` : '';
+    const key = `${f.functionName || '(anonymous)'}${where ? ' ' + where : ''}`;
+    fns.set(key, (fns.get(key) || 0) + us);
+  }
+  const busyUs = Math.max(0, wallUs - idleUs);
+  return {
+    wallMs: Math.round(wallUs / 1000),
+    busyMs: Math.round(busyUs / 100) / 10,
+    busyPct: Math.round((busyUs / wallUs) * 1000) / 10,
+    top: [...fns].sort((a, b) => b[1] - a[1]).slice(0, top).map(([fn, us]) => ({ fn, ms: Math.round(us / 100) / 10 })),
+  };
+}
+/** Test mode: the main process's own JS thread profiled for `ms` (Node's inspector, in-process) → profileSummary, or null. */
+function mainProfile(ms) {
+  return new Promise((resolve) => {
+    let s;
+    try {
+      const inspector = require('inspector');
+      s = new inspector.Session();
+      s.connect();
+    } catch { return resolve(null); }
+    const post = (m, p) => new Promise((res, rej) => s.post(m, p || {}, (err, r) => (err ? rej(err) : res(r))));
+    post('Profiler.enable').then(() => post('Profiler.setSamplingInterval', { interval: 1000 })).then(() => post('Profiler.start'))
+      .then(() => new Promise((r) => setTimeout(r, ms)))
+      .then(() => post('Profiler.stop'))
+      .then((r) => resolve(profileSummary(r && r.profile)), () => resolve(null))
+      .finally(() => { try { s.disconnect(); } catch {} });
+  });
+}
+/** Test mode: a window's JS thread profiled for `ms` through the DevTools protocol → profileSummary. */
+async function rendererProfile(wc, ms) {
+  const dbg = wc.debugger;
+  if (!dbg.isAttached()) dbg.attach('1.3');
+  await dbg.sendCommand('Profiler.enable');
+  await dbg.sendCommand('Profiler.setSamplingInterval', { interval: 1000 });
+  await dbg.sendCommand('Profiler.start');
+  await new Promise((r) => setTimeout(r, ms));
+  const r = await dbg.sendCommand('Profiler.stop');
+  await dbg.sendCommand('Profiler.disable').catch(() => {});
+  return profileSummary(r && r.profile);
 }
 
 // Test mode: a clipboard of this run's own, in memory. What the app copies (clipboard:write — Copy on select, Copy
@@ -849,6 +911,31 @@ function registerIpc() {
     monitor.setCommand(cmd);
     return true;
   });
+  // Test-only, for test/qa/perf.js: the main process's boot timestamps (epoch ms: main.js loading, its requires done,
+  // the app ready, the main window loaded), its memory, every process of the app with Chromium's CPU share since the
+  // previous call and its working set (app.getAppMetrics) — and on request { gc: true } a full garbage collection
+  // first, in main and in the calling window, so heaps can be compared; { domCounters: true } the window's documents,
+  // nodes and listeners; { profile: ms } a CPU profile of both JS threads over that long (profileSummary).
+  ipcMain.handle('test:perf', async (e, opts) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    const o = opts && typeof opts === 'object' ? opts : {};
+    const out = { at: Date.now(), pid: process.pid, boot: { ...bootTimes } };
+    const dbg = e.sender.debugger;
+    const cdp = async (method, params) => { if (!dbg.isAttached()) dbg.attach('1.3'); return dbg.sendCommand(method, params); };
+    if (o.gc) {
+      try { require('v8').setFlagsFromString('--expose-gc'); require('vm').runInNewContext('gc')(); } catch {}
+      try { await cdp('HeapProfiler.collectGarbage'); } catch {}
+    }
+    if (o.domCounters) { try { out.dom = await cdp('Memory.getDOMCounters'); } catch {} }
+    if (o.profile > 0) {
+      const ms = Math.min(60000, o.profile | 0);
+      const [renderer, main] = await Promise.all([rendererProfile(e.sender, ms).catch(() => null), mainProfile(ms)]);
+      out.profiles = { renderer, main };
+    }
+    out.main = { memory: process.memoryUsage() };
+    out.processes = app.getAppMetrics().map((m) => ({ pid: m.pid, type: m.type, name: m.name || '', cpu: m.cpu && m.cpu.percentCPUUsage, idleWakeups: m.cpu && m.cpu.idleWakeupsPerSecond, workingSetKB: m.memory && m.memory.workingSetSize, privateKB: m.memory && m.memory.privateBytes }));
+    return out;
+  });
   ipcMain.handle('app:screenshot', async (e, name) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null; // test mode only
     const dir = process.env.MOBALT_SHOT_DIR || os.tmpdir();
@@ -1234,6 +1321,7 @@ process.on('uncaughtException', (e) => {
   } catch {}
 });
 app.whenReady().then(() => {
+  bootTimes.ready = Date.now();
   nativeTheme.themeSource = chromeOf(store.getSettings()).scheme; // the applied theme's chrome (app:chrome keeps it current)
   // `npm start` runs the bare Electron binary, which shows Electron's own icon in the Dock; the packaged
   // app gets build/icon.icns from electron-builder. Point the dev Dock tile at the rendered PNG.
