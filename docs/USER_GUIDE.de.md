@@ -135,7 +135,8 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 - **Post-Quanten-Schlüsselaustausch**: „Erweitert“ → „Post-Quanten“ bietet die Hybride ML-KEM-768 + X25519 und
   sntrup761 + X25519 (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) vor der
   Schlüsselaustausch-Liste der Sitzung an: ein Server, der sie kennt, nimmt einen davon, ein älterer fällt wie
-  bisher auf die Liste zurück. Standardmäßig aus; der Server braucht OpenSSH 8.9 oder neuer (ML-KEM ab 9.9). Die
+  bisher auf die Liste zurück. Standardmäßig aus; der Server braucht für sntrup761 OpenSSH 8.5 oder neuer (ab 9.0 standardmäßig an), für ML-KEM
+  9.9 oder neuer. Die
   graue Zeile nach dem Handshake nennt das Vereinbarte, bei einem Hybrid mit „(Post-Quanten)“.
 - **Jump-Hosts**: „Erweitert“ → „Jump-Host“ wählt eine andere gesicherte Sitzung als Bastion-Host (ProxyJump).
 - **Wenn es scheitert**: Das Terminal gibt aus, was passiert ist, zum Beispiel

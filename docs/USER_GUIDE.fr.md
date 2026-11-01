@@ -127,7 +127,8 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
 - **Échange de clés post-quantique** : SSH avancé → Post-quantique propose les hybrides ML-KEM-768 + X25519 et
   sntrup761 + X25519 (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) avant la liste d'échange
   de clés de la session : un serveur qui les connaît en prend un, un serveur plus ancien retombe sur la liste
-  comme avant. Désactivé par défaut ; le serveur doit avoir OpenSSH 8.9 ou plus récent (ML-KEM à partir de 9.9).
+  comme avant. Désactivé par défaut ; le serveur doit avoir OpenSSH 8.5 ou plus récent pour sntrup761 (activé par défaut à partir
+  de 9.0), 9.9 ou plus récent pour ML-KEM.
   La ligne grise après la négociation nomme ce qui a été convenu, avec « (post-quantique) » après un hybride.
 - **Hôtes de rebond** : SSH avancé → Hôte de rebond choisit une autre session enregistrée comme bastion (ProxyJump).
 - **En cas d'échec** : le terminal affiche ce qui s'est passé, par exemple

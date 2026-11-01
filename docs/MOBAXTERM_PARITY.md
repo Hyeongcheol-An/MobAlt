@@ -289,7 +289,7 @@ MobAlt has 54 in full, 39 in a narrower or different form and lacks 32.
 | 25.4 — Windows SSH agent, other PuTTY agents, Windows Hello | ✅ | any agent behind `SSH_AUTH_SOCK`; Hello is Windows-only |
 | 25.4 — macro include, ms log timestamps, "chokes on full KEXINIT", Cisco KEX autodetect, floating popup console | ❌ | none of these (old devices: the "Legacy algorithms" preset or the per-session algorithm lists) |
 | 25.3 — MobaTextEditor / MobaDiff overhaul | 🟡 | plain built-in editor or external editor only |
-| 25.2 — ML-KEM post-quantum KEX, PuTTY engine update | ✅ | `mlkem768x25519-sha256` (OpenSSH 9.9+) and `sntrup761x25519-sha512@openssh.com` (OpenSSH 8.9+) as a per-session option (Advanced SSH → Post-quantum), off by default; the handshake line shows the negotiated one; no PuTTY engine here (ssh2 + patch) |
+| 25.2 — ML-KEM post-quantum KEX, PuTTY engine update | ✅ | `mlkem768x25519-sha256` (OpenSSH 9.9+) and `sntrup761x25519-sha512@openssh.com` (OpenSSH 8.5+, on by default from 9.0; also under its IANA name `sntrup761x25519-sha512`) as a per-session option (Advanced SSH → Post-quantum), off by default; the handshake line shows the negotiated one; no PuTTY engine here (ssh2 + patch) |
 | 25.2 — RDP redirection options, tunnel reconnect, 64 icons, follow-path and monitoring on by default, export password | 🟡 | icons ✅; monitoring bar ✅ and on by default; RDP options live in Windows App; no tunnel reconnect; following is opt-in |
 | 25.1 — SSH proxy via netcat/socat, user certificate + host CA, PuTTY import of proxy/certs/Teleport, CyberArk | ❌ | none |
 | 25.0 — PuTTY engine + Unicode 16, dark-mode dialogs, CVE-2025-0714 | 🟡 | Unicode 11 width tables; dialogs follow the chosen theme (dark or light) |

@@ -124,7 +124,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
 - **Trao đổi khóa hậu lượng tử**: SSH nâng cao → Hậu lượng tử đề xuất các cặp lai ML-KEM-768 + X25519 và
   sntrup761 + X25519 (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) trước danh sách trao đổi
   khóa của phiên: máy chủ hỗ trợ sẽ chọn một trong hai, máy chủ cũ quay về danh sách như trước. Mặc định tắt;
-  máy chủ cần OpenSSH 8.9 trở lên (ML-KEM từ 9.9). Dòng xám sau khi bắt tay nêu thuật toán đã thỏa thuận, kèm
+  máy chủ cần OpenSSH 8.5 trở lên cho sntrup761 (bật mặc định từ 9.0), 9.9 trở lên cho ML-KEM. Dòng xám sau khi bắt tay nêu thuật toán đã thỏa thuận, kèm
   "(hậu lượng tử)" sau một cặp lai.
 - **Máy chủ trung gian**: SSH nâng cao → Máy chủ trung gian chọn một phiên đã lưu khác làm bastion (ProxyJump).
 - **Khi kết nối thất bại**: terminal in ra điều đã xảy ra, ví dụ

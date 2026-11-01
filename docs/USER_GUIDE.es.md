@@ -130,7 +130,8 @@ carpetas y deja el campo como estaba si cancelas.
 - **Intercambio de claves poscuántico**: SSH avanzado → Poscuántico ofrece los híbridos ML-KEM-768 + X25519 y
   sntrup761 + X25519 (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) antes de la lista de
   intercambio de claves de la sesión: un servidor que los tenga toma uno y un servidor más antiguo vuelve a la
-  lista como antes. Desactivado por omisión; el servidor necesita OpenSSH 8.9 o posterior (ML-KEM desde 9.9). La
+  lista como antes. Desactivado por omisión; el servidor necesita OpenSSH 8.5 o posterior para sntrup761 (activado por omisión desde 9.0),
+  9.9 o posterior para ML-KEM. La
   línea gris tras el saludo indica lo acordado, con «(poscuántico)» tras un híbrido.
 - **Hosts de salto**: SSH avanzado → Host de salto elige otra sesión guardada como bastión (ProxyJump).
 - **Cuando falla**: el terminal explica qué ha pasado, por ejemplo

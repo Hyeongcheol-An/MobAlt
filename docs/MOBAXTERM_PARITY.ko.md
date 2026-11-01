@@ -288,7 +288,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 25.4 — Windows SSH 에이전트, 다른 PuTTY 에이전트, Windows Hello | ✅ | `SSH_AUTH_SOCK` 뒤의 아무 에이전트나. Hello는 Windows 전용 |
 | 25.4 — 매크로 포함, ms 단위 로그 타임스탬프, "full KEXINIT에 막힘", Cisco KEX 자동 감지, 떠 있는 팝업 콘솔 | ❌ | 모두 없음(구형 장비는 "Legacy algorithms" 프리셋이나 세션별 알고리즘 목록으로) |
 | 25.3 — MobaTextEditor / MobaDiff 개편 | 🟡 | 일반 텍스트 내장 편집기 또는 외부 편집기만 |
-| 25.2 — ML-KEM 양자내성 KEX, PuTTY 엔진 갱신 | ✅ | `mlkem768x25519-sha256`(OpenSSH 9.9+)·`sntrup761x25519-sha512@openssh.com`(OpenSSH 8.9+)을 세션 옵션(고급 SSH → 양자내성, 기본 꺼짐)으로. 핸드셰이크 줄에 합의된 알고리즘 표시. PuTTY 엔진은 없음(ssh2 + 패치) |
+| 25.2 — ML-KEM 양자내성 KEX, PuTTY 엔진 갱신 | ✅ | `mlkem768x25519-sha256`(OpenSSH 9.9+)·`sntrup761x25519-sha512@openssh.com`(OpenSSH 8.5+, 9.0부터 기본; IANA 이름 `sntrup761x25519-sha512`로도)을 세션 옵션(고급 SSH → 양자내성, 기본 꺼짐)으로. 핸드셰이크 줄에 합의된 알고리즘 표시. PuTTY 엔진은 없음(ssh2 + 패치) |
 | 25.2 — RDP 리디렉션 옵션, 터널 재연결, 아이콘 64개, 경로 추종·모니터링 기본 켜짐, 내보내기 비밀번호 | 🟡 | 아이콘 ✅. 모니터링 바 ✅(기본 켜짐). RDP 옵션은 Windows App에. 터널 재연결 없음. 추종은 선택 사항 |
 | 25.1 — netcat/socat 경유 SSH 프록시, 사용자 인증서 + 호스트 CA, PuTTY의 프록시/인증서/Teleport 가져오기, CyberArk | ❌ | 모두 없음 |
 | 25.0 — PuTTY 엔진 + 유니코드 16, 다크 모드 대화상자, CVE-2025-0714 | 🟡 | 유니코드 11 폭 테이블. 대화상자는 고른 테마(다크든 라이트든)를 따름 |

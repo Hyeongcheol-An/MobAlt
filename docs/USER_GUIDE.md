@@ -127,8 +127,9 @@ folder dialog and leaves the field as it was when you cancel.
 - **Post-quantum key exchange**: Advanced SSH → Post-quantum offers the ML-KEM-768 + X25519 and
   sntrup761 + X25519 hybrids (`mlkem768x25519-sha256`, `sntrup761x25519-sha512@openssh.com`) before
   the session's key-exchange list, so a server that has them takes one and an older server falls back
-  to the list as before. Off by default; the server needs OpenSSH 8.9 or newer (ML-KEM from 9.9). The
-  grey line after the handshake names what was agreed, "(post-quantum)" after a hybrid.
+  to the list as before. Off by default; the server needs OpenSSH 8.5 or newer for sntrup761 (on by default
+  from 9.0) and 9.9 or newer for ML-KEM. The grey line after the handshake names what was agreed,
+  "(post-quantum)" after a hybrid.
 - **Jump hosts**: Advanced SSH → Jump host picks another saved session as the bastion (ProxyJump).
 - **When it fails**: the terminal prints what happened, for example
   `authentication failed — server accepts: publickey; tried: ~/.ssh/id_ed25519`, or a hint that
