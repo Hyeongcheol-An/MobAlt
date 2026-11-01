@@ -181,7 +181,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
   Kopfzeile) stellt das Layout wieder her. Teilen, Schließen eines Bereichs, ein Rasterlayout oder das Fokussieren eines
   verborgenen Bereichs (⌘]) stellt das Layout zuerst wieder her. Jeder Tab behält seine eigene Maximierung, auch über
   einen Neustart hinweg.
-- **Bereichsmenü** (die Taste ⚙ in der Kopfzeile eines Bereichs im geteilten Tab oder Rechtsklick auf ein Terminal; ⇧- oder ⌃-Rechtsklick, solange *Rechtsklick setzt ein* aktiv ist):
+- **Bereichsmenü** (die Taste ⚙ in der Kopfzeile eines Bereichs in einem geteilten Tab oder Rechtsklick auf ein Terminal; ⇧- oder ⌃-Rechtsklick, solange *Rechtsklick setzt ein* aktiv ist):
   Neben Kopieren, Einsetzen, Suchen, Löschen, Teilen und Maximieren enthält es die Einträge des Terminalmenüs von
   MobaXterm, die nur ein Terminal betreffen. *Bereich umbenennen…* (in MobaXterm *Rename Terminal*) benennt den Bereich
   selbst: Die Kopfzeile des Bereichs zeigt den Namen, der Tab übernimmt ihn, wenn dieser Bereich den Tab benennt, und
