@@ -23,25 +23,31 @@ const DEFAULT_IDENTITY_FILES = ['id_ed25519', 'id_ecdsa', 'id_rsa'];
 const notConnected = () => Object.assign(new Error(t('Not connected')), { code: 'ENOTCONN' });
 
 let agentKeysCache = null;
-/** Public keys (base64 blobs) currently held by ssh-agent; cached for 10 s. */
+/**
+ * Public keys (base64 blobs) currently held by ssh-agent, cached for 10 s: { keys: Set, reachable } — `reachable`
+ * false when nothing answers at SSH_AUTH_SOCK (ssh-add exits 2), so the agent step can say which it was: an agent
+ * with no identities (ssh-add -l) or no agent at all.
+ */
 function agentPublicKeys() {
   if (agentKeysCache && Date.now() - agentKeysCache.at < 10000) return agentKeysCache.promise;
   const promise = new Promise((resolve) => {
-    const set = new Set();
-    if (!process.env.SSH_AUTH_SOCK) return resolve(set);
+    const keys = new Set();
+    if (!process.env.SSH_AUTH_SOCK) return resolve({ keys, reachable: false });
     execFile('ssh-add', ['-L'], { env: process.env, timeout: 3000 }, (err, out) => {
       if (!err) {
         for (const line of String(out).split('\n')) {
           const cols = line.trim().split(/\s+/);
-          if (cols.length >= 2 && /^(ssh-|ecdsa-|sk-)/.test(cols[0])) set.add(cols[1]);
+          if (cols.length >= 2 && /^(ssh-|ecdsa-|sk-)/.test(cols[0])) keys.add(cols[1]);
         }
       }
-      resolve(set);
+      resolve({ keys, reachable: !err || err.code === 1 }); // 1: "The agent has no identities."; 2 / a spawn error: not reachable
     });
   });
   agentKeysCache = { at: Date.now(), promise };
   return promise;
 }
+/** The error a cancelled connection attempt fails with (Disconnect / ⌘W while connecting, Cancel in a prompt). */
+const cancelledError = () => Object.assign(new Error('cancelled'), { code: 'ECANCELED' });
 
 function expandHome(p) {
   if (!p) return p;
@@ -89,7 +95,13 @@ class SshManager {
 
     steps.push({ type: 'none', run: async () => ({ type: 'none', username }) });
 
-    /** Load a private key file, prompting for its passphrase when needed. */
+    ctx.tried = ctx.tried || [];
+    /**
+     * Load a private key file, prompting for its passphrase when needed. Resolves the auth attempt, null when the key
+     * cannot be used (the next step is tried) or false when the user cancelled the passphrase prompt — a cancel ends the
+     * whole authentication, it never goes on to offer the agent or the default keys to a host the user just declined.
+     * Passphrase attempts count as tries of the key ("<key> (passphrase)" in the failure summary).
+     */
     const loadKey = async (file, display, savePassphrase) => {
       let raw;
       try {
@@ -102,6 +114,7 @@ class SshManager {
       const hadSaved = !!passphrase;
       let parsed = utils.parseKey(raw, passphrase);
       let tries = 0;
+      const triedPassphrase = () => { if (tries || hadSaved) ctx.tried.push(t('{key} (passphrase)', { key: display })); };
       while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
         // only a retry (or a saved passphrase that no longer fits) is blamed on the passphrase
         const message = tries ? t('Incorrect passphrase. Enter passphrase for key {key}', { key: display })
@@ -109,7 +122,12 @@ class SshManager {
             : t('Enter passphrase for key {key}', { key: display });
         tries++;
         const ans = await prompter.password({ kind: 'passphrase', title: t('Private key passphrase'), message, session: cfg });
-        if (!ans) return null;
+        if (ctx.cancelled) return false;
+        if (!ans) {
+          ctx.cancelled = true;
+          triedPassphrase();
+          return false;
+        }
         passphrase = ans.password;
         parsed = utils.parseKey(raw, passphrase);
         if (!(parsed instanceof Error) && ans.save && cfg.id && savePassphrase) {
@@ -118,6 +136,7 @@ class SshManager {
       }
       if (parsed instanceof Error) {
         ctx.out(`${RED}${t('Invalid private key {key}: {error}', { key: display, error: parsed.message })}${RESET}\r\n`);
+        triedPassphrase();
         return null;
       }
       return { type: 'publickey', username, key: raw, passphrase, _parsed: parsed };
@@ -128,14 +147,21 @@ class SshManager {
     }
     // "auto" order: configured key → saved password → ssh-agent keys → default ~/.ssh keys (like the
     // ssh CLI) → keyboard-interactive with the saved password → interactive prompts.
+    const savedPasswordLabel = t('saved password');
     if ((method === 'password' || method === 'auto') && cfg.password) {
-      steps.push({ type: 'password', label: t('saved password'), run: async () => ({ type: 'password', username, password: cfg.password }) });
+      steps.push({ type: 'password', label: savedPasswordLabel, run: async () => ({ type: 'password', username, password: cfg.password }) });
     }
     // Every key is a failed attempt on the server side (MaxAuthTries, fail2ban), so when a password is
     // saved and the server accepts passwords, keys from the agent / default files are not tried.
     const keysWanted = () => !(cfg.password && Array.isArray(ctx.serverMethods) && ctx.serverMethods.includes('password'));
     if ((method === 'agent' || method === 'auto') && process.env.SSH_AUTH_SOCK) {
-      steps.push({ type: 'agent', label: t('ssh-agent keys'), guard: keysWanted, run: async () => ((await agentPublicKeys()).size ? { type: 'agent', username, agent: process.env.SSH_AUTH_SOCK } : null) });
+      steps.push({ type: 'agent', label: t('ssh-agent keys'), guard: keysWanted, run: async () => {
+        const agent = await agentPublicKeys();
+        if (agent.keys.size) return { type: 'agent', username, agent: process.env.SSH_AUTH_SOCK };
+        // nothing to offer: say why before the summary ("tried: nothing" alone reads like the agent was skipped)
+        ctx.out(`${GREY}${agent.reachable ? t('ssh-agent: no keys loaded (ssh-add -l)') : t('ssh-agent not reachable at SSH_AUTH_SOCK')}${RESET}\r\n`);
+        return null;
+      } });
     }
     if (method === 'auto' || (method === 'key' && !cfg.privateKeyPath)) {
       for (const name of DEFAULT_IDENTITY_FILES) {
@@ -147,7 +173,7 @@ class SshManager {
           guard: keysWanted,
           run: async () => {
             const res = await loadKey(file, `~/.ssh/${name}`, false);
-            if (!res) return null;
+            if (!res) return res; // null: unusable, on to the next step; false: the user cancelled
             // skip keys the agent already offered
             let pub = null;
             try {
@@ -156,7 +182,7 @@ class SshManager {
             if (!pub && res._parsed) {
               try { pub = res._parsed.getPublicSSH().toString('base64'); } catch {}
             }
-            if (pub && (await agentPublicKeys()).has(pub)) return null;
+            if (pub && (await agentPublicKeys()).keys.has(pub)) return null;
             delete res._parsed;
             return res;
           },
@@ -166,7 +192,9 @@ class SshManager {
     let kbdUsedSaved = false;
     let promptCount = 0;
     const MAX_PROMPTS = 3;
-    // keyboard-interactive (PAM / 2FA): a lone hidden prompt gets the saved password once, else ask the user.
+    // keyboard-interactive (PAM / 2FA): a lone hidden prompt gets the saved password once, else ask the user. Cancel in
+    // the dialog ends the attempt (ctx.abort): answering with no responses is a protocol error to OpenSSH, which then
+    // reads as "closed by the server" instead of a cancel.
     const kbdStep = (stepLabel) => ({
       type: 'keyboard-interactive',
       label: stepLabel,
@@ -181,12 +209,15 @@ class SshManager {
             return finish([cfg.password]);
           }
           if (!prompts.length) return finish([]);
+          if (ctx.cancelled) return ctx.abort ? ctx.abort(cancelledError()) : finish([]);
           promptCount++;
           prompter
             .keyboardInteractive({ name, instructions, prompts, session: cfg, label })
             .then((answers) => {
-              if (!answers) ctx.cancelled = true;
-              finish(answers || []);
+              if (answers) return finish(answers);
+              ctx.cancelled = true;
+              if (ctx.abort) ctx.abort(cancelledError());
+              else finish([]);
             })
             .catch(() => finish([]));
         },
@@ -200,13 +231,11 @@ class SshManager {
         guard: () => promptCount < MAX_PROMPTS,
         run: async () => {
           promptCount++;
-          const ans = await prompter.password({
-            kind: 'password',
-            title: t('SSH password'),
-            message: promptCount > 1 ? t("{account}'s password (attempt {n})", { account: label, n: promptCount }) : t("{account}'s password", { account: label }),
-            session: cfg,
-          });
-          if (!ans) {
+          const message = promptCount > 1 ? t("{account}'s password (attempt {n})", { account: label, n: promptCount })
+            : ctx.savedPasswordRejected ? t("The saved password was rejected. Enter {account}'s password", { account: label })
+              : t("{account}'s password", { account: label });
+          const ans = await prompter.password({ kind: 'password', title: t('SSH password'), message, session: cfg });
+          if (!ans || ctx.cancelled) {
             ctx.cancelled = true;
             return false; // abort
           }
@@ -219,14 +248,16 @@ class SshManager {
 
     // ssh2 reports the server's remaining methods by SSH name; agent auth is "publickey" on the wire.
     const WIRE = { none: 'none', publickey: 'publickey', agent: 'publickey', password: 'password', 'keyboard-interactive': 'keyboard-interactive' };
-    ctx.tried = ctx.tried || [];
     let idx = 0;
     return (methodsLeft, partialSuccess, cb) => {
       if (Array.isArray(methodsLeft) && !ctx.serverMethods) {
         ctx.serverMethods = methodsLeft.slice();
-        ctx.out(`${GREY}${t('Server accepts: {methods}', { methods: methodsLeft.join(', ') })}${RESET}\r\n`);
+        ctx.out(`${GREY}${t('Server accepts: {methods}', { methods: methodsLeft.join(', ') || t('(none)') })}${RESET}\r\n`);
       }
-      if (ctx.currentLabel && ctx.currentLabel !== 'none') ctx.tried.push(ctx.currentLabel); // previous attempt was rejected
+      if (ctx.currentLabel && ctx.currentLabel !== 'none') { // previous attempt was rejected
+        ctx.tried.push(ctx.currentLabel);
+        if (ctx.currentLabel === savedPasswordLabel) ctx.savedPasswordRejected = true; // the next prompt says so
+      }
       const next = async () => {
         if (ctx.cancelled) return cb(false);
         while (idx < steps.length) {
@@ -266,6 +297,7 @@ class SshManager {
       return fn().finally(() => { if (ctx.readyTimer) ctx.readyTimer.resume(); });
     };
     const decide = (key, cb) => {
+      if (ctx.cancelled) return cb(false); // the pane was closed or disconnected meanwhile: no dialog for it
       const status = knownhosts.check(host, port, key);
       if (status === 'ok') return cb(true);
       const open = this.hostKeyPrompts.get(slot);
@@ -341,7 +373,12 @@ class SshManager {
    * key formats, ciphers, MACs), so a handshake that finds nothing in common can say what the server does speak.
    */
   _debugHook(ctx) {
-    return (line) => { ctx.remoteAlgorithms = algorithms.noteRemote(ctx.remoteAlgorithms, line); };
+    return (line) => {
+      // how far the handshake got, for the timeout's wording: TCP connected ("Socket connected"), the banner seen
+      if (line === 'Socket connected') ctx.tcpConnected = true;
+      else if (line.startsWith('Remote ident:')) ctx.bannerSeen = true;
+      ctx.remoteAlgorithms = algorithms.noteRemote(ctx.remoteAlgorithms, line);
+    };
   }
 
   /**
@@ -420,17 +457,34 @@ class SshManager {
 
   /**
    * Connect a raw ssh2 Client for cfg (used for shells and standalone tunnels).
+   * While it runs, `ctx.abort(err)` ends the attempt at whatever stage it is — the TCP connect, the handshake, a
+   * host-key or password dialog, a jump host's own connection — and the promise rejects with `err`: the socket is
+   * destroyed (never left connecting, authenticating or open behind a pane that is gone), the handshake timer stops,
+   * the host verifier answers no further prompt (ctx.cancelled). disconnect() calls it for a pane that is still
+   * "Connecting to …"; Cancel in the keyboard-interactive dialog calls it too.
    * @returns {Promise<{client: Client, jump: Client|null}>}
    */
   connectClient(cfg, ctx, depth = 0) {
     return new Promise(async (resolve, reject) => {
+      if (ctx.cancelled) return reject(cancelledError());
       const settings = this.store.getSettings();
       const client = new Client();
       let settled = false;
+      let aborted = false;
       const fail = (e) => {
         if (settled) return;
         settled = true;
         reject(e);
+      };
+      // the abort chain: this level ends its client, and the level above (a connection through this jump) its own
+      const outerAbort = ctx.abort;
+      ctx.abort = (err) => {
+        ctx.cancelled = true;
+        aborted = true;
+        if (ctx.readyTimer) ctx.readyTimer.stop();
+        fail(err || cancelledError());
+        try { client.destroy(); } catch {}
+        if (outerAbort) outerAbort(err);
       };
 
       const jumpCfg = depth < 3 ? await this._resolveJump(cfg) : null;
@@ -444,12 +498,14 @@ class SshManager {
           sock = await new Promise((res, rej) =>
             jump.forwardOut('127.0.0.1', 0, cfg.host, cfg.port || 22, (err, stream) => (err ? rej(err) : res(stream)))
           );
+          if (ctx.cancelled) throw cancelledError();
           ctx.out(`${GREY}${t('Jump established, connecting to {target}...', { target: `${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
         } catch (e) {
           if (jump) jump.end();
-          return fail(new Error(t('Jump host failed: {error}', { error: e.message })));
+          return fail(ctx.cancelled ? cancelledError() : new Error(t('Jump host failed: {error}', { error: e.message })));
         }
       }
+      if (ctx.cancelled) return fail(cancelledError());
 
       client.on('ready', () => {
         if (settled) return;
@@ -458,11 +514,14 @@ class SshManager {
       });
       client.on('error', (e) => {
         if (!settled) fail(e);
-        else if (ctx.onError) ctx.onError(e);
+        else if (ctx.onError && !aborted) ctx.onError(e); // an aborted client's last words are nobody's business
       });
       client.on('banner', (msg) => ctx.out(msg.replace(/\r?\n/g, '\r\n')));
       client.on('close', () => {
         if (jump) jump.end();
+        // a server that hangs up cleanly before the handshake is done (after its banner, say) gives ssh2 nothing to
+        // report: that is a failed connection, not a session the server ended
+        if (!settled) return fail(Object.assign(new Error('EOF'), { code: 'ECONNRESET' }));
         if (ctx.onClose) ctx.onClose();
       });
 
@@ -542,11 +601,20 @@ class SshManager {
       },
     };
 
+    info.ctx = ctx; // disconnect() while still connecting aborts the attempt through it
     this.prompter.status(id, 'connecting');
     this._out(id, `${GREY}${t('Connecting to {target}...', { target: `${cfg.username || os.userInfo().username}@${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
 
+    // a pane that went away while this was connecting: whatever came up for it goes down again, nothing is shown
+    const gone = (client, jump) => {
+      if (!info.closed) return false;
+      try { client.end(); } catch {}
+      if (jump) try { jump.end(); } catch {}
+      return true;
+    };
     this.connectClient(cfg, ctx)
       .then(async ({ client, jump }) => {
+        if (gone(client, jump)) return;
         info.client = client;
         info.jump = jump;
         // Remember a prompted password if the user asked to save it.
@@ -563,7 +631,7 @@ class SshManager {
         const sessOpts = {};
         if (cfg.x11) {
           const xp = await x11.prepare((msg) => this._out(id, `${GREY}${t('X11: {message}', { message: msg })}${RESET}\r\n`));
-          if (info.closed) return;
+          if (gone(client, jump)) return;
           if (xp) {
             info.x11 = xp;
             sessOpts.x11 = { single: false, screen: xp.screen, protocol: xp.protocol, cookie: xp.fakeCookie };
@@ -589,6 +657,7 @@ class SshManager {
           else reject();
         });
         client.shell(shellOpts, sessOpts, (err, stream) => {
+          if (gone(client, jump)) return;
           if (err) {
             this._out(id, `${RED}${t('Failed to open shell: {error}', { error: err.message })}${RESET}\r\n`);
             info.closing = true; // our own end, not a drop
@@ -617,14 +686,13 @@ class SshManager {
         });
       })
       .catch((e) => {
+        if (info.closed) return; // cancelled by disconnect(): the pane already says so
         const msg = this._explainError(e, ctx, cfg);
         this._out(id, `\r\n${RED}${t('Connection failed: {error}', { error: msg })}${RESET}\r\n`);
         this.prompter.status(id, 'failed', e.message);
-        if (!info.closed) {
-          info.closed = true;
-          this.conns.delete(id);
-          registry.exit(id, 1, 'failed');
-        }
+        info.closed = true;
+        this.conns.delete(id);
+        registry.exit(id, 1, 'failed');
       });
     return { id };
   }
@@ -632,11 +700,12 @@ class SshManager {
   /** Turn a connect/auth failure into the message shown to the user (hints for the usual causes). */
   _explainError(e, ctx, cfg) {
     let msg = e.message;
+    const limit = () => Math.round((this.store.getSettings().readyTimeout || 20000) / 1000);
     // the regexes classify ssh2's own (English) messages; the hints are composed around them as {error}
     if (ctx.cancelled) msg = t('authentication cancelled');
     else if (e.level === 'client-authentication') {
-      msg = t('authentication failed — server accepts: {accepts}; tried: {tried}', { accepts: (ctx.serverMethods || []).join(', ') || t('unknown'), tried: (ctx.tried || []).join(', ') || t('nothing') });
       const accepts = ctx.serverMethods || [];
+      msg = t('authentication failed — server accepts: {accepts}; tried: {tried}', { accepts: Array.isArray(ctx.serverMethods) ? accepts.join(', ') || t('(none)') : t('unknown'), tried: (ctx.tried || []).join(', ') || t('nothing') });
       if (!(ctx.tried || []).length && cfg.authMethod === 'password' && accepts.length && !accepts.includes('password') && !accepts.includes('keyboard-interactive')) {
         msg = t('{error}. This session is set to Password authentication but the server does not offer it — switch it to Automatic or Private key.', { error: msg });
       } else if (!(ctx.tried || []).length && cfg.authMethod === 'key' && !cfg.privateKeyPath) {
@@ -645,7 +714,12 @@ class SshManager {
     } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
       msg = t('{error} — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.', { error: msg });
     } else if (/Timed out while waiting for handshake/i.test(msg)) {
-      msg = t('{error} — no SSH banner within {s}s. Usually the host/port is unreachable from this network (try "nc -vz {host} {port}" in a local terminal), or the port is not an SSH service.', { error: msg, s: Math.round((this.store.getSettings().readyTimeout || 20000) / 1000), host: cfg.host, port: cfg.port || 22 });
+      // what the time ran out on: the TCP connect itself (a black-holed host), the banner, or the rest of the handshake
+      if (!ctx.tcpConnected) msg = t('{error} — no TCP connection within {s}s. Usually the host/port is unreachable from this network (try "nc -vz {host} {port}" in a local terminal).', { error: msg, s: limit(), host: cfg.host, port: cfg.port || 22 });
+      else if (!ctx.bannerSeen) msg = t('{error} — no SSH banner within {s}s. Usually the host/port is unreachable from this network (try "nc -vz {host} {port}" in a local terminal), or the port is not an SSH service.', { error: msg, s: limit(), host: cfg.host, port: cfg.port || 22 });
+      else msg = t('{error} — the server answered but the handshake did not finish within {s}s.', { error: msg, s: limit() });
+    } else if (e.code === 'ECONNRESET' || e.code === 'EPIPE' || /ECONNRESET|EPIPE/.test(msg)) {
+      msg = t('{error} — the server closed the connection during the handshake.', { error: msg });
     } else if (e.code === 'ECONNREFUSED' || /ECONNREFUSED/.test(msg)) {
       msg = t('{error} — the host is reachable but nothing listens on that port.', { error: msg });
     } else if (/Too many authentication failures/i.test(msg)) {
@@ -742,6 +816,7 @@ class SshManager {
       },
     };
 
+    info.ctx = ctx; // disconnect() while still connecting aborts the attempt through it
     this.prompter.status(id, 'connecting');
     this.connectClient(cfg, ctx)
       .then(({ client, jump }) => {
@@ -755,12 +830,11 @@ class SshManager {
         this.prompter.status(id, 'connected');
       })
       .catch((e) => {
+        if (info.closed) return; // cancelled by disconnect()
         this.prompter.status(id, 'failed', this._explainError(e, ctx, cfg));
-        if (!info.closed) {
-          info.closed = true;
-          this.conns.delete(id);
-          registry.exit(id, 1, 'failed');
-        }
+        info.closed = true;
+        this.conns.delete(id);
+        registry.exit(id, 1, 'failed');
       });
     return { id };
   }
@@ -772,15 +846,20 @@ class SshManager {
     try {
       if (info.stream) info.stream.end();
     } catch {}
-    try {
-      if (info.client) info.client.end();
-      else {
-        // still connecting: mark closed; close handler will fire when client errors
-        info.closed = true;
-        this.conns.delete(id);
-        this.registry.exit(id, 0, 'cancelled');
+    if (info.client) {
+      try { info.client.end(); } catch {}
+    } else {
+      // still connecting: the pane is over now, and so is the attempt behind it — the socket is destroyed, the
+      // handshake timer stopped and no host-key or password dialog opens for it (connectClient's ctx.abort); before,
+      // the attempt went on for nobody and a slow server got a dialog, a login and an invisible open connection
+      info.closed = true;
+      this.conns.delete(id);
+      if (info.ctx) {
+        info.ctx.cancelled = true;
+        if (info.ctx.abort) try { info.ctx.abort(cancelledError()); } catch {}
       }
-    } catch {}
+      this.registry.exit(id, 0, 'cancelled');
+    }
     if (info.jump) {
       try {
         info.jump.end();
