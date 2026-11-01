@@ -58,9 +58,10 @@ test('validate: unknown names are a readable error per category, nothing else', 
   assert.equal(ok.ok, true);
   assert.deepEqual(ok.errors, {});
   assert.deepEqual(ok.value, { kex: ['curve25519-sha256'], serverHostKey: ['ssh-ed25519', 'rsa-sha2-512'], cipher: [], hmac: ['hmac-sha2-256', 'hmac-sha2-512'] });
-  const bad = A.validate({ kex: 'curve25519-sha256, mlkem768x25519-sha256', cipher: 'aes128-ctr aes128-foo aes256-bar' });
+  // mlkem768nistp256-sha256: OpenSSH 10 has it, ssh2 does not (the X25519 hybrids are supported: pqkex.test.js)
+  const bad = A.validate({ kex: 'curve25519-sha256, mlkem768nistp256-sha256', cipher: 'aes128-ctr aes128-foo aes256-bar' });
   assert.equal(bad.ok, false);
-  assert.equal(bad.errors.kex, 'Unknown key exchange algorithm: mlkem768x25519-sha256');
+  assert.equal(bad.errors.kex, 'Unknown key exchange algorithm: mlkem768nistp256-sha256');
   assert.equal(bad.errors.cipher, 'Unknown cipher algorithms: aes128-foo, aes256-bar');
   assert.equal(bad.errors.hmac, undefined);
   assert.equal(A.validate({ hmac: 'hmac-md5-96, nope' }).errors.hmac, 'Unknown MAC algorithm: nope', 'the label is "MAC", as the editor shows it');
@@ -128,17 +129,19 @@ test('noteRemote collects the server\'s KEXINIT lists from ssh2\'s debug lines a
 });
 
 test('explainHandshake names both sides and the knob; other errors pass through as null', () => {
-  const remote = { kex: ['mlkem768x25519-sha256', 'curve25519-sha256', 'ecdh-sha2-nistp256'], cipher: ['chacha20-poly1305@openssh.com', 'aes128-ctr'] };
+  const remote = { kex: ['mlkem768nistp256-sha256', 'curve25519-sha256', 'ecdh-sha2-nistp256'], cipher: ['chacha20-poly1305@openssh.com', 'aes128-ctr'] };
   const cfg = { algorithms: { kex: ['diffie-hellman-group14-sha256'] } };
   const m = A.explainHandshake('Handshake failed: no matching key exchange algorithm', cfg, remote);
-  assert.equal(m, 'no matching key exchange: this session offers diffie-hellman-group14-sha256; the server offers mlkem768x25519-sha256, curve25519-sha256, ecdh-sha2-nistp256. Advanced SSH → Algorithms: add curve25519-sha256, ecdh-sha2-nistp256 to the key exchange list or Reset to defaults');
+  assert.equal(m, 'no matching key exchange: this session offers diffie-hellman-group14-sha256; the server offers mlkem768nistp256-sha256, curve25519-sha256, ecdh-sha2-nistp256. Advanced SSH → Algorithms: add curve25519-sha256, ecdh-sha2-nistp256 to the key exchange list or Reset to defaults');
+  // a hybrid the server offers counts as common ground now (the option, or the list, can take it)
+  assert.match(A.explainHandshake('Handshake failed: no matching key exchange algorithm', cfg, { kex: ['mlkem768x25519-sha256'] }), /add mlkem768x25519-sha256 to the key exchange list/);
   // a cipher mismatch of a session on the defaults against an old server: the legacy preset is the hint
   const old = A.explainHandshake('Handshake failed: no matching C->S cipher', {}, { cipher: ['aes128-cbc', '3des-cbc'] });
   assert.match(old, /^no matching cipher: this session offers aes128-gcm@openssh\.com, .*; the server offers aes128-cbc, 3des-cbc\. The server only speaks old algorithms: tick "Legacy algorithms \(old devices\)" in Advanced SSH$/);
   // the server's list unknown (no KEXINIT seen): still readable
   assert.match(A.explainHandshake('Handshake failed: no matching S->C MAC', { algorithms: { hmac: ['hmac-sha1'] } }, undefined), /^no matching MAC: this session offers hmac-sha1; the server offers nothing it told us about\. Advanced SSH → Algorithms: Reset to defaults$/);
   // a server speaking only what this ssh2 lacks
-  assert.match(A.explainHandshake('Handshake failed: no matching key exchange algorithm', {}, { kex: ['mlkem768x25519-sha256'] }), /This version of MobAlt supports none of them$/);
+  assert.match(A.explainHandshake('Handshake failed: no matching key exchange algorithm', {}, { kex: ['mlkem768nistp256-sha256'] }), /This version of MobAlt supports none of them$/);
   assert.match(A.explainHandshake('Handshake failed: no matching host key format', {}, { serverHostKey: ['ssh-ed25519'] }), /^no matching host key: .*add ssh-ed25519 to the host key list$/);
   assert.equal(A.explainHandshake('Timed out while waiting for handshake', {}, remote), null);
   assert.equal(A.explainHandshake('', {}, remote), null);
