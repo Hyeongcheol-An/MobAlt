@@ -5,7 +5,8 @@
 // folder with a toast and no sheet; a page's beforeunload never holds the pane; window.close() ends in the error view
 // and Retry brings the page back; HTTP Basic authentication is asked through the app's own prompt (Cancel shows the
 // 401 page, demo / demo signs in, a prompt still up when the pane closes is withdrawn); a page that swallows every
-// keydown does not take ⌘L from the app; an address with a password is refused everywhere.
+// keydown does not take ⌘L from the app, yet gets ⌘K / ⌘B / ⌘D (they are the page's); a page's link with a user name
+// is followed without it, one with a password is not; an address with a password is refused everywhere.
 //   test/e2e-browser.sh <out-dir>                               (all phases, the site started for them)
 //   test/qa/run.sh test/e2e-browser-security.js <out-dir> 180000 (alone: node test/httpsrv.js --port 42510 --log <out-dir>/httpsrv.log)
 (async () => {
@@ -147,10 +148,40 @@
     const seen = await inGuest(p, 'JSON.stringify(window.__keys)', false);
     results.reservedShortcutReachesApp = document.activeElement === p.urlEl && !/"Ml"/.test(seen);
     log('keys the page saw', seen);
+    const keysSeen = () => inGuest(p, 'JSON.stringify(window.__keys)', false);
     p.focus();
     await window.api.app.testKey({ keyCode: 'a', modifiers: [], guest: guestId(p) });
-    await sleep(150);
-    results.ordinaryKeyStaysInPage = /"a"/.test(await inGuest(p, 'JSON.stringify(window.__keys)', false));
+    await waitFor(async () => /"a"/.test(await keysSeen()), 3000, 'a key in the page').catch(() => {});
+    results.ordinaryKeyStaysInPage = /"a"/.test(await keysSeen());
+    // the app's other shortcuts belong to the page (a web console's ⌘K palette, an editor's ⌘B): ⌘K, ⌘B and ⌘D reach
+    // it, and neither the sidebar nor the panes change
+    const sidebarCollapsed = () => document.getElementById('sidebar').classList.contains('collapsed');
+    const panesBefore = app.workspace.allPanes().length, sidebarBefore = sidebarCollapsed();
+    for (const k of ['k', 'b', 'd']) {
+      p.focus();
+      await window.api.app.testKey({ keyCode: k, modifiers: ['cmd'], guest: guestId(p) });
+      await waitFor(async () => (await keysSeen()).includes('"M' + k + '"'), 3000, '⌘' + k.toUpperCase() + ' in the page').catch(() => {});
+    }
+    await sleep(300); // a split or a sidebar toggle would have happened by now
+    const seenAfter = await keysSeen();
+    log('keys the page saw', seenAfter);
+    results.pageShortcutsReachPage = ['"Mk"', '"Mb"', '"Md"'].every((k) => seenAfter.includes(k)) && app.workspace.allPanes().length === panesBefore && sidebarCollapsed() === sidebarBefore && app.activePane() === p;
+    // and ⌘L is still the app's, after them
+    p.focus();
+    await window.api.app.testKey({ keyCode: 'l', modifiers: ['cmd'], guest: guestId(p) });
+    await waitFor(() => document.activeElement === p.urlEl, 3000, '⌘L again').catch(() => {});
+    results.reservedShortcutStillReachesApp = document.activeElement === p.urlEl && !/"Ml"/.test(await keysSeen());
+    p.urlEl.value = p.url;
+
+    // ---------- a page's link to an address with a user name: followed without it (a password is never followed) ----------
+    await inGuest(p, "location = 'http://someone@127.0.0.1:42510/b'", false);
+    await loaded(p, '/b');
+    results.userNameLinkFollowedWithout = p.url === SITE + 'b' && (await inGuest(p, 'location.href', false)) === SITE + 'b';
+    await inGuest(p, "location = 'http://admin:admin@127.0.0.1:42510/notitle?pw=1'", false);
+    await sleep(1000);
+    results.passwordLinkRefused = p.url === SITE + 'b' && (await requests(/notitle\?pw=/)).length === 0;
+    p.navigate(SITE + 'keys');
+    await loaded(p, '/keys');
 
     // ---------- an address with a password is refused: the field, the editor, the importer ----------
     p.urlEl.focus();

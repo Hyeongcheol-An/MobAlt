@@ -6,7 +6,7 @@ const assert = require('node:assert/strict');
 const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
-const { normalizeBrowserUrl, isBrowserUrl, browserHost, isLocalHost } = require('../../src/main/browserurl');
+const { normalizeBrowserUrl, isBrowserUrl, browserUrlWithoutUser, browserHost, isLocalHost } = require('../../src/main/browserurl');
 
 test('normalizeBrowserUrl: a typed address becomes an http(s) URL, or is refused with a reason', () => {
   const table = [
@@ -79,6 +79,32 @@ test('normalizeBrowserUrl: a typed address becomes an http(s) URL, or is refused
 test('isBrowserUrl: only an http(s) URL with a host, or about:blank — what the webview guard lets through', () => {
   for (const ok of ['http://example.com/', 'https://example.com', 'HTTPS://example.com/x', 'http://127.0.0.1:8080/', 'http://[::1]:3000/', 'about:blank', ' about:blank ']) assert.equal(isBrowserUrl(ok), true, ok);
   for (const bad of ['', null, undefined, 42, 'example.com', 'file:///etc/hosts', 'javascript:alert(1)', 'data:text/html,x', 'ftp://example.com', 'http://', 'about:config', 'blob:http://example.com/x', 'http:example.com', 'http://u:p@example.com/', 'http://u@example.com/']) assert.equal(isBrowserUrl(bad), false, String(bad));
+});
+
+test('browserUrlWithoutUser: a page\'s link or a saved address with a user name goes there without it; a password never', () => {
+  const table = [
+    ['http://example.com/', 'http://example.com/'],
+    [' https://example.com/x ', 'https://example.com/x'],
+    ['about:blank', 'about:blank'],
+    ['http://user@example.com/', 'http://example.com/'],
+    ['https://user@192.0.2.1:8443/a?b#c', 'https://192.0.2.1:8443/a?b#c'],
+    ['HTTP://User@Example.com/x', 'http://example.com/x'],
+    ['http://user@[::1]:3000/', 'http://[::1]:3000/'],
+    ['http://u:p@example.com/', null],
+    ['http://:p@example.com/', null],
+    ['http://user:@example.com/', 'http://example.com/'], // an empty password is no password
+    ['ftp://user@example.com/', null],
+    ['file:///etc/hosts', null],
+    ['javascript:alert(1)', null],
+    ['user@example.com', null],
+    ['http://user@/', null],
+    ['', null], [null, null], [42, null],
+  ];
+  for (const [input, want] of table) {
+    const got = browserUrlWithoutUser(input);
+    assert.equal(got, want, String(input));
+    if (got) assert.equal(isBrowserUrl(got), true, 'a browser URL: ' + got);
+  }
 });
 
 test('browserHost: the default session name is the host, with a non-default port', () => {

@@ -7,7 +7,8 @@
 // terminal works for both without reloading the page; ⇧⌘⏎ zoom; MultiExec leaves the pane out; ⌘= zooms the page;
 // ⌘F finds in the page; the pane menu's items and Copy URL; Rename Pane locks the title; the workspace saves the
 // page the pane is on and a restore brings it back there; detach to a window and back; close removes the webview.
-// Then the review round's cases: a titleless page is named after the session; a hidden page never re-activates its
+// Then the review round's cases: the title does not flicker to the session's name while a titled page loads; a
+// titleless page is named after the session; a hidden page never re-activates its
 // tab while another opens (20×); a session re-saved as another type; an editor-made session through export → import;
 // page zoom is Chromium's per-site level; about:blank; a shared cookie jar and an isolated one; a tab switch hides
 // the page without reloading; the sidebar toggle and a window resize keep the page over its pane; the drop zone
@@ -77,10 +78,18 @@
     await shot('b1-loaded');
 
     // ---------- navigation: a link, Back / Forward / Reload, the address field ----------
+    // every title the pane shows on the way: the previous page's stays until the next one's arrives, never the
+    // session's name in between (that is only for a page with no <title>, below)
+    const titlesSeen = [];
+    const updateTitle = p.updateTitle;
+    p.updateTitle = function (...a) { titlesSeen.push(this.title); return updateTitle.apply(this, a); };
     await inGuest(p, "document.getElementById('to-b').click()");
     await loaded(p, '/b');
     await waitFor(() => p.title === 'Page B', 5000, 'title B');
     await waitFor(() => p.canBack, 3000, 'back enabled');
+    delete p.updateTitle; // the prototype's again
+    results.titleNoFlickerOnNavigate = titlesSeen.length > 0 && titlesSeen.every((x) => x === 'Page A' || x === 'Page B') && titlesSeen[titlesSeen.length - 1] === 'Page B';
+    log('titles during the navigation', JSON.stringify(titlesSeen));
     results.linkNavigates = p.url === SITE + 'b' && p.tab.title === 'Page B' && p.urlEl.value === SITE + 'b';
     results.backEnabled = !p.backBtn.disabled && p.fwdBtn.disabled;
     p.backBtn.click();
