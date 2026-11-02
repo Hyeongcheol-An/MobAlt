@@ -1,3 +1,20 @@
+## [0.18.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.17.0...v0.18.0) (2026-11-02)
+
+### Features
+
+* **browser:** built-in browser session — a web page in a pane ([1d99e7a](https://github.com/Hyeongcheol-An/MobAlt/commit/1d99e7a23217dc25f59d1abfc564bfc18d92b5c4)), closes [#webview-layer](https://github.com/Hyeongcheol-An/MobAlt/issues/webview-layer)
+* **i18n:** translate the browser session ([79fc111](https://github.com/Hyeongcheol-An/MobAlt/commit/79fc11107398c83833af01918ed960e57770c16a))
+
+### Bug Fixes
+
+* **browser:** an odd guest id is no guest, not an exception ([81eaa31](https://github.com/Hyeongcheol-An/MobAlt/commit/81eaa31d43d128638965350570b631d22130db6d))
+* **browser:** leave the page its own shortcuts, steady titles, user-name links ([0c5f7f0](https://github.com/Hyeongcheol-An/MobAlt/commit/0c5f7f04a4d13d2ba90cd4326717a7c848081846))
+* **browser:** let user@ redirects through so the redirect limit ends a loop ([16a0810](https://github.com/Hyeongcheol-An/MobAlt/commit/16a0810d6eca528aae52fabea9d3cfc8dc79b1cf))
+* **browser:** no credentials in an address; the web's ports, IPv6 and octal hosts ([5df27a1](https://github.com/Hyeongcheol-An/MobAlt/commit/5df27a12db70c4caea1e1aaaec0f0d054a2c5a56))
+* **browser:** sign-in prompt, downloads, dialogs and the guest guards ([e797c55](https://github.com/Hyeongcheol-An/MobAlt/commit/e797c55856649238578b4d4d1872e4ea9f8a3e01))
+* **browser:** the pane after review — focus, titles, zoom, errors, keyboard ([2a6cdbd](https://github.com/Hyeongcheol-An/MobAlt/commit/2a6cdbdbbb78ac2f9a5a300a686e242bbc398d27))
+* **session:** sessions without a port survive export → import ([341864c](https://github.com/Hyeongcheol-An/MobAlt/commit/341864c7480112ca2c060dbd77c1b2fdf1adab22))
+
 ## [0.17.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.16.1...v0.17.0) (2026-11-02)
 
 ### Features
