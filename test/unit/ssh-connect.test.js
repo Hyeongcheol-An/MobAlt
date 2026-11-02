@@ -114,3 +114,48 @@ test('a jump hop that times out is explained against the jump host: the nc hint 
   assert.match(msg, new RegExp(`nc -vz 127\\.0\\.0\\.1 ${jumpPort}`), 'the hint names the jump host and its port');
   assert.doesNotMatch(msg, /target\.example|2299/, 'never the target');
 });
+
+/** openShell over a stubbed connectClient: a fake client whose end() closes the connection (ctx.onClose), as ssh2's does. */
+function shellHarness({ openShell = false } = {}) {
+  const exits = [];
+  let n = 0;
+  const registry = { newId: () => 'ssh-' + ++n, register() {}, data() {}, bytes() {}, exit: (id, code, reason) => exits.push({ id, code, reason }) };
+  const ssh = new SshManager(registry, store, { status() {} });
+  const EventEmitter = require('events');
+  ssh.connectClient = (cfg, ctx) => {
+    const client = new EventEmitter();
+    client.end = () => setImmediate(() => ctx.onClose());
+    client.shell = (opts, sessOpts, cb) => {
+      if (!openShell) return; // the server has not answered the shell request yet
+      const stream = new EventEmitter();
+      stream.stderr = new EventEmitter();
+      stream.write = () => true;
+      stream.end = () => {};
+      stream.setWindow = () => {};
+      setImmediate(() => cb(null, stream));
+    };
+    return Promise.resolve({ client, jump: null });
+  };
+  return { ssh, exits };
+}
+const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
+
+test('Disconnect after the login but before the shell opened ends as "cancelled", not as a session that ended', async () => {
+  const { ssh, exits } = shellHarness();
+  const { id } = ssh.openShell({ host: '127.0.0.1', port: 2222, username: 'u' });
+  await tick();
+  assert.ok(ssh.get(id) && ssh.get(id).client && !ssh.get(id).stream, 'client up, shell not open');
+  ssh.disconnect(id);
+  await tick();
+  assert.deepEqual(exits.map((e) => e.reason), ['cancelled']);
+});
+
+test('Disconnect of an open shell still ends as "closed"', async () => {
+  const { ssh, exits } = shellHarness({ openShell: true });
+  const { id } = ssh.openShell({ host: '127.0.0.1', port: 2222, username: 'u' });
+  await tick();
+  assert.ok(ssh.get(id) && ssh.get(id).stream, 'shell open');
+  ssh.disconnect(id);
+  await tick();
+  assert.deepEqual(exits.map((e) => e.reason), ['closed']);
+});

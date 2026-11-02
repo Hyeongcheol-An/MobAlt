@@ -646,7 +646,8 @@ class SshManager {
         this.conns.delete(id);
         const lost = !info.closing && !info.shellExited;
         this.prompter.status(id, 'disconnected');
-        registry.exit(id, 0, lost ? 'lost' : 'closed', lost ? info.lastError || undefined : undefined);
+        // Disconnect after the login but before the shell opened: still the attempt being cancelled, not a session that ended
+        registry.exit(id, 0, lost ? 'lost' : info.cancelled ? 'cancelled' : 'closed', lost ? info.lastError || undefined : undefined);
       },
     };
 
@@ -906,6 +907,7 @@ class SshManager {
       if (info.stream) info.stream.end();
     } catch {}
     if (info.client) {
+      if (!info.stream) info.cancelled = true; // authenticated, the shell not open yet: the pane says "Connection attempt cancelled."
       try { info.client.end(); } catch {}
     } else {
       // still connecting: the pane is over now, and so is the attempt behind it — the socket is destroyed, the
