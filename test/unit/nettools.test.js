@@ -54,3 +54,14 @@ test('comparePorts is ascending: fewer open ports first, then the lowest port', 
   assert.deepEqual([...rows].sort(comparePorts).map((r) => r.ip), ['b', 'd', 'c', 'a']);
   assert.deepEqual([...rows].sort((x, y) => -comparePorts(x, y)).map((r) => r.ip), ['a', 'c', 'd', 'b'], 'descending: the most open ports first');
 });
+
+// The 1.0 security review, N6: a host is never read as an option of ping / traceroute.
+test('ping / traceroute end the options before the host', () => {
+  const tools = require('../../src/main/tools');
+  for (const c of [tools.pingCommand('-oEvil', 3), tools.tracerouteCommand('-F /etc/passwd'), tools.pingCommand('2001:db8::1')]) {
+    const i = c.args.indexOf('--');
+    assert.ok(i >= 0, JSON.stringify(c));
+    assert.equal(i, c.args.length - 2, 'the host is the one argument after --');
+  }
+  assert.deepEqual(tools.pingCommand('192.0.2.1', 3).args.slice(-4), ['-c', '3', '--', '192.0.2.1']);
+});

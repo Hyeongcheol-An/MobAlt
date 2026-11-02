@@ -10,7 +10,7 @@ Siehe auch: [MobaXterm 26.6 feature parity](MOBAXTERM_PARITY.md) (Englisch) — 
 ![MobAlt mit zwei entfernten Shells nebeneinander](images/de/hero.png)
 
 Inhalt: [Installation](#installation) · [Aktualisieren](#aktualisieren) · [Sitzungen](#sitzungen) · [Verbinden](#verbinden) ·
-[Terminal](#terminal) · [Dateien (SFTP / FTP)](#dateien-sftp--ftp) · [Tunnel](#tunnel-portweiterleitung) ·
+[Terminal](#terminal) · [Dateien (SFTP / FTP)](#dateien-sftp--ftp) · [Browser-Sitzungen](#browser-sitzungen) · [Tunnel](#tunnel-portweiterleitung) ·
 [X11, Mosh, seriell, RDP/VNC](#x11-mosh-seriell-rdpvnc) · [Werkzeuge und Makros](#werkzeuge-und-makros) ·
 [Arbeitsbereich und Einstellungen](#arbeitsbereich-und-einstellungen) · [Tastaturkurzbefehle](#tastaturkurzbefehle) ·
 [Daten und Datenschutz](#daten-und-datenschutz) · [Fehlerbehebung](#fehlerbehebung)
@@ -40,7 +40,9 @@ Drei Wege führen zu einem neuen Release; alle enden mit dem neuen Bundle unter 
   „Einstellungen“ → „Updates“ eine Fortschrittszeile — *Download von MobAlt 0.17.0 — 42 % (12.3 von 29.4 MB,
   2.1 MB/s)* — mit einem schmalen Balken; sobald die Datei vollständig ist, bieten beide **Jetzt neu starten** an
   (oder **Später**: die Installation erfolgt beim Beenden), und ein fehlgeschlagener Download nennt einige Sekunden
-  lang den Grund.
+  lang den Grund. Das Update lässt sich erst installieren, wenn alle MobAlt-Fenster beendet sind; solange eine
+  andere MobAlt-Instanz geöffnet ist, beendet „Jetzt neu starten“ daher nichts: Ein Dialog weist darauf hin, und das
+  Update wird installiert, wenn die letzte Instanz beendet wird.
 - **Homebrew**: `brew upgrade --cask mobalt` ersetzt das Programm im Ordner „Programme“.
 - **DMG**: Laden Sie das neue DMG von [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) und ziehen Sie
   MobAlt in den Ordner „Programme“; die alte Version wird ersetzt.
@@ -77,7 +79,7 @@ diesem Ordner).
 | Lokal | Ihre macOS-Login-Shell (zsh/bash) mit Ordnerverfolgung |
 | Telnet | Klassisches Telnet mit NAWS/TTYPE-Aushandlung; der Benutzername der Sitzung wird am `login:`-Prompt gesendet |
 | Seriell | USB-Seriell-Konsole (Baudrate, Datenformat, Flusskontrolle, lokales Echo) |
-| FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „Sftp“ |
+| FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „SFTP“ |
 | RDP / VNC | Übergibt an Windows App oder die macOS-Bildschirmfreigabe |
 | Browser | Eine Webseite in einem Bereich neben Ihren Terminals — ein Router, Grafana, die Weboberfläche eines Geräts, ein getunnelter `localhost` (nur http/https; siehe [Browser-Sitzungen](#browser-sitzungen)) |
 
@@ -100,7 +102,7 @@ jede andere wird hinzugefügt — ein von Hand geschriebener Eintrag ohne `id` w
 Datei geschriebenes `password` wird übernommen und verschlüsselt gespeichert —, Ordner werden hinzugefügt und nichts
 wird gelöscht; zweimaliges Importieren derselben Datei ändert also nichts. Einträge ohne Namen, mit unbekanntem Typ
 oder ungültigem Port werden übersprungen und in der Meldung gezählt; eine Datei, die keine MobAlt-Sitzungsdatei ist,
-wird mit Begründung abgelehnt. Beim Import von `~/.ssh/config` werden Hosts übersprungen, die Sie bereits haben
+wird mit Begründung abgelehnt. Die Meldung nennt außerdem, wie viele der importierten Sitzungen beim Öffnen Befehle ausführen (Startbefehle oder die Shell einer lokalen Sitzung) — sehen Sie sich diese vor dem Öffnen an, wenn die Datei von jemand anderem stammt. Beim Import von `~/.ssh/config` werden Hosts übersprungen, die Sie bereits haben
 (gleicher Ordner und Name). MobaXterm-Lesezeichen landen in einem Ordner `MobaXterm`; ein früher importiertes
 Lesezeichen (gleicher Ordner, Name und Host) wird an Ort und Stelle aufgefrischt — Host, Port, Benutzer, X11 und
 Komprimierung folgen der `.ini`, während gesichertes Passwort, Symbol, Farbe, Tunnel und ein von Ihnen gesetzter
@@ -122,7 +124,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
   *SSH-Agent*, um es einzuschränken. Bei Schlüsseln mit Passphrase wird einmal gefragt; aktivieren Sie „In Sitzung …
   sichern“, um sie zu behalten.
 - **Hostschlüssel**: Die erste Verbindung zeigt den Fingerabdruck (SHA256 und MD5). „Akzeptieren“ speichert den
-  Schlüssel; ein geänderter Schlüssel wird deutlich gemeldet und nie stillschweigend akzeptiert.
+  Schlüssel; ein geänderter Schlüssel wird deutlich gemeldet und nie stillschweigend akzeptiert: In diesem Dialog ist **Abbrechen** die Standardtaste, Enter lehnt also ab — um den neuen Schlüssel zu akzeptieren, klicken Sie auf *Neuen Schlüssel akzeptieren* (oder wechseln mit Tab dorthin). Ein bekannter Host mit einem Schlüssel eines anderen Typs gilt wie bei OpenSSH als geändert. Ein in einer `known_hosts`-Datei mit `@revoked` markierter Schlüssel wird sofort abgelehnt: Der Dialog nennt den Grund und hat keine Taste zum Akzeptieren. Hostnamen in `known_hosts` werden ohne Rücksicht auf Groß- und Kleinschreibung verglichen, und die Muster `*` / `?` / `!` funktionieren wie in OpenSSH.
 - **SSH-Schlüssel**: „Sitzung“ → „SSH-Schlüssel erzeugen…“ (auch im Panel „Werkzeuge“ und als *Erzeugen…* neben dem
   Feld für den privaten Schlüssel im Sitzungseditor) führt für Sie das `ssh-keygen` von macOS aus: Ed25519 (Standard),
   RSA 4096 oder ECDSA, ein Kommentar, eine optionale Passphrase mit Stärkehinweis und die Datei (Standard
@@ -253,7 +255,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 - **Zmodem (rz/sz)**: Dateien durch das Terminal selbst bewegen, auf die klassische Art über eine serielle Konsole oder
   einen Jump-Host, wo SFTP nicht verfügbar ist. Führen Sie auf der Gegenseite `sz file …` aus, um auf den Mac
   herunterzuladen, oder `rz`, um von ihm hochzuladen; MobAlt erkennt die Übertragung im Datenstrom, hält das Terminal an
-  und zeigt sie in der Übertragungsliste des Panels „Sftp“ (mit „Abbrechen“) und im Zähler der Statusleiste. Downloads
+  und zeigt sie in der Übertragungsliste des Panels „SFTP“ (mit „Abbrechen“) und im Zähler der Statusleiste. Downloads
   landen im Download-Ordner („Einstellungen“ → „Allgemein“) oder, wenn keiner festgelegt ist, in einem Ordner Ihrer
   Wahl; Uploads öffnen eine Dateiauswahl. Funktioniert in SSH-, lokalen, Telnet- und seriellen Bereichen — nicht in
   Mosh (dessen Datenstrom gehört dem mosh-Client und ist kein roher Bytestrom). Abschalten können Sie es unter
@@ -266,7 +268,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 - **Zwischenablage**: Auswählen kopiert („Einstellungen“ → „Terminal“ → „Bei Auswahl kopieren“); ein Rechtsklick setzt
   ein (⇧-Rechtsklick öffnet das Menü). Dateien aus dem Finder, die Sie auf einem SSH-Terminal ablegen, werden
   hochgeladen; auf einem lokalen Terminal werden die Pfade eingesetzt. Ist der Ordner der Shell unbekannt (die Sitzung folgt dem
-  Terminal nicht), landen sie in dem Ordner, den das Panel „Sftp“ für diese Verbindung zeigt; ist das Panel noch nicht
+  Terminal nicht), landen sie in dem Ordner, den das Panel „SFTP“ für diese Verbindung zeigt; ist das Panel noch nicht
   offen, werden Sie zuerst gefragt.
 - **Einsetzschutz**: Einsetzen von mehr als einer Zeile (oder über 1000 Zeichen) fragt zuerst nach — *N Zeilen in …
   einsetzen?* zeigt den Text in einer bearbeitbaren Vorschau; ⌘⏎ setzt ein, Esc bricht ab. Jedes Einsetzen wird zudem
@@ -304,10 +306,10 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 
 ## Dateien (SFTP / FTP)
 
-![Panel „Sftp“](images/de/sftp-panel.png)
+![Panel „SFTP“](images/de/sftp-panel.png)
 
-Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim Verbinden automatisch
-(„Einstellungen“ → „Allgemein“ → „Bei SSH-Verbindung zu ‚Sftp‘ wechseln“).
+Das Panel **SFTP** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim Verbinden automatisch
+(„Einstellungen“ → „Allgemein“ → „Bei SSH-Verbindung zu ‚SFTP‘ wechseln“).
 
 - Navigieren Sie per Doppelklick auf Ordner, durch Eintippen eines Pfads (`~` funktioniert) oder mit ⬆ / 🏠 / ⟳.
   „Terminal folgen“ hält das Panel im aktuellen Ordner der Shell (erfordert die Sitzungsoption, die einen kleinen
@@ -319,7 +321,7 @@ Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim
   wird vor dem Überschreiben gefragt.
 - Ein Doppelklick auf eine Textdatei öffnet sie im integrierten Editor (⌘S sichert zurück). „In externem Editor
   bearbeiten“ öffnet sie in Ihrem Editor („Einstellungen“ → „Allgemein“ → „Externer Editor“) und lädt sie bei jedem
-  Sichern erneut hoch.
+  Sichern erneut hoch. Die Einstellung ist ein Programm mit seinen Argumenten — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` —, das direkt gestartet wird, nicht über eine Shell: Anführungszeichen fassen Wörter zusammen, `{file}` wird durch den Pfad der Datei ersetzt (sonst kommt der Pfad ans Ende), und sonst wird nichts expandiert (kein `$VAR`, `~` nur am Anfang des Programms, kein `;` und keine Pipes). Die lokale Kopie liegt in `$TMPDIR/mobalt-edit/` und wird beim Beenden von MobAlt gelöscht.
 - Übertragungen zeigen Fortschritt, Geschwindigkeit und eine Abbrechen-Taste; nach einem Download „Im Finder zeigen“. Ein Download wird nach
   `<Name>.part` geschrieben und erhält seinen Namen erst, wenn er vollständig ist; bricht er ab (Verbindungsabbruch, Trennen),
   bietet der nächste Download derselben Datei *Fortsetzen* oder *Von vorn* an.
@@ -395,14 +397,14 @@ diesem Mac bereits verwendet* (bei einer Remote-Weiterleitung *auf dem Server*).
 ## X11, Mosh, seriell, RDP/VNC
 
 - **X11**: Aktivieren Sie „X11-Weiterleitung“ unter „Erweitert“. MobAlt startet bei Bedarf XQuartz, leitet das Display
-  weiter und tauscht das Auth-Cookie aus, sodass `xeyes` oder `gedit` einfach funktionieren. Die Statusleiste zeigt, ob
+  weiter und tauscht das Auth-Cookie aus, sodass `xeyes` oder `gedit` einfach funktionieren. Durch kommen nur X-Clients, die das eigene (gefälschte) Cookie der Sitzung vorweisen — das, was sshd für Ihre Anmeldung einrichtet —, sodass ein anderer Benutzer auf dem Server das Display Ihres Mac nicht erreichen kann. Die Statusleiste zeigt, ob
   X11 verfügbar ist.
 - **Mosh**: braucht lokal `brew install mosh` und auf dem Host `mosh-server` (UDP 60000-61000). Der Bereich führt den
   mosh-Client aus; der SSH-Start verwendet Ihren Schlüssel, den Agent oder eine interaktive Abfrage. Legen Sie den Pfad
   zu `mosh-server` fest, wenn er nicht im entfernten PATH liegt.
-- **Mosh + SFTP**: mosh transportiert keinen SFTP-Kanal, deshalb durchsucht das Panel „Sftp“ einen Mosh-Host über eine
+- **Mosh + SFTP**: mosh transportiert keinen SFTP-Kanal, deshalb durchsucht das Panel „SFTP“ einen Mosh-Host über eine
   separate SSH-Verbindung ohne Shell zum selben Host (gleicher Schlüssel, Agent und Abfragen). Sie öffnet sich
-  automatisch, wenn „SFTP-Browser automatisch öffnen“ für die Sitzung aktiv ist (und „Bei SSH-Verbindung zu ‚Sftp‘
+  automatisch, wenn „SFTP-Browser automatisch öffnen“ für die Sitzung aktiv ist (und „Bei SSH-Verbindung zu ‚SFTP‘
   wechseln“ unter „Einstellungen“ → „Allgemein“), sonst über die Taste „SFTP für diesen Host öffnen (über SSH)“ im Panel
   oder „SFTP-Browser öffnen“ im Menü des Bereichs; sie wird zusammen mit dem Bereich getrennt.
 - **Seriell**: Der Editor listet USB-Seriell-Geräte; stellen Sie Baudrate, Daten-/Stoppbits, Parität, Flusskontrolle,
@@ -439,7 +441,7 @@ Abschalten lässt sich das unter „Einstellungen“ → „Allgemein“ → „
 ![Einstellungen](images/de/settings.png)
 
 Die Einstellungen haben fünf Tabs, von denen jeder ohne Scrollen ins kleinste Fenster passt: **Allgemein** (die
-Sprache der Oberfläche, die Bestätigung beim Beenden, der Wechsel zum Panel „Sftp“, die Wiederherstellung des
+Sprache der Oberfläche, die Bestätigung beim Beenden, der Wechsel zum Panel „SFTP“, die Wiederherstellung des
 Arbeitsbereichs, die lokale Shell und ihre Ordnerintegration, der externe Editor, der Download-Ordner, SSH-Keep-Alive
 und „Konfigurationsordner öffnen“, das zeigt, wo alles gespeichert ist), **Terminal** (Schrift, Zeilenhöhe, Cursor,
 Pufferzeilen, Thema — das Aussehen des ganzen Fensters, siehe *Themen und Erscheinungsbild* —, Maus/Tasten und was
@@ -457,7 +459,7 @@ Oberfläche der Sprachliste von macOS (Systemeinstellungen → Allgemein → Spr
 Liste, die MobAlt mitbringt, gewinnt, Englisch, wenn keine passt. „Einstellungen“ → „Allgemein“ → **Sprache** wählt
 eine Sprache ausdrücklich; die Änderung gilt sofort in jedem Fenster — nichts startet neu, Verbindungen bleiben
 bestehen — und wird gemerkt. Terminalausgaben werden nie übersetzt: Was ein entfernter Host ausgibt, erscheint
-unverändert. Das Benutzerhandbuch gibt es in denselben elf Sprachen (`docs/USER_GUIDE.<language>.md`); „Hilfe“ →
+unverändert. Die Zeilen, die MobAlt selbst ins Terminal schreibt („Verbindung zu … wird hergestellt...“, „Schlüsselaustausch …“, „Verbindung fehlgeschlagen: …“, „── Sitzung beendet. … ──“), folgen der Sprache der Oberfläche, außer auf Arabisch und Hindi, wo sie englisch bleiben: Ein Terminal zeichnet ein Zeichen pro Zelle, von links nach rechts, und kann weder arabische Buchstaben verbinden noch Devanagari formen. Das Benutzerhandbuch gibt es in denselben elf Sprachen (`docs/USER_GUIDE.<language>.md`); „Hilfe“ →
 **Benutzerhandbuch** öffnet das für die aktuelle Sprache.
 
 Auf Arabisch liest sich das ganze Fenster von rechts nach links: Seitenstreifen und Seitenleiste wandern an den rechten
@@ -520,8 +522,8 @@ Feld für die Schnellverbindung leert es und kehrt zum Terminal zurück.
 
 Alles bleibt in `~/Library/Application Support/MobAlt/`: `sessions.json` (Passwörter und Passphrasen über den
 macOS-Schlüsselbund verschlüsselt), `settings.json`, `known_hosts`, `workspace.json` und die Dateien der
-zsh-Integration. Sitzungsprotokolle landen in `~/Documents/MobAlt Logs/`. MobAlt verbindet sich nur mit den Hosts, die
-Sie einrichten; die optionale Update-Prüfung liest die Release-Liste auf GitHub und sonst nichts. Details:
+zsh-Integration (`zdotdir/`, das auch den Verlauf der lokalen Shell enthält, `zdotdir/.zsh_history`, sofern Ihre eigenen zsh-Dateien nicht `HISTFILE` setzen). Diese Dateien, das `known_hosts` der App und die Sitzungsprotokolle kann nur Ihr Benutzerkonto lesen (0600). Sitzungsprotokolle landen in `~/Documents/MobAlt Logs/`. Browser-Bereiche legen ihre Cookies und ihren Cache unter `Partitions/` im selben Ordner ab (Cookies verschlüsselt). Eine mit *In externem Editor bearbeiten* geöffnete entfernte Datei wird nach `$TMPDIR/mobalt-edit/` kopiert und beim Beenden von MobAlt gelöscht. Ist der Schlüsselbund nicht nutzbar, funktionieren gesicherte Passwörter weiterhin, werden aber ungeschützt (base64) gespeichert, und MobAlt zeigt einmal pro Start eine Warnung. MobAlt verbindet sich nur mit den Hosts, die
+Sie einrichten; die optionale Update-Prüfung liest die Release-Liste auf GitHub und sonst nichts. Links öffnen sich nur dann in Ihrem Standardbrowser, wenn sie `http(s)` oder `mailto` sind (ein Terminal-Link mit einem anderen Schema bewirkt nichts). Details:
 [SECURITY.md](../SECURITY.md).
 
 ## Fehlerbehebung
@@ -543,7 +545,7 @@ Sie einrichten; die optionale Update-Prüfung liest die Release-Liste auf GitHub
   Sie einen davon unter „Erweitert“ → „Algorithmen“ hinzu (oder *Auf Standard zurücksetzen*); bei einem alten Gerät,
   das nur SHA-1 / CBC anbietet, aktivieren Sie „Alte Algorithmen (ältere Geräte)“.
 - **Hostschlüssel geändert**: Der Server wurde neu installiert, oder etwas fängt die Verbindung ab. Akzeptieren Sie nur,
-  wenn Sie den Grund kennen; der alte Schlüssel lässt sich im Konfigurationsordner aus `known_hosts` entfernen.
+  wenn Sie den Grund kennen (Enter bricht ab; klicken Sie auf *Neuen Schlüssel akzeptieren*); der alte Schlüssel lässt sich im Konfigurationsordner aus `known_hosts` entfernen.
 - **X11-Programm erscheint nicht**: Installieren Sie XQuartz und stellen Sie sicher, dass die entfernte Shell `DISPLAY`
   in ihren Startdateien nicht überschreibt.
 - **Mosh**: „mosh-Client nicht gefunden“ bedeutet, dass lokal `brew install mosh` fehlt; „mosh-server not found“

@@ -5,8 +5,8 @@
 const fs = require('fs');
 const net = require('net');
 const crypto = require('crypto');
-const { execFileSync, spawn } = require('child_process');
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const { execFile, spawn } = require('child_process');
+const { t, tn, tt } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn(); these are printed into the SSH pane, so tt()
 
 const XAUTH_CANDIDATES = ['/opt/X11/bin/xauth', '/usr/X11/bin/xauth', 'xauth'];
 
@@ -63,7 +63,16 @@ function tcpTarget(display) {
  * name ended in :N, which on a Mac that has used X over the network is a stale 192.168.x.x:0 cookie ahead of the local
  * one, and the server then answered every forwarded client with "Invalid MIT-MAGIC-COOKIE-1 key".
  */
-function localCookie(display) {
+// xauth is asked with -i (ignore locks: a read never waits for the lock another xauth — the test sshd's own `xauth add`,
+// a login — holds on ~/.Xauthority) and asynchronously with a time limit: it runs between the key exchange and the shell
+// request, and a synchronous call stuck on the lock froze the whole main process. No answer in time: no cookie — the
+// forwarded clients then meet the existing failure line, the session itself opens.
+const XAUTH_TIMEOUT_MS = 3000;
+const xauthList = (bin, args, env, timeout) => new Promise((resolve, reject) => {
+  execFile(bin, ['-i', 'list', ...args], { encoding: 'utf8', env, timeout, killSignal: 'SIGKILL' }, (err, out) => (err ? reject(err) : resolve(out)));
+});
+
+async function localCookie(display, { candidates = XAUTH_CANDIDATES, timeout = XAUTH_TIMEOUT_MS } = {}) {
   const num = displayNumber(display);
   const parse = (out) => {
     let fallback = null;
@@ -75,14 +84,16 @@ function localCookie(display) {
     }
     return fallback;
   };
-  for (const bin of XAUTH_CANDIDATES) {
+  for (const bin of candidates) {
     try {
       const env = { ...process.env, DISPLAY: display };
-      const exact = parse(execFileSync(bin, ['list', `:${num}`], { encoding: 'utf8', env }));
+      const exact = parse(await xauthList(bin, [`:${num}`], env, timeout));
       if (exact) return exact;
-      const any = parse(execFileSync(bin, ['list'], { encoding: 'utf8', env }));
+      const any = parse(await xauthList(bin, [], env, timeout));
       if (any) return any;
-    } catch {}
+    } catch (e) {
+      if (e && (e.killed || e.signal)) return null; // timed out: another binary would wait the same way
+    }
   }
   return null;
 }
@@ -100,7 +111,7 @@ async function ensureServer(onStatus, timeoutMs = 12000) {
   if (d) return d;
   const appPath = XQUARTZ_APPS.find((p) => fs.existsSync(p));
   if (!appPath) return null;
-  onStatus && onStatus(t('starting XQuartz…'));
+  onStatus && onStatus(tt('starting XQuartz…'));
   try {
     spawn('open', ['-g', '-a', appPath], { stdio: 'ignore', detached: true }).unref();
   } catch {
@@ -123,7 +134,7 @@ async function prepare(onStatus) {
   const display = await ensureServer(onStatus);
   if (!display) return null;
   const fake = crypto.randomBytes(16).toString('hex');
-  const real = localCookie(display);
+  const real = await localCookie(display);
   return {
     display,
     socketPath: socketPathFor(display),
@@ -134,17 +145,46 @@ async function prepare(onStatus) {
   };
 }
 
-/** Pipe an accepted ssh2 x11 channel to the local X server. */
+/**
+ * Is `presented` (the cookie bytes an X client sent in its setup request) the fake cookie handed to sshd for this
+ * session? sshd does not check X11 cookies itself, so this check is the only thing that keeps other users of the
+ * remote host away from the Mac's X server: without it any local process there could connect to the forwarded display
+ * and be given the real cookie.
+ */
+function cookieMatches(presented, fakeHex) {
+  if (!fakeHex) return false;
+  const fake = Buffer.from(fakeHex, 'hex');
+  return Buffer.isBuffer(presented) && presented.length === fake.length && crypto.timingSafeEqual(presented, fake);
+}
+
+/**
+ * Pipe an accepted ssh2 x11 channel to the local X server. With a fake cookie in place the client's setup request must
+ * carry exactly that cookie (MIT-MAGIC-COOKIE-1); anything else — another cookie, another protocol, no authorisation —
+ * closes the channel before a byte reaches the X server, like OpenSSH's x11_open_helper. A matching cookie is replaced
+ * by the real local one when there is one.
+ */
 function proxy(channel, x11, onError) {
   const sock = x11.socketPath ? net.connect(x11.socketPath) : net.connect(tcpTarget(x11.display) || { port: 6000 });
-  sock.once('error', (e) => onError && onError(t('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
+  sock.once('error', (e) => onError && onError(tt('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
   let header = Buffer.alloc(0);
-  let done = !x11.realCookie; // nothing to swap if we have no local cookie
+  // nothing to check or swap when the session has neither a fake nor a local cookie
+  let done = !x11.fakeCookie && !x11.realCookie;
+  let refused = false;
+
+  const refuse = () => {
+    refused = true;
+    header = Buffer.alloc(0);
+    onError && onError(t('permission denied'));
+    sock.destroy();
+    try { channel.close(); } catch {}
+  };
 
   const onData = (chunk) => {
+    if (refused) return;
     if (done) return sock.write(chunk);
     header = Buffer.concat([header, chunk]);
     if (header.length < 12) return;
+    if (header[0] !== 0x6c && header[0] !== 0x42) return refuse(); // neither 'l' nor 'B': not an X11 setup request
     const le = header[0] === 0x6c; // 'l'
     const rd16 = (o) => (le ? header.readUInt16LE(o) : header.readUInt16BE(o));
     const n = rd16(6);
@@ -156,13 +196,16 @@ function proxy(channel, x11, onError) {
     const dataStart = 12 + n + pad(n);
     const rest = header.slice(total);
     let out;
-    if (name === 'MIT-MAGIC-COOKIE-1' && d === 16) {
-      const real = Buffer.from(x11.realCookie, 'hex');
-      out = Buffer.concat([header.slice(0, dataStart), real, header.slice(dataStart + 16, total)]);
+    if (x11.fakeCookie) {
+      if (name !== 'MIT-MAGIC-COOKIE-1' || !cookieMatches(header.slice(dataStart, dataStart + d), x11.fakeCookie)) return refuse();
+      out = x11.realCookie
+        ? Buffer.concat([header.slice(0, dataStart), Buffer.from(x11.realCookie, 'hex'), header.slice(dataStart + d, total)])
+        : header.slice(0, total);
     } else {
       out = header.slice(0, total);
     }
     done = true;
+    header = Buffer.alloc(0);
     sock.write(out);
     if (rest.length) sock.write(rest);
   };
@@ -180,4 +223,4 @@ function proxy(channel, x11, onError) {
   channel.on('error', () => sock.destroy());
 }
 
-module.exports = { prepare, proxy, isAvailable, ensureServer, findDisplay, displayNumber, socketPathFor };
+module.exports = { prepare, proxy, cookieMatches, isAvailable, ensureServer, findDisplay, displayNumber, socketPathFor, localCookie };

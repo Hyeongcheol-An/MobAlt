@@ -624,6 +624,11 @@
         && picksOf(g).filter((p) => p.tabIndex === 0).length === 1 && picksOf(g).filter((p) => p.getAttribute('aria-checked') === 'true').length === 1 && picksOf(g).find((p) => p.tabIndex === 0).getAttribute('aria-checked') === 'true');
       results.pickerTabStops = [...m.querySelectorAll('.pick')].filter((p) => p.tabIndex === 0).length === 2; // 35 before
       const [iconG, colorG] = groups;
+      // the ten swatches are announced by name (Red … Grey), never by their hex value
+      const swatches = picksOf(colorG).filter((p) => p.classList.contains('swatch'));
+      const names = swatches.map((p) => p.getAttribute('aria-label'));
+      results.swatchNames = swatches.length === 10 && names.join(',') === 'Red,Orange,Yellow,Green,Teal,Blue,Indigo,Purple,Pink,Grey'
+        && swatches.every((p) => p.title === p.getAttribute('aria-label') && !/#/.test(p.title) && /^#[0-9a-f]{6}$/.test(p.dataset.value));
       const ip = picksOf(iconG);
       ip[0].focus();
       await press('ArrowRight');
@@ -851,6 +856,15 @@
       await shot('84-find-input-focus');
       app.action('find-close');
       await sleep(100);
+      // Esc closes the find bar from any of its controls (a checkbox, an arrow), not only from the field; the terminal has the focus back
+      for (const sel of ['#find-case', '#find-bar [data-find="next"]']) {
+        app.action('find');
+        await sleep(120);
+        $(sel).focus();
+        key(active(), 'Escape');
+        await sleep(120);
+        results['findEscFrom' + (sel === '#find-case' ? 'Checkbox' : 'Button')] = $('#find-bar').hidden && inTerminal();
+      }
       app.showPanel('tools');
       await sleep(100);
       const th = $('#tool-host'), tp = $('#tool-port-from');

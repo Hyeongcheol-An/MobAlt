@@ -10,7 +10,7 @@ Xem thêm: [Mức tương đương tính năng với MobaXterm 26.6](MOBAXTERM_P
 ![MobAlt với hai shell từ xa đặt cạnh nhau](images/vi/hero.png)
 
 Mục lục: [Tải về và cài đặt](#tải-về-và-cài-đặt) · [Cập nhật](#cập-nhật) · [Phiên](#phiên) · [Kết nối](#kết-nối) ·
-[Terminal](#terminal) · [Tệp (SFTP / FTP)](#tệp-sftp--ftp) · [Đường hầm](#đường-hầm-chuyển-tiếp-cổng) ·
+[Terminal](#terminal) · [Tệp (SFTP / FTP)](#tệp-sftp--ftp) · [Phiên trình duyệt](#phiên-trình-duyệt) · [Đường hầm](#đường-hầm-chuyển-tiếp-cổng) ·
 [X11, Mosh, Serial, RDP/VNC](#x11-mosh-serial-rdpvnc) · [Công cụ và macro](#công-cụ-và-macro) ·
 [Không gian làm việc và cài đặt](#không-gian-làm-việc-và-cài-đặt) · [Phím tắt](#phím-tắt) ·
 [Dữ liệu và quyền riêng tư](#dữ-liệu-và-quyền-riêng-tư) · [Khắc phục sự cố](#khắc-phục-sự-cố)
@@ -39,7 +39,9 @@ Có ba cách để lên bản phát hành mới; cách nào cũng kết thúc b�
   hoặc ngay lập tức với "Khởi động lại ngay". Trong lúc tải, một dòng tiến trình —
   *Đang tải về MobAlt 0.17.0 — 42% (12.3/29.4 MB, 2.1 MB/s)* — cùng một thanh mỏng hiện phía trên các tab và trong
   Cài đặt → Cập nhật; khi tệp đã tải xong, cả hai nơi đều đưa ra **Khởi động lại ngay** (hoặc **Để sau**: sẽ được
-  cài khi bạn thoát), còn một lần tải về thất bại sẽ cho biết lý do trong vài giây.
+  cài khi bạn thoát), còn một lần tải về thất bại sẽ cho biết lý do trong vài giây. Bản cập nhật chỉ có thể được cài khi mọi cửa sổ
+  MobAlt đã thoát, nên khi một bản MobAlt khác đang mở, "Khởi động lại ngay" sẽ không thoát: một hộp thoại cho
+  biết điều đó, và bản cập nhật được cài khi bản cuối cùng thoát.
 - **Homebrew**: `brew upgrade --cask mobalt` thay thế ứng dụng trong Applications.
 - **DMG**: tải DMG mới từ [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) rồi
   kéo MobAlt vào Applications, thay thế bản cũ.
@@ -72,7 +74,7 @@ rồi điền thẻ Cơ bản. Nhấp đúp vào phiên để kết nối; nhấ
 | Cục bộ (Local) | Shell đăng nhập macOS của bạn (zsh/bash), có theo dõi thư mục |
 | Telnet | Telnet cổ điển với thương lượng NAWS/TTYPE; tên người dùng của phiên được gửi tại dấu nhắc `login:` |
 | Serial | Console USB-serial (baud, khung, điều khiển luồng, echo cục bộ) |
-| FTP | Trình duyệt tệp FTP / FTPS (TLS tường minh) trong bảng Sftp |
+| FTP | Trình duyệt tệp FTP / FTPS (TLS tường minh) trong bảng SFTP |
 | RDP / VNC | Chuyển sang Windows App hoặc Chia sẻ màn hình của macOS |
 | Trình duyệt (Browser) | Một trang web trong ngăn cạnh các terminal của bạn — router, Grafana, giao diện web của thiết bị, một `localhost` qua đường hầm (chỉ http/https; xem [Phiên trình duyệt](#phiên-trình-duyệt)) |
 
@@ -91,7 +93,7 @@ phiên có `id` trùng với một phiên hiện có sẽ được thay bằng p
 mọi phiên khác được thêm vào — mục viết tay không có `id` luôn được thêm, và `password` ghi trong tệp sẽ được lấy và lưu
 ở dạng mã hóa — thư mục được thêm và không có gì bị xóa, nên nhập cùng một tệp hai lần không thay đổi gì. Các mục
 không có tên, có loại không rõ hoặc cổng không hợp lệ sẽ bị bỏ qua và được đếm trong thông báo; tệp không phải là tệp phiên
-của MobAlt sẽ bị từ chối kèm lý do. `~/.ssh/config` bỏ qua các máy chủ bạn đã có (cùng thư mục và tên). Dấu trang MobaXterm
+của MobAlt sẽ bị từ chối kèm lý do. Thông báo cũng cho biết có bao nhiêu phiên đã nhập chạy lệnh khi mở (lệnh khởi động, hoặc shell của phiên cục bộ) — hãy xem các phiên đó trước khi mở nếu tệp đến từ người khác. `~/.ssh/config` bỏ qua các máy chủ bạn đã có (cùng thư mục và tên). Dấu trang MobaXterm
 được đưa vào thư mục `MobaXterm`; dấu trang đã được nhập trước đó (cùng thư mục, tên và máy chủ) được làm mới tại chỗ —
 máy chủ, cổng, người dùng, X11 và nén theo tệp `.ini`, còn mật khẩu đã lưu, biểu tượng, màu, đường hầm và đường dẫn khóa
 do bạn đặt thì giữ nguyên — nên nhập cùng một tệp `.ini` hai lần cũng không thay đổi gì.
@@ -111,7 +113,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   khóa mặc định trong `~/.ssh` trước khi hỏi. Chọn *Mật khẩu*, *Khóa riêng* hoặc *Agent SSH* để
   giới hạn. Khóa có cụm mật khẩu sẽ hỏi một lần; đánh dấu "Lưu trong phiên" để giữ lại.
 - **Khóa máy chủ**: lần kết nối đầu tiên hiện dấu vân tay (SHA256 và MD5). Chấp nhận sẽ lưu
-  khóa; khóa đã thay đổi được cảnh báo rõ ràng và không bao giờ được chấp nhận ngầm.
+  khóa; khóa đã thay đổi được cảnh báo rõ ràng và không bao giờ được chấp nhận ngầm: trong hộp thoại đó **Hủy** là nút mặc định, nên nhấn Enter là từ chối — muốn chấp nhận khóa mới phải nhấp *Chấp nhận khóa mới* (hoặc Tab tới nút đó). Giống OpenSSH, một máy chủ đã biết đưa ra khóa thuộc loại khác cũng được coi là khóa đã thay đổi. Khóa được đánh dấu `@revoked` trong tệp `known_hosts` bị từ chối ngay: hộp thoại nêu lý do và không có nút Chấp nhận. Tên máy chủ trong `known_hosts` được so khớp không phân biệt chữ hoa chữ thường, và các mẫu `*` / `?` / `!` hoạt động như trong OpenSSH.
 - **Khóa SSH**: Phiên → Tạo khóa SSH… (cũng có trong bảng Công cụ, và nút *Tạo…* cạnh
   trường khóa riêng trong trình sửa phiên) chạy `ssh-keygen` của macOS cho bạn: Ed25519 (mặc định),
   RSA 4096 hoặc ECDSA, một chú thích, cụm mật khẩu tùy chọn kèm gợi ý độ mạnh, và tệp (mặc định
@@ -231,7 +233,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   được tô trên mỗi terminal — khi có một loạt đầu ra dài, các hàng cũ nhất trở về bình thường trước — và ⌘K xóa tất cả.
 - **Zmodem (rz/sz)**: truyền tệp ngay qua terminal, cách làm cổ điển qua console serial hoặc máy chủ trung gian
   nơi không dùng được SFTP. Chạy `sz file …` ở máy từ xa để tải về máy Mac, hoặc `rz` để tải lên từ máy Mac; MobAlt
-  nhận ra quá trình truyền trong luồng dữ liệu, tạm dừng terminal và hiện nó trong danh sách truyền tệp của bảng Sftp (có nút Hủy)
+  nhận ra quá trình truyền trong luồng dữ liệu, tạm dừng terminal và hiện nó trong danh sách truyền tệp của bảng SFTP (có nút Hủy)
   và bộ đếm trên thanh trạng thái. Tệp tải về được lưu vào Thư mục tải về (Cài đặt → Chung), hoặc vào thư mục bạn chọn nếu
   chưa đặt; tải lên sẽ mở hộp thoại chọn tệp. Hoạt động trong ngăn SSH, cục bộ, telnet và serial — không có với Mosh (luồng của nó
   thuộc về client mosh, không phải luồng byte thô). Tắt bằng Cài đặt → Tính năng → Truyền tệp → *Truyền tệp Zmodem (rz/sz)* (bật theo mặc định);
@@ -241,7 +243,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   cùng tên được lưu thành `name (1).ext` và được liệt kê dưới tên đó.
 - **Bảng nhớ tạm**: chọn văn bản là sao chép (Cài đặt → Terminal → Sao chép khi chọn); nhấp chuột phải để dán
   (⇧-chuột phải mở menu). Thả tệp từ Finder vào terminal SSH sẽ tải chúng lên;
-  vào terminal cục bộ thì dán đường dẫn. Khi không rõ thư mục của shell (phiên không theo terminal), tệp được tải lên thư mục mà bảng Sftp
+  vào terminal cục bộ thì dán đường dẫn. Khi không rõ thư mục của shell (phiên không theo terminal), tệp được tải lên thư mục mà bảng SFTP
   đang hiển thị cho kết nối đó; nếu bảng chưa mở, bạn được hỏi trước.
 - **Bảo vệ dán**: nội dung dán có nhiều hơn một dòng (hoặc trên 1000 ký tự) sẽ hỏi trước — *Dán N
   dòng vào …?* hiện văn bản trong ô xem trước có thể sửa; ⌘⏎ để dán, Esc để hủy. Mọi lần dán cũng
@@ -279,7 +281,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
 
 ![Bảng SFTP](images/vi/sftp-panel.png)
 
-Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự mở khi kết nối
+Bảng **SFTP** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự mở khi kết nối
 (Cài đặt → Chung → "Chuyển sang bảng SFTP khi SSH kết nối").
 
 - Điều hướng bằng cách nhấp đúp vào thư mục, gõ đường dẫn (dùng được `~`) hoặc dùng ⬆ / 🏠 / ⟳.
@@ -289,7 +291,7 @@ Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự 
 - Thanh công cụ và menu ngữ cảnh: thư mục mới, đổi tên, quyền, xóa, tải về, tải lên. Chọn nhiều mục
   bằng ⌘ / ⇧. Kéo tệp từ Finder vào danh sách để tải lên; tên đã tồn tại sẽ được hỏi trước khi ghi đè.
 - Nhấp đúp vào tệp văn bản để sửa trong trình sửa tích hợp (⌘S lưu ngược lên máy chủ). "Sửa bằng trình
-  sửa ngoài" mở tệp trong trình sửa của bạn (Cài đặt → Chung → Trình sửa ngoài) và tải lại lên mỗi khi lưu.
+  sửa ngoài" mở tệp trong trình sửa của bạn (Cài đặt → Chung → Trình sửa ngoài) và tải lại lên mỗi khi lưu. Cài đặt này là một chương trình cùng các đối số — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` — được chạy trực tiếp, không qua shell: dấu ngoặc kép gộp các từ, `{file}` được thay bằng đường dẫn của tệp (nếu không có thì đường dẫn được thêm vào cuối), ngoài ra không có gì được mở rộng (không có `$VAR`, `~` chỉ ở đầu chương trình, không có `;` hay pipe). Bản sao cục bộ nằm trong `$TMPDIR/mobalt-edit/` và bị xóa khi MobAlt thoát.
 - Quá trình truyền tệp hiện tiến độ, tốc độ và nút hủy; "Hiện trong Finder" sau khi tải về. Tệp tải về được ghi vào
   `<tên>.part` và chỉ mang tên thật khi hoàn tất; nếu bị dừng (mất kết nối, Ngắt kết nối), lần tải về tiếp theo của cùng tệp
   sẽ hỏi *Tiếp tục* hay *Bắt đầu lại*.
@@ -357,12 +359,12 @@ kết nối, và bạn được báo nếu có đường hầm không lắng ngh
 ## X11, Mosh, Serial, RDP/VNC
 
 - **X11**: đánh dấu "Chuyển tiếp X11" trong SSH nâng cao. MobAlt khởi động XQuartz khi cần, chuyển tiếp
-  display và hoán đổi cookie xác thực, nên `xeyes` hay `gedit` chạy ngay. Thanh trạng thái cho biết X11
+  display và hoán đổi cookie xác thực, nên `xeyes` hay `gedit` chạy ngay. Chỉ những X client đưa ra đúng cookie (giả) của chính phiên — thứ sshd thiết lập cho lần đăng nhập của bạn — mới đi qua được, nên người dùng khác trên máy chủ không thể truy cập màn hình máy Mac của bạn. Thanh trạng thái cho biết X11
   có sẵn hay không.
 - **Mosh**: cần `brew install mosh` trên máy cục bộ và `mosh-server` trên máy chủ (UDP 60000-61000).
   Ngăn chạy client mosh; bước khởi động SSH dùng khóa, agent hoặc dấu nhắc tương tác của bạn.
   Đặt đường dẫn `mosh-server` nếu nó không nằm trong PATH của máy từ xa.
-- **Mosh + SFTP**: mosh không mang kênh SFTP, nên bảng Sftp duyệt máy chủ Mosh qua một
+- **Mosh + SFTP**: mosh không mang kênh SFTP, nên bảng SFTP duyệt máy chủ Mosh qua một
   kết nối SSH riêng không có shell tới cùng máy chủ đó (cùng khóa, agent và dấu nhắc). Kết nối này tự mở
   khi "Tự động mở trình duyệt SFTP" được bật cho phiên (và "Chuyển sang bảng SFTP
   khi SSH kết nối" trong Cài đặt → Chung), nếu không thì mở từ nút "Mở SFTP cho máy chủ này (qua SSH)" của bảng hoặc
@@ -416,7 +418,7 @@ văn bản căn phải; terminal vẫn chạy từ trái sang phải). Theo mặ
 danh sách ngôn ngữ của macOS (Cài đặt hệ thống → Cài đặt chung → Ngôn ngữ & Vùng): ngôn ngữ đầu tiên trong danh sách đó mà
 MobAlt có sẽ được dùng, và tiếng Anh nếu không có ngôn ngữ nào khớp. Cài đặt → Chung → **Ngôn ngữ** chọn một ngôn ngữ cụ thể; thay đổi
 có hiệu lực ngay trong mọi cửa sổ — không có gì khởi động lại, các kết nối vẫn giữ — và được ghi nhớ. Đầu ra terminal không bao giờ
-được dịch: những gì máy chủ từ xa in ra được hiển thị nguyên vẹn. Hướng dẫn sử dụng cũng có đủ mười một ngôn ngữ đó
+được dịch: những gì máy chủ từ xa in ra được hiển thị nguyên vẹn. Các dòng do chính MobAlt in vào terminal ("Đang kết nối tới …", "Trao đổi khóa …", "Kết nối thất bại: …", "── Phiên đã kết thúc. … ──") theo ngôn ngữ giao diện, trừ tiếng Ả Rập và tiếng Hindi, khi đó chúng giữ nguyên tiếng Anh: terminal vẽ mỗi ô một ký tự, từ trái sang phải, nên không thể nối chữ Ả Rập hay ghép chữ Devanagari. Hướng dẫn sử dụng cũng có đủ mười một ngôn ngữ đó
 (`docs/USER_GUIDE.<language>.md`); Trợ giúp → **Hướng dẫn sử dụng** mở bản cho ngôn ngữ hiện tại.
 
 Với tiếng Ả Rập, toàn bộ cửa sổ đọc từ phải sang trái: dải bên và thanh bên chuyển sang mép phải, còn các terminal
@@ -477,9 +479,9 @@ lọc phiên hoặc ô kết nối nhanh sẽ xóa nội dung và quay về term
 
 Mọi thứ nằm trong `~/Library/Application Support/MobAlt/`: `sessions.json` (mật khẩu và
 cụm mật khẩu được mã hóa thông qua Chuỗi khóa của macOS), `settings.json`, `known_hosts`,
-`workspace.json`, và các tệp tích hợp zsh. Nhật ký phiên được lưu vào `~/Documents/MobAlt Logs/`.
+`workspace.json`, và các tệp tích hợp zsh (`zdotdir/`, nơi cũng chứa lịch sử của shell cục bộ, `zdotdir/.zsh_history`, trừ khi các tệp zsh của riêng bạn đặt `HISTFILE`). Các tệp này, `known_hosts` của ứng dụng và nhật ký phiên chỉ tài khoản của bạn đọc được (0600). Nhật ký phiên được lưu vào `~/Documents/MobAlt Logs/`. Các ngăn trình duyệt giữ cookie và bộ nhớ đệm trong `Partitions/` ở cùng thư mục (cookie được mã hóa). Tệp từ xa mở bằng *Sửa bằng trình sửa ngoài* được sao chép vào `$TMPDIR/mobalt-edit/` và bị xóa khi MobAlt thoát. Nếu không dùng được Chuỗi khóa, mật khẩu đã lưu vẫn hoạt động nhưng được lưu mà không được bảo vệ (base64), và MobAlt hiện cảnh báo một lần mỗi lần chạy.
 MobAlt chỉ kết nối tới các máy chủ bạn cấu hình; bước kiểm tra cập nhật tùy chọn chỉ đọc danh sách bản phát hành
-trên GitHub, ngoài ra không gì khác. Chi tiết: [SECURITY.md](../SECURITY.md).
+trên GitHub, ngoài ra không gì khác. Liên kết chỉ mở trong trình duyệt mặc định khi là `http(s)` hoặc `mailto` (liên kết trong terminal có scheme khác không làm gì cả). Chi tiết: [SECURITY.md](../SECURITY.md).
 
 ## Khắc phục sự cố
 
@@ -499,7 +501,7 @@ trên GitHub, ngoài ra không gì khác. Chi tiết: [SECURITY.md](../SECURITY.
   trong số đó vào SSH nâng cao → Thuật toán (hoặc *Đặt lại mặc định*); với thiết bị cũ chỉ
   cung cấp SHA-1 / CBC, hãy đánh dấu "Thuật toán cũ (thiết bị cũ)".
 - **Khóa máy chủ đã thay đổi**: máy chủ đã được cài lại, hoặc có thứ gì đó đang chặn bắt kết nối.
-  Chỉ chấp nhận khi bạn biết lý do; khóa cũ có thể được xóa khỏi `known_hosts` trong thư mục cấu hình.
+  Chỉ chấp nhận khi bạn biết lý do (Enter là hủy; hãy nhấp *Chấp nhận khóa mới*); khóa cũ có thể được xóa khỏi `known_hosts` trong thư mục cấu hình.
 - **Ứng dụng X11 không hiện ra**: cài XQuartz, và đảm bảo shell từ xa không ghi đè
   `DISPLAY` trong các tệp khởi động của nó.
 - **Mosh**: "không tìm thấy mosh client" nghĩa là máy cục bộ chưa chạy `brew install mosh`;

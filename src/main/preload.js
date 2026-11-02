@@ -74,13 +74,14 @@ contextBridge.exposeInMainWorld('api', {
     testQuitCheck: (verb) => invoke('test:quit-check', verb),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testUpdateProgress: (info) => invoke('test:update-progress', info), // the updater's download event (app:update-progress) as the windows hear it: { phase, version, percent, transferred, total, bytesPerSecond, message? } (test mode only)
+    testOtherInstances: (pids) => invoke('test:other-instances', pids), // pretend these pids are other running instances of the bundle: Restart now shows the sheet instead of installing ([] for none; test mode only)
     testNotice: (text) => invoke('test:notice', text),
     testNextDialog: (result) => invoke('test:next-dialog', result),
     testWolListen: (port) => invoke('test:wol-listen', port), // UDP listener on 127.0.0.1:<port> for magic packets (test mode only)
     testWolPackets: () => invoke('test:wol-packets'), // what it received: [{ from, port, length, hex }]
     testSilentListen: (port) => invoke('test:silent-listen', port), // TCP listener on 127.0.0.1:<port> that accepts and never speaks (test mode only)
     testConnSocket: (id) => invoke('test:conn-socket', id), // an SSH connection's TCP socket: { noDelay, remoteAddress, remotePort } (test mode only)
-    testMonitorStats: () => invoke('test:monitor-stats'), // { execCount, samples }: exec channels opened, monitor polls started (test mode only)
+    testMonitorStats: () => invoke('test:monitor-stats'), // { execCount, samples, sshConnections }: exec channels opened, monitor polls started, SSH connections held by main (test mode only)
     testMonitorCommand: (cmd) => invoke('test:monitor-command', cmd), // run this instead of the monitoring snippet (null = the snippet; test mode only)
     testPerf: (opts) => invoke('test:perf', opts), // boot timestamps, memory and every process's CPU share / working set; { gc, domCounters, detached, heapSnapshot: path, profile: ms } (test mode only; test/qa/perf.js)
     testFs: (op, ...args) => invoke('test:fs', op, ...args),

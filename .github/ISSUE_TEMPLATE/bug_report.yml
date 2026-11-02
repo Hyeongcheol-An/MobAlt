@@ -1,0 +1,95 @@
+name: Bug report
+description: Something MobAlt does wrong, or not at all
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Before you file it: nothing in this form should hold a password, a passphrase, a private key,
+        a public IP of your own or a company host name — replace them with `example.com` / `192.0.2.1`. For a security
+        problem use [Security → Report a vulnerability](https://github.com/Hyeongcheol-An/MobAlt/security/advisories/new) instead of an issue ([SECURITY.md](https://github.com/Hyeongcheol-An/MobAlt/blob/main/SECURITY.md)).
+  - type: input
+    id: version
+    attributes:
+      label: MobAlt version
+      description: MobAlt → About MobAlt, or the status bar (`MobAlt 1.0.0`).
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How it was installed
+      options:
+        - Homebrew (brew install --cask mobalt)
+        - DMG from Releases
+        - Built from source (npm run install:local / npm start)
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      placeholder: "macOS 15.1, Apple Silicon (M2)"
+    validations:
+      required: true
+  - type: dropdown
+    id: session
+    attributes:
+      label: Session type involved
+      multiple: true
+      options:
+        - SSH
+        - Mosh
+        - Local terminal
+        - Telnet
+        - Serial
+        - FTP / FTPS
+        - SFTP panel / transfers
+        - Browser session
+        - RDP / VNC hand-off
+        - Tunnels
+        - Tools (ping, scanner, Wake-on-LAN…)
+        - Not session-specific (window, settings, updater, language…)
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, from a fresh start where possible. Session settings that matter (auth method, jump host, X11, algorithms…).
+      placeholder: |
+        1. ＋ Session → SSH → host example.com, Private key
+        2. Connect
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happened instead
+      description: |
+        For SSH failures, paste the line the terminal printed — `authentication failed — server accepts: …; tried: …`,
+        `no matching key exchange …`, `connect EHOSTUNREACH …` — it names what both sides offered. For a connection that
+        hangs, the result of `nc -vz host port` from Terminal.app.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: remote
+    attributes:
+      label: Remote side (if relevant)
+      placeholder: "OpenSSH 9.6 on Ubuntu 24.04 behind a jump host; or: a USB-serial adapter (vendor), 115200 8N1"
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched the open issues and the [Troubleshooting](https://github.com/Hyeongcheol-An/MobAlt/blob/main/docs/USER_GUIDE.md#troubleshooting) section of the user guide.
+          required: true
+        - label: This report contains no password, key, token, real public IP or private host name.
+          required: true

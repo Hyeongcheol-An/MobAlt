@@ -39,8 +39,8 @@ a long value still fails, in every language.
 4. **Translate**, in every `src/locales/<code>.json`, by the dictionary rules below and the file's own `@glossary`,
    `@keep` and `@notes`: the same words as the rest of the file. One translator, or one agent, per language works
    well (the brief at the end of this file); nothing but that file and the language's guide is touched.
-5. **See it**: `MOBALT_LANG=<code> test/qa/run.sh test/qa/i18n-shots.js /tmp/i18n-<code> 180000` writes every view
-   in that language to `/tmp/i18n-<code>/shots/` and logs an `OVERFLOW` line for a label that is clipped, wider than
+5. **See it**: `MOBALT_LANG=<code> test/qa/run.sh test/qa/i18n-shots.js <out-dir> 180000` writes every view in that
+   language to `<out-dir>/shots/` (an out-dir of your own, such as `/tmp/i18n-<code>`) and logs an `OVERFLOW` line for a label that is clipped, wider than
    its box or wrapped onto a second line. Shorten until there is none.
 6. **The guide**: a change the user can see gets its paragraph in `docs/USER_GUIDE.md` and the same paragraph, in
    the same place, in every `docs/USER_GUIDE.<code>.md`, with the labels as the dictionary now has them.
@@ -71,7 +71,9 @@ a long value still fails, in every language.
   the first form is used for n = 1 and the second for everything else. A key without `plural` is one string.
 - A string that stays as in English on purpose (a protocol name standing alone, "Ping", "RTT", key glyphs) is listed
   under `@keep` **and** still mapped to itself; the test flags any key of three words or more whose value equals the
-  key unless `@keep` has it. Keep that list short and honest.
+  key unless `@keep` has it. Keep that list short and honest: the test also flags a `@keep` entry that is not a key
+  of the catalog (a word such as "DNS" that only appears inside longer strings, a key that was reworded) or whose value
+  is translated after all.
 - Keys that start with `@` are the translator's (`@language`, `@glyphs`, `@glossary`, `@keep`, `@notes`); nothing
   else. Glyphs and symbols stay: ⌘ ⇧ ⌥ ⌃ ⏎ ⎋ ▾ ‹ › ● — … ×; shortcut text such as `(⌘N)` stays. Product and protocol
   names stay in Latin script: MobAlt, MobaXterm, SSH, SFTP, FTP, Mosh, Telnet, RDP, VNC, X11, XQuartz, Zmodem,
@@ -107,7 +109,7 @@ else (no source, no tests, no catalog, no other language).
 2. `npm run i18n:status -- --list <code>` is your work list: translate every `missing` string by the rules above,
    delete every `stale` key (carry its wording to the reworded key), fix what else is listed; run it until the
    language is `ok`, then `npm test`.
-3. `MOBALT_LANG=<code> test/qa/run.sh test/qa/i18n-shots.js /tmp/i18n-<code> 180000` — no `OVERFLOW` line, and read
+3. `MOBALT_LANG=<code> test/qa/run.sh test/qa/i18n-shots.js <out-dir> 180000` (an out-dir of your own) — no `OVERFLOW` line, and read
    the pictures of the views your strings appear in.
 4. Bring the guide in line with the English one, section by section: same headings in the same order, same tables,
    links and pictures, UI labels written as your dictionary has them, code spans untouched.

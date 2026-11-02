@@ -3,12 +3,11 @@
 // works unchanged. One control connection per session runs listing/rename/delete; every transfer
 // opens its own data client so browsing keeps working while a download runs and cancel just closes it.
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
 const { Readable, Writable } = require('stream');
-const { spawn } = require('child_process');
+const editor = require('./editor'); // the Edit command's temp copy and the external editor (no shell)
 let basicFtp = null; // loaded on the first FTP connection (nothing the window should wait for)
 const ftpClient = () => (basicFtp || (basicFtp = require('basic-ftp'))).Client;
 const i18n = require('./i18n'); // interface language: every message shown to the user goes through i18n.t() (`t` names the transfer in this file)
@@ -44,7 +43,7 @@ function mtimeOf(info) {
  * FTPError("NNN text") with a numeric .code; socket and TLS errors carry a string code. Anything not
  * recognised keeps its message. The result is an Error (numeric .code kept) so callers can rethrow it.
  */
-function explainFtpError(e) {
+function explainFtpError(e, { notify = true } = {}) {
   const raw = ((e && e.message) || String(e)).trim().replace(/^FTPError:\s*/, '');
   const m = /^(\d{3})[ -]?([\s\S]*)$/.exec(raw);
   const code = m ? parseInt(m[1], 10) : null;
@@ -71,7 +70,7 @@ function explainFtpError(e) {
     const where = localnet.unreachableAddress(e) || raw.replace(/^connect EHOSTUNREACH\s*/, '');
     msg = t('No route to {where} (EHOSTUNREACH)', { where });
     const hint = localnet.hint(e, where);
-    if (hint) { msg = `${msg} — ${hint}`; localnet.notify(where); }
+    if (hint) { msg = `${msg} — ${hint}`; if (notify) localnet.notify(where); }
   } else if (scode === 'ECONNREFUSED') msg = t('Connection refused ({where}) — the host is reachable but no FTP server listens on that port', { where: raw.replace(/^connect ECONNREFUSED\s*/, '') });
   else if (scode === 'ETIMEDOUT' || /timeout \((control|data) socket\)/i.test(raw)) msg = t('Connection timed out ({error}) — check the host/port, VPN or firewall', { error: raw });
   else if (scode === 'ENOTFOUND' || scode === 'EAI_AGAIN') msg = t('Host not found ({host}) — check the host name', { host: raw.replace(/^getaddrinfo \w+\s*/, '') });
@@ -83,6 +82,12 @@ function explainFtpError(e) {
   else if (scode) out.code = scode;
   out.cause = e;
   return out;
+}
+
+/** A connect failure as the pane prints it too ("Failed to start: …"): the same explanation in the terminal language. */
+function forPane(err, cause) {
+  if (!err.terminalMessage) err.terminalMessage = i18n.inTerminal(() => explainFtpError(cause, { notify: false }).message);
+  return err;
 }
 
 class FtpManager extends EventEmitter {
@@ -138,7 +143,7 @@ class FtpManager extends EventEmitter {
     let client;
     for (let attempt = 1; ; attempt++) {
       if (cfg.username && !cfg.password) {
-        if (!this.prompter) throw new Error(i18n.t('No password set for this FTP session'));
+        if (!this.prompter) throw i18n.errorFor(() => i18n.t('No password set for this FTP session'));
         const account = `${cfg.username}@${cfg.host}`;
         const ans = await this.prompter.password({
           kind: 'password',
@@ -146,7 +151,7 @@ class FtpManager extends EventEmitter {
           message: attempt > 1 ? i18n.t("Login failed. {account}'s FTP password (attempt {n})", { account, n: attempt }) : i18n.t("{account}'s FTP password", { account }),
           session: cfg,
         });
-        if (!ans) throw new Error(i18n.t('authentication cancelled'));
+        if (!ans) throw i18n.errorFor(() => i18n.t('authentication cancelled'));
         prompted = ans;
         cfg.password = ans.password;
       }
@@ -159,7 +164,7 @@ class FtpManager extends EventEmitter {
           cfg.password = '';
           continue;
         }
-        throw err;
+        throw forPane(err, e);
       }
     }
     if (prompted && prompted.save && cfg.id) this.store.upsertSession({ ...cfg }).catch(() => {});
@@ -168,7 +173,7 @@ class FtpManager extends EventEmitter {
       home = await client.pwd();
     } catch (e) {
       try { client.close(); } catch {}
-      throw explainFtpError(e);
+      throw forPane(explainFtpError(e), e);
     }
     const id = 'ftp_' + crypto.randomBytes(6).toString('hex');
     this.conns.set(id, { cfg, client, home, queue: Promise.resolve() });
@@ -460,9 +465,7 @@ class FtpManager extends EventEmitter {
     const c = this.conns.get(connId);
     if (!c) throw new Error(i18n.t('FTP session is closed'));
     const settings = this.store.getSettings();
-    const dir = path.join(os.tmpdir(), 'mobalt-edit', connId, crypto.randomBytes(3).toString('hex'));
-    fs.mkdirSync(dir, { recursive: true });
-    const local = path.join(dir, path.posix.basename(remote));
+    const { dir, local } = editor.editTarget(connId, remote); // the remote name is only ever a file name (editor.js)
     const t = this._newTransfer(connId, 'download', path.posix.basename(remote), remote, local);
     try {
       const st = await this.stat(connId, remote);
@@ -480,13 +483,8 @@ class FtpManager extends EventEmitter {
     }
     this._emitTransfer(t);
 
-    const cmd = (settings.editorCommand || '').trim();
-    if (cmd) {
-      const parts = cmd.includes('{file}') ? cmd.replace('{file}', JSON.stringify(local)) : `${cmd} ${JSON.stringify(local)}`;
-      spawn('/bin/sh', ['-c', parts], { detached: true, stdio: 'ignore' }).unref();
-    } else {
-      spawn('open', ['-t', local], { detached: true, stdio: 'ignore' }).unref();
-    }
+    // program + arguments, the path one argument: no shell; a program that cannot start is told (main: app:notice)
+    editor.openInEditor(settings.editorCommand, local, (e, program) => this.emit('editor-error', { connId, program, error: e.message }));
 
     let lastMtime = fs.statSync(local).mtimeMs;
     let timer = null;
@@ -534,6 +532,7 @@ class FtpManager extends EventEmitter {
         this.edits.delete(k);
       }
     }
+    if (!connId) editor.removeEditDirs(); // quitting: the local copies go too
   }
 }
 

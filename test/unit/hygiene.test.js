@@ -79,3 +79,28 @@ test('no e-mail address outside the domains that belong in source', opts, () => 
   });
   assert.deepEqual(hits, []);
 });
+
+// A home folder path names the account it was written on: docs and fixtures use /Users/me, /Users/someone (or
+// /Users/Shared, which is no one's).
+test('no /Users/<name> path except the placeholders', opts, () => {
+  const hits = scan((line) => {
+    const out = [];
+    for (const m of line.matchAll(/\/Users\/([A-Za-z0-9._-]+)/g)) if (!['me', 'someone', 'Shared'].includes(m[1])) out.push(m[0]);
+    return out;
+  });
+  assert.deepEqual(hits, [], 'home folder paths (write /Users/me or /Users/someone)');
+});
+
+// Global unicast IPv6 (first group 2xxx or 3xxx) is as identifying as a public IPv4; RFC 3849's 2001:db8::/32 is the documentation range.
+test('no global IPv6 address in tracked files', opts, () => {
+  const net = require('net');
+  const hits = scan((line) => {
+    const out = [];
+    for (const m of line.matchAll(/(?<![\w:.])([23][0-9a-f]{0,3}(?::[0-9a-f]{0,4}){2,7})(?![\w:])/gi)) {
+      const a = m[1];
+      if (net.isIPv6(a) && !/^2001:0{0,3}db8:/i.test(a)) out.push(a);
+    }
+    return out;
+  });
+  assert.deepEqual(hits, [], 'global IPv6 addresses (use 2001:db8::/32 in fixtures)');
+});

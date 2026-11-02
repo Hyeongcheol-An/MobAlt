@@ -5,10 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Actions are pinned by commit (the tag in the comment); every job gets a read-only token unless it says otherwise.
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: release
@@ -18,11 +17,13 @@ jobs:
   secrets-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -30,12 +31,17 @@ jobs:
     name: Build, sign, notarize & semantic-release
     needs: secrets-scan
     runs-on: macos-latest
+    # semantic-release pushes the release commit and tag, creates the GitHub release and comments on issues / PRs
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
           cache: npm
@@ -43,8 +49,10 @@ jobs:
         run: npm ci
       - name: Unit tests
         run: npm test
-      # Signing/notarization secrets are optional. electron-builder treats an *empty* CSC_LINK as a file path,
-      # so the variables are only exported when the secrets exist.
+      # On main a release is published, and it must be signed and notarized: the job fails when a secret is missing
+      # (an unsigned build would otherwise go out as a release and through the updater / Homebrew). A manual run on
+      # another branch may build unsigned. electron-builder treats an *empty* CSC_LINK as a file path, so the
+      # variables are only exported when the secrets exist.
       - name: Configure signing & notarization
         env:
           MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
@@ -53,6 +61,16 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
         run: |
+          if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+            missing=""
+            for v in MAC_CERT_P12 MAC_CERT_PASSWORD APPLE_API_KEY_P8 APPLE_API_KEY_ID APPLE_API_ISSUER; do
+              [ -n "${!v}" ] || missing="$missing $v"
+            done
+            if [ -n "$missing" ]; then
+              echo "::error::release from main needs the signing and notarization secrets; missing:$missing"
+              exit 1
+            fi
+          fi
           if [ -n "$MAC_CERT_P12" ]; then
             { echo "CSC_LINK<<__CSC_EOF__"; echo "$MAC_CERT_P12"; echo "__CSC_EOF__"; } >> "$GITHUB_ENV"
             echo "CSC_KEY_PASSWORD=$MAC_CERT_PASSWORD" >> "$GITHUB_ENV"

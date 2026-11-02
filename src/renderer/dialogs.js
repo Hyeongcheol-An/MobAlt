@@ -79,7 +79,7 @@ function select(options, value, attrs = {}) {
 }
 /** One pick of a picker row (role=radio): only the chosen one (or `extra.stop`) is in the Tab order, see pickRow(). */
 function pick(content, checked, title, onclick, extra = {}) {
-  return h('button', { type: 'button', class: 'pick' + (extra.class ? ' ' + extra.class : '') + (checked ? ' active' : ''), role: 'radio', 'aria-checked': String(checked), tabindex: checked || extra.stop ? 0 : -1, title, style: extra.style, onclick }, content);
+  return h('button', { type: 'button', class: 'pick' + (extra.class ? ' ' + extra.class : '') + (checked ? ' active' : ''), role: 'radio', 'aria-checked': String(checked), tabindex: checked || extra.stop ? 0 : -1, title, 'aria-label': extra.label, 'data-value': extra.value, style: extra.style, onclick }, content);
 }
 /**
  * A picker row is ONE Tab stop (roving tabindex): ←/→/↑/↓ move between the picks (wrapping), Home/End jump,
@@ -197,6 +197,8 @@ export function sessionEditor(app, initial = {}) {
   // icon + color (like MobaXterm's per-session icon and tab colour)
   const ICON_CHOICES = ['🐧', '🖥️', '🪟', '🍎', '☁️', '🐳', '🗄️', '🌐', '🔒', '🔑', '⚙️', '🧪', '🚀', '⭐', '🔥', '📦', '💾', '📡', '🏠', '🏢', '🎮', '🤖', '📊'];
   const COLOR_CHOICES = ['#e5534b', '#f08c3a', '#e6b422', '#4caf50', '#2fbfa7', '#4ea1ff', '#7a7dff', '#bd93f9', '#ff79c6', '#8a93a2'];
+  // what a swatch is called (its title and what VoiceOver says) — a name, not "#e5534b"; built at open time, in the language of the moment
+  const COLOR_NAMES = [t('Red'), t('Orange'), t('Yellow'), t('Green'), t('Teal'), t('Blue'), t('Indigo'), t('Purple'), t('Pink'), t('Grey')];
   let iconVal = s.icon || '';
   let colorVal = s.color || '';
   const iconRow = pickRow(t('Icon'));
@@ -213,7 +215,7 @@ export function sessionEditor(app, initial = {}) {
     // a custom colour (the colour input) is none of the swatches: "—" then holds the group's Tab stop without being chosen
     colorRow.fill(
       pick('—', !colorVal, t('No colour'), () => { colorVal = ''; renderColors(); }, { stop: !COLOR_CHOICES.includes(colorVal) }),
-      ...COLOR_CHOICES.map((c) => pick('', c === colorVal, c, () => { colorVal = c; renderColors(); }, { class: 'swatch', style: { background: c } })),
+      ...COLOR_CHOICES.map((c, i) => pick('', c === colorVal, COLOR_NAMES[i], () => { colorVal = c; renderColors(); }, { class: 'swatch', style: { background: c }, label: COLOR_NAMES[i], value: c })),
       customColor
     );
   };
@@ -1060,25 +1062,38 @@ function fill(str, nodes) {
   return String(str).split(/\{(\w+)\}/).map((part, i) => (i % 2 ? (part in nodes ? nodes[part] : `{${part}}`) : part)).filter((p) => p !== '');
 }
 
+/**
+ * The host-key question. Unknown host: Accept is the default button (trust on first use, as before). Changed key: the
+ * default is Cancel — Enter, or a key pressed while the dialog comes up, refuses; accepting takes a click or moving to
+ * Accept new key first. Revoked key (an @revoked line in known_hosts): the changed-key warning with the reason and only
+ * Cancel — the connection is refused whatever is pressed.
+ */
 export function hostKeyDialog(p) {
-  const changed = p.status === 'mismatch';
+  const revoked = p.status === 'revoked';
+  const changed = p.status === 'mismatch' || revoked;
   const m = showModal({
     title: changed
       ? t(p.name ? '⚠️ Host key changed! — {name}' : '⚠️ Host key changed!', { name: p.name })
       : t(p.name ? 'Unknown host key — {name}' : 'Unknown host key', { name: p.name }),
     closeOnBackdrop: false,
     body: h('div', {},
-      changed ? h('div', { class: 'warn' }, t('The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.')) : h('p', {}, t('The authenticity of host {host}:{port} can\'t be established.', { host: p.host, port: p.port })),
+      revoked ? h('div', { class: 'warn' }, t('This host key is marked as revoked in known_hosts. MobAlt will not connect with it.'))
+        : changed ? h('div', { class: 'warn' }, t('The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.'))
+          : h('p', {}, t('The authenticity of host {host}:{port} can\'t be established.', { host: p.host, port: p.port })),
       h('div', {}, h('b', {}, `${p.host}:${p.port}`), ` (${p.keyType})`),
       h('div', { class: 'hostkey-fp' }, p.fingerprint.sha256, h('br'), p.fingerprint.md5),
-      h('p', { style: { color: 'var(--fg-dim)' } }, t('Accept to continue and remember this key.'))
+      revoked ? null : h('p', { style: { color: 'var(--fg-dim)' } }, t('Accept to continue and remember this key.'))
     ),
-    buttons: [
-      { label: t('Cancel'), value: false },
-      { label: changed ? t('Accept new key') : t('Accept'), primary: true, danger: changed, value: true },
-    ],
+    buttons: revoked ? [{ label: t('Cancel'), primary: true, value: false }]
+      : changed ? [
+        { label: t('Cancel'), primary: true, value: false },
+        { label: t('Accept new key'), danger: true, value: true },
+      ] : [
+        { label: t('Cancel'), value: false },
+        { label: t('Accept'), primary: true, value: true },
+      ],
   });
-  return m.promise.then((r) => !!r);
+  return m.promise.then((r) => !revoked && r === true);
 }
 
 export function passwordDialog(p) {

@@ -6,6 +6,12 @@
         "src/main/live.js"
       ]
     },
+    ", {n} of them runs commands when opened (startup commands or a custom shell)": {
+      "plural": ", {n} of them run commands when opened (startup commands or a custom shell)",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     ", skipped {n}: {reasons}": {
       "refs": [
         "src/renderer/app.js"
@@ -949,6 +955,11 @@
     "Always": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Another MobAlt window is open": {
+      "refs": [
+        "src/main/updater.js"
       ]
     },
     "Apply to this pane": {
@@ -2667,6 +2678,11 @@
         "src/renderer/highlight.js"
       ]
     },
+    "Grey": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Grid 2 / 4 / 6 / 8 panes": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2938,6 +2954,11 @@
       "refs": [
         "src/renderer/browser.js",
         "src/renderer/terminal.js"
+      ]
+    },
+    "Indigo": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "Input": {
@@ -3542,6 +3563,11 @@
         "src/renderer/app.js"
       ]
     },
+    "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": {
+      "refs": [
+        "src/main/updater.js"
+      ]
+    },
     "MobAlt {version} is ready to install": {
       "refs": [
         "src/main/updater.js"
@@ -3753,12 +3779,14 @@
         "src/renderer/app.js"
       ]
     },
-    "MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab": {
+    "MultiExec is ON — keystrokes go to {n} visible terminal in this tab": {
+      "plural": "MultiExec is ON — keystrokes go to {n} visible terminals in this tab",
       "refs": [
         "src/renderer/app.js"
       ]
     },
-    "MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab (the zoomed pane only)": {
+    "MultiExec is ON — keystrokes go to {n} visible terminal in this tab (the zoomed pane only)": {
+      "plural": "MultiExec is ON — keystrokes go to {n} visible terminals in this tab (the zoomed pane only)",
       "refs": [
         "src/renderer/app.js"
       ]
@@ -4286,7 +4314,8 @@
     "OK": {
       "refs": [
         "src/renderer/dialogs.js",
-        "src/renderer/ui.js"
+        "src/renderer/ui.js",
+        "src/main/updater.js"
       ]
     },
     "On": {
@@ -4495,6 +4524,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Orange": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Overwrite": {
       "refs": [
         "src/renderer/sftp.js"
@@ -4673,7 +4707,8 @@
     },
     "permission denied": {
       "refs": [
-        "src/main/monitor.js"
+        "src/main/monitor.js",
+        "src/main/x11.js"
       ]
     },
     "Permission denied": {
@@ -4720,6 +4755,11 @@
     "Ping + TCP": {
       "refs": [
         "src/renderer/index.html"
+      ]
+    },
+    "Pink": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "Pinned": {
@@ -4868,6 +4908,11 @@
       ]
     },
     "Public key copied": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Purple": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -5466,6 +5511,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Security": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -5681,7 +5731,7 @@
         "src/main/main.js"
       ]
     },
-    "Sftp": {
+    "SFTP": {
       "refs": [
         "src/renderer/index.html"
       ]
@@ -6153,6 +6203,11 @@
         "src/renderer/index.html"
       ]
     },
+    "Teal": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Telnet error: {error}": {
       "refs": [
         "src/main/terminals.js"
@@ -6460,6 +6515,11 @@
     "There is no network connection.": {
       "refs": [
         "src/renderer/browser.js"
+      ]
+    },
+    "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "This is MobAlt {version} running from source.": {

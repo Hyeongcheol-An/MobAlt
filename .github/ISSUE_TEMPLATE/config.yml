@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Hyeongcheol-An/MobAlt/security/advisories/new
+    about: Private report, never a public issue — see SECURITY.md.
+  - name: User guide
+    url: https://github.com/Hyeongcheol-An/MobAlt/blob/main/docs/USER_GUIDE.md
+    about: How every feature works, the shortcut table and the troubleshooting list (eleven languages).
+  - name: MobaXterm feature parity and roadmap
+    url: https://github.com/Hyeongcheol-An/MobAlt/blob/main/docs/MOBAXTERM_PARITY.md
+    about: What MobAlt has, lacks and does differently, feature by feature — check before asking for one.

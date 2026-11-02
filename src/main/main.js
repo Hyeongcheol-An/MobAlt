@@ -1,17 +1,19 @@
 'use strict';
 const bootTimes = { mainStart: Date.now() }; // when main.js began loading; then the requires done, the app ready, the window loaded (test:perf)
 const { app, BrowserWindow, ipcMain, Menu, dialog, shell, clipboard, nativeTheme, webContents, screen } = require('electron');
+// Before anything else reads the environment: a release build ignores every test variable (testgate.js).
+require('./testgate').applyTestGate(app, require('../../package.json'));
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const dgram = require('dgram');
-const { Store, validChrome } = require('./store');
+const { Store, validChrome, setPlaintextWarning } = require('./store');
 const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, spawnMosh } = require('./terminals');
 const { SshManager } = require('./ssh');
 const { SftpManager } = require('./sftp');
 const { FtpManager } = require('./ftp');
-const { setupUpdater } = require('./updater');
+const { setupUpdater, otherInstancesSheet } = require('./updater');
 const { TunnelManager } = require('./tunnels');
 const importers = require('./importers');
 const tools = require('./tools');
@@ -29,6 +31,8 @@ const i18n = require('./i18n'); // interface language: t() for every label built
 const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 const { ZmodemManager, fmtBytes } = require('./zmodem');
+const editor = require('./editor'); // external editor: the stale edit-folder sweep at start-up
+const urlpolicy = require('./urlpolicy'); // what a window may open outside the app (external URLs, folders, vnc://)
 const { isBrowserUrl, browserUrlWithoutUser } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
 
 const pkg = require('../../package.json');
@@ -39,6 +43,10 @@ let silentListener = null; // test-only TCP listener that accepts and never spea
 app.setName('MobAlt');
 if (process.env.MOBALT_USER_DATA) app.setPath('userData', process.env.MOBALT_USER_DATA); // test isolation
 const store = new Store();
+// safeStorage unavailable: secrets are saved base64-encoded only (store.js); say so once per run, in the main window
+setPlaintextWarning(() => {
+  if (win && !win.isDestroyed()) win.webContents.send('app:notice', { level: 'warn', text: t('Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected') });
+});
 const registry = new TerminalRegistry();
 let win = null; // the main window: the sidebar, the test hooks and the fallback for everything addressed to "the window"
 // A tab can be detached into a window of its own (app.js detachTab): every window runs the same renderer, the
@@ -53,6 +61,8 @@ let quitting = false; // a quit is under way (confirmed, test hook, update insta
 let bundleWatch = null; // notices a different MobAlt.app written over the running one (brew upgrade / dragged DMG)
 let relaunchRequested = false; // test mode: app:relaunch records the request instead of restarting the test run
 let installRequested = false; // test mode: app:install-update records the request instead of quitting into the install
+let testOtherInstances = []; // test mode: the pids app:install-update pretends are other running instances (test:other-instances)
+let testUpdateVersion = null; // test mode: the version of the last test:update-progress event (the sheet names it)
 
 /**
  * Ask before the app goes away with live connections (SSH / Mosh / SFTP companions / FTP). Shared by the
@@ -229,6 +239,14 @@ sftp.on('edit-synced', toOwner('sftp:edit-synced'));
 zmodem.on('transfer', toOwner('sftp:transfer')); // same list, same Cancel
 ftp.on('transfer', toOwner('sftp:transfer'));
 ftp.on('edit-synced', toOwner('sftp:edit-synced'));
+// the external editor could not be started (not installed, not on the login shell's PATH): an error toast in the
+// window showing the connection — "<program>: <error>"
+const editorError = (x) => {
+  const wc = (x && x.connId && ownerOf(x.connId)) || (win && !win.isDestroyed() ? win.webContents : null);
+  if (wc && !wc.isDestroyed()) wc.send('app:notice', { level: 'error', text: t('{entry}: {reason}', { entry: x.program, reason: x.error }) });
+};
+sftp.on('editor-error', editorError);
+ftp.on('editor-error', editorError);
 tunnels.on('changed', (list) => broadcast('tunnels:changed', list));
 
 // ---------- workspace file: the main window's tabs plus one entry per detached window ----------
@@ -348,9 +366,16 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
       try { writeWorkspace(); } catch {}
     }
   });
+  // The window never opens another window or leaves its own page: a link (window.open, target=_blank) goes to the
+  // default browser when it is http(s) / mailto, and a navigation away from index.html — a file dropped outside a
+  // drop zone, a link in rendered text — is cancelled (urlpolicy.js).
   w.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (urlpolicy.externalUrlAllowed(url)) shell.openExternal(url);
     return { action: 'deny' };
+  });
+  const indexFile = path.join(__dirname, '..', 'renderer', 'index.html');
+  w.webContents.on('will-navigate', (ev, url) => {
+    if (!urlpolicy.windowNavigationAllowed(url, indexFile)) ev.preventDefault();
   });
   if (isMain) w.webContents.on('did-finish-load', () => { bootTimes.windowLoaded = Date.now(); runTestHooks(); });
   if (process.env.MOBALT_SCREENSHOT || process.env.MOBALT_TEST_SCRIPT) {
@@ -853,8 +878,16 @@ function registerIpc() {
   // the banner above the tabs and the Settings → Updates line are exercised without a release to download.
   ipcMain.handle('test:update-progress', (_e, info) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    if (info && info.version) testUpdateVersion = String(info.version);
     broadcast('app:update-progress', { ...(info && typeof info === 'object' ? info : {}) });
     return true;
+  });
+  // Test-only: what the other-instance check of "Restart now" finds (updater.js install(), instances.js), here a list of
+  // pids instead of ps — [] (the default) for none. app:install-update then shows the sheet instead of recording.
+  ipcMain.handle('test:other-instances', (_e, pids) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    testOtherInstances = Array.isArray(pids) ? pids.map(Number).filter(Number.isFinite) : [];
+    return testOtherInstances.length;
   });
   // Test-only: a few filesystem helpers the renderer test scripts have no bridge for — make a random file, hash a
   // file (sha256), read small text, stat, make a temp dir, remove. Only when a test script is injected; a release
@@ -967,7 +1000,7 @@ function registerIpc() {
   // the monitoring bar's polling, counted (does it stop off screen?) and made to fail (the "unavailable" path)
   ipcMain.handle('test:monitor-stats', () => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
-    return { execCount: ssh.execCount, samples: monitor.samples };
+    return { execCount: ssh.execCount, samples: monitor.samples, sshConnections: ssh.conns.size }; // sshConnections: open or opening SSH connections (a ghost shows here)
   });
   ipcMain.handle('test:monitor-command', (_e, cmd) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
@@ -1037,20 +1070,29 @@ function registerIpc() {
     return file;
   });
 
+  // A pane prints a failed start into its terminal ("Failed to start: …") and shows it in the status bar. An error
+  // only crosses IPC as its message, so the terminal-language text (terminalMessage: English for Arabic and Hindi,
+  // i18n.errorFor) rides along after a U+001F separator; the renderer splits them (terminal.js startErrorText).
+  const forPane = (fn) => async (...args) => {
+    try { return await fn(...args); } catch (err) {
+      if (err && err.terminalMessage && err.terminalMessage !== err.message) throw new Error(`${err.message}\u001f${err.terminalMessage}`);
+      throw err;
+    }
+  };
   ipcMain.handle('term:spawn-local', (e, opts) => own(e, spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-telnet', (e, opts) => own(e, spawnTelnet(registry, { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-serial', (e, opts) => own(e, spawnSerial(registry, opts)));
   // Mosh bootstraps over an external ssh: the host key goes through the app's own prompt first and the
   // bootstrap then runs strictly against the app's known_hosts file (never ~/.ssh/known_hosts).
-  ipcMain.handle('term:spawn-mosh', async (e, opts) => {
+  ipcMain.handle('term:spawn-mosh', forPane(async (e, opts) => {
     // the session's Advanced SSH algorithm settings apply to this check (and to the SFTP companion), not to mosh's own ssh
     const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms, pqKex: opts.pqKex, algorithms: opts.algorithms });
-    if (!v.ok) throw new Error(v.error || t('host key not accepted'));
+    if (!v.ok) throw Object.assign(new Error(v.error || t('host key not accepted')), { terminalMessage: v.terminalError });
     const r = own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
     // the check's key exchange, for the pane to show as an SSH pane shows its own (the mosh client's output follows)
     return { ...r, handshakeLine: v.handshakeLine || '' };
-  });
-  ipcMain.handle('ftp:connect', async (e, cfg) => own(e, await ftp.connect(await mergeSecrets(cfg))));
+  }));
+  ipcMain.handle('ftp:connect', forPane(async (e, cfg) => own(e, await ftp.connect(await mergeSecrets(cfg)))));
   // A window takes over a live terminal (a detached tab, or one coming back): from now on its output goes there; the
   // ring buffer (last 256 KB) redraws what the previous window showed. What is still queued for the old owner is in
   // the ring already, so it is dropped here rather than sent twice. ok: false when the backend has ended meanwhile
@@ -1066,10 +1108,18 @@ function registerIpc() {
   // up-to-date / error / on-disk sheet; only a new release's "Download?" offer). Help → Check for Updates… keeps the sheets.
   ipcMain.handle('app:check-updates', () => updater && updater.check(true, { quiet: true }));
   // "Restart now" on the banner or in Settings → Updates once a download is complete: the sheet's path (quitAndInstall
-  // behind the beforeInstall hook). A test run records the request — the harness must never quit into an install.
-  ipcMain.handle('app:install-update', () => {
+  // behind the beforeInstall hook). A test run records the request — the harness must never quit into an install — after
+  // the same other-instance check, fed by test:other-instances instead of ps (other test runs are Electron instances too).
+  ipcMain.handle('app:install-update', async () => {
     if (!updater) return false;
-    if (process.env.MOBALT_TEST_SCRIPT) { installRequested = true; return true; }
+    if (process.env.MOBALT_TEST_SCRIPT) {
+      if (testOtherInstances.length) {
+        await otherInstancesSheet(win && !win.isDestroyed() ? win : undefined, testUpdateVersion || app.getVersion());
+        return false;
+      }
+      installRequested = true;
+      return true;
+    }
     return updater.install();
   });
   ipcMain.handle('serial:list', () => listSerialPorts());
@@ -1238,7 +1288,10 @@ function registerIpc() {
       updated++;
     }
     if (imported || updated) peers(e, 'sessions:changed');
-    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
+    // a sessions file from someone else can carry commands that run on opening (startup commands typed into the
+    // terminal, a local session's shell): the summary says how many, so they are looked at before use
+    const commands = parsed.sessions.filter((x) => String(x.startupCommand || '').trim() || String(x.shell || '').trim()).length;
+    return { imported, updated, skipped: parsed.skipped.length, commands, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
   });
   // The chosen path on success, null when cancelled, { error } when the file could not be written (a read-only or
   // vanished folder): the renderer shows the reason instead of an unhandled rejection in the console.
@@ -1279,7 +1332,10 @@ function registerIpc() {
       await store.saveSessions({ sessions: d.sessions, folders: [...new Set([...d.folders, ...parsed.folders])] });
     }
     if (imported || updated || parsed.folders.length) peers(e, 'sessions:changed');
-    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
+    // a sessions file from someone else can carry commands that run on opening (startup commands typed into the
+    // terminal, a local session's shell): the summary says how many, so they are looked at before use
+    const commands = parsed.sessions.filter((x) => String(x.startupCommand || '').trim() || String(x.shell || '').trim()).length;
+    return { imported, updated, skipped: parsed.skipped.length, commands, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
   });
 
   ipcMain.handle('settings:get', () => store.getSettings());
@@ -1349,7 +1405,9 @@ function registerIpc() {
   ipcMain.handle('dialog:open', (e, opts) => dialogs.showOpenDialog(wof(e), opts));
   ipcMain.handle('dialog:save', (e, opts) => dialogs.showSaveDialog(wof(e), opts));
   ipcMain.handle('dialog:message', (e, opts) => dialogs.showMessageBox(wof(e), opts));
-  ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url));
+  // http(s) and mailto only: the URL may come from a server (a terminal link, a web page); an app's own URL scheme
+  // must not be reachable from there (urlpolicy.js)
+  ipcMain.handle('shell:open-external', (_e, url) => (urlpolicy.externalUrlAllowed(url) ? shell.openExternal(url) : false));
   ipcMain.handle('browser:favicon', (e, id, url) => fetchFavicon(e.sender, id, url)); // a browser pane's page icon as a data: URL (null when there is none)
   // a browser pane's history (the <webview> tag's own canGoBack / goBack went with the webContents methods they wrapped):
   // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward'
@@ -1362,29 +1420,26 @@ function registerIpc() {
     return { canGoBack: nav.canGoBack(), canGoForward: nav.canGoForward() };
   });
   ipcMain.handle('shell:show-item', (_e, p) => shell.showItemInFolder(p));
-  ipcMain.handle('shell:open-path', (_e, p) => shell.openPath(p));
+  // folders under home / the temporary folder / the download folder only: opening a file could start an app or run a
+  // .command script that came from a server
+  const appDirs = () => ['userData', 'logs'].map((k) => { try { return app.getPath(k); } catch { return null; } }).filter(Boolean);
+  ipcMain.handle('shell:open-path', (_e, p) => {
+    if (!urlpolicy.openPathAllowed(p, { downloadDir: store.getSettings().downloadDir, appDirs: appDirs() })) return 'refused';
+    if (process.env.MOBALT_TEST_SCRIPT) return ''; // test mode: allowed, but no Finder window on the Mac running the tests
+    return shell.openPath(p);
+  });
 
   ipcMain.handle('launch:rdp', (_e, cfg) => {
     const dir = path.join(os.tmpdir(), 'mobalt-rdp');
     fs.mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, `${(cfg.name || cfg.host).replace(/[^\w.-]+/g, '_')}.rdp`);
-    const lines = [
-      `full address:s:${cfg.host}${cfg.port && cfg.port !== 3389 ? ':' + cfg.port : ''}`,
-      `username:s:${cfg.username || ''}`,
-      'screen mode id:i:2',
-      'use multimon:i:0',
-      'session bpp:i:32',
-      'audiomode:i:0',
-      'redirectclipboard:i:1',
-      'authentication level:i:2',
-      'prompt for credentials:i:1',
-    ];
-    fs.writeFileSync(file, lines.join('\r\n') + '\r\n');
+    const { name, text } = urlpolicy.rdpFile(cfg); // control characters removed: one line per setting
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, text, { mode: 0o600 });
     return shell.openPath(file);
   });
   ipcMain.handle('launch:vnc', (_e, cfg) => {
-    const user = cfg.username ? encodeURIComponent(cfg.username) + '@' : '';
-    return shell.openExternal(`vnc://${user}${cfg.host}:${cfg.port || 5900}`);
+    const url = urlpolicy.vncUrl(cfg); // null when the host would change what the URL means (a '/', '@', '?', spaces…)
+    return url ? shell.openExternal(url) : false;
   });
 
   ipcMain.handle('tools:ping', (e, host, count) => tools.ping(wof(e), host, count));
@@ -1704,6 +1759,7 @@ async function fetchFavicon(sender, id, url) {
 
 app.whenReady().then(() => {
   bootTimes.ready = Date.now();
+  setTimeout(() => { try { editor.sweepStaleEdits(); } catch {} }, 5000); // edited copies a killed run left behind (> 24 h)
   nativeTheme.themeSource = chromeOf(store.getSettings()).scheme; // the applied theme's chrome (app:chrome keeps it current)
   // `npm start` runs the bare Electron binary, which shows Electron's own icon in the Dock; the packaged
   // app gets build/icon.icns from electron-builder. Point the dev Dock tile at the rendered PNG.
@@ -1741,6 +1797,8 @@ app.on('before-quit', (e) => {
   tunnels.stopAll();
   ssh.disconnectAll();
   ftp.disconnectAll();
+  sftp.stopEdits(); // every edited file's watcher, and the local copies under $TMPDIR/mobalt-edit (editor.js)
+  ftp.stopEdits();
   registry.killAll();
 });
 app.on('window-all-closed', () => app.quit());

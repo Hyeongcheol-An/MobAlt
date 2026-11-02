@@ -1,7 +1,8 @@
 // Interface language QA: screenshots of every view in the language the app runs in, plus an overflow check.
 //   env -u ELECTRON_RUN_AS_NODE MOBALT_LANG=ko test/qa/run.sh test/qa/i18n-shots.js /tmp/i18n-qa/ko 180000
 // Writes <out>/shots/*.png at the minimum window size (900×560, where translations are tightest) and at 1400×900,
-// logs `[i18n-shots] OVERFLOW …` for every visible label that is clipped or wider than its box, `[i18n-shots] MENU`
+// logs `[i18n-shots] OVERFLOW …` for every visible label that is clipped or wider than its box (a field's placeholder
+// included: "PLACEHOLDER CLIPPED"), `[i18n-shots] MENU`
 // with the native menu labels, and `[i18n-shots] LATIN …` for visible texts that still look English (two or more
 // Latin words) while a non-Latin language is on — a translator reads those lists to shorten or complete strings.
 (async () => {
@@ -15,6 +16,12 @@
   const latin = new Set();
   const nonLatin = /^(ko|ja|zh|hi|ar)/.test(lang);
   const KEEP = /^(MobAlt|MobaXterm|SSH|SFTP|FTP|FTPS|Mosh|Telnet|RDP|VNC|X11|XQuartz|Zmodem|rz|sz|Wake-on-LAN|MultiExec|Finder|Homebrew|GitHub|JSON|CIDR|MAC|UDP|TCP|DNS|rDNS|URL|IP|CPU|RTT|Ping|Aa|OK|ms|s|Go|Rec|zsh|bash|\d+|[^A-Za-z]+)$/;
+  const textCtx = document.createElement('canvas').getContext('2d'); // measures placeholders (check)
+  const placeholdersSeen = new Set();
+  // the English source of a translated text: the dictionary's key whose value it is (the text itself when none is)
+  const reverse = new Map();
+  try { for (const [k, v] of Object.entries(window.api.i18n.boot().dict || {})) if (typeof v === 'string' && !k.startsWith('@')) reverse.set(v, k); } catch {}
+  const sourceOf = (text) => reverse.get(text) || text;
   const visible = (el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== 'hidden'; };
   const check = (view) => {
     for (const el of document.querySelectorAll('button, label, th, td, option, .tab, .mtabs button, .strip-btn, .tb-btn, .panel-head *, .form-grid label, .form-help, .modal-title-text, .statusbar span, #statusbar span, .toast, .ctx-item, .menu-item, summary, .lbl, .hint, .tree-empty, .sftp-empty p, .big')) {
@@ -38,6 +45,25 @@
         const text = (el.textContent || '').trim();
         if (/[A-Za-z]{2,}\s+[A-Za-z]{2,}/.test(text) && !KEEP.test(text) && !el.closest('.xterm')) latin.add(`${view}: "${text.slice(0, 80)}"`);
         for (const a of ['title', 'placeholder', 'aria-label']) { const v = el.getAttribute(a); if (v && /[A-Za-z]{2,}\s+[A-Za-z]{2,}/.test(v) && !KEEP.test(v)) latin.add(`${view} [${a}]: "${v.slice(0, 80)}"`); }
+      }
+    }
+    // a field's hint (its placeholder, a translated phrase) that does not fit the field: the browser cuts it off without
+    // an ellipsis and scrollWidth does not see it, so it is measured with the field's own font. A few hints are cut in
+    // English too at 900 px (quick connect, the scanner's example ranges, the Wake-on-LAN label): there a translation is
+    // reported only when it is over 10 % longer than its English source; anywhere else whenever it is cut. Once per
+    // field and text, not once per view.
+    for (const el of document.querySelectorAll('input[placeholder], textarea[placeholder]')) {
+      const ph = el.getAttribute('placeholder');
+      if (el.tagName !== 'INPUT' || !ph || el.value || !visible(el) || el.closest('.xterm')) continue;
+      const cs = getComputedStyle(el);
+      textCtx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+      const room = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const need = textCtx.measureText(ph).width, english = textCtx.measureText(sourceOf(ph)).width;
+      const where = `<input${el.id ? '#' + el.id : ''}> placeholder "${ph.slice(0, 60)}"`;
+      const cut = need > room + 1 && (english <= room + 1 || need > english * 1.1); // English cut too: only a clearly longer translation
+      if (cut && !placeholdersSeen.has(where)) {
+        placeholdersSeen.add(where);
+        overflows.push(`${view}: ${where} needs ${Math.ceil(need)} px, the field has ${Math.floor(room)} (English ${Math.ceil(english)}) PLACEHOLDER CLIPPED`);
       }
     }
     // the modal as a whole must fit the window

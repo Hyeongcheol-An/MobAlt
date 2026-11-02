@@ -1,7 +1,8 @@
 // Produces the screenshots used by README / docs. Runs in a fresh user-data folder with made-up sessions,
 // local shells whose prompt is overridden, and an FTP session against test/ftpd.py — nothing personal
 // ends up in the images.
-//   test/qa/run.sh test/qa/docs-shots.js <out-dir> 90000   (after starting the FTP server on 127.0.0.1:2121)
+//   test/qa/run.sh test/qa/docs-shots.js <out-dir> 90000   (after starting the FTP server on 127.0.0.1:2121 and
+//   `node test/httpsrv.js --port 48731` for the browser picture; scripts/docs-shots.sh starts both)
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (n) => window.api.app.screenshot(n);
@@ -11,6 +12,7 @@
   const clearToasts = () => document.querySelectorAll('#toast-root .toast').forEach((el) => el.remove());
   /** The pane's shell is up and its columns are what its box holds (the split's fit, with the final renderer, is done). */
   const settled = async (p) => { for (let i = 0; i < 60; i++) { await sleep(150); const d = p.fitAddon.proposeDimensions(); if (p.status === 'connected' && d && p.term.cols > 40 && p.term.cols === d.cols) return; } };
+  const BROWSER_PORT = 48731; // test/httpsrv.js's made-up router page (42510 belongs to test/e2e-browser.sh)
   const PROMPT = (host) => `cd /Users/Shared 2>/dev/null && export HOME=/Users/Shared || cd /tmp; export PS1='demo@${host}:%~$ '; export PROMPT='demo@${host}:%~$ '; clear`; // a neutral cwd: the status bar shows the active pane's folder
   try {
     await window.api.app.testResize(1360, 860);
@@ -93,6 +95,16 @@
     await sleep(2500);
     await shot('tools');
     app.showPanel('sessions');
+
+    // --- browser session beside the shell that manages the device
+    const web = await app.openSession({ name: 'router', type: 'browser', url: `http://127.0.0.1:${BROWSER_PORT}/router` });
+    for (let i = 0; i < 40; i++) { await sleep(250); if (web.failed) break; try { if (web.webview.getTitle()) break; } catch {} }
+    const ops = await app.openSession({ name: 'bastion', type: 'local' }, { split: 'right', target: web });
+    await settled(ops);
+    ops.term.input(PROMPT('bastion') + "; printf 'ops@bastion ~ $ ssh admin@192.0.2.1\\nadmin@router> show interfaces brief\\n  wan0   up    203.0.113.9/24\\n  lan0   up    192.0.2.1/24\\n  wlan0  up    -\\n'" + '\r');
+    await sleep(1500);
+    clearToasts();
+    await shot('browser-session');
     log('DONE');
   } catch (e) {
     console.error('[docs-shots] FAIL', e.message, e.stack);

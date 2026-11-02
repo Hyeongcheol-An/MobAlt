@@ -7,13 +7,25 @@
     [
       "@semantic-release/commit-analyzer",
       {
-        "preset": "conventionalcommits"
+        "preset": "conventionalcommits",
+        "parserOpts": {
+          "issuePrefixes": null
+        },
+        "releaseRules": [
+          {
+            "type": "release",
+            "release": "major"
+          }
+        ]
       }
     ],
     [
       "@semantic-release/release-notes-generator",
       {
-        "preset": "conventionalcommits"
+        "preset": "conventionalcommits",
+        "parserOpts": {
+          "issuePrefixes": null
+        }
       }
     ],
     [

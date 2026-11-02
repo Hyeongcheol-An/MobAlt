@@ -9,7 +9,7 @@ MobAlt 0.12.0을 MobaXterm 26.6(Mobatek, Windows, 2026-10-25 출시)과 기능 �
 Professional 에디션 안내 페이지를 바탕으로 만든 목록이며, MobaXterm 문서가 나누는 방식 그대로 묶었습니다.
 MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](USER_GUIDE.ko.md), README를 한
 줄씩 대조해 확인했고, 기억에 의존해 적은 내용은 없습니다. "Settings → …"는 MobAlt의 Settings 대화상자(⌘,),
-"세션 편집기"는 ＋ Session(⌘N), "Sftp 패널"은 파일 브라우저(⌘2), "Tools 패널"은 ⌘3을 뜻합니다.
+"세션 편집기"는 ＋ Session(⌘N), "SFTP 패널"은 파일 브라우저(⌘2), "Tools 패널"은 ⌘3을 뜻합니다.
 
 **상태 열 읽는 법.**
 
@@ -35,9 +35,9 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 6. 작업대 기능 | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional 전용 항목과 Home 에디션 제한 | 0 | 0 | 0 | 13 | 13 |
 | **1–7절 합계(기능당 한 번)** | **55** | **39** | **31** | **59** | **184** |
-| 8. 최근 추가 기능(24.3 → 26.6) | 4 | 17 | 6 | 3 | 30 |
+| 8. 최근 추가 기능(24.3 → 26.6) | 5 | 17 | 5 | 3 | 30 |
 | 9. 파워 유저가 기대는 UX | 9 | 9 | 1 | 1 | 20 |
-| **전체 표 합계** | **68** | **65** | **38** | **63** | **234** |
+| **전체 표 합계** | **69** | **65** | **37** | **63** | **234** |
 
 8절과 9절은 원본 목록의 구성을 그대로 따른 것이라 1–7절에 이미 나온 기능을 다시 세므로, "전체 표 합계"에는
 같은 기능이 두 번 들어갑니다. 인용할 때는 1–7절 합계를 쓰세요. 다르게 읽으면, macOS에서 의미가 있는 기능
@@ -48,7 +48,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 
 | MobaXterm 기능 | MobAlt | MobAlt의 방식, 또는 없는 이유 |
 |---|---|---|
-| SSH 세션 | ✅ | 세션 편집기의 SSH 종류: ssh2 터미널, 접속과 함께 열리는 Sftp 패널, X11, 점프 호스트, 터널, 시작 명령 |
+| SSH 세션 | ✅ | 세션 편집기의 SSH 종류: ssh2 터미널, 접속과 함께 열리는 SFTP 패널, X11, 점프 호스트, 터널, 시작 명령 |
 | Telnet 세션 | 🟡 | NAWS/TTYPE 협상이 되는 Telnet 종류. 호스트·포트만 받고 keepalive, 자동 로그인, "^M 전송" 옵션은 없음 |
 | Rsh / Rlogin 세션 | ➖ | macOS가 더는 클라이언트를 싣지 않는 평문 프로토콜. SSH(구형 장비는 Telnet)를 쓰면 됨 |
 | Xdmcp 세션 | ❌ | XDMCP 세션 종류 없음. XQuartz에서 `X :1 -query host`로 직접 띄울 수는 있음 |
@@ -56,8 +56,8 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | RDP — 새 64비트 엔진 | ➖ | MobaXterm 내부 엔진. macOS에서는 Windows App이 RDP 엔진 |
 | RDP — 고급(Restricted Admin, 다중 모니터, 드라이브 등) | 🟡 | 전부 Windows App 안에서 설정. MobAlt는 호스트·포트·사용자만 넘김 |
 | VNC 세션 | 🟡 | VNC 종류는 `vnc://` URL을 macOS 화면 공유로 엶. Quick connect의 `vnc://`도 됨. 앱 안 뷰어는 없음 |
-| FTP 세션 | ✅ | FTP 종류: 명시적 TLS FTPS, 익명 로그인, 자체 서명 인증서 허용 옵션. Sftp 패널에서 탐색·전송·편집(ASCII 모드는 없음) |
-| SFTP 세션 | 🟡 | SFTP 단독 세션은 없음. Sftp 패널은 모든 SSH 세션에 딸려 오고, Mosh에는 동반 SSH 연결로 붙음 |
+| FTP 세션 | ✅ | FTP 종류: 명시적 TLS FTPS, 익명 로그인, 자체 서명 인증서 허용 옵션. SFTP 패널에서 탐색·전송·편집(ASCII 모드는 없음) |
+| SFTP 세션 | 🟡 | SFTP 단독 세션은 없음. SFTP 패널은 모든 SSH 세션에 딸려 오고, Mosh에는 동반 SSH 연결로 붙음 |
 | Serial(COM) 세션 | ✅ | Serial 종류: USB-시리얼 자동 검색, baud, 데이터/정지 비트, 패리티, 흐름 제어, 로컬 에코, Enter 전송(CR/LF/CRLF). 명명된 파이프는 없음 |
 | File 세션(로컬 폴더 탭) | ❌ | 로컬 파일 브라우저 탭 없음. Finder나 Local 터미널의 `open .` |
 | Shell 세션(로컬 터미널) | ✅ | Local 종류: 로그인 셸(또는 Settings → General → Local shell의 아무 경로), 시작 폴더, 시작 명령. ⌘T로 바로 하나 |
@@ -67,7 +67,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | WSL 세션 | ➖ | Windows 전용. Local 세션이 이미 Unix 셸 |
 | 라이브 세션(저장 안 함) | ✅ | Quick connect 입력란(⇧⌘N): `user@host[:port]`에 `ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://` 접두사를 붙여 저장하지 않는 세션을 엶. 셸 명령과 `-exec`는 6절 참고 |
 | 사용자 셸 스크립트 북마크 | 🟡 | 시작 명령에 스크립트를 넣은 Local 세션. 바탕화면 바로가기는 없음 |
-| "같은 설정으로 SFTP 세션 열기" | ✅ | 페인 메뉴 → Open SFTP Browser, Mosh는 Sftp 패널의 "Open SFTP for this host (via SSH)". SSH 세션에는 패널이 이미 있음 |
+| "같은 설정으로 SFTP 세션 열기" | ✅ | 페인 메뉴 → Open SFTP Browser, Mosh는 SFTP 패널의 "Open SFTP for this host (via SSH)". SSH 세션에는 패널이 이미 있음 |
 | 세션 수 제한(Home 12개) | ➖ | 제한 없음. MIT 라이선스 |
 
 ## 2. SSH 세부 기능
@@ -84,7 +84,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 내장 SSH 에이전트 "MobAgent" | 🟡 | 내장 에이전트 없음. macOS `ssh-agent`(`SSH_AUTH_SOCK`)를 쓰고, 키는 `ssh-add --apple-use-keychain` |
 | 외부 에이전트 | ✅ | `SSH_AUTH_SOCK`이 가리키는 것이면 무엇이든: ssh-agent, 1Password, Secretive, gpg-agent… |
 | 에이전트 포워딩 | ✅ | Advanced SSH의 "Agent forwarding" |
-| SSH 게이트웨이 / 점프 호스트(다단, 홉별 자격 증명) | 🟡 | Advanced SSH → Jump host: 저장된 세션 또는 `user@host:port`, 점프 세션 자신의 점프 호스트를 따라 3홉까지 연쇄, Sftp와 X11도 통과. SSH만 해당, CyberArk/Teleport 없음 |
+| SSH 게이트웨이 / 점프 호스트(다단, 홉별 자격 증명) | 🟡 | Advanced SSH → Jump host: 저장된 세션 또는 `user@host:port`, 점프 세션 자신의 점프 호스트를 따라 3홉까지 연쇄, SFTP와 X11도 통과. SSH만 해당, CyberArk/Teleport 없음 |
 | 프록시(SOCKS / HTTP / netcat) | ❌ | 세션별 프록시 없음. 점프 호스트나 다른 세션의 `-D` 터널로 대신 |
 | Keepalive | ✅ | Settings → General → SSH keep-alive (s), Advanced SSH에서 세션별 덮어쓰기. 기본 켜짐(30초) |
 | "connection reset by peer 우회" | 🟡 | 그런 체크박스는 없음. 구형 서버용 손잡이는 Advanced SSH → "Legacy algorithms (old devices)" |
@@ -94,7 +94,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 명령 실행 / 접속 유지 | ✅ | 시작 명령(세션 편집기 → Terminal): 로그인 뒤 입력되고 셸은 그대로 열려 있음 |
 | 시작 매크로 | 🟡 | 녹화한 매크로를 붙이는 대신 모든 종류의 세션에 시작 명령 |
 | 원격 모니터링 바(CPU/RAM/net/disk) | ✅ | SSH 페인마다 아래 한 줄: CPU, 메모리 사용/전체, 루트 디스크, 네트워크 ↓/↑ 속도, 부하 평균, 가동 시간, 호스트명. 페인 자체 연결의 exec 채널로 POSIX `sh` 스니펫 하나를 3초마다(2–30초) 실행, 화면에 없으면 멈춤, `sh`가 없는 호스트는 "monitor unavailable". 기본 켜짐, 세션별(Advanced SSH)·페인별(페인 머리글, View 메뉴)·전역 스위치. Mosh 페인은 SFTP 동반 연결을 씀 |
-| 그래픽 SSH 브라우저(SFTP/SCP) | ✅ | 접속과 함께 열리는 Sftp 패널(⌘2): 진행률·취소가 있는 업로드/다운로드, 새 폴더, 이름 변경, 권한, 삭제, 숨김 파일, 더블클릭 편집 후 저장. SFTP만, SCP 모드 없음 |
+| 그래픽 SSH 브라우저(SFTP/SCP) | ✅ | 접속과 함께 열리는 SFTP 패널(⌘2): 진행률·취소가 있는 업로드/다운로드, 새 폴더, 이름 변경, 권한, 삭제, 숨김 파일, 더블클릭 편집 후 저장. SFTP만, SCP 모드 없음 |
 | SSH 브라우저 부가 기능(SUDO, 경로 이력, 붙여넣기, diff 등) | 🟡 | 덮어쓰기 확인, 다운로드 시 수정 시각 보존, 정렬, Show in Finder, 호스트 키 확인은 있음. SUDO, 주소 이력, ⌘V 파일 붙여넣기, SCP 폴백, diff, 열 너비 기억은 없음 |
 | 터미널 폴더 추종 | ✅ | 세션 옵션 "SFTP follows terminal folder"(bash/zsh용 OSC 7 훅)와 패널의 Follow 체크박스. 기본 꺼짐 |
 | Zmodem(rz/sz) | ✅ | SSH·로컬·텔넷·시리얼 페인의 터미널 안 전송(바이트 스트림에 zmodem.js Sentry). `sz`는 내려받기, `rz`는 올려보내기, 전송 목록에 진행률·취소. Mosh는 미지원 |
@@ -275,7 +275,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 26.5 — RDP의 WebAuthn 리디렉션 | ➖ | Windows App |
 | 26.5 — SFTP에서 로컬 하위 폴더로 드래그, CygUtils 무결성 검사, Customizer 옵션 | 🟡 | 다운로드는 지정한 폴더로(Download folder 설정 또는 대화상자). Finder로 끌어내기는 없음 |
 | 26.4 — 스마트카드 SSH 인증(CAPI) + 관리자, MobAgent의 스마트카드 | ➖ | macOS `ssh-agent`를 통한 PKCS#11 |
-| 26.4 — SSH → 같은 설정의 SFTP, 트리 옆 브라우저, 열 너비 저장, 덮어쓰기 확인 | 🟡 | Sftp 패널은 세션마다 붙어 있고 덮어쓰기 전에 물음. 나란히 도킹이나 열 너비 기억은 없음 |
+| 26.4 — SSH → 같은 설정의 SFTP, 트리 옆 브라우저, 열 너비 저장, 덮어쓰기 확인 | 🟡 | SFTP 패널은 세션마다 붙어 있고 덮어쓰기 전에 물음. 나란히 도킹이나 열 너비 기억은 없음 |
 | 26.4 — "linux" 터미널 종류, 압축 기본 꺼짐, Quick connect 폴더 자동 펼침 | 🟡 | 압축 기본 꺼짐. 터미널 종류는 고정. 필터가 일치 항목을 보여 줌 |
 | 26.3 — 붙여넣기 확인 다듬기 | ✅ | 여러 줄·긴 붙여넣기는 먼저 확인: "Paste N lines into …?"에 편집 가능한 미리보기, ⌘⏎ / Esc |
 | 26.2 — 악성 붙여넣기 경고 | ✅ | 붙여넣기 보호의 발견 항목(숨은 문자, 셸로 파이프, 프로필 쓰기, 파괴적 명령, 동형 문자)과 "Paste cleaned" |
@@ -304,14 +304,14 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 |---|---|---|
 | `cd`를 따라가는 SFTP 창, 저장하면 업로드되는 편집 | ✅ | 세션 옵션 "SFTP follows terminal folder" + Follow 체크박스. 더블클릭 편집, ⌘S 업로드. 추종은 기본 꺼짐 |
 | 원격 모니터링 바 | ✅ | SSH 페인마다 아래 띠(2절), 기본 켜짐. 페인 머리글의 맥박 버튼, View → Remote Monitoring Bar, 우클릭 메뉴로 페인별 토글 |
-| 사이드바 = 세션 트리 + 매크로 + 파일 브라우저, 도킹, 오른쪽 배치 | 🟡 | Sessions / Sftp / Tools / Macros 사이드 스트립(⌘1-4), 한 번에 패널 하나, 왼쪽에만, ⌘B로 숨김 |
+| 사이드바 = 세션 트리 + 매크로 + 파일 브라우저, 도킹, 오른쪽 배치 | 🟡 | Sessions / SFTP / Tools / Macros 사이드 스트립(⌘1-4), 한 번에 패널 하나, 왼쪽에만, ⌘B로 숨김 |
 | 전부 자동 저장(Quick connect 세션 포함) | 🟡 | 세션과 설정은 Save 때, 작업대는 20초마다 저장. Quick connect 세션은 저장되지 않음 |
 | 전역 토글인 우클릭 붙여넣기 | ✅ | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", 기본 켜짐 |
 | 선택 시 복사, Alt-드래그 사각형, 조정 가능한 구분 문자 | ✅ | Copy on select(토글), ⌥-드래그 열 선택. 구분 문자 조정은 없음 |
 | 미리보기와 악성 검사가 있는 여러 줄 붙여넣기 보호 | ✅ | "Paste N lines into …?"에 편집 가능한 미리보기와 의심 항목 목록. 두 토글 모두 Settings → Features → Paste guard |
 | MultiExec와 분할 보기(Exclude, 스크롤 동기화) | ✅ | 8페인까지 분할과 격자. MultiExec에 터미널마다 Exclude 체크 상자, Activate all / none / Invert selection, 휠 스크롤 동기화 |
 | 일급 객체인 매크로(WaitFor, 중첩, 폴더, 암호화) | 🟡 | 녹화·텍스트 매크로를 하나 또는 모든 터미널에 재생. 부가 기능은 없음 |
-| 드롭다운으로 고르는 점프 호스트 | ✅ | Advanced SSH → Jump host 드롭다운(저장된 세션 또는 직접 입력), 점프 세션 자신의 점프 호스트로 연쇄. Sftp와 X11도 통과. SSH 세션만 |
+| 드롭다운으로 고르는 점프 호스트 | ✅ | Advanced SSH → Jump host 드롭다운(저장된 세션 또는 직접 입력), 점프 세션 자신의 점프 호스트로 연쇄. SFTP와 X11도 통과. SSH 세션만 |
 | 자격 증명과 비밀번호(이름 있는 자격 증명, 마스터 비밀번호, Hello) | 🟡 | Keychain에 세션별 비밀번호. 이름 있는 자격 증명은 없음 |
 | 상태를 지닌 탭(색상, 아이콘, 점, 고정, 왼쪽/오른쪽 닫기, 분리) | ✅ | 색상, 아이콘, 상태 점, 트리의 초록 점, Pin Tab(⇧⌘P), Close Tabs to the Left / Right, Detach to New Window(⌥⌘N). 출력 활동 표시는 없음(활동 표시 행 참고) |
 | 홈 탭 + Quick connect(`ssh user@host` 그대로) | 🟡 | `user@host`와 스킴 접두사를 그대로 받는 Quick connect. 홈 탭은 없고 복원은 자동 |
@@ -330,7 +330,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 - **11개 언어 인터페이스.** 영어·한국어·중국어(간체)·일본어·베트남어·힌디어·독일어·프랑스어·스페인어·포르투갈어·아랍어(오른쪽에서 왼쪽, 크롬 좌우 반전). macOS 언어 목록을 따르거나 설정에서 선택하며 재시작 없이 즉시 전환되고, 사용자 안내서도 언어별로 제공(`src/main/i18n.js`, `src/locales/`, `docs/USER_GUIDE.<code>.md`). MobaXterm 인터페이스는 영어뿐.
 - **명암비를 보장하는 창 전체 테마.** 크롬 팔레트는 터미널 테마에서 유도되고(`src/renderer/theme.js`), 모든 텍스트 토큰이 모든 표면에서 4.5:1 이상, 테두리는 3:1 이상을 지킵니다. Light를 포함한 6개 테마 전부를 `test/unit/theme.test.js`가 검증합니다. MobaXterm은 터미널만 테마를 입히고 다크 스킨 하나를 제공합니다.
 - **키보드 접근성.** 세션 트리와 SFTP 목록은 roving tabindex를 쓰는 트리 / 리스트박스이고 Finder 식 타이핑 이동이 되며, 컨텍스트 메뉴는 ⇧F10이나 Menu 키로 열리고, 대화상자는 포커스를 가두었다가 되돌립니다(`src/renderer/sidebar.js`, `src/renderer/sftp.js`, `test/e2e-a11y.js`).
-- **SFTP 동반 연결이 있는 Mosh.** Mosh 페인은 같은 호스트로 셸 없는 SSH 연결을 하나 더 열어 Sftp 패널에 씁니다(`src/main/ssh.js`의 `sftpOnly`).
+- **SFTP 동반 연결이 있는 Mosh.** Mosh 페인은 같은 호스트로 셸 없는 SSH 연결을 하나 더 열어 SFTP 패널에 씁니다(`src/main/ssh.js`의 `sftpOnly`).
 - **FTPS**(명시적 TLS)와 익명 FTP를 SFTP와 같은 파일 패널에서(`src/main/ftp.js`). MobaXterm의 FTP 클라이언트는 별도 탭 종류입니다.
 - **일반 텍스트 세션 로그.** Settings → Logging이 색상, 커서 이동, 폴더 훅을 로그에서 걷어냅니다(`src/main/terminals.js`의 `PlainTextFilter`).
 - **디스크 상의 업데이트 감지와 재시작 배너.** `brew upgrade`나 DMG가 실행 중인 번들을 바꿔치면 이를 알아채고, 작업대를 복원하는 재시작을 제안합니다(`src/main/bundlewatch.js`).

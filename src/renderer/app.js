@@ -490,7 +490,7 @@ class App {
     // an unfinished regex (e.g. "h[ae") throws inside the search addon: show it as an invalid pattern instead
     const safeFind = (fn) => {
       try { fn(); fb.classList.remove('bad-pattern'); return true; }
-      catch { fb.classList.add('bad-pattern'); $('#find-count').textContent = t('Invalid pattern'); return false; }
+      catch { fb.classList.add('bad-pattern'); $('#find-count').classList.remove('num'); $('#find-count').textContent = t('Invalid pattern'); return false; }
     };
     // a browser pane searches its page (webview.findInPage: case toggle honoured, no regex); a terminal its buffer
     const inPage = (p, forward, findNext) => p.find(fi.value, { forward, findNext, matchCase: $('#find-case').checked });
@@ -518,7 +518,14 @@ class App {
     };
     fi.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); step(!e.shiftKey); }
-      if (e.key === 'Escape') this.action('find-close');
+    });
+    // Esc closes the bar from any of its controls (the field, the arrows, the Aa / .* boxes, ✕), not only from the
+    // field: the keyboard user who tabbed to a checkbox would otherwise be stuck there; the terminal gets the focus back
+    fb.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.isComposing) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.action('find-close');
     });
     for (const b of $$('[data-find]')) b.addEventListener('click', () => {
       const k = b.dataset.find;
@@ -767,7 +774,10 @@ class App {
   _afterClose() {
     const ap = this.activePane();
     if (ap) this.focusPane(ap, true);
-    else this.updateStatus(null);
+    else {
+      this.updateStatus(null);
+      this.action('find-close'); // nothing left to search: the find bar does not stay over the "No terminal open" card
+    }
     this.updateMultiexec();
   }
 
@@ -974,6 +984,7 @@ class App {
     if (!el) return;
     this._findLast = { resultCount, resultIndex }; // redone in the new language on a switch (onLanguageChanged)
     el.textContent = resultCount > 0 ? `${resultIndex >= 0 ? resultIndex + 1 : '–'} / ${resultCount}` : fi.value ? t('No matches') : '';
+    el.classList.toggle('num', resultCount > 0); // "1 / 6" reads left to right in Arabic too (styles.css); "No matches" is a sentence
     $('#find-bar').classList.toggle('no-match', !!fi.value && resultCount === 0);
   }
 
@@ -1226,17 +1237,19 @@ class App {
     $('#btn-multiexec').classList.toggle('on', this.multiexec);
     const candidates = this.multiexecCandidates();
     const n = this.multiexecTargets().length, excluded = candidates.length - n; // n = the panes that receive keystrokes
-    // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminal(s)".
+    // #multiexec-count always exists (scripts read it); with nothing to write to, the sentence says so instead of "0 visible terminals".
     // The banner is rendered here, never through a data-i18n hook on the static element (index.html): one sentence
-    // per case, the count element put where {count} is, so a translation can move it; ", N excluded" follows when
+    // per case, the count element put where {n} is, so a translation can move it; ", N excluded" follows when
     // some boxes are ticked, and with every box ticked the sentence says so instead of the count.
+    // The count sentences are tn() pairs ("1 visible terminal", "2 visible terminals"): the plural form is picked for
+    // n and its {n} left in place (params.n wins over the number in tn), so that the count element goes there.
     const count = h('b', { id: 'multiexec-count', hidden: n === 0 }, String(n));
     const zoomed = !!(this.workspace.active && this.workspace.active.zoomed);
     const text = n === 0 && excluded ? t('MultiExec is ON — every visible terminal is excluded — untick "Exclude … from MultiExec mode" under a pane')
       : n === 0 ? t('MultiExec is ON — {reason}', { reason: this.multiexecNoneText() })
-      : zoomed ? t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab (the zoomed pane only)')
-      : t('MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab');
-    banner.replaceChildren(...fillNodes(text, { count }), ...(n === 0 ? [count] : []), ...(n > 0 && excluded ? [', ' + tn('{n} excluded', '{n} excluded', excluded)] : []));
+      : zoomed ? tn('MultiExec is ON — keystrokes go to {n} visible terminal in this tab (the zoomed pane only)', 'MultiExec is ON — keystrokes go to {n} visible terminals in this tab (the zoomed pane only)', n, { n: '{n}' })
+      : tn('MultiExec is ON — keystrokes go to {n} visible terminal in this tab', 'MultiExec is ON — keystrokes go to {n} visible terminals in this tab', n, { n: '{n}' });
+    banner.replaceChildren(...fillNodes(text, { n: count }), ...(n === 0 ? [count] : []), ...(n > 0 && excluded ? [', ' + tn('{n} excluded', '{n} excluded', excluded)] : []));
     for (const p of this.workspace.allPanes()) p.syncMultiexecStrip?.(); // the Exclude strips under the terminals follow the mode
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
@@ -1341,8 +1354,8 @@ class App {
    * One toast for an importer's { imported, updated?, skipped, errors, file? }: a file that could not be used at all
    * (nothing imported or skipped, one reason) is an error — "<refused>: <reason>"; a file with nothing in it is a
    * warning — "No sessions found in <file>"; anything else is a summary — "Imported 5 sessions from MobaXterm.ini,
-   * updated 2 already in the tree, skipped 1: …" — shown as a warning when entries were skipped, with up to three
-   * of their reasons. The summary is a head clause and up to two tail clauses, each translated whole (with its
+   * updated 2 already in the tree, 1 of them runs commands when opened (…), skipped 1: …" — shown as a warning when
+   * entries were skipped (with up to three of their reasons) or carry commands (JSON import: `commands`). The summary is a head clause and up to two tail clauses, each translated whole (with its
    * leading comma), since the eight combinations would otherwise be sixteen sentences.
    */
   importToast(r, { from = '', refused = t('Import failed') } = {}) {
@@ -1352,8 +1365,10 @@ class App {
     if (!r.imported && !r.updated && !r.skipped) return toast(file ? t('No sessions found in {file}', { file }) : t('No sessions found'), 'warn');
     let msg = from ? tn('Imported {n} session from {from}', 'Imported {n} sessions from {from}', r.imported, { from }) : tn('Imported {n} session', 'Imported {n} sessions', r.imported);
     if (r.updated) msg += t(', updated {n} already in the tree', { n: r.updated });
+    if (r.commands) msg += tn(', {n} of them runs commands when opened (startup commands or a custom shell)', ', {n} of them run commands when opened (startup commands or a custom shell)', r.commands);
     if (r.skipped) msg += t(', skipped {n}: {reasons}', { n: r.skipped, reasons: errors.slice(0, 3).join('; ') + (errors.length > 3 ? '; …' : '') });
-    return toast(msg, r.skipped ? 'warn' : 'success', r.skipped ? 8000 : undefined);
+    const warn = r.skipped || r.commands;
+    return toast(msg, warn ? 'warn' : 'success', warn ? 8000 : undefined);
   }
 
   async reloadSessions() {
