@@ -102,7 +102,7 @@ jede andere wird hinzugefügt — ein von Hand geschriebener Eintrag ohne `id` w
 Datei geschriebenes `password` wird übernommen und verschlüsselt gespeichert —, Ordner werden hinzugefügt und nichts
 wird gelöscht; zweimaliges Importieren derselben Datei ändert also nichts. Einträge ohne Namen, mit unbekanntem Typ
 oder ungültigem Port werden übersprungen und in der Meldung gezählt; eine Datei, die keine MobAlt-Sitzungsdatei ist,
-wird mit Begründung abgelehnt. Beim Import von `~/.ssh/config` werden Hosts übersprungen, die Sie bereits haben
+wird mit Begründung abgelehnt. Die Meldung nennt außerdem, wie viele der importierten Sitzungen beim Öffnen Befehle ausführen (Startbefehle oder die Shell einer lokalen Sitzung) — sehen Sie sich diese vor dem Öffnen an, wenn die Datei von jemand anderem stammt. Beim Import von `~/.ssh/config` werden Hosts übersprungen, die Sie bereits haben
 (gleicher Ordner und Name). MobaXterm-Lesezeichen landen in einem Ordner `MobaXterm`; ein früher importiertes
 Lesezeichen (gleicher Ordner, Name und Host) wird an Ort und Stelle aufgefrischt — Host, Port, Benutzer, X11 und
 Komprimierung folgen der `.ini`, während gesichertes Passwort, Symbol, Farbe, Tunnel und ein von Ihnen gesetzter
@@ -124,7 +124,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
   *SSH-Agent*, um es einzuschränken. Bei Schlüsseln mit Passphrase wird einmal gefragt; aktivieren Sie „In Sitzung …
   sichern“, um sie zu behalten.
 - **Hostschlüssel**: Die erste Verbindung zeigt den Fingerabdruck (SHA256 und MD5). „Akzeptieren“ speichert den
-  Schlüssel; ein geänderter Schlüssel wird deutlich gemeldet und nie stillschweigend akzeptiert.
+  Schlüssel; ein geänderter Schlüssel wird deutlich gemeldet und nie stillschweigend akzeptiert: In diesem Dialog ist **Abbrechen** die Standardtaste, Enter lehnt also ab — um den neuen Schlüssel zu akzeptieren, klicken Sie auf *Neuen Schlüssel akzeptieren* (oder wechseln mit Tab dorthin). Ein bekannter Host mit einem Schlüssel eines anderen Typs gilt wie bei OpenSSH als geändert. Ein in einer `known_hosts`-Datei mit `@revoked` markierter Schlüssel wird sofort abgelehnt: Der Dialog nennt den Grund und hat keine Taste zum Akzeptieren. Hostnamen in `known_hosts` werden ohne Rücksicht auf Groß- und Kleinschreibung verglichen, und die Muster `*` / `?` / `!` funktionieren wie in OpenSSH.
 - **SSH-Schlüssel**: „Sitzung“ → „SSH-Schlüssel erzeugen…“ (auch im Panel „Werkzeuge“ und als *Erzeugen…* neben dem
   Feld für den privaten Schlüssel im Sitzungseditor) führt für Sie das `ssh-keygen` von macOS aus: Ed25519 (Standard),
   RSA 4096 oder ECDSA, ein Kommentar, eine optionale Passphrase mit Stärkehinweis und die Datei (Standard
@@ -321,7 +321,7 @@ Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim
   wird vor dem Überschreiben gefragt.
 - Ein Doppelklick auf eine Textdatei öffnet sie im integrierten Editor (⌘S sichert zurück). „In externem Editor
   bearbeiten“ öffnet sie in Ihrem Editor („Einstellungen“ → „Allgemein“ → „Externer Editor“) und lädt sie bei jedem
-  Sichern erneut hoch.
+  Sichern erneut hoch. Die Einstellung ist ein Programm mit seinen Argumenten — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` —, das direkt gestartet wird, nicht über eine Shell: Anführungszeichen fassen Wörter zusammen, `{file}` wird durch den Pfad der Datei ersetzt (sonst kommt der Pfad ans Ende), und sonst wird nichts expandiert (kein `$VAR`, `~` nur am Anfang des Programms, kein `;` und keine Pipes). Die lokale Kopie liegt in `$TMPDIR/mobalt-edit/` und wird beim Beenden von MobAlt gelöscht.
 - Übertragungen zeigen Fortschritt, Geschwindigkeit und eine Abbrechen-Taste; nach einem Download „Im Finder zeigen“. Ein Download wird nach
   `<Name>.part` geschrieben und erhält seinen Namen erst, wenn er vollständig ist; bricht er ab (Verbindungsabbruch, Trennen),
   bietet der nächste Download derselben Datei *Fortsetzen* oder *Von vorn* an.
@@ -397,7 +397,7 @@ diesem Mac bereits verwendet* (bei einer Remote-Weiterleitung *auf dem Server*).
 ## X11, Mosh, seriell, RDP/VNC
 
 - **X11**: Aktivieren Sie „X11-Weiterleitung“ unter „Erweitert“. MobAlt startet bei Bedarf XQuartz, leitet das Display
-  weiter und tauscht das Auth-Cookie aus, sodass `xeyes` oder `gedit` einfach funktionieren. Die Statusleiste zeigt, ob
+  weiter und tauscht das Auth-Cookie aus, sodass `xeyes` oder `gedit` einfach funktionieren. Durch kommen nur X-Clients, die das eigene (gefälschte) Cookie der Sitzung vorweisen — das, was sshd für Ihre Anmeldung einrichtet —, sodass ein anderer Benutzer auf dem Server das Display Ihres Mac nicht erreichen kann. Die Statusleiste zeigt, ob
   X11 verfügbar ist.
 - **Mosh**: braucht lokal `brew install mosh` und auf dem Host `mosh-server` (UDP 60000-61000). Der Bereich führt den
   mosh-Client aus; der SSH-Start verwendet Ihren Schlüssel, den Agent oder eine interaktive Abfrage. Legen Sie den Pfad
@@ -522,8 +522,8 @@ Feld für die Schnellverbindung leert es und kehrt zum Terminal zurück.
 
 Alles bleibt in `~/Library/Application Support/MobAlt/`: `sessions.json` (Passwörter und Passphrasen über den
 macOS-Schlüsselbund verschlüsselt), `settings.json`, `known_hosts`, `workspace.json` und die Dateien der
-zsh-Integration. Sitzungsprotokolle landen in `~/Documents/MobAlt Logs/`. MobAlt verbindet sich nur mit den Hosts, die
-Sie einrichten; die optionale Update-Prüfung liest die Release-Liste auf GitHub und sonst nichts. Details:
+zsh-Integration (`zdotdir/`, das auch den Verlauf der lokalen Shell enthält, `zdotdir/.zsh_history`, sofern Ihre eigenen zsh-Dateien nicht `HISTFILE` setzen). Diese Dateien, das `known_hosts` der App und die Sitzungsprotokolle kann nur Ihr Benutzerkonto lesen (0600). Sitzungsprotokolle landen in `~/Documents/MobAlt Logs/`. Browser-Bereiche legen ihre Cookies und ihren Cache unter `Partitions/` im selben Ordner ab (Cookies verschlüsselt). Eine mit *In externem Editor bearbeiten* geöffnete entfernte Datei wird nach `$TMPDIR/mobalt-edit/` kopiert und beim Beenden von MobAlt gelöscht. Ist der Schlüsselbund nicht nutzbar, funktionieren gesicherte Passwörter weiterhin, werden aber ungeschützt (base64) gespeichert, und MobAlt zeigt einmal pro Start eine Warnung. MobAlt verbindet sich nur mit den Hosts, die
+Sie einrichten; die optionale Update-Prüfung liest die Release-Liste auf GitHub und sonst nichts. Links öffnen sich nur dann in Ihrem Standardbrowser, wenn sie `http(s)` oder `mailto` sind (ein Terminal-Link mit einem anderen Schema bewirkt nichts). Details:
 [SECURITY.md](../SECURITY.md).
 
 ## Fehlerbehebung
@@ -545,7 +545,7 @@ Sie einrichten; die optionale Update-Prüfung liest die Release-Liste auf GitHub
   Sie einen davon unter „Erweitert“ → „Algorithmen“ hinzu (oder *Auf Standard zurücksetzen*); bei einem alten Gerät,
   das nur SHA-1 / CBC anbietet, aktivieren Sie „Alte Algorithmen (ältere Geräte)“.
 - **Hostschlüssel geändert**: Der Server wurde neu installiert, oder etwas fängt die Verbindung ab. Akzeptieren Sie nur,
-  wenn Sie den Grund kennen; der alte Schlüssel lässt sich im Konfigurationsordner aus `known_hosts` entfernen.
+  wenn Sie den Grund kennen (Enter bricht ab; klicken Sie auf *Neuen Schlüssel akzeptieren*); der alte Schlüssel lässt sich im Konfigurationsordner aus `known_hosts` entfernen.
 - **X11-Programm erscheint nicht**: Installieren Sie XQuartz und stellen Sie sicher, dass die entfernte Shell `DISPLAY`
   in ihren Startdateien nicht überschreibt.
 - **Mosh**: „mosh-Client nicht gefunden“ bedeutet, dass lokal `brew install mosh` fehlt; „mosh-server not found“

@@ -12,3 +12,7 @@ build/icon.iconset/
 .env
 .env.*
 test/shots/
+dist-qa/
+# QA run output: a run's user-data folder and session logs (they can hold host names and terminal output)
+**/userdata/
+**/MobAlt Logs/

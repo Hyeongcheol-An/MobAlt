@@ -6,6 +6,12 @@
         "src/main/live.js"
       ]
     },
+    ", {n} of them runs commands when opened (startup commands or a custom shell)": {
+      "plural": ", {n} of them run commands when opened (startup commands or a custom shell)",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     ", skipped {n}: {reasons}": {
       "refs": [
         "src/renderer/app.js"
@@ -4684,7 +4690,8 @@
     },
     "permission denied": {
       "refs": [
-        "src/main/monitor.js"
+        "src/main/monitor.js",
+        "src/main/x11.js"
       ]
     },
     "Permission denied": {
@@ -5475,6 +5482,11 @@
     "Seconds between two polls (2–30)": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Security": {
@@ -6471,6 +6483,11 @@
     "There is no network connection.": {
       "refs": [
         "src/renderer/browser.js"
+      ]
+    },
+    "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "This is MobAlt {version} running from source.": {

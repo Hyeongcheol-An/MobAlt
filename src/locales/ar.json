@@ -1594,5 +1594,11 @@
   "URL": "عنوان URL",
   "URL copied": "تم نسخ عنوان URL",
   "URL is required": "عنوان URL مطلوب",
-  "User name": "اسم المستخدم"
+  "User name": "اسم المستخدم",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "مفتاح المضيف هذا مُعلَّم كمفتاح مُبطَل في known_hosts. لن يتصل MobAlt باستخدامه.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "لا يمكن تشفير البيانات السرية على هذا الـ Mac (سلسلة المفاتيح غير متاحة) — تُخزَّن كلمات السر دون حماية",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": [
+    "، منها {n} تشغّل أوامر عند فتحها (أوامر البدء أو صدفة مخصّصة)",
+    "، منها {n} تشغّل أوامر عند فتحها (أوامر البدء أو صدفة مخصّصة)"
+  ]
 }

@@ -1341,8 +1341,8 @@ class App {
    * One toast for an importer's { imported, updated?, skipped, errors, file? }: a file that could not be used at all
    * (nothing imported or skipped, one reason) is an error — "<refused>: <reason>"; a file with nothing in it is a
    * warning — "No sessions found in <file>"; anything else is a summary — "Imported 5 sessions from MobaXterm.ini,
-   * updated 2 already in the tree, skipped 1: …" — shown as a warning when entries were skipped, with up to three
-   * of their reasons. The summary is a head clause and up to two tail clauses, each translated whole (with its
+   * updated 2 already in the tree, 1 of them runs commands when opened (…), skipped 1: …" — shown as a warning when
+   * entries were skipped (with up to three of their reasons) or carry commands (JSON import: `commands`). The summary is a head clause and up to two tail clauses, each translated whole (with its
    * leading comma), since the eight combinations would otherwise be sixteen sentences.
    */
   importToast(r, { from = '', refused = t('Import failed') } = {}) {
@@ -1352,8 +1352,10 @@ class App {
     if (!r.imported && !r.updated && !r.skipped) return toast(file ? t('No sessions found in {file}', { file }) : t('No sessions found'), 'warn');
     let msg = from ? tn('Imported {n} session from {from}', 'Imported {n} sessions from {from}', r.imported, { from }) : tn('Imported {n} session', 'Imported {n} sessions', r.imported);
     if (r.updated) msg += t(', updated {n} already in the tree', { n: r.updated });
+    if (r.commands) msg += tn(', {n} of them runs commands when opened (startup commands or a custom shell)', ', {n} of them run commands when opened (startup commands or a custom shell)', r.commands);
     if (r.skipped) msg += t(', skipped {n}: {reasons}', { n: r.skipped, reasons: errors.slice(0, 3).join('; ') + (errors.length > 3 ? '; …' : '') });
-    return toast(msg, r.skipped ? 'warn' : 'success', r.skipped ? 8000 : undefined);
+    const warn = r.skipped || r.commands;
+    return toast(msg, warn ? 'warn' : 'success', warn ? 8000 : undefined);
   }
 
   async reloadSessions() {

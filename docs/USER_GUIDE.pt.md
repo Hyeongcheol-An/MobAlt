@@ -95,7 +95,7 @@ cujo `id` corresponde a uma existente é substituída pela versão do arquivo (a
 todas as outras são adicionadas — uma entrada escrita à mão sem `id` é sempre adicionada, e uma `password` escrita
 no arquivo é aproveitada e guardada cifrada —, as pastas são adicionadas e nada é apagado, de modo que importar o mesmo
 arquivo duas vezes não muda nada. Entradas sem nome, com tipo desconhecido ou porta inválida são ignoradas e
-contadas no aviso; um arquivo que não seja um arquivo de sessões do MobAlt é recusado com o motivo. O `~/.ssh/config`
+contadas no aviso; um arquivo que não seja um arquivo de sessões do MobAlt é recusado com o motivo. O aviso também diz quantas das sessões importadas executam comandos ao abrir (comandos iniciais, ou o shell de uma sessão local) — confira essas sessões antes de abri-las quando o arquivo vier de outra pessoa. O `~/.ssh/config`
 ignora os hosts que você já tem (mesma pasta e nome). Os favoritos do MobaXterm vão para uma pasta `MobaXterm`; um
 importado antes (mesma pasta, nome e host) é atualizado no lugar — host, porta, usuário, X11 e compressão
 seguem o `.ini`, enquanto a senha salva, o ícone, a cor, os túneis e um caminho de chave que você definiu permanecem —, de modo que importar
@@ -116,7 +116,7 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
   chaves padrão em `~/.ssh` antes de perguntar. Escolha *Senha*, *Chave privada* ou *Agente SSH* para
   restringi-la. Chaves com frase secreta a pedem uma vez; marque “Salvar na sessão” para guardá-la.
 - **Chaves do host**: a primeira conexão mostra a impressão digital (SHA256 e MD5). Aceitar guarda a
-  chave; uma chave alterada é sinalizada com destaque e nunca aceita em silêncio.
+  chave; uma chave alterada é sinalizada com destaque e nunca aceita em silêncio: nesse diálogo, **Cancelar** é o botão padrão, então Enter recusa — para aceitar a chave nova é preciso clicar em *Aceitar chave nova* (ou chegar a ele com Tab). Como no OpenSSH, um host já conhecido que apresenta uma chave de outro tipo conta como alterado. Uma chave marcada `@revoked` num arquivo `known_hosts` é recusada de imediato: o diálogo diz por quê e não tem botão Aceitar. Os nomes de host no `known_hosts` são comparados sem diferenciar maiúsculas de minúsculas, e os padrões `*` / `?` / `!` funcionam como no OpenSSH.
 - **Chaves SSH**: Sessão → Gerar Chave SSH… (também no painel Ferramentas, e *Gerar…* ao lado do
   campo de chave privada no editor de sessão) executa o `ssh-keygen` do macOS para você: Ed25519 (padrão),
   RSA 4096 ou ECDSA, um comentário, uma frase secreta opcional com indicação da força, e o arquivo (padrão
@@ -296,7 +296,7 @@ O painel **Sftp** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente 
 - Barra de ferramentas e menu de contexto: nova pasta, renomear, permissões, apagar, baixar, enviar. Seleção múltipla
   com ⌘ / ⇧. Arraste arquivos do Finder para a lista para enviá-los; nomes já existentes pedem confirmação antes de substituir.
 - Clique duas vezes num arquivo de texto para editá-lo no editor integrado (⌘S salva de volta). “Editar no Editor
-  Externo” o abre no seu editor (Ajustes → Geral → Editor externo) e o reenvia a cada gravação.
+  Externo” o abre no seu editor (Ajustes → Geral → Editor externo) e o reenvia a cada gravação. O ajuste é um programa e seus argumentos — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` — iniciado diretamente, não por um shell: aspas agrupam palavras, `{file}` é substituído pelo caminho do arquivo (senão o caminho vai no final) e nada mais é expandido (sem `$VAR`, `~` só no início do programa, sem `;` nem pipes). A cópia local fica em `$TMPDIR/mobalt-edit/` e é apagada quando o MobAlt é encerrado.
 - As transferências mostram progresso, velocidade e um botão de cancelar; “Mostrar no Finder” depois de um download. Um download é gravado em `<nome>.part` e só
   recebe o nome ao terminar; se parar (conexão perdida, Desconectar), o próximo download do mesmo arquivo oferece *Retomar* ou
   *Recomeçar*.
@@ -370,7 +370,7 @@ se conecta, e você é avisado se algum não conseguir escutar na porta. Uma por
 ## X11, Mosh, Serial, RDP/VNC
 
 - **X11**: marque “Encaminhamento X11” em SSH avançado. O MobAlt inicia o XQuartz quando necessário, encaminha o
-  display e troca o cookie de autenticação, de modo que `xeyes` ou `gedit` simplesmente funcionam. A barra de estado mostra a
+  display e troca o cookie de autenticação, de modo que `xeyes` ou `gedit` simplesmente funcionam. Só passam os clientes X que apresentam o cookie (falso) da própria sessão — o que o sshd prepara para o seu login —, de modo que outro usuário do servidor não consegue alcançar a tela do seu Mac. A barra de estado mostra a
   disponibilidade do X11.
 - **Mosh**: requer `brew install mosh` localmente e `mosh-server` no host (UDP 60000-61000).
   O painel executa o cliente mosh; a inicialização via SSH usa a sua chave, o agente ou um pedido interativo.
@@ -490,9 +490,9 @@ filtro de sessões ou na caixa de conexão rápida a limpa e volta ao terminal.
 
 Tudo fica em `~/Library/Application Support/MobAlt/`: `sessions.json` (senhas e
 frases secretas cifradas pelas Chaves do macOS), `settings.json`, `known_hosts`,
-`workspace.json` e os arquivos de integração do zsh. Os registros de sessão vão para `~/Documents/MobAlt Logs/`.
+`workspace.json` e os arquivos de integração do zsh (`zdotdir/`, que também guarda o histórico do shell local, `zdotdir/.zsh_history`, a menos que seus próprios arquivos do zsh definam `HISTFILE`). Esses arquivos, o `known_hosts` do app e os registros de sessão só podem ser lidos pela sua conta (0600). Os registros de sessão vão para `~/Documents/MobAlt Logs/`. Os painéis de navegador guardam cookies e cache em `Partitions/` na mesma pasta (cookies cifrados). Um arquivo remoto aberto com *Editar no Editor Externo* é copiado para `$TMPDIR/mobalt-edit/` e apagado quando o MobAlt é encerrado. Se as Chaves não puderem ser usadas, as senhas salvas continuam funcionando, mas ficam armazenadas sem proteção (base64), e o MobAlt mostra um aviso uma vez por execução.
 O MobAlt só se conecta aos hosts que você configura; a verificação de atualizações opcional lê a lista de versões
-no GitHub e nada mais. Detalhes: [SECURITY.md](../SECURITY.md).
+no GitHub e nada mais. Links só abrem no seu navegador padrão quando são `http(s)` ou `mailto` (um link do terminal com outro esquema não faz nada). Detalhes: [SECURITY.md](../SECURITY.md).
 
 ## Solução de problemas
 
@@ -512,7 +512,7 @@ no GitHub e nada mais. Detalhes: [SECURITY.md](../SECURITY.md).
   deles em SSH avançado → Algoritmos (ou *Restaurar padrões*); para um equipamento antigo que só
   oferece SHA-1 / CBC, marque “Algoritmos antigos (equipamentos velhos)”.
 - **A chave do host mudou**: o servidor foi reinstalado, ou algo está interceptando a conexão.
-  Só aceite se souber o motivo; a chave antiga pode ser removida do `known_hosts` na pasta de configuração.
+  Só aceite se souber o motivo (Enter cancela; clique em *Aceitar chave nova*); a chave antiga pode ser removida do `known_hosts` na pasta de configuração.
 - **O app X11 não aparece**: instale o XQuartz e verifique se o shell remoto não substitui
   `DISPLAY` nos seus arquivos de inicialização.
 - **Mosh**: “cliente mosh não encontrado” significa que falta o `brew install mosh` localmente;

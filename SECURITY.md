@@ -48,14 +48,15 @@ Everything stays on your Mac, under `~/Library/Application Support/MobAlt/` unle
 | `settings.json` | Preferences only, no secrets. |
 | `known_hosts` | Host keys you accepted in MobAlt. `~/.ssh/known_hosts` is read, never written. |
 | `workspace.json` | Open tabs and the split layout, sessions referenced by id; a browser pane keeps its last address. |
-| `zdotdir/` | Generated zsh integration files for local terminals (folder following). |
+| `zdotdir/` | Generated zsh integration files for local terminals (folder following), and the local shell's history (`.zsh_history`) unless your zsh files set `HISTFILE`. |
 | `Partitions/browser*/` | Cookies and site data of browser panes (`persist:browser`, or `persist:browser-<id>` for a session with its own sign-ins). Cookies are encrypted. |
 | `~/Documents/MobAlt Logs/` | Session logs, only when you turn logging on. A log is the raw terminal stream, so it holds whatever the terminal showed. |
-| `$TMPDIR/mobalt-edit/` | Local copies of remote files opened with Edit (your per-user temporary folder; macOS clears it). |
+| `$TMPDIR/mobalt-edit/` | Local copies of remote files opened with Edit (your per-user temporary folder); deleted when MobAlt quits, and a copy an interrupted run left behind is removed a day later. |
 | `$TMPDIR/mobalt-rdp/` | The `.rdp` file handed to Windows App: host and user name, never a password. |
 
-Passwords never reach the interface: the window gets a "has a password" flag, and a sessions export never contains
-a password or passphrase.
+These files are written readable by your account only (0600). If the Keychain cannot be used, secrets are stored
+base64-encoded only and the app warns once per run. Passwords never reach the interface: the window gets a "has a
+password" flag, and a sessions export never contains a password or passphrase.
 
 ## Network behaviour
 
@@ -81,9 +82,14 @@ or crash reporting.
 Releases are built by GitHub Actions (`.github/workflows/release.yml`) on every push to `main`: a gitleaks secret
 scan, the unit tests, then `semantic-release`, which builds the DMG and zip for both architectures, signs them with
 a Developer ID Application certificate (Team ID `325WWNX46Q`) and the hardened runtime, has Apple notarize them,
-publishes the GitHub Release and updates the Homebrew cask, which pins the DMG's SHA-256. The packaged app's
-Electron fuses switch off `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and the `--inspect` arguments and switch on cookie
-encryption.
+publishes the GitHub Release and updates the Homebrew cask, which pins the DMG's SHA-256. A release run fails rather
+than publish an unsigned build; the workflow's actions are pinned by commit and only the release job gets a write
+token.
+
+The packaged app's Electron fuses switch off `ELECTRON_RUN_AS_NODE`, `NODE_OPTIONS` and the `--inspect` arguments,
+switch on cookie encryption, validate the integrity of `app.asar` and load the app only from it. The QA test hooks
+(`MOBALT_TEST_SCRIPT` and friends, `test/qa/README.md`) are ignored by every packaged build except one made with
+`npm run pack:qa`, which is never released.
 
 Signing material is never in the repository (`*.p12`, `*.p8`, `*.pem`, `*.key`, `.env*` are git-ignored); every push is scanned with
 gitleaks, and `test/unit/hygiene.test.js` refuses real host names, addresses, e-mail addresses and keys in the tree.

@@ -177,6 +177,7 @@ npm install            # node-pty를 Electron용으로 리빌드
 npm start              # 소스에서 실행
 npm test               # 단위 테스트
 npm run pack           # dist/mac-arm64/MobAlt.app (서명 없음)
+npm run pack:qa        # dist-qa/mac-arm64/MobAlt.app, QA 테스트 훅 포함 (배포용 아님)
 npm run dist           # arm64·x64 DMG + zip
 npm run install:local  # arm64 빌드, Developer ID 인증서가 있으면 서명, /Applications에 설치
 npm run perf           # 시작 시간·유휴 CPU·메모리·번들 크기 측정 (docs/PERFORMANCE.md)

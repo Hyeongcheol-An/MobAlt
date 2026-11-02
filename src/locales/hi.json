@@ -1666,5 +1666,11 @@
   "URL copied": "URL कॉपी हुआ",
   "URL is required": "URL ज़रूरी है",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, or an http:// / https:// address": "user@host[:port] लिखें, चाहें तो ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc:// के साथ, या कोई http:// / https:// पता",
-  "User name": "यूज़रनेम"
+  "User name": "यूज़रनेम",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "यह होस्ट कुंजी known_hosts में निरस्त (revoked) चिह्नित है। MobAlt इस कुंजी से कनेक्ट नहीं करेगा।",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "इस Mac पर गोपनीय जानकारी एन्क्रिप्ट नहीं की जा सकती (कीचेन उपलब्ध नहीं) — पासवर्ड बिना सुरक्षा के सहेजे जाते हैं",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": [
+    ", जिनमें से {n} खोलने पर कमांड चलाता है (स्टार्टअप कमांड या कस्टम शेल)",
+    ", जिनमें से {n} खोलने पर कमांड चलाते हैं (स्टार्टअप कमांड या कस्टम शेल)"
+  ]
 }

@@ -1526,5 +1526,8 @@
   "URL": "URL",
   "URL copied": "Đã sao chép URL",
   "URL is required": "Cần có URL",
-  "User name": "Tên người dùng"
+  "User name": "Tên người dùng",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "Khóa máy chủ này được đánh dấu là đã thu hồi trong known_hosts. MobAlt sẽ không kết nối bằng khóa này.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "Không thể mã hóa dữ liệu bí mật trên máy Mac này (Chuỗi khóa không khả dụng) — mật khẩu được lưu mà không được bảo vệ",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": ", trong đó {n} phiên chạy lệnh khi mở (lệnh khởi động hoặc shell tùy chỉnh)"
 }

@@ -32,6 +32,7 @@
     "rebuild": "electron-rebuild -f -w node-pty",
     "postinstall": "patch-package && electron-rebuild -f -w node-pty",
     "pack": "electron-builder --dir",
+    "pack:qa": "electron-builder --dir -c.extraMetadata.testHooks=true -c.directories.output=dist-qa",
     "dist": "electron-builder --mac",
     "test:sshd": "node test/start-sshd.js",
     "test": "node --test \"test/unit/**/*.test.js\"",
@@ -174,7 +175,9 @@
       "enableNodeOptionsEnvironmentVariable": false,
       "enableNodeCliInspectArguments": false,
       "enableCookieEncryption": true,
-      "resetAdHocDarwinSignature": true
+      "resetAdHocDarwinSignature": true,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
     }
   },
   "repository": {

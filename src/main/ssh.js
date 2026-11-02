@@ -320,6 +320,12 @@ class SshManager {
       if (ctx.cancelled) return cb(false); // the pane was closed or disconnected meanwhile: no dialog for it
       const status = knownhosts.check(host, port, key);
       if (status === 'ok') return cb(true);
+      if (status === 'revoked') {
+        // an @revoked key is refused whatever the answer: the dialog only says why (it has no Accept button)
+        const info = { host, port, keyType: knownhosts.readKeyType(key), fingerprint: knownhosts.fingerprint(key), status, name: cfg.name || '' };
+        paused(() => Promise.resolve(this.prompter.hostKey(info))).catch(() => {}).then(() => cb(false));
+        return;
+      }
       const open = this.hostKeyPrompts.get(slot);
       if (open) {
         paused(() => open.promise).then((ok) => {
@@ -382,10 +388,13 @@ class SshManager {
 
   /**
    * ssh2's `algorithms` option for a session: the explicit lists of Advanced SSH → Algorithms when set, else the
-   * "Legacy algorithms" additions, else nothing (ssh2's defaults). See algorithms.js.
+   * "Legacy algorithms" additions, else nothing (ssh2's defaults). See algorithms.js. The host-key algorithms the
+   * host is already known by in known_hosts go first, so a host known by its RSA key is asked for that one.
    */
   _algorithms(cfg) {
-    return algorithms.connectOption(cfg);
+    let types = [];
+    try { types = knownhosts.knownTypes(cfg.host, cfg.port || 22); } catch {}
+    return algorithms.connectOptionFor(cfg, types);
   }
 
   /**

@@ -59,3 +59,68 @@ test('ensure() copies a key into the app file only when it is missing there, rep
   assert.equal(kh.check('mosh.test', 2200, k2, [file]), 'ok');
   assert.equal(kh.check('mosh.test', 2200, k1, [file]), 'mismatch');
 });
+
+// From the 1.0 security review (khpoc.js): @revoked lines, keys of another type, case and wildcard patterns.
+function khFile(text) {
+  const f = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mobalt-khf-')), 'known_hosts');
+  fs.writeFileSync(f, text);
+  return [f];
+}
+
+test('an @revoked key is refused, even when a plain line also holds it', () => {
+  const k = fakeKey();
+  const b = k.toString('base64');
+  assert.equal(kh.check('host.example.com', 22, k, khFile(`@revoked host.example.com ssh-ed25519 ${b}\n`)), 'revoked');
+  assert.equal(kh.check('host.example.com', 22, k, khFile(`host.example.com ssh-ed25519 ${b}\n@revoked * ssh-ed25519 ${b}\n`)), 'revoked');
+  // another key revoked: this one is still judged on its own
+  const other = fakeKey();
+  assert.equal(kh.check('host.example.com', 22, k, khFile(`@revoked * ssh-ed25519 ${other.toString('base64')}\nhost.example.com ssh-ed25519 ${b}\n`)), 'ok');
+});
+
+test('a known host offering a key of another type is a changed key, not an unknown host', () => {
+  const ed = fakeKey('ssh-ed25519');
+  const rsa = fakeKey('ssh-rsa');
+  const list = khFile(`host.example.com ssh-ed25519 ${ed.toString('base64')}\n`);
+  assert.equal(kh.check('host.example.com', 22, rsa, list), 'mismatch');
+  assert.deepEqual(kh.knownTypes('host.example.com', 22, list), ['ssh-ed25519']);
+  // known with both types: either key passes
+  const both = khFile(`host.example.com ssh-ed25519 ${ed.toString('base64')}\nhost.example.com ssh-rsa ${rsa.toString('base64')}\n`);
+  assert.equal(kh.check('host.example.com', 22, rsa, both), 'ok');
+  assert.equal(kh.check('host.example.com', 22, ed, both), 'ok');
+});
+
+test('host names match without regard to case, plain and hashed', () => {
+  const k = fakeKey();
+  const b = k.toString('base64');
+  assert.equal(kh.check('host.example.com', 22, k, khFile(`Host.Example.com ssh-ed25519 ${b}\n`)), 'ok');
+  assert.equal(kh.check('HOST.example.com', 2222, k, khFile(`[host.example.COM]:2222 ssh-ed25519 ${b}\n`)), 'ok');
+  const salt = crypto.randomBytes(20);
+  const hash = crypto.createHmac('sha1', salt).update('host.example.com').digest();
+  assert.equal(kh.check('Host.Example.com', 22, k, khFile(`|1|${salt.toString('base64')}|${hash.toString('base64')} ssh-ed25519 ${b}\n`)), 'ok');
+});
+
+test('wildcard and negated patterns follow OpenSSH', () => {
+  const k = fakeKey();
+  const b = k.toString('base64');
+  assert.equal(kh.check('host.example.com', 22, k, khFile(`*.example.com ssh-ed25519 ${b}\n`)), 'ok');
+  assert.equal(kh.check('host.example.com', 22, fakeKey(), khFile(`*.example.com ssh-ed25519 ${b}\n`)), 'mismatch');
+  assert.equal(kh.check('host1.example.com', 22, k, khFile(`host?.example.com ssh-ed25519 ${b}\n`)), 'ok');
+  assert.equal(kh.check('bad.example.com', 22, k, khFile(`*.example.com,!bad.example.com ssh-ed25519 ${b}\n`)), 'unknown');
+  assert.equal(kh.check('host.example.com', 2222, k, khFile(`[*.example.com]:2222 ssh-ed25519 ${b}\n`)), 'ok');
+  assert.equal(kh.check('host.example.com', 2222, k, khFile(`*.example.com ssh-ed25519 ${b}\n`)), 'unknown', 'a pattern without a port names port 22 only');
+  assert.equal(kh.check('hostXexample.com', 22, k, khFile(`host.example.com ssh-ed25519 ${b}\n`)), 'unknown', 'a dot is not a wildcard');
+});
+
+test('@cert-authority lines neither accept a key nor make the host known', () => {
+  const k = fakeKey();
+  assert.equal(kh.check('host.example.com', 22, k, khFile(`@cert-authority *.example.com ssh-ed25519 ${k.toString('base64')}\n`)), 'unknown');
+});
+
+test('forget() removes an entry whatever its case', () => {
+  const file = path.join(process.env.MOBALT_USER_DATA, 'known_hosts');
+  const k = fakeKey();
+  fs.appendFileSync(file, `Mixed.Example.com ssh-ed25519 ${k.toString('base64')}\n`);
+  assert.equal(kh.check('mixed.example.com', 22, k, [file]), 'ok');
+  kh.forget('mixed.example.com', 22);
+  assert.equal(kh.check('mixed.example.com', 22, k, [file]), 'unknown');
+});

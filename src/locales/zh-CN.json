@@ -1515,5 +1515,8 @@
   "URL": "URL",
   "URL copied": "已拷贝 URL",
   "URL is required": "必须填写 URL",
-  "User name": "用户名"
+  "User name": "用户名",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "此主机密钥在 known_hosts 中被标记为已吊销。MobAlt 不会使用它进行连接。",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "无法在此 Mac 上加密机密信息（钥匙串不可用）——密码将以未受保护的形式存储",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": "，其中 {n} 个在打开时会运行命令（启动命令或自定义 Shell）"
 }

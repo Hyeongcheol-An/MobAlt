@@ -186,6 +186,20 @@
     await app.action('import-json');
     results.importWithoutIdAdds = sess().filter((s) => s.name === 'app-01').length === 2 && toastsSince(n).some((t) => t.text === 'Imported 1 session, skipped 1: entry 2: no name' && !t.error)
       && !sess().some((s) => s.host === 'nameless.example.internal') && app.sessions.folders.includes('Hand/Written') && !app.sessions.folders.includes('');
+    // a file whose sessions run commands when opened (startup commands, a local shell): the summary counts them, as a warning
+    const withCommands = scratch + '/with-commands.json';
+    await sftp.write(connId, withCommands, JSON.stringify({ sessions: [
+      { name: 'cmd-1', type: 'ssh', host: 'cmd.example.internal', username: 'u', startupCommand: 'echo hi' },
+      { name: 'cmd-2', type: 'local', shell: '/bin/sh' },
+      { name: 'cmd-3', type: 'ssh', host: 'plain.example.internal', username: 'u' },
+    ] }));
+    n = toasts.length;
+    await answer({ canceled: false, filePaths: [withCommands] });
+    await app.action('import-json');
+    results.importCountsCommands = toastsSince(n).some((t) => t.text === 'Imported 3 sessions, 2 of them run commands when opened (startup commands or a custom shell)' && t.warn);
+    if (!results.importCountsCommands) log('commands toast:', JSON.stringify(toastsSince(n)));
+    for (const x of ['cmd-1', 'cmd-2', 'cmd-3']) if (byName(x)) await window.api.sessions.remove(byName(x).id);
+    await app.reloadSessions();
     info.importJsonSemantics = 'upsert by id (file wins, saved secrets kept), id-less entries added, nameless / unknown type / bad port skipped and counted, folders unioned, never deletes; not a sessions file → error toast';
     // a file that is not a sessions file: an error toast names the reason and nothing changes; bad entries are skipped and counted
     const countBefore = sess().length, foldersBefore = app.sessions.folders.length;

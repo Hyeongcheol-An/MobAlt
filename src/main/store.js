@@ -26,10 +26,14 @@ function readJson(file, fallback) {
   }
 }
 
+// Every file of the user-data folder is the user's alone (0600): sessions.json holds host names, user names and the
+// encrypted secrets, settings.json the folders and commands. The mode is set on the temporary file before the rename,
+// so a file written by an older version (0644) is tightened on its next save.
 function writeJson(file, data) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = file + '.tmp';
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), { mode: 0o600 });
+  try { fs.chmodSync(tmp, 0o600); } catch {} // a leftover .tmp keeps its old mode otherwise
   fs.renameSync(tmp, file);
 }
 
@@ -48,11 +52,23 @@ async function canEncrypt() {
   return encryptionAvailable;
 }
 
+// Without safeStorage (the Keychain refused or is unavailable) a secret is still saved — only base64-encoded, so the
+// session keeps working — and the user is told once per run (setPlaintextWarning: main shows a warning toast).
+let plaintextWarning = null;
+let plaintextWarned = false;
+function setPlaintextWarning(fn) {
+  plaintextWarning = fn;
+}
+
 async function encrypt(plain) {
   if (!plain) return '';
   if (await canEncrypt()) {
     const buf = typeof safeStorage.encryptStringAsync === 'function' ? await safeStorage.encryptStringAsync(plain) : safeStorage.encryptString(plain);
     return 'enc:' + buf.toString('base64');
+  }
+  if (!plaintextWarned && plaintextWarning) {
+    plaintextWarned = true;
+    try { plaintextWarning(); } catch {}
   }
   return 'b64:' + Buffer.from(plain, 'utf8').toString('base64');
 }
@@ -252,4 +268,4 @@ function validChrome(c) {
   return out;
 }
 
-module.exports = { Store, DEFAULT_SETTINGS, encrypt, decrypt, userDataFile, validChrome };
+module.exports = { Store, DEFAULT_SETTINGS, encrypt, decrypt, userDataFile, validChrome, setPlaintextWarning };

@@ -1600,5 +1600,11 @@
   "URL copied": "URL copiada",
   "URL is required": "La URL es obligatoria",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, or an http:// / https:// address": "Usa usuario@host[:puerto], opcionalmente con ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, o una dirección http:// / https://",
-  "User name": "Nombre de usuario"
+  "User name": "Nombre de usuario",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "Esta clave del host está marcada como revocada en known_hosts. MobAlt no se conectará con ella.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "No se pueden cifrar los secretos en este Mac (llavero no disponible) — las contraseñas se guardan sin protección",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": [
+    ", {n} de ellas ejecuta comandos al abrirse (comandos de inicio o un shell personalizado)",
+    ", {n} de ellas ejecutan comandos al abrirse (comandos de inicio o un shell personalizado)"
+  ]
 }

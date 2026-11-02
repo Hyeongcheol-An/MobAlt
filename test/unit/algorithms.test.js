@@ -172,3 +172,16 @@ test('loading the module is instant: only the 1024-bit group is probed (BoringSS
   const unavailable = fresh.UNAVAILABLE ? fresh.UNAVAILABLE.kex : (fresh.describe().unavailable || {}).kex || [];
   for (const n of unavailable) assert.equal(n, 'diffie-hellman-group1-sha1', 'only group1 may be reported unavailable');
 });
+
+test('connectOptionFor: the host-key types known for the host go first, the set stays the same', () => {
+  assert.equal(A.connectOptionFor({}, []), undefined);
+  assert.equal(A.connectOptionFor({}, ['ssh-ed25519']), undefined, 'already first: nothing to change');
+  const rsa = A.connectOptionFor({}, ['ssh-rsa']);
+  assert.deepEqual(rsa.serverHostKey.slice(0, 3), ['rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa']);
+  assert.deepEqual([...rsa.serverHostKey].sort(), [...A.DEFAULTS.serverHostKey].sort());
+  const ec = A.connectOptionFor({ pqKex: true }, ['ecdsa-sha2-nistp256']);
+  assert.equal(ec.serverHostKey[0], 'ecdsa-sha2-nistp256');
+  assert.ok(ec.kex, 'the other categories are kept');
+  const explicit = A.connectOptionFor({ algorithms: { serverHostKey: ['ssh-ed25519', 'rsa-sha2-256'] } }, ['ssh-rsa']);
+  assert.deepEqual(explicit.serverHostKey, ['rsa-sha2-256', 'ssh-ed25519']);
+});
