@@ -46,14 +46,26 @@ function stop(id) {
 /** macOS keeps IPv6 in separate binaries (ping6, traceroute6); Linux's take -6. */
 const v6Tool = (tool, host) => (net.isIPv6(host) ? (process.platform === 'linux' ? { bin: tool, args: ['-6'] } : { bin: tool + '6', args: [] }) : { bin: tool, args: [] });
 
-function ping(win, host, count = 5) {
+// The host is typed into the Tools panel or comes from a session: `--` ends the options, so a host that starts with
+// '-' is looked up as a name ("cannot resolve") instead of being read as an option of ping / traceroute.
+function pingCommand(host, count = 5) {
   const tool = v6Tool('ping', host);
-  return streamCommand(win, tool.bin, [...tool.args, '-c', String(count), host], host);
+  return { bin: tool.bin, args: [...tool.args, '-c', String(parseInt(count, 10) || 5), '--', String(host)] };
+}
+
+function tracerouteCommand(host) {
+  const tool = v6Tool('traceroute', host);
+  return { bin: tool.bin, args: [...tool.args, '-m', '30', '-q', '1', '-w', '2', '--', String(host)] };
+}
+
+function ping(win, host, count = 5) {
+  const c = pingCommand(host, count);
+  return streamCommand(win, c.bin, c.args, host);
 }
 
 function traceroute(win, host) {
-  const tool = v6Tool('traceroute', host);
-  return streamCommand(win, tool.bin, [...tool.args, '-m', '30', '-q', '1', '-w', '2', host], host);
+  const c = tracerouteCommand(host);
+  return streamCommand(win, c.bin, c.args, host);
 }
 
 /** Runs fn(item, index) over `items` with at most `concurrency` in flight; once isCancelled() is true no further item is taken. */
@@ -117,9 +129,9 @@ function pingOnce(host, timeout = 600, procs = null) {
     const secs = String(Math.max(1, Math.ceil(timeout / 1000)));
     const v6 = net.isIPv6(host);
     const bin = v6 && process.platform !== 'linux' ? 'ping6' : 'ping';
-    const args = process.platform === 'linux' ? [...(v6 ? ['-6'] : []), '-c', '1', '-W', secs, '-n', host]
-      : v6 ? ['-c', '1', '-n', host]
-        : ['-c', '1', '-W', String(timeout), '-t', secs, '-n', host];
+    const args = process.platform === 'linux' ? [...(v6 ? ['-6'] : []), '-c', '1', '-W', secs, '-n', '--', host]
+      : v6 ? ['-c', '1', '-n', '--', host]
+        : ['-c', '1', '-W', String(timeout), '-t', secs, '-n', '--', host]; // `--`: a host is never an option
     let p;
     try { p = spawn(bin, args, { env: { ...process.env, LANG: 'C' } }); } catch { return resolve({ alive: false, ms: null, unreachable: false }); }
     if (procs) procs.add(p);
@@ -173,4 +185,4 @@ function netinfo() {
   return { hostname: os.hostname(), interfaces: list, dns: dns.getServers() };
 }
 
-module.exports = { ping, traceroute, portScan, lookup, netinfo, stop, pingOnce, tcpConnect, runQueue };
+module.exports = { ping, traceroute, pingCommand, tracerouteCommand, portScan, lookup, netinfo, stop, pingOnce, tcpConnect, runQueue };
