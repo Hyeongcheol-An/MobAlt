@@ -317,6 +317,8 @@ El panel **SFTP** sigue al panel SSH o FTP activo. Se abre automáticamente al c
 
 ## Sesiones de navegador
 
+![La página de administración de un router en un panel junto al shell que lo gestiona](images/es/browser-session.png)
+
 Una sesión **Navegador** abre una página web en un panel propio —la página de administración de un router, Grafana,
 la interfaz web de un dispositivo, el puerto `localhost` de un túnel— junto a los terminales que la administran. Créala
 con ＋ Sesión → Navegador (la URL; un nombre que por omisión es el host; un icono y un color como cualquier sesión) o

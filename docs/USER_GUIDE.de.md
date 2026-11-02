@@ -330,6 +330,8 @@ Das Panel **SFTP** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim
 
 ## Browser-Sitzungen
 
+![Die Admin-Seite eines Routers in einem Bereich neben der Shell, die ihn verwaltet](images/de/browser-session.png)
+
 Eine **Browser**-Sitzung öffnet eine Webseite in einem eigenen Bereich — die Admin-Seite eines Routers, Grafana, die
 Weboberfläche eines Geräts, den `localhost`-Port eines Tunnels — neben den Terminals, die sie verwalten. Legen Sie
 eine mit `＋ Sitzung` → „Browser“ an (die URL; ein Name, der standardmäßig der Host ist; Symbol und Farbe wie bei jeder

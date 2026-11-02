@@ -299,6 +299,8 @@ Bảng **SFTP** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự 
 
 ## Phiên trình duyệt
 
+![Trang quản trị của router trong một ngăn bên cạnh shell quản lý nó](images/vi/browser-session.png)
+
 Phiên **Trình duyệt** mở một trang web trong ngăn riêng — trang quản trị của router, Grafana, giao diện web của thiết bị,
 cổng `localhost` của một đường hầm — cạnh các terminal quản lý nó. Tạo phiên bằng ＋ Phiên → Trình duyệt (URL; tên
 mặc định là máy chủ; biểu tượng và màu như mọi phiên khác) hoặc gõ một địa chỉ `http://` / `https://` vào ô Kết nối

@@ -163,6 +163,16 @@ a fixed addon makes the step a no-op.
 | LICENSES.chromium.html | 5.3 | 5.3 |
 | MobAlt-0.15.2-arm64.dmg (what users download) | 119.1 | 115.1 |
 
+The downloads at 1.0.0, from the v1.0.0 GitHub release's assets (read 2026-11-02; MB, 1024-based). No 1.0.0 app was
+measured part by part, so the table above stays the 0.15.2 round's.
+
+| Release asset | MB |
+|---|---:|
+| MobAlt-1.0.0-arm64.dmg | 115.6 |
+| MobAlt-1.0.0-arm64.zip (the update download) | 111.5 |
+| MobAlt-1.0.0-x64.dmg | 122.5 |
+| MobAlt-1.0.0-x64.zip (the update download) | 118.4 |
+
 What app.asar shipped that the app never loads (6.8 MB of its 14.2): node-pty's Windows prebuilds and winpty sources,
 serialport's android / linux / win32 prebuilds and C++ sources, xterm's TypeScript sources
 and `xterm.mjs` (the page loads `lib/xterm.js`), the nan and node-addon-api headers, cpu-features' vendored C library,
