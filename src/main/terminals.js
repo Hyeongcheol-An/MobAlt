@@ -294,7 +294,7 @@ class TerminalRegistry extends EventEmitter {
   startLog(id, file, { plain = false } = {}) {
     this.stopLog(id);
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    const ws = fs.createWriteStream(file, { flags: 'a' });
+    const ws = fs.createWriteStream(file, { flags: 'a', mode: 0o600 }); // a log holds everything the terminal showed: the user's alone
     ws.write(`--- session log started ${new Date().toISOString()} ---\n`);
     this.logs.set(id, { ws, filter: plain ? new PlainTextFilter() : null });
     return file;

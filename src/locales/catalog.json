@@ -5467,6 +5467,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "Security": {
       "refs": [
         "src/renderer/dialogs.js"

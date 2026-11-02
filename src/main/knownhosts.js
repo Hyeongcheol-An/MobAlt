@@ -132,7 +132,8 @@ function remember(host, port, keyBuf) {
   const file = userDataFile('known_hosts');
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const line = `${hostPattern(host, port)} ${readKeyType(keyBuf)} ${keyBuf.toString('base64')}\n`;
-  fs.appendFileSync(file, line);
+  fs.appendFileSync(file, line, { mode: 0o600 }); // the user's alone, like ~/.ssh/known_hosts
+  try { fs.chmodSync(file, 0o600); } catch {} // a file written by an older version
 }
 
 function forget(host, port) {
@@ -141,7 +142,7 @@ function forget(host, port) {
   try {
     const lines = fs.readFileSync(file, 'utf8').split('\n');
     const keep = lines.filter((l) => !l.toLowerCase().startsWith(pat + ' '));
-    fs.writeFileSync(file, keep.join('\n'));
+    fs.writeFileSync(file, keep.join('\n'), { mode: 0o600 });
   } catch {}
 }
 

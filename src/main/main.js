@@ -8,7 +8,7 @@ const fs = require('fs');
 const os = require('os');
 const crypto = require('crypto');
 const dgram = require('dgram');
-const { Store, validChrome } = require('./store');
+const { Store, validChrome, setPlaintextWarning } = require('./store');
 const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts, spawnMosh } = require('./terminals');
 const { SshManager } = require('./ssh');
 const { SftpManager } = require('./sftp');
@@ -42,6 +42,10 @@ let silentListener = null; // test-only TCP listener that accepts and never spea
 app.setName('MobAlt');
 if (process.env.MOBALT_USER_DATA) app.setPath('userData', process.env.MOBALT_USER_DATA); // test isolation
 const store = new Store();
+// safeStorage unavailable: secrets are saved base64-encoded only (store.js); say so once per run, in the main window
+setPlaintextWarning(() => {
+  if (win && !win.isDestroyed()) win.webContents.send('app:notice', { level: 'warn', text: t('Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected') });
+});
 const registry = new TerminalRegistry();
 let win = null; // the main window: the sidebar, the test hooks and the fallback for everything addressed to "the window"
 // A tab can be detached into a window of its own (app.js detachTab): every window runs the same renderer, the
