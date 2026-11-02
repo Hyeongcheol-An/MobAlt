@@ -5,6 +5,7 @@
 //   - Cancel (the connecting pane's button) while a slow server has not answered yet: the pane ends at once with
 //     "Connection attempt cancelled.", no host-key dialog ever opens for it and the attempt is torn down — the delay
 //     proxy logs the client gone before it relays, the test sshd's log gains no login (the "ghost" of the r16 QA)
+//   - Cancel at +0 ms, before the pane has its connection id: remembered, the attempt cancelled when the id arrives
 //   - the same against a black-holed address, where TCP never connects
 //   - the handshake timeout's wording: "no TCP connection" (black hole) against "no SSH banner" (a silent listener)
 //   - a server that closes at once / right after its banner: "closed the connection during the handshake"
@@ -114,6 +115,26 @@
       const sshdDelta = (await fsx('readText', sshdLog)).slice(sshdBefore);
       const r = { during, cancelMs, after, dialogsAfterCancel: dialogs.slice(dialogsBefore).map((d) => d.title), proxyClientGone: /client gone before relay/.test(proxyLog), proxyNeverRelayed: !/relaying #/.test(proxyLog), noGhostLogin: !(/relaying #/.test(proxyLog) && /Accepted publickey/.test(sshdDelta)) /* the sshd log is shared with suites that run alongside: only a relayed connection could be this one's */, noFailedLine: !/Connection failed/.test(textOf(pane)) };
       await close(pane);
+      return r;
+    });
+
+    // 1b. Cancel at +0 ms, before main has even answered with the connection's id (the pane has no termId yet): the
+    //     click is remembered and the attempt cancelled as soon as the id arrives — against the real sshd, which
+    //     would otherwise log the pane in a few milliseconds later
+    await step('cancelAtZeroMs', async () => {
+      const s = await app.saveSession({ ...base, name: 'cancel-0ms', port: 2222 });
+      const opening = app.openSession(s); // not awaited: the pane exists, its ssh.connect is in flight
+      const p = app.activePane();
+      pane = p;
+      const btn = p.el.querySelector('.pane-overlay.connecting button');
+      const before = { termId: p.termId, status: p.status, button: !!btn };
+      btn.click();
+      await opening;
+      await waitFor(() => p.dead, 5000, 'pane dead after Cancel at +0 ms');
+      await sleep(1500); // a connection that went on regardless would have logged in and drawn its prompt by now
+      const r = { before, status: p.status, line: (textOf(p).match(/── [^\n]*/) || [''])[0], overlay: p.el.querySelector('.pane-overlay span')?.textContent || '' };
+      r.cancelledLine = /Connection attempt cancelled\./.test(r.line) && r.overlay === 'Connection attempt cancelled.' && r.before.termId == null && r.status !== 'connected';
+      await close(p);
       return r;
     });
 

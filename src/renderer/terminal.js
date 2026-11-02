@@ -823,10 +823,19 @@ export class TermPane {
         this.setStatus('connected');
         this._sendStartup();
       } else if (this.kind === 'ssh') {
+        this._cancelRequested = false;
         this.setStatus('connecting');
         const r = await window.api.ssh.connect(this.session, size);
+        // the pane went away, or Cancel was pressed, before main answered with the connection's id (the Keychain read
+        // and openShell take a few milliseconds): the attempt behind it is cancelled now that it can be named
+        if (this.disposed) { window.api.ssh.disconnect(r.id); return; }
         this.termId = r.id;
         this.app.registerPane(this);
+        if (this._cancelRequested) {
+          this._cancelRequested = false;
+          await this.disconnect(); // main ends it with reason 'cancelled': "Connection attempt cancelled."
+          return;
+        }
       } else if (this.kind === 'telnet') {
         this.setStatus('connecting');
         const r = await window.api.term.spawnTelnet({ host: this.session.host, port: this.session.port || 23, username: this.session.username || '', ...size });
@@ -1042,7 +1051,11 @@ export class TermPane {
   }
 
   async disconnect() {
-    if (!this.termId) return;
+    if (!this.termId) {
+      // an SSH pane in its first milliseconds of "Connecting…" has no id yet: start() cancels once it arrives
+      if (this.kind === 'ssh' && this.status === 'connecting') this._cancelRequested = true;
+      return;
+    }
     const id = this.termId;
     if (this.kind === 'ssh') await window.api.ssh.disconnect(id);
     else if (this.kind === 'ftp') {
