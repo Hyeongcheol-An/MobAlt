@@ -1,5 +1,6 @@
 // Small DOM helpers, context menus, modals and toasts (no framework).
 import { t, tn, locale } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { normalizeBrowserUrl, browserHost } from './browserurl.js'; // quick connect: an http(s) address opens a browser session
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -154,6 +155,7 @@ const ICONS = {
   // pushpin: a pinned tab (head, shaft and the point)
   pin: 'M9 3h6M10 3v6l-3 3v1h10v-1l-3-3V3M12 13v8',
   monitor: 'M3 12h4l3-7 4 14 3-7h4', // the remote monitoring bar: a pulse line
+  external: 'M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5', // a browser pane's "open in the default browser": a box with an arrow leaving it
 };
 /** An inline SVG icon element (class "i"); unknown names render an empty 16px box rather than throwing. */
 export function icon(name) {
@@ -170,7 +172,7 @@ export function applyIcons(root = document) {
 export const TYPE_ICON = { ssh: '●', local: '●', telnet: '●', rdp: '●', vnc: '●', serial: '●' };
 // Protocol names stay as they are; "Local" and "Serial" are words and follow the interface language — looked up at
 // read time (a Proxy), so TYPE_LABEL[kind], `in`, Object.keys and spreads keep working everywhere it is used.
-const TYPE_SRC = { ssh: () => 'SSH', mosh: () => 'Mosh', local: () => t('Local'), telnet: () => 'Telnet', serial: () => t('Serial'), ftp: () => 'FTP', rdp: () => 'RDP', vnc: () => 'VNC', empty: () => t('Empty') }; // `empty`: the status bar's kind for an empty pane
+const TYPE_SRC = { ssh: () => 'SSH', mosh: () => 'Mosh', local: () => t('Local'), telnet: () => 'Telnet', serial: () => t('Serial'), ftp: () => 'FTP', rdp: () => 'RDP', vnc: () => 'VNC', browser: () => t('Browser'), empty: () => t('Empty') }; // `empty`: the status bar's kind for an empty pane
 export const TYPE_LABEL = new Proxy({}, {
   get: (_, k) => (typeof k === 'string' && TYPE_SRC[k] ? TYPE_SRC[k]() : undefined),
   has: (_, k) => k in TYPE_SRC,
@@ -548,6 +550,11 @@ export function debounce(fn, ms) {
 export function parseQuickConnect(str) {
   const s = str.trim();
   if (!s) return null;
+  // http(s)://… is a browser session (src/renderer/browser.js); any other scheme written out is not an address to connect to
+  if (/^https?:\/\//i.test(s)) {
+    const r = normalizeBrowserUrl ? normalizeBrowserUrl(s) : null;
+    return r && r.url ? { type: 'browser', url: r.url, name: browserHost(r.url) || r.url } : null;
+  }
   let m = /^(?:(ssh|mosh|telnet|ftp|ftps|rdp|vnc):\/\/)?(?:([^@\s]+)@)?(\[[^\]]+\]|[^:\s@]+)(?::(\d+))?$/.exec(s);
   if (!m) return null;
   const scheme = m[1] || 'ssh';

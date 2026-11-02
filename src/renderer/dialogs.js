@@ -5,6 +5,7 @@ import { mix, contrast } from './theme.js';
 import { analysePaste, KIND_LABEL, DANGER_KINDS, PASTE_CONFIRM_CHARS } from './pasteguard.js';
 import { DEFAULT_RULES, COLOR_KEYS, compileRules, normalizeRule } from './highlight.js';
 import { t, tn, LANGUAGES, SYSTEM_LOCALE, languageOf } from './i18n.js';
+import { normalizeBrowserUrl, browserHost } from './browserurl.js'; // a browser session's address: http(s) only, a bare host completed
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -24,7 +25,7 @@ function paintThemePreview(el, name) {
   return el;
 }
 const clamp = (v, min, max, def) => (Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : def);
-const DEFAULT_PORT = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900, local: 0, serial: 0 };
+const DEFAULT_PORT = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900, local: 0, serial: 0, browser: 0 };
 const BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600];
 // Labels looked up when a row is rendered (never at module load), so they follow the interface language.
 /** A tunnel's type as the session editor's Tunnels table shows it. */
@@ -263,6 +264,9 @@ export function sessionEditor(app, initial = {}) {
   const pqKex = check(t('Post-quantum key exchange'), !!s.pqKex, pqAvailable ? {} : { disabled: true });
   // the remote monitoring bar: a session without its own value shows Settings → Features' default and saves it explicitly
   const monitor = check(t('Show remote monitoring bar'), s.monitor ?? app.settings.monitorBar !== false);
+  // --- browser: the page the pane opens; "isolated" gives the session a cookie jar of its own (two accounts on one site)
+  const url = text(s.url || '', { placeholder: t('https://host/path, or host:port (http for the local network)'), dir: 'ltr', autocomplete: 'off' });
+  const isolated = check(t('Own cookies and sign-ins (isolated from other browser sessions)'), !!s.isolated);
   // --- mosh / ftp
   const moshServer = text(s.moshServer, { placeholder: t('mosh-server (path on the remote host, optional)') });
   const moshPredict = select([['adaptive', t('Adaptive (default)')], ['always', t('Always')], ['never', t('Never')], ['experimental', t('Experimental')]], s.moshPredict || 'adaptive');
@@ -412,7 +416,7 @@ export function sessionEditor(app, initial = {}) {
   const { strip: tabs, btns: tabBtns, show: showPage } = modalTabs([['basic', t('Basic'), pages.basic], ['advanced', t('Advanced SSH'), pages.advanced], ['terminal', t('Terminal'), pages.terminal], ['tunnels', t('Tunnels'), pages.tunnels]]);
 
   const typeBtns = {};
-  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'].map((k) => (typeBtns[k] = h('button', { type: 'button', class: k === type ? 'active' : '', onclick: () => setType(k) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '💻', telnet: '☎️', serial: '🔌', ftp: '📁', rdp: '🪟', vnc: '🖥️' }[k]), TYPE_LABEL[k]))));
+  const picker = h('div', { class: 'type-picker' }, ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc', 'browser'].map((k) => (typeBtns[k] = h('button', { type: 'button', class: k === type ? 'active' : '', onclick: () => setType(k) }, h('span', { class: 'ico' }, { ssh: '🔐', mosh: '📶', local: '💻', telnet: '☎️', serial: '🔌', ftp: '📁', rdp: '🪟', vnc: '🖥️', browser: '🌐' }[k]), TYPE_LABEL[k]))));
 
   const buildBasic = () => {
     const b = pages.basic;
@@ -421,6 +425,10 @@ export function sessionEditor(app, initial = {}) {
       ...field(t('Icon'), iconRow), ...field(t('Colour'), colorRow, t('Shown on the session, its tab and pane')));
     if (type === 'local') {
       b.append(...field(t('Shell'), shell, t('Leave blank for your login shell')), ...field(t('Start folder'), h('div', { class: 'inline' }, cwd, cwdBrowse)));
+    } else if (type === 'browser') {
+      b.append(...field(t('URL'), url),
+        h('label', {}, t('Cookies')), h('div', { class: 'checks' }, isolated.el),
+        h('div', { class: 'full form-help', style: { gridColumn: '1 / -1' } }, t('Opens the page in a pane of its own, next to the terminals that manage it — a router, Grafana, a device\'s web UI, a tunnelled localhost. Only http:// and https:// addresses; a bare host gets https:// (http:// on the local network). Sign-ins are shared by every browser session unless the session is isolated.')));
     } else if (type === 'serial') {
       b.append(
         ...field(t('Serial port'), h('div', { class: 'inline' }, serialSel, serialRefresh)),
@@ -497,12 +505,12 @@ export function sessionEditor(app, initial = {}) {
     // keep a custom port, but follow the type's default when the port was still the previous type's default
     if (!port.value || +port.value === DEFAULT_PORT[prevType] || +port.value === 0) port.value = DEFAULT_PORT[ty] || '';
     prevType = type = ty;
-    name.placeholder = ty === 'local' ? t('Session name (defaults to "Local")') : ty === 'serial' ? t('Session name (defaults to device @ baud)') : t('Session name (defaults to user@host)');
+    name.placeholder = ty === 'local' ? t('Session name (defaults to "Local")') : ty === 'serial' ? t('Session name (defaults to device @ baud)') : ty === 'browser' ? t('Session name (defaults to the host)') : t('Session name (defaults to user@host)');
     tabBtns.advanced.hidden = ty !== 'ssh' && ty !== 'mosh'; // Mosh: the preset / lists (host-key check, SFTP companion) and the monitoring bar
     for (const el of [...jumpRows, ...keepAliveRows, x11.el, agentFwd.el, compression.el]) el.hidden = ty !== 'ssh';
     moshAlgoNote.hidden = ty !== 'mosh';
     tabBtns.tunnels.hidden = ty !== 'ssh';
-    tabBtns.terminal.hidden = ty === 'rdp' || ty === 'vnc' || ty === 'ftp';
+    tabBtns.terminal.hidden = ty === 'rdp' || ty === 'vnc' || ty === 'ftp' || ty === 'browser'; // a browser pane has no terminal
     sftpAuto.el.hidden = ty !== 'ssh' && ty !== 'mosh'; // Mosh: opens the SFTP companion connection automatically
     followCwd.el.hidden = ty !== 'ssh';
     buildBasic();
@@ -533,12 +541,25 @@ export function sessionEditor(app, initial = {}) {
       toast(t('Serial device path is required'), 'warn');
       return null;
     }
-    if (type !== 'local' && type !== 'serial' && !host.value.trim()) {
+    let browserUrl = '';
+    if (type === 'browser') {
+      // the address is the session: refused here when it is not http(s) (file:, javascript:, data:…), completed when a bare host was typed
+      const r = normalizeBrowserUrl(url.value);
+      if (!r.url) {
+        showPage('basic');
+        url.focus();
+        toast(r.error === 'empty' ? t('URL is required') : r.error === 'scheme' ? t('Only http:// and https:// addresses can be opened in a browser pane') : t('That is not a valid URL'), 'warn');
+        return null;
+      }
+      browserUrl = r.url;
+      url.value = r.url;
+    }
+    if (type !== 'local' && type !== 'serial' && type !== 'browser' && !host.value.trim()) {
       host.focus();
       toast(t('Host is required'), 'warn');
       return null;
     }
-    if (type !== 'local' && type !== 'serial') {
+    if (type !== 'local' && type !== 'serial' && type !== 'browser') {
       const pn = /^\d+$/.test(port.value.trim()) ? parseInt(port.value, 10) : NaN; // integers only (12.5 / 1e3 are not ports)
       if (!(pn >= 1 && pn <= 65535)) {
         toast(t('Port must be between 1 and 65535'), 'warn');
@@ -550,7 +571,7 @@ export function sessionEditor(app, initial = {}) {
     const out = {
       ...s,
       type,
-      name: name.value.trim() || (type === 'local' ? 'Local' : type === 'serial' ? `${serialPath.replace('/dev/', '')} @ ${baud.value}` : `${username.value ? username.value + '@' : ''}${host.value.trim()}`),
+      name: name.value.trim() || (type === 'local' ? 'Local' : type === 'serial' ? `${serialPath.replace('/dev/', '')} @ ${baud.value}` : type === 'browser' ? (browserHost(browserUrl) || browserUrl) : `${username.value ? username.value + '@' : ''}${host.value.trim()}`),
       serialPath,
       baudRate: parseInt(baud.value, 10) || 115200,
       dataBits: parseInt(dataBits.value, 10) || 8,
@@ -595,6 +616,8 @@ export function sessionEditor(app, initial = {}) {
       ftpsInsecure: ftpsInsecure.cb.checked,
       tunnels,
     };
+    if (type === 'browser') { out.url = browserUrl; out.isolated = isolated.cb.checked; }
+    else { delete out.url; delete out.isolated; }
     delete out._connect;
     if (algo && (type === 'ssh' || type === 'mosh')) { // Mosh: used by its host-key check and SFTP companion (main.js, terminal.js)
       for (const [cat] of ALGO_CATS) {
@@ -1149,7 +1172,7 @@ export function shortcutsDialog(app) {
     ]],
     ['panes', t('Panes & terminal'), [
       [t('Split right / down'), '⌘D / ⇧⌘D'], [t('Grid 2 / 4 / 6 / 8 panes'), '⌥⌘2 / ⌥⌘4 / ⌥⌘6 / ⌥⌘8'], [t('Unsplit'), '⌥⌘1'], [t('Close pane'), '⇧⌘W'], [t('Next pane'), '⌘]'], [t('Zoom pane (fill the tab) / restore'), '⇧⌘⏎'],
-      [t('Find'), '⌘F'], [t('Clear terminal'), '⌘K'], [t('Zoom text'), '⌘= / ⌘- / ⌘0'], [t('Copy / Paste'), '⌘C / ⌘V'], [t('Paste (terminal)'), rightClick ? t('Right-click') : '⌘V'], [t('Terminal menu'), rightClick ? t('⇧Right-click') : t('Right-click')],
+      [t('Find'), '⌘F'], [t('Address bar (browser pane)'), '⌘L'], [t('Clear terminal'), '⌘K'], [t('Zoom text'), '⌘= / ⌘- / ⌘0'], [t('Copy / Paste'), '⌘C / ⌘V'], [t('Paste (terminal)'), rightClick ? t('Right-click') : '⌘V'], [t('Terminal menu'), rightClick ? t('⇧Right-click') : t('Right-click')],
       [t('Newline in TUI apps (ESC+CR)'), '⇧Enter / ⌥Enter'], [t('MultiExec'), '⇧⌘M'],
     ]],
     ['sidebar', t('Sidebar, SFTP & lists'), [

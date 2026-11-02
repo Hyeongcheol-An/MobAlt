@@ -5,6 +5,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const { normalizeBrowserUrl } = require('./browserurl'); // a browser session's URL: http(s) only, whatever the file says
 
 function expandHome(p) {
   if (p.startsWith('~/')) return path.join(os.homedir(), p.slice(2));
@@ -212,14 +213,15 @@ function parseMobaXtermIniDetailed(file) {
   return { sessions, skipped };
 }
 
-const SESSION_TYPES = ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc'];
+const SESSION_TYPES = ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc', 'browser'];
 
 /**
  * Validate the text of a MobAlt sessions export, or a hand-written file of the same shape. Returns
  * { sessions, folders, skipped }: the usable sessions normalised (trimmed string name, a known type — trimmed and
  * lower-cased, 'ssh' when absent — an integer port when one is given, a string id — fresh when missing — and a
- * string folder) and the rejected entries as { entry, reason }; a second entry with an id the file already used
- * is rejected as a duplicate, so one file never overwrites its own rows. Or { error } when the file is not a
+ * string folder, and for a browser session an http(s) URL — normalised, a file: / javascript: / data: address is
+ * rejected like a missing one) and the rejected entries as { entry, reason }; a second entry with an id the file
+ * already used is rejected as a duplicate, so one file never overwrites its own rows. Or { error } when the file is not a
  * sessions file at all (not JSON, no top-level object, no "sessions" array). Secrets and the exporter's
  * hasPassword/… flags are passed through untouched: what to do with them is the store's business.
  */
@@ -250,6 +252,13 @@ function parseSessionsJson(text) {
       const port = typeof s.port === 'number' ? s.port : /^\s*\d+\s*$/.test(String(s.port)) ? parseInt(s.port, 10) : NaN;
       if (!Number.isInteger(port) || port < 1 || port > 65535) return skip(t('bad port {port}', { port: JSON.stringify(s.port) }));
       out.port = port;
+    }
+    if (type === 'browser') {
+      // the URL is what the session is; only http(s) and about:blank ever reach the webview (src/main/browserurl.js)
+      const r = normalizeBrowserUrl(s.url);
+      if (!r.url) return skip(r.error === 'empty' ? t('no URL') : t('bad URL {url}', { url: JSON.stringify(s.url) }));
+      out.url = r.url;
+      out.isolated = s.isolated === true;
     }
     if (seenIds.has(out.id)) return skip(t('duplicate id'));
     seenIds.add(out.id);

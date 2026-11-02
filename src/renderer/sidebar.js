@@ -2,7 +2,7 @@
 import { $, h, contextMenu, confirmDialog, promptDialog, toast, typeAhead, repointOpeners } from './ui.js';
 import { t, tn, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
-const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet' };
+const ICON = { ssh: 'ico-ssh', mosh: 'ico-ssh', local: 'ico-local', telnet: 'ico-telnet', ftp: 'ico-rdp', rdp: 'ico-rdp', vnc: 'ico-vnc', serial: 'ico-telnet', browser: 'ico-browser' };
 
 /** A translated sentence whose {name} placeholders are DOM nodes (links): the pieces in the order the translation puts them. */
 function sentence(template, parts) {
@@ -238,6 +238,7 @@ export class SessionTree {
   sessionRow(s) {
     const open = this.app.workspace.allPanes().some((p) => p.session && p.session.id === s.id && p.status === 'connected');
     const sub = s.type === 'local' ? t('local')
+      : s.type === 'browser' ? String(s.url || '').replace(/^https?:\/\//, '').replace(/\/$/, '') // the address without its scheme: "nas:8080/admin"
       : s.type === 'serial' ? `${(s.serialPath || '').replace('/dev/', '')} @ ${s.baudRate || ''}`
       : `${s.username ? s.username + '@' : ''}${s.host || ''}${s.port && s.port !== { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 }[s.type] ? ':' + s.port : ''}`;
     // the session's colour is never a text colour (a yellow pick is unreadable on the light chrome): a coloured session

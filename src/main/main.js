@@ -29,6 +29,7 @@ const i18n = require('./i18n'); // interface language: t() for every label built
 const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 const { ZmodemManager, fmtBytes } = require('./zmodem');
+const { isBrowserUrl } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
 
 const pkg = require('../../package.json');
 bootTimes.mainLoaded = Date.now();
@@ -283,6 +284,7 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
       nodeIntegration: false,
       sandbox: false,
       spellcheck: false,
+      webviewTag: true, // browser sessions (src/renderer/browser.js): a <webview> per pane, hardened in hardenWebviews below
       ...(process.env.MOBALT_TEST_SCRIPT ? { backgroundThrottling: false } : {}), // a run keeps its timers and frames at full speed behind other windows
     },
   });
@@ -580,6 +582,7 @@ function buildMenu() {
         { label: t('Focus Next Pane'), accelerator: 'Cmd+]', click: () => sendAction('next-pane') },
         { label: t('Zoom Pane (fill the tab / restore)'), accelerator: 'Cmd+Shift+Return', click: () => sendAction('zoom-pane') },
         { label: t('Remote Monitoring Bar'), click: () => sendAction('toggle-monitor') },
+        { label: t('Address Bar'), accelerator: 'Cmd+L', click: () => sendAction('address-bar') }, // a browser pane's URL field (the page itself may hold the keyboard: a menu accelerator reaches it anyway)
         { type: 'separator' },
         { label: t('Zoom In'), accelerator: 'Cmd+=', click: () => sendAction('zoom', 1) },
         { label: t('Zoom Out'), accelerator: 'Cmd+-', click: () => sendAction('zoom', -1) },
@@ -1315,6 +1318,17 @@ function registerIpc() {
   ipcMain.handle('dialog:save', (e, opts) => dialogs.showSaveDialog(wof(e), opts));
   ipcMain.handle('dialog:message', (e, opts) => dialogs.showMessageBox(wof(e), opts));
   ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url));
+  ipcMain.handle('browser:favicon', (_e, partition, url) => fetchFavicon(partition, url)); // a browser pane's page icon as a data: URL (null when there is none)
+  // a browser pane's history (the <webview> tag's own canGoBack / goBack went with the webContents methods they wrapped):
+  // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward'
+  ipcMain.handle('browser:nav', (e, id, op) => {
+    const wc = webContents.fromId(Number(id));
+    if (!wc || wc.isDestroyed() || wc.getType() !== 'webview' || !wc.hostWebContents || wc.hostWebContents.id !== e.sender.id) return null;
+    const nav = wc.navigationHistory;
+    if (op === 'back' && nav.canGoBack()) nav.goBack();
+    else if (op === 'forward' && nav.canGoForward()) nav.goForward();
+    return { canGoBack: nav.canGoBack(), canGoForward: nav.canGoForward() };
+  });
   ipcMain.handle('shell:show-item', (_e, p) => shell.showItemInFolder(p));
   ipcMain.handle('shell:open-path', (_e, p) => shell.openPath(p));
 
@@ -1408,6 +1422,81 @@ process.on('uncaughtException', (e) => {
     if (win && !win.isDestroyed()) win.webContents.send('app:notice', { level: 'error', text: t('Internal error: {message}', { message: e.message }) });
   } catch {}
 });
+
+// ---------- browser sessions: the <webview> guests ----------
+// A browser pane (src/renderer/browser.js) is a <webview> in the window. The renderer is not trusted with what it
+// loads or how: every guest is sandboxed and isolated whatever attributes the tag carries (no preload, no node), may
+// only ever show http(s) pages (or about:blank) — file:, javascript:, data: and the rest are refused when the tag
+// attaches and again when the page tries to navigate there —, keeps its partition to the ones browser panes use,
+// opens a popup / target=_blank in the same pane instead of a window, and gets no camera, microphone, location,
+// notifications or any other permission a page could ask for.
+const BROWSER_PARTITION = /^persist:browser(-[A-Za-z0-9_-]{1,64})?$/;
+const guardedSessions = new WeakSet(); // the permission handlers are per session, set once
+function hardenWebviews() {
+  app.on('web-contents-created', (_e, contents) => {
+    contents.on('will-attach-webview', (event, webPreferences, params) => {
+      delete webPreferences.preload;
+      delete webPreferences.preloadURL;
+      webPreferences.nodeIntegration = false;
+      webPreferences.nodeIntegrationInWorker = false;
+      webPreferences.nodeIntegrationInSubFrames = false;
+      webPreferences.contextIsolation = true;
+      webPreferences.sandbox = true;
+      webPreferences.webSecurity = true;
+      webPreferences.allowRunningInsecureContent = false;
+      webPreferences.enableBlinkFeatures = '';
+      webPreferences.javascript = true;
+      if (!isBrowserUrl(params.src)) { event.preventDefault(); return; }
+      if (!BROWSER_PARTITION.test(String(params.partition || ''))) params.partition = 'persist:browser';
+    });
+    contents.on('did-attach-webview', (_e, guest) => {
+      guest.setWindowOpenHandler(({ url }) => {
+        // a popup / target=_blank to a web page: the same pane goes there. Never about:blank — Chromium opens a
+        // window.open('javascript:…') as about:blank and runs the script in it afterwards — nor anything else.
+        if (/^https?:\/\//i.test(url) && isBrowserUrl(url)) guest.loadURL(url).catch(() => {});
+        return { action: 'deny' };
+      });
+      guest.on('will-navigate', (ev, url) => { if (!isBrowserUrl(url)) ev.preventDefault(); });
+      guest.on('will-redirect', (ev, url) => { if (!isBrowserUrl(url)) ev.preventDefault(); });
+      const ses = guest.session;
+      if (ses && !guardedSessions.has(ses)) {
+        guardedSessions.add(ses);
+        ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+        ses.setPermissionCheckHandler(() => false);
+        ses.setDevicePermissionHandler(() => false);
+      }
+    });
+  });
+}
+hardenWebviews();
+
+/**
+ * The favicon of a page shown in a browser pane, as a data: URL the pane can put in an <img> (the window's CSP
+ * allows images from itself and data: only). Fetched through the guest's own partition — the site's cookies — with
+ * a short timeout and a size cap; anything that is not a small image comes back as null, never as an error.
+ */
+const FAVICON_MAX = 64 * 1024;
+async function fetchFavicon(partition, url) {
+  if (!isBrowserUrl(url) || !/^https?:/i.test(url) || !BROWSER_PARTITION.test(String(partition || ''))) return null;
+  const { session } = require('electron');
+  const ses = session.fromPartition(partition);
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), 4000);
+  try {
+    const r = await ses.fetch(url, { signal: ac.signal, cache: 'force-cache' });
+    if (!r.ok) return null;
+    const type = String(r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
+    if (!/^image\//.test(type)) return null;
+    const buf = Buffer.from(await r.arrayBuffer());
+    if (!buf.length || buf.length > FAVICON_MAX) return null;
+    return `data:${type};base64,${buf.toString('base64')}`;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 app.whenReady().then(() => {
   bootTimes.ready = Date.now();
   nativeTheme.themeSource = chromeOf(store.getSettings()).scheme; // the applied theme's chrome (app:chrome keeps it current)

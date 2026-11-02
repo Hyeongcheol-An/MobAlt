@@ -693,7 +693,7 @@ export class Workspace {
     if (mode !== 'ask') return 'tabs';
     const others = tab ? tab.panes().filter((p) => p !== tab.activePane) : [];
     const n = Math.max(1, others.length);
-    const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead).length;
+    const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && p.kind !== 'browser' && !p.dead).length; // a web page is not a connection
     const m = showModal({
       title: t('Unsplit this tab'),
       width: 'narrow',
@@ -778,6 +778,7 @@ export class Workspace {
       const splitter = h('div', { class: 'splitter' });
       splitter.addEventListener('mousedown', (e) => {
         e.preventDefault();
+        document.body.classList.add('divider-drag'); // a browser pane's web page lets the pointer through meanwhile (styles.css #webview-layer)
         const rect = el.getBoundingClientRect();
         const move = (ev) => {
           const r = n.dir === 'h' ? (ev.clientX - rect.left) / rect.width : (ev.clientY - rect.top) / rect.height;
@@ -788,6 +789,7 @@ export class Workspace {
         const up = () => {
           document.removeEventListener('mousemove', move);
           document.removeEventListener('mouseup', up);
+          document.body.classList.remove('divider-drag');
           for (const p of tab.panes()) p.fit();
         };
         document.addEventListener('mousemove', move);

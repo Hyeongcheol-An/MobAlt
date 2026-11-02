@@ -226,6 +226,9 @@
     </footer>
   </div>
 
+  <!-- browser panes keep their <webview> here, placed over the pane's body (browser.js): a webview moved in the DOM
+       would reload its page, and the split layout moves panes on every change -->
+  <div id="webview-layer"></div>
   <div id="modal-root"></div>
   <div id="ctx-root"></div>
   <!-- notices are announced: a polite live region; an error toast is an alert of its own (ui.js toast()) -->
@@ -237,6 +240,7 @@
   <script src="../../node_modules/@xterm/addon-search/lib/addon-search.js"></script>
   <script src="../../node_modules/@xterm/addon-webgl/lib/addon-webgl.js"></script>
   <script src="../../node_modules/@xterm/addon-unicode11/lib/addon-unicode11.js"></script>
+  <script src="../main/browserurl.js"></script><!-- what a browser pane may load: the same file the main process requires (window.BrowserUrl) -->
   <script type="module" src="app.js"></script>
 </body>
 </html>

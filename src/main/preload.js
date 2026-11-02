@@ -205,6 +205,11 @@ contextBridge.exposeInMainWorld('api', {
     showItem: (p) => invoke('shell:show-item', p),
     openPath: (p) => invoke('shell:open-path', p),
   },
+  // browser sessions (src/renderer/browser.js): the page's favicon as a data: URL, fetched through the pane's partition
+  browser: {
+    favicon: (partition, url) => invoke('browser:favicon', partition, url),
+    nav: (id, op) => invoke('browser:nav', id, op), // the page's history: 'state' | 'back' | 'forward' → { canGoBack, canGoForward }
+  },
   launch: {
     rdp: (cfg) => invoke('launch:rdp', cfg),
     vnc: (cfg) => invoke('launch:vnc', cfg),
