@@ -130,7 +130,10 @@ for (const lang of i18n.LANGUAGES) {
     assert.equal(typeof dict, 'object');
     // every catalog string present and non-empty, no stale key, the placeholders of the source, [one, other] only for
     // a tn() pair, nothing of three words or more left in English unless @keep lists it (scripts/i18n-status.js)
-    const problems = status.problems(dict, catalog);
+    // I18N_STRICT=0 (a feature branch whose strings are not translated yet): a key the dictionary lacks or no longer
+    // needs is the translators' work in progress, not a failure; everything else (placeholders, empty values, English
+    // left in a long value) still is
+    const problems = status.problems(dict, catalog).filter((p) => strict || !/^(missing: |stale key )/.test(p));
     assert.deepEqual(problems, [], `${problems.length} problem(s) — npm run i18n:status -- --list ${lang.code}:\n${problems.slice(0, 40).join('\n')}`);
   });
 }

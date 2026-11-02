@@ -121,6 +121,11 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
   Double-click a session in the sidebar to connect; drag sessions into folders and folders into each other.
 - **Quick connect**: type `user@host[:port]` in the toolbar field and press Enter. `mosh://`, `telnet://`,
   `ftp://`, `ftps://`, `rdp://` and `vnc://` prefixes work too.
+- **Browser sessions**: a web page in a pane next to the shells that manage it — a router, Grafana, a tunnelled
+  `localhost:port`. `＋ Session → Browser` or an `http://` / `https://` address in Quick connect; Back / Forward /
+  Reload, an address field (⌘L), the page title on the tab, Open in default browser, an error view with Retry; it
+  splits, zooms, detaches and is restored with the workspace like any pane. `http(s)` only, sandboxed, no popups or
+  permissions; sign-ins shared across browser sessions unless a session asks for its own.
 - **SFTP**: opens automatically for SSH sessions. Double-click to navigate or edit, `>_` sends `cd` to
   the terminal, the terminal can follow your shell's folder (session option).
 - **Tunnels**: `Tunneling` (⇧⌘U) starts tunnels over an open connection or a saved session; tunnels

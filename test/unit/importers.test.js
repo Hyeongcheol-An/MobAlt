@@ -150,6 +150,52 @@ test('parseSessionsJson: normalises the usable entries and skips the rest with a
   ]);
 });
 
+test('parseSessionsJson: a browser session needs an http(s) URL; other schemes are skipped, a bare host is completed', () => {
+  const r = parseSessionsJson(JSON.stringify({ sessions: [
+    { name: 'grafana', type: 'browser', url: 'http://127.0.0.1:3000/dashboards', isolated: true },
+    { name: 'router', type: 'Browser', url: '192.168.1.1' },
+    { name: 'public', type: 'browser', url: 'example.com', isolated: 'yes' },
+    { name: 'blank', type: 'browser', url: 'about:blank' },
+    { name: 'no-url', type: 'browser' },
+    { name: 'file-url', type: 'browser', url: 'file:///etc/hosts' },
+    { name: 'js-url', type: 'browser', url: 'javascript:alert(1)' },
+    { name: 'data-url', type: 'browser', url: 'data:text/html,<b>x</b>' },
+    { name: 'bad-url', type: 'browser', url: 'http://exa mple.com' },
+    { name: 'with-password', type: 'browser', url: 'http://admin:admin@192.0.2.1/' },
+    // what the session editor writes for a page (an older export had port 0 and the SSH fields): the stray keys go
+    { name: 'editor-made', type: 'browser', url: 'http://192.0.2.9/', isolated: false, port: 0, host: '', username: '', authMethod: 'auto', privateKeyPath: '', icon: '🌐' },
+  ] }));
+  assert.equal(r.error, undefined);
+  assert.deepEqual(r.sessions.map((s) => [s.name, s.type, s.url, s.isolated]), [
+    ['grafana', 'browser', 'http://127.0.0.1:3000/dashboards', true],
+    ['router', 'browser', 'http://192.168.1.1/', false],
+    ['public', 'browser', 'https://example.com/', false], // isolated is a boolean or nothing
+    ['blank', 'browser', 'about:blank', false],
+    ['editor-made', 'browser', 'http://192.0.2.9/', false],
+  ]);
+  const made = r.sessions.find((s) => s.name === 'editor-made');
+  assert.deepEqual(['port', 'host', 'username', 'authMethod', 'privateKeyPath'].filter((k) => k in made), []);
+  assert.equal(made.icon, '🌐');
+  assert.deepEqual(r.skipped, [
+    { entry: '"no-url"', reason: 'no URL' },
+    { entry: '"file-url"', reason: 'bad URL "file:///etc/hosts"' },
+    { entry: '"js-url"', reason: 'bad URL "javascript:alert(1)"' },
+    { entry: '"data-url"', reason: 'bad URL "data:text/html,<b>x</b>"' },
+    { entry: '"bad-url"', reason: 'bad URL "http://exa mple.com"' },
+    { entry: '"with-password"', reason: 'bad URL "http://admin:admin@192.0.2.1/"' },
+  ]);
+});
+
+test('parseSessionsJson: a local or serial session has no port — a 0 written by an older editor is dropped, not refused', () => {
+  const r = parseSessionsJson(JSON.stringify({ sessions: [
+    { name: 'shell', type: 'local', port: 0, cwd: '/tmp' },
+    { name: 'console', type: 'serial', port: 0, serialPath: '/dev/cu.usbserial-1', baudRate: 115200 },
+    { name: 'oddity', type: 'local', port: 70000 },
+  ] }));
+  assert.deepEqual(r.sessions.map((s) => [s.name, 'port' in s]), [['shell', false], ['console', false], ['oddity', false]]);
+  assert.deepEqual(r.skipped, []);
+});
+
 test('decodeText: BOMs, UTF-16 LE without a BOM (a short file too), plain UTF-8', () => {
   assert.equal(decodeText(Buffer.from('﻿{"sessions": []}', 'utf8')), '{"sessions": []}');
   assert.equal(decodeText(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('[Bookmarks]', 'utf16le')])), '[Bookmarks]');

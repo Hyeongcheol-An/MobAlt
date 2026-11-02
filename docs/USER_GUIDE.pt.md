@@ -76,6 +76,7 @@ e preencha a aba Básico. Clique duas vezes numa sessão para conectar; clique c
 | Serial | Console USB-serial (baud, enquadramento, controle de fluxo, eco local) |
 | FTP | Navegador de arquivos FTP / FTPS (TLS explícito) no painel Sftp |
 | RDP / VNC | Passa a conexão ao Windows App ou ao Compartilhamento de Tela do macOS |
+| Navegador | Uma página web num painel ao lado dos seus terminais — um roteador, o Grafana, a interface web de um dispositivo, um `localhost` encaminhado por túnel (só http/https; veja [Sessões de navegador](#sessões-de-navegador)) |
 
 **Pastas**: o botão de pasta no cabeçalho do painel (Nova pasta) cria uma pasta; arraste sessões e pastas para movê-las (solte na área vazia
 para a raiz). O menu de contexto de uma pasta pode abrir todas as sessões dela numa grade ou em abas.
@@ -299,6 +300,56 @@ O painel **Sftp** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente 
   *Recomeçar*.
 - Os cabeçalhos das colunas ordenam por nome, tamanho ou data. Quando a barra lateral está estreita, a coluna de data some.
 
+## Sessões de navegador
+
+Uma sessão **Navegador** abre uma página web num painel próprio — a página de administração de um roteador, o Grafana,
+a interface web de um dispositivo, a porta `localhost` de um túnel — ao lado dos terminais que a administram. Crie uma
+com ＋ Sessão → Navegador (a URL; um nome que por padrão é o host; um ícone e uma cor como em qualquer sessão) ou digite
+um endereço `http://` / `https://` na Conexão rápida (um `localhost:3000` sem esquema ali é um endereço SSH, como
+sempre: digite o esquema para abrir uma página). Só endereços `http://` e `https://` abrem (e `about:blank`): `file:`,
+`javascript:`, `data:` e qualquer outro esquema são recusados pelo editor, pela Conexão rápida, pelo importador de JSON
+e mais uma vez pelo próprio app quando a página é anexada. Um host sem esquema recebe `https://` — exceto na rede local
+(`localhost`, `127.0.0.1`, `192.168.…`, `10.…`, `nas.local`, um nome simples como `router`), onde recebe `http://`; um
+`:80` explícito significa `http://`, `:443` ou `:8443` `https://`. Uma senha digitada no endereço (`admin:secret@router`)
+é recusada: a página a pede quando precisa dela, pelo diálogo de login do próprio MobAlt (autenticação HTTP Basic /
+Digest, do jeito que roteadores e dispositivos pequenos pedem), e nada é armazenado — o site mantém o login durante a
+sessão.
+
+O painel é um painel comum: vive numa aba, divide-se com terminais (⌘D / ⇧⌘D, ou solte uma sessão nas suas bordas),
+maximiza (⇧⌘⏎), move-se para uma janela própria (⌥⌘N — a página é carregada de novo lá, então o que você digitou num
+formulário não é mantido; o mesmo quando a janela fecha e a aba volta) e volta com o espaço de trabalho na página em
+que estava por último. A sua barra de ferramentas tem Voltar, Avançar, Recarregar (Parar enquanto a página carrega), o
+campo de endereço (⌘L lhe dá o foco; Enter abre o que você digitou, Esc restaura o endereço atual e devolve o teclado à
+página) e *Abrir no navegador padrão*. Com o teclado, Tab a partir desse último botão entra na página; ⌘L traz de volta
+à barra de ferramentas. A aba recebe o título da página, cujo ícone aparece antes do endereço e no cabeçalho do painel,
+a menos que você renomeie a aba ou o painel; uma página aberta pela Conexão rápida leva o seu host depois do título, já
+que uma página pode se chamar como quiser. A barra de estado mostra `NAVEGADOR · url · carregada`. ⌘= / ⌘- / ⌘0 dão
+zoom na página, não na fonte do terminal — o zoom pertence ao site, como no Safari: vale em todos os painéis que
+compartilham os logins do site, e o site abre nesse nível da próxima vez; o menu do painel mostra a porcentagem atual.
+⌘F busca na página com a barra de busca (a opção Diferenciar maiúsculas se aplica, a opção Regex não), ⌘C / ⌘V e o
+menu Editar funcionam na página. Os atalhos que um navegador reserva para si diante das páginas chegam ao MobAlt mesmo
+quando a página tenta retê-los: ⌘W, ⇧⌘W, ⌘T, ⌘N, ⇧⌘N, ⇧⌘T, ⌥⌘N, ⌘L, ⌘Q, ⌘,, ⌘1–4, ⌃Tab, ⌃⇧Tab, ⌘], ⇧⌘↩, ⌘= / ⌘- / ⌘0
+e ⌘F. Qualquer outro atalho (⌘K, ⌘B, ⌘D…) vai primeiro para a página — a paleta ⌘K de um console web, o ⌘B de um
+editor — e só executa a ação do MobAlt quando a página não o usa. O menu do painel (⚙ no cabeçalho do painel de uma aba dividida, um clique direito na
+página ou na barra de ferramentas) oferece Voltar, Avançar, Recarregar, Copiar URL, Abrir no Navegador, Buscar…,
+Renomear Painel…, Zoom da Página, as divisões, Maximizar Painel e Fechar Painel; um clique direito num link acrescenta
+*Abrir Link no Navegador* e *Copiar Link*, e em texto selecionado *Copiar*.
+
+Uma página que não pode ser carregada mostra o que deu errado em palavras simples (nada responde no endereço, o nome é
+desconhecido, o servidor não respondeu a tempo, o certificado não é confiável — abra-a no seu navegador para examiná-lo)
+com o código bruto abaixo (`ERR_CONNECTION_REFUSED (-102)`) e um botão Tentar novamente; uma página que se fecha sozinha
+ou cujo processo travou recebe a mesma visão, e Tentar novamente a inicia do zero; uma página que para de responder
+mostra uma faixa com Parar e Recarregar. Um popup ou um link `target="_blank"` abre no mesmo painel; o `beforeunload`
+de uma página nunca prende você nela; a página roda isolada (sandbox) e não recebe permissão de câmera, microfone,
+localização, notificações, Bluetooth nem de outros dispositivos. O `alert()` / `confirm()` de uma página é um diálogo
+que bloqueia a janela até ser dispensado (consoles de administração perguntam “tem certeza?” assim); a partir do
+segundo, o diálogo oferece impedir que a página abra mais. Um download (um link com `download`, um backup de
+configuração) é salvo direto na sua pasta Downloads (Ajustes → Geral → Pasta de downloads, quando definida) com um nome
+ainda livre, com um aviso quando começa e outro quando termina — sem diálogo de salvar. Os logins (cookies) são
+compartilhados por todas as sessões de navegador, então você entra num console uma vez só; marque **Cookies e logins
+próprios** no editor para dar a uma sessão cookies só dela (duas contas no mesmo site). O MultiExec nunca digita numa
+página, e *Ajustes do Painel…*, a barra de monitoramento e os registros de sessão são para painéis de terminal.
+
 ## Túneis (encaminhamento de portas)
 
 ![Túneis](images/pt/tunnels.png)
@@ -410,6 +461,7 @@ no ambiente (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt`, `ar`
 | Painel seguinte, aba seguinte / anterior, aba 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
 | Maximizar painel (preencher a aba) / restaurar o layout | ⇧⌘⏎ |
 | Buscar, limpar, zoom | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
+| Painel de navegador: barra de endereços | ⌘L (⌘F busca na página, ⌘= / ⌘- / ⌘0 dão zoom nela) |
 | Barra lateral, Sessões / SFTP / Ferramentas / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, túneis, ajustes | ⇧⌘M, ⇧⌘U, ⌘, |
 | Quebra de linha em apps TUI | ⇧Enter ou ⌥Enter |

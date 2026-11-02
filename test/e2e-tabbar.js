@@ -339,11 +339,16 @@
     log('saved workspace', JSON.stringify(ws));
     for (const t of [...app.workspace.tabs]) await app.closeTab(t);
     await sleep(100);
+    // the app's own saves stand still meanwhile: the debounced one, and the periodic one (every 20 s from launch —
+    // this step lands right on its first tick, and a tick between the hand-written file and the restore wrote the
+    // emptied workspace over it)
     clearTimeout(app._wsTimer); app._wsTimer = null;
+    app._wsReady = false;
     // a file whose pinned tab is not first still restores pinned-first
     window.api.workspace.save({ ...ws, tabs: [ws.tabs[1], ws.tabs[0], ws.tabs[2]], activeTab: 0 });
     await sleep(200);
     results.restored = await app.restoreWorkspace();
+    app._wsReady = true;
     await sleep(300);
     const rG = app.workspace.tabs.find((t) => t.title === 'G');
     results.restoreKeepsPinned = order() === 'GDH' && domOrder() === 'GDH' && !!rG && rG.pinned && rG.tabEl.classList.contains('pinned') && !closeShown(rG) && app.workspace.tabs.filter((t) => t.pinned).length === 1;

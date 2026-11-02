@@ -85,7 +85,7 @@ export const CHROME_OVERRIDES = {
     ok: '#4caf50', 'ok-fg': '#c9f5cf', 'ok-bg': '#2f5e36',
     'info-bg': '#203a5a', 'info-fg': '#dbe9ff', 'info-border': '#4f6f94',
     scrollbar: '#4a4e56',
-    'ico-ssh': '#7cc4ff', 'ico-local': '#9ad28e', 'ico-telnet': '#e3c36d', 'ico-rdp': '#8fb5ff', 'ico-vnc': '#d99cff',
+    'ico-ssh': '#7cc4ff', 'ico-local': '#9ad28e', 'ico-telnet': '#e3c36d', 'ico-rdp': '#8fb5ff', 'ico-vnc': '#d99cff', 'ico-browser': '#6fd3d9',
   },
   light: {
     bg: '#f5f6f8', 'bg-panel': '#e9ebee', 'bg-elev': '#ffffff', 'bg-dialog': '#ffffff', 'bg-control': '#f7f8fa', 'bg-input': '#ffffff',
@@ -174,7 +174,7 @@ export function chromePalette(theme, name) {
     scrollbar: pick('scrollbar', step(bg0, light ? 0.25 : 0.2)),
     'shadow-a': light ? '.18' : '.4', 'backdrop-a': light ? '.3' : '.45',
     'ico-ssh': icon('ico-ssh', accent), 'ico-local': icon('ico-local', ok), 'ico-telnet': icon('ico-telnet', warn),
-    'ico-rdp': icon('ico-rdp', accent), 'ico-vnc': icon('ico-vnc', theme.magenta || accent),
+    'ico-rdp': icon('ico-rdp', accent), 'ico-vnc': icon('ico-vnc', theme.magenta || accent), 'ico-browser': icon('ico-browser', theme.cyan || accent),
   };
 }
 

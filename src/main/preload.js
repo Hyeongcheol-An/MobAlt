@@ -43,7 +43,7 @@ if (process.env.MOBALT_TEST_SCRIPT) {
 
 const EVENT_CHANNELS = [
   'term:data', 'term:exit', 'ssh:status', 'sftp:transfer', 'sftp:edit-synced', 'tunnels:changed',
-  'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'tools:scan', 'app:notice', 'app:bundle-updated', 'app:update-progress',
+  'prompt:request', 'prompt:cancel', 'menu:action', 'tools:output', 'tools:done', 'tools:scan', 'app:notice', 'app:bundle-updated', 'app:update-progress',
   'detach:adopt', 'window:closing', 'settings:changed', 'sessions:changed', // several windows (detached tabs)
 ];
 // A detached window is the same page with ?detached=<key>; main hands it the tabs for that key once (detach.payload).
@@ -209,6 +209,12 @@ contextBridge.exposeInMainWorld('api', {
     openExternal: (url) => invoke('shell:open-external', url),
     showItem: (p) => invoke('shell:show-item', p),
     openPath: (p) => invoke('shell:open-path', p),
+  },
+  // browser sessions (src/renderer/browser.js): the page's favicon as a data: URL, fetched by main through the guest's own
+  // session (the guest named by its webContents id, which main checks against the calling window)
+  browser: {
+    favicon: (id, url) => invoke('browser:favicon', id, url),
+    nav: (id, op) => invoke('browser:nav', id, op), // the page's history: 'state' | 'back' | 'forward' → { canGoBack, canGoForward }
   },
   launch: {
     rdp: (cfg) => invoke('launch:rdp', cfg),

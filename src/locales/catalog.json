@@ -448,6 +448,11 @@
         "src/main/main.js"
       ]
     },
+    "{name} saved to {folder}": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "{name} uploaded": {
       "refs": [
         "src/renderer/sftp.js"
@@ -896,6 +901,26 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Address": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "Address (⌘L)": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "Address Bar": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
+    "Address bar (browser pane)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Advanced SSH": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -957,6 +982,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Back": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "Background": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -981,6 +1011,11 @@
     "Bad remote file name": {
       "refs": [
         "src/main/keygen.js"
+      ]
+    },
+    "bad URL {url}": {
+      "refs": [
+        "src/main/importers.js"
       ]
     },
     "Bar": {
@@ -1077,6 +1112,16 @@
     "Browse…": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Browser": {
+      "refs": [
+        "src/renderer/ui.js"
+      ]
+    },
+    "Browser toolbar": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "Built-in rules restored": {
@@ -1320,12 +1365,14 @@
     },
     "Close pane": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/dialogs.js",
         "src/renderer/terminal.js"
       ]
     },
     "Close Pane": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
       ]
@@ -1563,6 +1610,11 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "Cookies": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Copied {n} host as text": {
       "plural": "Copied {n} hosts as text",
       "refs": [
@@ -1571,6 +1623,7 @@
     },
     "Copy": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/dialogs.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
@@ -1591,6 +1644,11 @@
         "src/renderer/sftp.js"
       ]
     },
+    "Copy Link": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "Copy on select": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -1604,6 +1662,11 @@
     "Copy the results as text": {
       "refs": [
         "src/renderer/index.html"
+      ]
+    },
+    "Copy URL": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "Could not connect to {where}: {error}": {
@@ -1729,6 +1792,7 @@
     },
     "Decrease": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -2039,6 +2103,11 @@
       ]
     },
     "Download to…": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
+    "Downloading {name} to {folder}…": {
       "refs": [
         "src/main/main.js"
       ]
@@ -2386,6 +2455,7 @@
     },
     "Find…": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
       ]
@@ -2489,6 +2559,11 @@
     "formats a disk": {
       "refs": [
         "src/renderer/pasteguard.js"
+      ]
+    },
+    "Forward": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "Framing": {
@@ -2745,6 +2820,11 @@
         "src/renderer/index.html"
       ]
     },
+    "https://host/path, or host:port (http for the local network)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Icon": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2856,6 +2936,7 @@
     },
     "Increase": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -3216,6 +3297,16 @@
         "src/renderer/terminal.js"
       ]
     },
+    "loaded": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "loading": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     "Loading…": {
       "refs": [
         "src/renderer/sftp.js"
@@ -3559,6 +3650,31 @@
     "Move \"{name}\" into": {
       "refs": [
         "src/renderer/sidebar.js"
+      ]
+    },
+    "Move pane down": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move pane here (replace)": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move pane left": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move pane right": {
+      "refs": [
+        "src/renderer/terminal.js"
+      ]
+    },
+    "Move pane up": {
+      "refs": [
+        "src/renderer/terminal.js"
       ]
     },
     "Move panes to tabs": {
@@ -4021,6 +4137,11 @@
         "src/renderer/app.js"
       ]
     },
+    "no URL": {
+      "refs": [
+        "src/main/importers.js"
+      ]
+    },
     "No X server found (install XQuartz for X11 forwarding)": {
       "refs": [
         "src/renderer/app.js"
@@ -4117,6 +4238,11 @@
         "src/main/ssh.js"
       ]
     },
+    "Nothing answers at this address and port.": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "nothing it told us about": {
       "refs": [
         "src/main/algorithms.js"
@@ -4183,6 +4309,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Only http:// and https:// addresses can be opened in a browser pane": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Only one pane in this tab": {
       "refs": [
         "src/renderer/app.js"
@@ -4219,6 +4350,16 @@
         "src/renderer/terminal.js"
       ]
     },
+    "Open in Browser": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "Open in default browser": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "Open in External Editor": {
       "refs": [
         "src/renderer/sftp.js"
@@ -4232,6 +4373,11 @@
     "Open in Split Right": {
       "refs": [
         "src/renderer/sidebar.js"
+      ]
+    },
+    "Open Link in Browser": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "Open ports": {
@@ -4314,6 +4460,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Opens the page in a pane of its own, next to the terminals that manage it — a router, Grafana, a device's web UI, a tunnelled localhost. Only http:// and https:// addresses; a bare host gets https:// (http:// on the local network). Sign-ins are shared by every browser session unless the session is isolated.": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Option key acts as Meta/Alt": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -4364,8 +4515,24 @@
         "src/renderer/pasteguard.js"
       ]
     },
+    "Own cookies and sign-ins (isolated from other browser sessions)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Page Zoom": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "Page Zoom ({pct}%)": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "Pane menu": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -4434,8 +4601,14 @@
         "src/main/ssh.js"
       ]
     },
+    "Passwords do not belong in the address — the page asks for them when it needs them.": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Paste": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/dialogs.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
@@ -4843,6 +5016,16 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Reload": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "Reload page": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "Remote (-R)": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -4935,11 +5118,13 @@
     },
     "Rename pane": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
     "Rename Pane…": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -4988,6 +5173,7 @@
     },
     "Reset": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -5030,11 +5216,13 @@
     },
     "Restore Panes": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
     "Restore panes (⇧⌘⏎)": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -5061,6 +5249,11 @@
     "resuming at {size}": {
       "refs": [
         "src/renderer/sftp.js"
+      ]
+    },
+    "Retry": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "Right-click": {
@@ -5402,12 +5595,22 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Session logs need a terminal pane": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "Session name (defaults to \"Local\")": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
     },
     "Session name (defaults to device @ baud)": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Session name (defaults to the host)": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -5601,6 +5804,7 @@
     },
     "Shown in the pane head and used for the tab title; leave empty to go back to the automatic title": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -5610,6 +5814,16 @@
       ]
     },
     "Sidebar, SFTP & lists": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Sign in": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Sign in to {host}": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -5661,11 +5875,13 @@
     },
     "Split down": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
     "Split Down": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/layout.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
@@ -5678,11 +5894,13 @@
     },
     "Split right": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
     "Split Right": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/layout.js",
         "src/renderer/terminal.js",
         "src/main/main.js"
@@ -5840,6 +6058,7 @@
     },
     "Stop": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/dialogs.js",
         "src/renderer/index.html"
       ]
@@ -5847,6 +6066,11 @@
     "Stop bits": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Stop loading": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "Stop Session Log": {
@@ -5857,6 +6081,11 @@
     "Stop the scan": {
       "refs": [
         "src/renderer/index.html"
+      ]
+    },
+    "Stop this page from opening more dialogs": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "stopped": {
@@ -5979,6 +6208,11 @@
         "src/main/keygen.js"
       ]
     },
+    "That is not a valid URL": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "That session no longer exists": {
       "refs": [
         "src/main/main.js"
@@ -5999,6 +6233,11 @@
         "src/main/main.js"
       ]
     },
+    "The download of {name} did not finish ({state})": {
+      "refs": [
+        "src/main/main.js"
+      ]
+    },
     "The first port must not be greater than the last": {
       "refs": [
         "src/renderer/panels.js"
@@ -6012,6 +6251,11 @@
     "The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "The host name could not be found.": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "The key path must be absolute (or start with ~): {path}": {
@@ -6044,6 +6288,21 @@
       "plural": "The {n} other panes can become tabs of their own right after this one, their terminals as they are — or close.",
       "refs": [
         "src/renderer/layout.js"
+      ]
+    },
+    "The page is loaded again in the new window — what was typed into it is not kept.": {
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
+    "The page keeps redirecting to itself.": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "The page's process ended ({reason})": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "The passphrases do not match": {
@@ -6080,6 +6339,7 @@
     },
     "The remote monitoring bar needs an SSH or Mosh session": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -6122,6 +6382,11 @@
       "refs": [
         "src/renderer/sftp.js",
         "src/main/ftp.js"
+      ]
+    },
+    "The server did not answer in time.": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "The server does not support FTPS (explicit TLS); untick FTPS": {
@@ -6167,6 +6432,16 @@
         "src/renderer/terminal.js"
       ]
     },
+    "The site says: {realm}": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "The site's certificate is not trusted (self-signed, expired or for another name): open the page in your browser to inspect it.": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "the top level is not an object": {
       "refs": [
         "src/main/importers.js"
@@ -6182,9 +6457,24 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "There is no network connection.": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
     "This is MobAlt {version} running from source.": {
       "refs": [
         "src/main/updater.js"
+      ]
+    },
+    "This page could not be loaded": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "This page is not responding.": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "This pane is read-only": {
@@ -6195,6 +6485,11 @@
     "This pane's terminal colours; the window keeps the global theme": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "This port is one Chromium refuses to use for web pages.": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "timed out after {s} s": {
@@ -6321,6 +6616,11 @@
     "Type": {
       "refs": [
         "src/renderer/dialogs.js"
+      ]
+    },
+    "Type an address first": {
+      "refs": [
+        "src/renderer/browser.js"
       ]
     },
     "type its first letters": {
@@ -6527,12 +6827,27 @@
         "src/renderer/terminal.js"
       ]
     },
+    "URL": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "URL copied": {
+      "refs": [
+        "src/renderer/browser.js"
+      ]
+    },
+    "URL is required": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Use in this session": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
     },
-    "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://": {
+    "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, or an http:// / https:// address": {
       "refs": [
         "src/renderer/app.js"
       ]
@@ -6545,6 +6860,11 @@
     "User Guide": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "User name": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "user@bastion[:port]": {
@@ -6780,16 +7100,19 @@
     },
     "Zoom pane": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
     "Zoom Pane": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
     "Zoom pane (⇧⌘⏎)": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },
@@ -6815,6 +7138,7 @@
     },
     "zoomed": {
       "refs": [
+        "src/renderer/browser.js",
         "src/renderer/terminal.js"
       ]
     },

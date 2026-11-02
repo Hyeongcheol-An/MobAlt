@@ -1,12 +1,14 @@
 // Application controller: wires main-process events, toolbar/menu actions, panes, panels and dialogs.
 import { TYPE_LABEL, $, $$, h, toast, confirmDialog, promptDialog, parseQuickConnect, anyModalOpen, modalsShown, contextMenu, icon, applyIcons, ipcMessage, fillNodes } from './ui.js';
 import { TermPane, THEMES, searchDecorations } from './terminal.js';
+import { BrowserPane } from './browser.js'; // a web page in a pane (browser sessions)
+import { browserHost } from './browserurl.js';
 import { chromePalette, cssVars } from './theme.js';
 import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
-import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog, paneSettingsDialog } from './dialogs.js';
+import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, httpAuthDialog, shortcutsDialog, pasteGuardDialog, keygenDialog, paneSettingsDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
 import { t, tn, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
 import { progressLine, progressParts } from './updateprogress.js'; // the updater's download on the banner, worded as in Settings → Updates
@@ -17,7 +19,15 @@ translateDom(document); // the static labels of index.html, before anything else
 const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
 
 /** Pane kind for a session type (rdp/vnc never get a pane). */
-const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh');
+const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh'); // a browser session never gets here (makePane)
+
+/** The pane for a session: a browser pane for a web page (browser.js), a terminal pane for everything else. opts: cwd, url (a browser pane's start page, else the session's). */
+const makePane = (app, session, opts = {}) => session && session.type === 'browser'
+  ? new BrowserPane(app, { session, url: opts.url || session.url })
+  : new TermPane(app, { kind: kindOf(session.type), session, cwd: session.cwd || undefined, ...opts });
+
+/** A pane whose closing drops a connection (the questions before a close count these): not a local shell, not a web page. */
+const dropsConnection = (p) => p.status === 'connected' && p.kind !== 'local' && p.kind !== 'browser' && !p.dead;
 
 /** A pane's / SFTP companion's state (terminal.js: idle | connecting | connected | failed | disconnected) as the status bar words it. */
 const stateLabel = (s) => s === 'connected' ? t('connected') : s === 'connecting' ? t('connecting') : s === 'failed' ? t('failed') : s === 'disconnected' ? t('disconnected') : s === 'idle' ? t('idle') : String(s || '');
@@ -104,6 +114,7 @@ class App {
         }
       }
       if (p.kind === 'local' && p.cwd) d.cwd = p.cwd;
+      if (p.kind === 'browser' && p.url) d.url = p.url; // the page the pane is on, not only the session's start page
       // the pane menu's per-terminal state: a name of the user's, Pane Settings… overrides, the background label, Read-Only
       if (p.titleLocked) d.paneTitle = p.title;
       if (p.overrides && Object.keys(p.overrides).length) d.overrides = { ...p.overrides };
@@ -174,6 +185,15 @@ class App {
       if (d.sessionId) session = this.sessions.sessions.find((s) => s.id === d.sessionId) || null;
       else if (d.session) session = d.session;
       let kind = d.kind;
+      if (kind === 'browser') {
+        // a web page comes back at the address it was on; a deleted session is not needed for that (an unsaved one is inline anyway)
+        const url = typeof d.url === 'string' && d.url ? d.url : session?.url;
+        if (!url) return new TermPane(this, { kind: 'empty', session: null });
+        if (!session || session.type !== 'browser') session = { type: 'browser', name: browserHost(url) || url, url };
+        const pane = new BrowserPane(this, { session, url, title: typeof d.paneTitle === 'string' && d.paneTitle ? d.paneTitle : null });
+        if (attach) pane._transfer = d;
+        return pane;
+      }
       if (!attach && kind !== 'local' && kind !== 'empty' && !session) kind = 'empty'; // session was deleted (a live terminal keeps its pane)
       if (kind === 'rdp' || kind === 'vnc') kind = 'empty';
       const pane = new TermPane(this, { kind, session, cwd: d.cwd || session?.cwd || undefined,
@@ -190,7 +210,7 @@ class App {
     for (const td of desc.tabs) {
       if (!td || !td.root) continue;
       let root;
-      try { root = build(td.root); } catch { continue; }
+      try { root = build(td.root); } catch (e) { console.error('workspace tab skipped', e); continue; } // a tab the file describes in a way this version cannot build: the others still come back
       const panes = [];
       (function walk(n) { n.type === 'pane' ? panes.push(n.pane) : n.children.forEach(walk); })(root);
       if (!panes.length) continue;
@@ -234,6 +254,7 @@ class App {
     tab = tab || this.workspace.active;
     if (!tab || !tab.root) return false;
     const payload = { tabs: [this.serializeTab(tab, true)], activeTab: 0 };
+    if (tab.panes().some((p) => p.kind === 'browser')) toast(t('The page is loaded again in the new window — what was typed into it is not kept.'), 'info', 4000); // no live guest moves between windows (browser.js transferState)
     this._detaching = true; // a detached window emptied by this must not close before the new window is known to exist
     for (const p of tab.panes()) p.release();
     this.workspace.removeTab(tab);
@@ -353,11 +374,17 @@ class App {
         if (kind === 'hostkey') result = await hostKeyDialog(payload);
         else if (kind === 'password') result = await passwordDialog(payload);
         else if (kind === 'kbdint') result = await kbdIntDialog(payload);
+        else if (kind === 'httpauth') { // a page's HTTP authentication (browser.js): main may withdraw it when the page goes
+          const d = httpAuthDialog(payload);
+          (this._prompts ||= new Map()).set(reqId, d);
+          try { result = await d.promise; } finally { this._prompts.delete(reqId); }
+        }
       } catch (e) {
         console.error(e);
       }
       window.api.promptReply(reqId, result);
     });
+    window.api.on('prompt:cancel', ({ reqId }) => { const d = this._prompts && this._prompts.get(reqId); if (d) d.close(null); }); // the pane that asked is gone
     window.api.on('tunnels:changed', (list) => {
       const active = list.filter((t) => t.status === 'active').length;
       $('#st-transfers').dataset.tunnels = active;
@@ -441,12 +468,14 @@ class App {
     const rs = $('#sidebar-resizer');
     rs.addEventListener('mousedown', (e) => {
       e.preventDefault();
+      document.body.classList.add('divider-drag'); // browser panes let the pointer through meanwhile (styles.css #webview-layer)
       const start = e.clientX, w0 = $('#sidebar').getBoundingClientRect().width;
       const grow = document.documentElement.dir === 'rtl' ? -1 : 1; // right to left: the sidebar is on the right, dragging left widens it
       const move = (ev) => document.documentElement.style.setProperty('--sidebar-w', Math.max(180, Math.min(700, window.innerWidth - 520, w0 + grow * (ev.clientX - start))) + 'px');
       const up = () => {
         document.removeEventListener('mousemove', move);
         document.removeEventListener('mouseup', up);
+        document.body.classList.remove('divider-drag');
         this.saveSettings({ sidebarWidth: Math.round($('#sidebar').getBoundingClientRect().width) });
         this.workspace.allPanes().forEach((p) => p.fit());
       };
@@ -463,9 +492,12 @@ class App {
       try { fn(); fb.classList.remove('bad-pattern'); return true; }
       catch { fb.classList.add('bad-pattern'); $('#find-count').textContent = t('Invalid pattern'); return false; }
     };
+    // a browser pane searches its page (webview.findInPage: case toggle honoured, no regex); a terminal its buffer
+    const inPage = (p, forward, findNext) => p.find(fi.value, { forward, findNext, matchCase: $('#find-case').checked });
     const research = () => {
       const p = this.activePane();
       if (!p) return;
+      if (p.kind === 'browser') return inPage(p, true, false);
       p.searchAddon.clearDecorations();
       if (fi.value) safeFind(() => p.searchAddon.findNext(fi.value, opts()));
       else this.onFindResults(p, { resultCount: 0, resultIndex: -1 });
@@ -474,18 +506,24 @@ class App {
     fi.addEventListener('input', () => {
       const p = this.activePane();
       if (!p) return;
-      if (!fi.value) return research();
+      if (!fi.value || p.kind === 'browser') return research();
       safeFind(() => p.searchAddon.findNext(fi.value, { ...opts(), incremental: true }));
     });
     for (const id of ['#find-case', '#find-regex']) $(id).addEventListener('change', research); // toggles re-run the search
+    const step = (forward) => {
+      const p = this.activePane();
+      if (!p) return;
+      if (p.kind === 'browser') return inPage(p, forward, true);
+      safeFind(() => (forward ? p.searchAddon.findNext(fi.value, opts()) : p.searchAddon.findPrevious(fi.value, opts())));
+    };
     fi.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); safeFind(() => (e.shiftKey ? this.activePane()?.searchAddon.findPrevious(fi.value, opts()) : this.activePane()?.searchAddon.findNext(fi.value, opts()))); }
+      if (e.key === 'Enter') { e.preventDefault(); step(!e.shiftKey); }
       if (e.key === 'Escape') this.action('find-close');
     });
     for (const b of $$('[data-find]')) b.addEventListener('click', () => {
       const k = b.dataset.find;
-      if (k === 'next') safeFind(() => this.activePane()?.searchAddon.findNext(fi.value, opts()));
-      else if (k === 'prev') safeFind(() => this.activePane()?.searchAddon.findPrevious(fi.value, opts()));
+      if (k === 'next') step(true);
+      else if (k === 'prev') step(false);
       else this.action('find-close');
     });
     window.addEventListener('resize', () => this.workspace.allPanes().forEach((p) => p.fit()));
@@ -623,8 +661,7 @@ class App {
       toast(t('Opening {name} in {app}…', { name: s.name || s.host, app: s.type === 'rdp' ? t('Windows App / Remote Desktop') : t('Screen Sharing') }), 'info');
       return s.type === 'rdp' ? window.api.launch.rdp(s) : window.api.launch.vnc(s);
     }
-    const kind = kindOf(s.type);
-    const pane = new TermPane(this, { kind, session: s, cwd: s.cwd || undefined });
+    const pane = makePane(this, s, opts.url ? { url: opts.url } : {}); // opts.url: a browser pane duplicated at the page it is on
     const target = opts.target || this.activePane();
     if (opts.split && target && target.tab) {
       this.workspace.split(target.tab, target, opts.split, pane);
@@ -645,10 +682,14 @@ class App {
    *  both sides counts as agreement): "ftp://host" means anonymous, not the saved "demo@host". */
   quickConnect(str) {
     const q = parseQuickConnect(str);
-    if (!q) return toast(t('Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://'), 'warn');
+    if (!q) return toast(t('Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, or an http:// / https:// address'), 'warn');
+    $('#qc-input').value = '';
+    if (q.type === 'browser') { // an http(s) address: a browser pane, the saved session of that address when there is one
+      const saved = this.sessions.sessions.find((s) => s.type === 'browser' && s.url === q.url);
+      return this.openSession(saved || q);
+    }
     const defPort = { ssh: 22, mosh: 22, telnet: 23, ftp: 21, rdp: 3389, vnc: 5900 };
     const existing = this.sessions.sessions.find((s) => s.type === q.type && s.host === q.host && (s.port || defPort[s.type] || 22) === q.port && (s.username || '') === (q.username || ''));
-    $('#qc-input').value = '';
     return this.openSession(existing || { ...q, authMethod: 'auto', sftpAuto: true });
   }
 
@@ -659,7 +700,7 @@ class App {
   }
 
   async closePane(pane, silent = false) {
-    if (!silent && pane.status === 'connected' && pane.kind !== 'local' && this.settings.confirmClose) {
+    if (!silent && dropsConnection(pane) && this.settings.confirmClose) {
       if (!(await confirmDialog(t('Close "{title}"? The connection will be dropped.', { title: pane.title }), { okLabel: t('Close'), danger: true }))) return;
     }
     const tab = pane.tab;
@@ -679,7 +720,7 @@ class App {
 
   /** The panes of `tabs` whose connection would drop (a local shell is not a connection). */
   liveIn(tabs) {
-    return tabs.flatMap((t) => t.panes()).filter((p) => p.status === 'connected' && p.kind !== 'local');
+    return tabs.flatMap((t) => t.panes()).filter(dropsConnection);
   }
 
   async closeTab(tab) {
@@ -801,7 +842,7 @@ class App {
     if (!mode || ap.tab.panes().length < 2) return;
     if (mode === 'tabs') return this.workspace.unsplitToTabs(ap.tab, ap);
     const others = ap.tab.panes().filter((p) => p !== ap);
-    const live = others.filter((p) => p.status === 'connected' && p.kind !== 'local' && !p.dead);
+    const live = others.filter(dropsConnection);
     const conns = tn('{n} live connection', '{n} live connections', live.length);
     if (live.length && this.settings.confirmClose && !asked && !(await confirmDialog(tn('Close {n} other pane? {conns} will be dropped.', 'Close {n} other panes? {conns} will be dropped.', others.length, { conns }), { okLabel: t('Close panes'), danger: true }))) return;
     for (const p of others) await this.closePane(p, true);
@@ -834,7 +875,7 @@ class App {
    */
   async paneSettings(pane) {
     pane = pane || this.activePane();
-    if (!pane || pane.kind === 'empty' || pane.kind === 'ftp') return toast(t('Pane settings need a terminal pane'), 'info');
+    if (!pane || pane.kind === 'empty' || pane.kind === 'ftp' || pane.kind === 'browser') return toast(t('Pane settings need a terminal pane'), 'info');
     const r = await paneSettingsDialog(this, pane);
     if (!r || pane.disposed) return;
     pane.applyOverrides(r.overrides);
@@ -882,18 +923,17 @@ class App {
   /** Fill an empty pane with a copy of another pane's session (or a local shell). */
   async duplicateInto(pane, from) {
     if (!from || from.kind === 'empty' || from.kind === 'local') return pane.becomeLocal(from && from.cwd);
-    return this.replacePane(pane, from.session, true);
+    return this.replacePane(pane, from.session, true, from.kind === 'browser' ? { url: from.url } : {}); // a page: where it is now, not the session's start page
   }
 
   /** Replace a pane's terminal with a new one for `session` (confirming if a live connection would drop). */
-  async replacePane(pane, session, silent = false) {
+  async replacePane(pane, session, silent = false, opts = {}) {
     if (!pane.tab || !session) return;
     if (session.type === 'rdp' || session.type === 'vnc') return this.openSession(session);
-    if (!silent && pane.status === 'connected' && pane.kind !== 'local' && !pane.dead && this.settings.confirmClose) {
+    if (!silent && dropsConnection(pane) && this.settings.confirmClose) {
       if (!(await confirmDialog(t('Replace "{title}" with "{name}"? The current connection will be dropped.', { title: pane.title, name: session.name }), { okLabel: t('Replace'), danger: true }))) return;
     }
-    const kind = kindOf(session.type);
-    const next = new TermPane(this, { kind, session, cwd: session.cwd || undefined });
+    const next = makePane(this, session, opts.url ? { url: opts.url } : {});
     const tab = pane.tab;
     this.workspace.replace(tab, pane, next);
     const connId = pane.termId;
@@ -1014,7 +1054,8 @@ class App {
     if (!tab.autoTitle) return false;
     const owner = this.tabTitlePane(tab);
     if (!owner) return false;
-    const title = owner.titleLocked ? owner.title : owner.session ? owner.session.name : owner.title, icon = owner.session?.icon || null; // a renamed pane (Rename Pane…) names its tab
+    // a renamed pane (Rename Pane…) names its tab; a browser pane's title is the page's (browser.js), a session's its name
+    const title = owner.titleLocked ? owner.title : owner.session && owner.kind !== 'browser' ? owner.session.name : owner.title, icon = owner.session?.icon || null;
     if (tab.title === title && tab.icon === icon) return false;
     tab.title = title;
     tab.icon = icon;
@@ -1059,13 +1100,16 @@ class App {
       const s = pane.session;
       // the protocol tag (SSH, LOCAL, …), where, and the state: the glyphs between them are punctuation, each part is translated on its own
       const where = pane.kind === 'local' ? t('local shell')
+        : pane.kind === 'browser' ? (pane.url || s?.url || '')
         : pane.kind === 'empty' ? t('empty pane — drag a session here')
         : pane.kind === 'serial' ? `${s?.serialPath} @ ${s?.baudRate}`
         : pane.kind === 'ftp' ? `${s?.username ? s.username + '@' : 'anonymous@'}${s?.host}${s?.port && s.port !== 21 ? ':' + s.port : ''}`
         : `${s?.username ? s.username + '@' : ''}${s?.host}${s?.port && s.port !== 22 ? ':' + s.port : ''}`;
       // the kind's label follows the interface language (LOCAL / SERIAL); user@host:port is a <bdi> (styles.css: its own
       // direction), so in a right-to-left interface it is not reordered with the words around it
-      el.replaceChildren(`${(TYPE_LABEL[pane.kind] || pane.kind).toUpperCase()} · `, h('bdi', {}, where), ` · ${stateLabel(pane.status)}${msg ? ' (' + msg + ')' : ''}`);
+      // a web page loads rather than connects: its own words for the state
+      const state = pane.kind === 'browser' ? (pane.status === 'connecting' ? t('loading') : pane.status === 'connected' ? t('loaded') : stateLabel(pane.status)) : stateLabel(pane.status);
+      el.replaceChildren(`${(TYPE_LABEL[pane.kind] || pane.kind).toUpperCase()} · `, h('bdi', {}, where), ` · ${state}${msg ? ' (' + msg + ')' : ''}`);
       if (pane.kind === 'mosh' && pane.sftpStatus && pane.sftpStatus !== 'idle') el.append(' · ' + t('SFTP: {state}', { state: stateLabel(pane.sftpStatus) }));
       const browsing = this.sftpPanel.states.get(pane.kind === 'mosh' ? pane.sftpConnId : pane.termId);
       $('#st-cwd').textContent = pane.dead ? '' : shortPath(pane.remoteCwd || pane.cwd || (browsing && browsing.path) || '');
@@ -1322,10 +1366,10 @@ class App {
     await this.reloadSessions();
     // an open pane of this session takes its new keyword-highlighting override and background label at once (the rest applies on the next connect)
     for (const p of this.workspace.allPanes()) {
-      if (!p.session || p.session.id !== saved.id) continue;
+      if (!p.session || p.session.id !== saved.id || p.kind === 'browser') continue; // a page has no highlighting or label; a session re-saved as another type leaves the open pane as it is
       if ((p.session.highlight || '') !== (saved.highlight || '')) {
         p.session.highlight = saved.highlight;
-        p._syncHighlight(this.settings);
+        p._syncHighlight?.(this.settings);
       }
       p.session.backgroundName = saved.backgroundName;
       p.session.backgroundShown = saved.backgroundShown;
@@ -1443,6 +1487,7 @@ class App {
       case 'duplicate': {
         if (!ap || ap.kind === 'empty') return;
         if (ap.kind === 'local') return this.newLocalTab({ cwd: ap.cwd || undefined });
+        if (ap.kind === 'browser') return this.openSession(ap.session, { url: ap.url }); // the page it is on, not the session's start page
         return this.openSession(ap.session);
       }
       case 'reconnect': return ap && ap.reconnect();
@@ -1483,9 +1528,11 @@ class App {
       case 'find-close':
         $('#find-bar').hidden = true;
         document.body.classList.remove('find-open');
-        ap && ap.searchAddon.clearDecorations();
+        if (ap && ap.kind === 'browser') ap.stopFind();
+        else if (ap) ap.searchAddon.clearDecorations();
         ap && ap.focus();
         return;
+      case 'address-bar': return ap && ap.kind === 'browser' && ap.focusUrl(); // ⌘L: a browser pane's URL field
       case 'clear': return ap && ap.clear();
       case 'toggle-sidebar': return this.toggleSidebar();
       case 'sidebar': return this.showPanel(arg);

@@ -27,21 +27,21 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 
 | 분류 | ✅ | 🟡 | ❌ | ➖ | 행 수 |
 |---|---|---|---|---|---|
-| 1. 세션 종류 | 7 | 6 | 4 | 4 | 21 |
+| 1. 세션 종류 | 8 | 6 | 3 | 4 | 21 |
 | 2. SSH 세부 기능 | 19 | 9 | 7 | 2 | 37 |
 | 3. 터미널 | 12 | 12 | 7 | 1 | 32 |
 | 4. X 서버와 내장 Unix 도구 | 2 | 1 | 1 | 17 | 21 |
 | 5. 네트워크·관리 도구, 내장 서버, Moba* 유틸리티 | 7 | 2 | 7 | 19 | 35 |
 | 6. 작업대 기능 | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional 전용 항목과 Home 에디션 제한 | 0 | 0 | 0 | 13 | 13 |
-| **1–7절 합계(기능당 한 번)** | **54** | **39** | **32** | **59** | **184** |
+| **1–7절 합계(기능당 한 번)** | **55** | **39** | **31** | **59** | **184** |
 | 8. 최근 추가 기능(24.3 → 26.6) | 4 | 17 | 6 | 3 | 30 |
 | 9. 파워 유저가 기대는 UX | 9 | 9 | 1 | 1 | 20 |
-| **전체 표 합계** | **67** | **65** | **39** | **63** | **234** |
+| **전체 표 합계** | **68** | **65** | **38** | **63** | **234** |
 
 8절과 9절은 원본 목록의 구성을 그대로 따른 것이라 1–7절에 이미 나온 기능을 다시 세므로, "전체 표 합계"에는
 같은 기능이 두 번 들어갑니다. 인용할 때는 1–7절 합계를 쓰세요. 다르게 읽으면, macOS에서 의미가 있는 기능
-125개(1–7절에서 ➖ 제외) 가운데 MobAlt는 54개를 그대로, 39개를 더 좁거나 다른 형태로 갖고 있고, 32개는
+125개(1–7절에서 ➖ 제외) 가운데 MobAlt는 55개를 그대로, 39개를 더 좁거나 다른 형태로 갖고 있고, 31개는
 없습니다.
 
 ## 1. 세션 종류
@@ -61,7 +61,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | Serial(COM) 세션 | ✅ | Serial 종류: USB-시리얼 자동 검색, baud, 데이터/정지 비트, 패리티, 흐름 제어, 로컬 에코, Enter 전송(CR/LF/CRLF). 명명된 파이프는 없음 |
 | File 세션(로컬 폴더 탭) | ❌ | 로컬 파일 브라우저 탭 없음. Finder나 Local 터미널의 `open .` |
 | Shell 세션(로컬 터미널) | ✅ | Local 종류: 로그인 셸(또는 Settings → General → Local shell의 아무 경로), 시작 폴더, 시작 명령. ⌘T로 바로 하나 |
-| Browser 세션 | ❌ | 내장 브라우저 탭 없음 |
+| Browser 세션 | ✅ | Browser 종류: 터미널 옆 페인에 웹 페이지(Chromium webview, http/https만, 샌드박스, 팝업·권한 없음) — 뒤로 / 앞으로 / 새로 고침, 주소 입력란(⌘L), 탭에 페이지 제목, 다시 시도가 있는 오류 화면, 원하면 세션마다 따로 두는 쿠키. 다른 페인처럼 분할·확대·창 분리·작업 공간 복원 |
 | Mosh 세션 | ✅ | Mosh 종류: 키/에이전트/프롬프트로 SSH 부트스트랩, `mosh-server` 경로, 예측 모드. `brew install mosh` 필요 |
 | Aws S3 세션 | ❌ | S3 브라우저 없음 |
 | WSL 세션 | ➖ | Windows 전용. Local 세션이 이미 Unix 셸 |
@@ -296,7 +296,7 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 | 24.3 — 그래픽 매크로, 매크로 폴더, 암호화된 매크로, VNC IPv6, 64비트 기본, 비활성 탭 닫기 | ❌ | 없음(매크로는 `settings.json`에 저장) |
 | 24.2 — 전문가 RDP 설정, 모니터 전체 전체 화면, MultiExec 스크롤 동기화, `X11MCAuth` | 🟡 | MultiExec의 Synchronize mouse wheel scrolling(우클릭 메뉴). RDP는 Windows App 몫. `X11MCAuth`는 없음 |
 | 24.0 — 전문가 터미널 설정, SFTP 브라우저의 호스트 키 확인 | 🟡 | 터미널 설정의 일부. 호스트 키는 모든 접속에서 확인 |
-| 23.x — Edge 브라우저 엔진, 편집 가능한 공유 세션, NTRU Prime + AES-GCM, Telnet keepalive, 탭 고정, Terrapin 수정 | 🟡 | ssh2의 strict KEX(Terrapin)와 기본 AES-GCM. 탭 고정(⇧⌘P). 브라우저, 공유 세션, telnet keepalive는 없음 |
+| 23.x — Edge 브라우저 엔진, 편집 가능한 공유 세션, NTRU Prime + AES-GCM, Telnet keepalive, 탭 고정, Terrapin 수정 | 🟡 | ssh2의 strict KEX(Terrapin)와 기본 AES-GCM. 탭 고정(⇧⌘P). 브라우저 세션(Chromium webview). 공유 세션, telnet keepalive는 없음 |
 
 ## 9. 파워 유저가 기대는 UX
 
@@ -361,7 +361,6 @@ MobAlt 쪽은 0.12.0 소스(`src/main`, `src/renderer`), [사용자 안내서](U
 
 | 항목 | 이유 | 크기 |
 |---|---|---|
-| 내장 브라우저 세션(Electron webview) | 웹 콘솔을 그것을 관리하는 셸 옆에 | M |
 | 공유 자격 증명 관리자(자격 증명 하나를 여러 세션과 점프 호스트가 사용) | 여러 서버의 비밀번호 교체 | M |
 | PuTTY / SecureCRT / mRemoteNG / Remote Desktop Manager / CSV 세션 가져오기 | MobaXterm만이 아니라 다른 Windows 도구에서의 이주 | M |
 | 글꼴 합자(`@xterm/addon-ligatures`) | Fira Code 등 | S |

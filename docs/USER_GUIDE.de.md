@@ -79,6 +79,7 @@ diesem Ordner).
 | Seriell | USB-Seriell-Konsole (Baudrate, Datenformat, Flusskontrolle, lokales Echo) |
 | FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „Sftp“ |
 | RDP / VNC | Übergibt an Windows App oder die macOS-Bildschirmfreigabe |
+| Browser | Eine Webseite in einem Bereich neben Ihren Terminals — ein Router, Grafana, die Weboberfläche eines Geräts, ein getunnelter `localhost` (nur http/https; siehe [Browser-Sitzungen](#browser-sitzungen)) |
 
 **Ordner**: Die Ordnertaste im Kopf des Panels („Neuer Ordner“) legt einen Ordner an; ziehen Sie Sitzungen und
 Ordner, um sie zu bewegen (auf die leere Fläche ablegen für die Stammebene). Über das Kontextmenü eines Ordners
@@ -325,6 +326,57 @@ Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim
 - Die Spaltenköpfe sortieren nach Name, Größe oder Datum. Ist die Seitenleiste schmal, wird die Datumsspalte
   ausgeblendet.
 
+## Browser-Sitzungen
+
+Eine **Browser**-Sitzung öffnet eine Webseite in einem eigenen Bereich — die Admin-Seite eines Routers, Grafana, die
+Weboberfläche eines Geräts, den `localhost`-Port eines Tunnels — neben den Terminals, die sie verwalten. Legen Sie
+eine mit `＋ Sitzung` → „Browser“ an (die URL; ein Name, der standardmäßig der Host ist; Symbol und Farbe wie bei jeder
+Sitzung) oder tippen Sie eine `http://`-/`https://`-Adresse in die Schnellverbindung (ein bloßes `localhost:3000` ist
+dort wie immer eine SSH-Adresse: Tippen Sie für eine Seite das Schema mit). Nur `http://`- und `https://`-Adressen
+werden geöffnet (und `about:blank`): `file:`, `javascript:`, `data:` und jedes andere Schema lehnen der Editor, die
+Schnellverbindung, der JSON-Import und noch einmal die App selbst ab, wenn die Seite eingehängt wird. Ein bloßer Host
+erhält `https://` — außer im lokalen Netzwerk (`localhost`, `127.0.0.1`, `192.168.…`, `10.…`, `nas.local`, ein
+einzelner Name wie `router`), wo er `http://` erhält; ein ausdrückliches `:80` bedeutet `http://`, `:443` oder
+`:8443` `https://`. Ein in die Adresse getipptes Passwort (`admin:secret@router`) wird abgelehnt: Die Seite fragt
+danach, wenn sie es braucht, über die eigene Anmeldeaufforderung von MobAlt (HTTP-Basic-/Digest-Authentifizierung, so
+wie Router und kleine Geräte fragen), und nichts wird gespeichert — die Website behält die Anmeldung für die Sitzung.
+
+Der Bereich ist ein gewöhnlicher Bereich: Er lebt in einem Tab, teilt sich mit Terminals (⌘D / ⇧⌘D, oder legen Sie
+eine Sitzung an seinen Rändern ab), lässt sich maximieren (⇧⌘⏎), in ein eigenes Fenster bewegen (⌥⌘N — die Seite
+wird dort neu geladen, Eingaben in ein Formular bleiben also nicht erhalten; dasselbe, wenn das Fenster schließt und
+der Tab zurückkommt) und kehrt mit dem Arbeitsbereich zu der Seite zurück, auf der er zuletzt war. Seine Symbolleiste
+hat „Zurück“, „Vorwärts“, „Neu laden“ („Stopp“, während die Seite lädt), das Adressfeld (⌘L fokussiert es; die
+Eingabetaste öffnet, was Sie getippt haben, Esc setzt die aktuelle Adresse zurück und gibt die Tastatur an die Seite)
+und *Im Standardbrowser öffnen*. Mit der Tastatur führt Tab von dieser letzten Taste in die Seite; ⌘L bringt sie
+zurück zur Symbolleiste. Der Tab trägt den Titel der Seite, deren Symbol vor der Adresse und im Kopf des Bereichs
+erscheint, sofern Sie den Tab oder den Bereich nicht umbenennen; eine aus der Schnellverbindung geöffnete Seite trägt
+ihren Host hinter dem Titel, da eine Seite sich nennen kann, wie sie will. Die Statusleiste zeigt
+`BROWSER · url · geladen`. ⌘= / ⌘- / ⌘0 zoomen die Seite, nicht die Terminalschrift — der Zoom gehört zur Website, wie
+in Safari: Er gilt in jedem Bereich, der die Anmeldungen der Website teilt, und die Website öffnet beim nächsten Mal
+in dieser Stufe; das Bereichsmenü zeigt den aktuellen Prozentwert. ⌘F durchsucht die Seite mit der Suchleiste (der
+Schalter für Groß-/Kleinschreibung gilt, der Regex-Schalter nicht), ⌘C / ⌘V und das Menü „Bearbeiten“ wirken in der
+Seite, und die Kurzbefehle, die ein Browser seinen Seiten nicht überlässt (⌘W, ⇧⌘W, ⌘T, ⌘N, ⇧⌘N, ⇧⌘T, ⌥⌘N, ⌘L, ⌘Q, ⌘,, ⌘1–4, ⌃Tab, ⌃⇧Tab, ⌘], ⇧⌘↩, ⌘= / ⌘- / ⌘0 und ⌘F), erreichen MobAlt auch dann, wenn die Seite sie behalten will. Jeder andere Kurzbefehl (⌘K, ⌘B, ⌘D …) geht zuerst an die Seite — die ⌘K-Palette einer Webkonsole, das ⌘B eines Editors — und löst seine MobAlt-Aktion nur aus, wenn die Seite ihn nicht verwendet. Das Bereichsmenü (⚙ im Kopf des Bereichs eines geteilten Tabs, ein Rechtsklick in die Seite oder
+auf die Symbolleiste) bietet „Zurück“, „Vorwärts“, „Neu laden“, „URL kopieren“, „Im Browser öffnen“, „Suchen…“,
+„Bereich umbenennen…“, „Seitenzoom“, die Teilungen, „Bereich maximieren“ und „Bereich schließen“; ein Rechtsklick auf
+einen Link ergänzt *Link im Browser öffnen* und *Link kopieren*, auf markierten Text *Kopieren*.
+
+Eine Seite, die nicht geladen werden kann, zeigt in einfachen Worten, was schiefging (unter der Adresse antwortet
+nichts, der Name ist unbekannt, der Server hat nicht rechtzeitig geantwortet, dem Zertifikat wird nicht vertraut —
+öffnen Sie sie in Ihrem Browser, um es zu prüfen), darunter den rohen Code (`ERR_CONNECTION_REFUSED (-102)`) und die
+Taste „Erneut versuchen“; eine Seite, die sich selbst schließt oder deren Prozess abgestürzt ist, bekommt dieselbe
+Ansicht, und „Erneut versuchen“ startet sie neu; eine Seite, die nicht mehr antwortet, zeigt einen Streifen mit
+„Stopp“ und „Neu laden“. Ein Popup oder ein Link mit `target="_blank"` öffnet im selben Bereich; das `beforeunload`
+einer Seite hält Sie nie auf ihr fest; die Seite läuft in einer Sandbox und erhält keine Berechtigung für Kamera,
+Mikrofon, Standort, Mitteilungen, Bluetooth oder andere Geräte. `alert()` / `confirm()` einer Seite ist ein Dialog,
+der das Fenster blockiert, bis er geschlossen wird (Admin-Konsolen fragen so „Sind Sie sicher?“); ab dem zweiten
+bietet der Dialog an, zu verhindern, dass die Seite weitere öffnet. Ein Download (ein Link mit `download`, ein
+Konfigurations-Backup) wird unter einem freien Namen direkt in Ihren Ordner „Downloads“ gesichert („Einstellungen“ →
+„Allgemein“ → „Download-Ordner“, falls gesetzt), mit einer Meldung beim Start und beim Abschluss — ohne
+Sicherungsdialog. Anmeldungen (Cookies) teilen sich alle Browser-Sitzungen, sodass Sie sich an einer Konsole nur
+einmal anmelden; aktivieren Sie **Eigene Cookies und Anmeldungen** im Editor, um einer Sitzung einen eigenen
+Cookie-Speicher zu geben (zwei Konten auf einer Website). MultiExec tippt nie in eine Seite, und
+*Bereichseinstellungen…*, die Monitoring-Leiste und Sitzungsprotokolle sind für Terminalbereiche.
+
 ## Tunnel (Portweiterleitung)
 
 ![Tunnel](images/de/tunnels.png)
@@ -441,6 +493,7 @@ beim Start `MOBALT_LANG=<code>` in der Umgebung (`en`, `ko`, `zh-CN`, `ja`, `vi`
 | Nächster Bereich, nächster / vorheriger Tab, Tab 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
 | Bereich maximieren (Tab füllen) / Layout wiederherstellen | ⇧⌘⏎ |
 | Suchen, löschen, zoomen | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
+| Browserbereich: Adressleiste | ⌘L (⌘F sucht in der Seite, ⌘= / ⌘- / ⌘0 zoomen sie) |
 | Seitenleiste, Sitzungen / SFTP / Werkzeuge / Makros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, Tunnel, Einstellungen | ⇧⌘M, ⇧⌘U, ⌘, |
 | Zeilenumbruch in TUI-Programmen | ⇧Enter oder ⌥Enter |

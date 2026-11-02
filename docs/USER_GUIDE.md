@@ -76,6 +76,7 @@ and fill in the Basic tab. Double-click a session to connect; right-click for th
 | Serial | USB-serial console (baud, framing, flow control, local echo) |
 | FTP | FTP / FTPS (explicit TLS) file browser in the Sftp panel |
 | RDP / VNC | Hands off to Windows App or macOS Screen Sharing |
+| Browser | A web page in a pane next to your terminals — a router, Grafana, a device's web UI, a tunnelled `localhost` (http/https only; see [Browser sessions](#browser-sessions)) |
 
 **Folders**: the folder button in the panel header (New folder) creates a folder; drag sessions and folders to move them (drop on the empty area
 for the root). A folder's context menu can open every session inside it in a grid or in tabs.
@@ -299,6 +300,53 @@ The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on
   of the same file offers *Resume* or *Start over*.
 - Column headers sort by name, size or date. When the sidebar is narrow the date column hides.
 
+## Browser sessions
+
+A **Browser** session opens a web page in a pane of its own — a router's admin page, Grafana, a device's web UI, the
+`localhost` port of a tunnel — next to the terminals that manage it. Create one with ＋ Session → Browser (the URL; a
+name that defaults to the host; an icon and a colour like any session) or type an `http://` / `https://` address into
+Quick connect (a bare `localhost:3000` there is an SSH address, as always: type the scheme for a page). Only `http://`
+and `https://` addresses open (and `about:blank`): `file:`, `javascript:`, `data:` and every other scheme are refused
+by the editor, by Quick connect, by the JSON importer and once more by the app itself when the page is attached. A
+bare host gets `https://` — except on the local network (`localhost`, `127.0.0.1`, `192.168.…`, `10.…`, `nas.local`,
+a single name such as `router`), where it gets `http://`; an explicit `:80` means `http://`, `:443` or `:8443`
+`https://`. A password typed into an address (`admin:secret@router`) is refused: the page asks for it when it needs
+it, through MobAlt's own sign-in prompt (HTTP Basic / Digest authentication, the way routers and small devices ask),
+and nothing is stored — the site keeps the sign-in for the session.
+
+The pane is an ordinary pane: it lives in a tab, splits with terminals (⌘D / ⇧⌘D, or drop a session on its edges),
+zooms (⇧⌘⏎), moves to a window of its own (⌥⌘N — the page is loaded again there, so what you typed into a form is not
+kept; the same when the window closes and the tab comes back) and comes back with the workspace at the page it was
+last on. Its toolbar has Back, Forward, Reload (Stop while the page loads), the address field (⌘L focuses it; Enter
+opens what you typed, Esc puts the current address back and hands the keyboard to the page) and *Open in default
+browser*. With the keyboard, Tab from that last button goes into the page; ⌘L brings it back to the toolbar. The tab
+is titled after the page, whose icon shows in front of the address and in the pane head, unless you rename the tab or
+the pane; a page opened from Quick connect carries its host after the title, since a page may call itself anything.
+The status bar reads `BROWSER · url · loaded`. ⌘= / ⌘- / ⌘0 zoom the page, not the terminal font — the zoom belongs
+to the site, as in Safari: it applies in every pane that shares the site's sign-ins and the site opens at that level
+next time; the pane menu shows the current percentage. ⌘F searches the page with the find bar (the case toggle
+applies, the regex toggle does not), ⌘C / ⌘V and the Edit menu work in the page. The shortcuts a browser keeps
+from its pages reach MobAlt even when the page tries to keep them: ⌘W, ⇧⌘W, ⌘T, ⌘N, ⇧⌘N, ⇧⌘T, ⌥⌘N, ⌘L, ⌘Q, ⌘,,
+⌘1–4, ⌃Tab, ⌃⇧Tab, ⌘], ⇧⌘↩, ⌘= / ⌘- / ⌘0 and ⌘F. Every other shortcut (⌘K, ⌘B, ⌘D…) goes to the page first — a web
+console's ⌘K palette, an editor's ⌘B — and does its MobAlt action only when the page does not use it. The pane menu (⚙ in the pane head of a split
+tab, a right-click in the page or on the toolbar) offers Back, Forward, Reload, Copy URL, Open in Browser, Find…,
+Rename Pane…, Page Zoom, the splits, Zoom Pane and Close Pane; a right-click on a link adds *Open Link in Browser* and
+*Copy Link*, on selected text *Copy*.
+
+A page that cannot be loaded shows what went wrong in plain words (nothing answers at the address, the name is unknown,
+the server did not answer in time, the certificate is not trusted — open it in your browser to inspect it) with the
+raw code below (`ERR_CONNECTION_REFUSED (-102)`) and a Retry button; a page that closes itself or whose process
+crashed gets the same view, and Retry starts it afresh; a page that stops answering shows a strip with Stop and
+Reload. A popup or a `target="_blank"` link opens in the same pane; a page's `beforeunload` never keeps you on it;
+the page is sandboxed and gets no camera, microphone, location, notification, Bluetooth or other device permissions.
+A page's `alert()` / `confirm()` is a sheet that blocks the window until it is dismissed (admin consoles ask "are you
+sure?" this way); from the second one on, the sheet offers to stop the page from opening more. A download (a link
+with `download`, a configuration backup) is saved straight into your Downloads folder (Settings → General → Download
+folder when set) under a name that is free, with a toast when it starts and when it is done — no save dialog.
+Sign-ins (cookies) are shared by every browser session, so you log into a console once; tick **Own cookies and
+sign-ins** in the editor to give a session a jar of its own (two accounts on one site). MultiExec never types into a
+page, and *Pane Settings…*, the monitoring bar and session logs are for terminal panes.
+
 ## Tunnels (port forwarding)
 
 ![Tunnels](images/tunnels.png)
@@ -410,6 +458,7 @@ in the environment (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt
 | Next pane, next / previous tab, tab 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
 | Zoom pane (fill the tab) / restore the layout | ⇧⌘⏎ |
 | Find, clear, zoom | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
+| Browser pane: address bar | ⌘L (⌘F finds in the page, ⌘= / ⌘- / ⌘0 zoom it) |
 | Sidebar, Sessions / SFTP / Tools / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, tunnels, settings | ⇧⌘M, ⇧⌘U, ⌘, |
 | Newline in TUI apps | ⇧Enter or ⌥Enter |

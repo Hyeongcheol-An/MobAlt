@@ -17,7 +17,7 @@ const SURFACES = ['bg', 'bg-panel', 'bg-elev', 'bg-dialog', 'bg-control', 'bg-in
 const TEXT_SURFACES = SURFACES.filter((s) => s !== 'bg-active');
 const LINE_SURFACES = ['bg', 'bg-panel', 'bg-elev', 'bg-dialog'];
 const ACCENT_SURFACES = [...LINE_SURFACES, 'bg-hover'];
-const ICONS = ['danger', 'warn', 'ok', 'ico-ssh', 'ico-local', 'ico-telnet', 'ico-rdp', 'ico-vnc'];
+const ICONS = ['danger', 'warn', 'ok', 'ico-ssh', 'ico-local', 'ico-telnet', 'ico-rdp', 'ico-vnc', 'ico-browser'];
 
 test('colour maths: hex, mix, luminance, contrast, ensureContrast, fillFor', async () => {
   const { hexToRgb, rgbToHex, mix, lighten, darken, luminance, contrast, ensureContrast, ensureContrastAll, fillFor, isLightTheme, THEMES } = await load();
