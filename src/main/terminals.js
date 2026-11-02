@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const { StringDecoder } = require('string_decoder');
 const { ensureZdotdir } = require('./zdotdir');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const localnet = require('./localnet');
 
 /**
  * Streaming filter that turns terminal output into plain text for session logs: drops CSI, OSC (incl.
@@ -524,7 +525,11 @@ function spawnTelnet(registry, { host, port = 23, username = '', cols = 80, rows
       registry.bytes(id, bytes);
     }
   });
-  sock.on('error', (e) => registry.data(id, `\r\n\x1b[31m${t('Telnet error: {error}', { error: e.message })}\x1b[0m\r\n`));
+  sock.on('error', (e) => {
+    const hint = localnet.hint(e, host); // refused on this Mac (macOS Local Network privacy)? say where the switch is
+    registry.data(id, `\r\n\x1b[31m${t('Telnet error: {error}', { error: hint ? `${e.message} — ${hint}` : e.message })}\x1b[0m\r\n`);
+    if (hint) localnet.notify(host);
+  });
   sock.on('close', () => registry.exit(id, 0, 'closed'));
 
   registry.register(id, {

@@ -19,6 +19,7 @@ const wol = require('./wol');
 const netscan = require('./netscan');
 const x11 = require('./x11');
 const knownhosts = require('./knownhosts');
+const localnet = require('./localnet');
 const keygen = require('./keygen');
 const algorithms = require('./algorithms');
 const { liveConnections, quitQuestion } = require('./live');
@@ -119,6 +120,22 @@ function ownerOf(id) {
   if (wc && !wc.isDestroyed()) return wc;
   return win && !win.isDestroyed() ? win.webContents : null;
 }
+
+// ---------- macOS Local Network privacy ----------
+// A connection macOS refused on this Mac (EHOSTUNREACH to a local address, see localnet.js): the pane's error line
+// carries the hint every time; this dialog, once per run, opens the setting.
+let localNetworkDialogShown = false;
+localnet.onBlocked(async (host) => {
+  if (localNetworkDialogShown) return;
+  localNetworkDialogShown = true;
+  const r = await dialogs.showMessageBox(focusedWindow(), {
+    type: 'warning',
+    message: t('macOS may be blocking MobAlt from the local network'),
+    detail: t('The connection to {host} was refused on this Mac before anything was sent (EHOSTUNREACH). On macOS 15 and later this usually means MobAlt is not allowed on the local network: turn it on under System Settings → Privacy & Security → Local Network, then connect again. Hosts outside the local network are not affected.', { host }),
+    buttons: [t('Open System Settings'), t('Later')], defaultId: 0, cancelId: 1,
+  });
+  if (r.response === 0) shell.openExternal(localnet.SETTINGS_URL);
+});
 
 // ---------- renderer prompts (host key / password / keyboard-interactive) ----------
 const pendingPrompts = new Map();

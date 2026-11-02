@@ -187,6 +187,9 @@ npm run perf           # 시작 시간·유휴 CPU·메모리·번들 크기 측
 - Mosh는 이 Mac에 `mosh` 클라이언트, 원격 호스트에 `mosh-server`(UDP 60000-61000)가 필요합니다.
 - *Timed out while waiting for handshake* / `ETIMEDOUT`이면 먼저 `nc -vz <host> <port>`로 도달 여부를 확인하세요.
   인증 실패가 반복되면 서버의 fail2ban이나 sshd `PerSourcePenalties`가 IP를 잠시 차단했을 수 있습니다.
+- macOS 15 이상에서는 로컬 네트워크의 호스트에 연결하려면 *로컬 네트워크* 권한이 필요합니다(시스템 설정 →
+  개인정보 보호 및 보안 → 로컬 네트워크 → MobAlt). 허용하기 전까지는 이 Mac에서 연결이 `EHOSTUNREACH`로 실패하며
+  MobAlt가 해당 설정을 안내합니다.
 
 ## 라이선스
 

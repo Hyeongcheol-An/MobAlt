@@ -1470,5 +1470,10 @@
   "Uploading {n} item to {dir}": [
     "Envoi de {n} élément vers {dir}",
     "Envoi de {n} éléments vers {dir}"
-  ]
+  ],
+  "macOS may be blocking MobAlt from the local network": "macOS bloque peut-être l'accès de MobAlt au réseau local",
+  "No route to {where} (EHOSTUNREACH)": "Aucune route vers {where} (EHOSTUNREACH)",
+  "On a Mac this usually means macOS has not allowed MobAlt on the local network: turn MobAlt on under System Settings → Privacy & Security → Local Network, then connect again.": "Sur un Mac, cela signifie généralement que macOS n'a pas autorisé MobAlt sur le réseau local : activez MobAlt dans Réglages Système → Confidentialité et sécurité → Réseau local, puis reconnectez-vous.",
+  "Open System Settings": "Ouvrir les Réglages Système",
+  "The connection to {host} was refused on this Mac before anything was sent (EHOSTUNREACH). On macOS 15 and later this usually means MobAlt is not allowed on the local network: turn it on under System Settings → Privacy & Security → Local Network, then connect again. Hosts outside the local network are not affected.": "La connexion à {host} a été refusée sur ce Mac avant même l'envoi de la moindre donnée (EHOSTUNREACH). Sous macOS 15 et versions ultérieures, cela signifie généralement que MobAlt n'est pas autorisé sur le réseau local : activez-le dans Réglages Système → Confidentialité et sécurité → Réseau local, puis reconnectez-vous. Les hôtes situés hors du réseau local ne sont pas concernés."
 }

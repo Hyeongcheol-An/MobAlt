@@ -471,6 +471,12 @@ Sie einrichten; die optionale Update-Prüfung liest die Release-Liste auf GitHub
 
 - **„Timed out while waiting for handshake“ / ETIMEDOUT**: Auf diesem Port hat nichts geantwortet. Prüfen Sie Adresse,
   VPN und Portweiterleitung am Router; versuchen Sie `nc -vz host port` in einem lokalen Terminal.
+- **„connect EHOSTUNREACH …“ / „No route to host“ bei einem Host in Ihrem eigenen Netzwerk**: Ab macOS 15 ist das
+  meist die Berechtigung *Lokales Netzwerk* — macOS lehnt die Verbindung auf diesem Mac ab, bevor etwas gesendet wird,
+  während `ssh` in einem Terminal weiterhin funktioniert (Befehlszeilenwerkzeuge sind ausgenommen) und Hosts außerhalb
+  des lokalen Netzwerks normal verbinden. Aktivieren Sie MobAlt unter „Systemeinstellungen“ → „Datenschutz & Sicherheit“
+  → „Lokales Netzwerk“ und verbinden Sie sich dann erneut; der Bereich meldet das, und MobAlt bietet an, die Einstellung
+  zu öffnen.
 - **„Authentifizierung fehlgeschlagen — Server akzeptiert: …; versucht: …“**: Der Server hat nicht akzeptiert, was
   MobAlt angeboten hat. Vergleichen Sie die Liste nach „akzeptiert“ mit der Authentifizierungsmethode Ihrer Sitzung; bei
   Servern, die nur Schlüssel annehmen, wählen Sie die richtige Schlüsseldatei. Wiederholte Fehlschläge können Ihre IP

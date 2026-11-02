@@ -12,6 +12,7 @@ const { spawn } = require('child_process');
 let basicFtp = null; // loaded on the first FTP connection (nothing the window should wait for)
 const ftpClient = () => (basicFtp || (basicFtp = require('basic-ftp'))).Client;
 const i18n = require('./i18n'); // interface language: every message shown to the user goes through i18n.t() (`t` names the transfer in this file)
+const localnet = require('./localnet');
 
 const FILE = 1, DIR = 2, LINK = 3; // basic-ftp FileType
 
@@ -65,7 +66,13 @@ function explainFtpError(e) {
   } else if (code === 421) msg = t('The server closed the connection (421 {detail})', { detail });
   else if (code === 425 || code === 426) msg = t('Data connection failed ({code} {detail}) — is passive mode blocked by a firewall?', { code, detail });
   else if (code !== null && code >= 400) msg = t('Server error {code}: {detail}', { code, detail });
-  else if (scode === 'ECONNREFUSED') msg = t('Connection refused ({where}) — the host is reachable but no FTP server listens on that port', { where: raw.replace(/^connect ECONNREFUSED\s*/, '') });
+  else if (scode === 'EHOSTUNREACH' || /\bEHOSTUNREACH\b/.test(raw)) {
+    // refused on this Mac (macOS Local Network privacy) more often than a real routing problem, see localnet.js
+    const where = localnet.unreachableAddress(e) || raw.replace(/^connect EHOSTUNREACH\s*/, '');
+    msg = t('No route to {where} (EHOSTUNREACH)', { where });
+    const hint = localnet.hint(e, where);
+    if (hint) { msg = `${msg} — ${hint}`; localnet.notify(where); }
+  } else if (scode === 'ECONNREFUSED') msg = t('Connection refused ({where}) — the host is reachable but no FTP server listens on that port', { where: raw.replace(/^connect ECONNREFUSED\s*/, '') });
   else if (scode === 'ETIMEDOUT' || /timeout \((control|data) socket\)/i.test(raw)) msg = t('Connection timed out ({error}) — check the host/port, VPN or firewall', { error: raw });
   else if (scode === 'ENOTFOUND' || scode === 'EAI_AGAIN') msg = t('Host not found ({host}) — check the host name', { host: raw.replace(/^getaddrinfo \w+\s*/, '') });
   else if (scode === 'ECONNRESET' || scode === 'EPIPE') msg = t('The server dropped the connection ({code})', { code: scode });

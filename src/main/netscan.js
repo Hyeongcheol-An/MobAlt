@@ -6,6 +6,7 @@ const net = require('net');
 const dns = require('dns');
 const { pingOnce, tcpConnect, runQueue } = require('./tools');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const localnet = require('./localnet'); // every probe refused on this Mac: the Local Network permission
 
 const MAX_HOSTS = 65536; // a /16
 const MAX_PORTS = 256;
@@ -78,7 +79,9 @@ function parsePorts(spec) {
  *                                                     is the address that answered (a name's IPv4 before its IPv6)
  *   { type: 'progress', done, total }                 at most every ~100 ms, and once at the end
  *   { type: 'error', host, message }                  a host name that does not resolve, or none of whose addresses answered
- *   { type: 'done', done, total, hits, cancelled, ms }
+ *   { type: 'done', done, total, hits, cancelled, ms, blocked, hint }   blocked: addresses this Mac refused to probe
+ *                                                                       (EHOSTUNREACH); hint: the sentence about the
+ *                                                                       macOS Local Network permission, when that is why
  * `method` is 'ping', 'tcp' or 'both'; `reverseDns` looks the name of every hit up (1.5 s at most). Returns
  * { promise, cancel, total }: cancel() stops the queue, kills the pings and connects still in flight and the 'done'
  * event follows at once.
@@ -87,7 +90,7 @@ function scan(targets, { method = 'both', ports = DEFAULT_PORTS, concurrency = 6
   const total = targets.length;
   const usePing = method !== 'tcp', useTcp = method !== 'ping';
   const procs = new Set(), sockets = new Set(), waiters = new Set();
-  let cancelled = false, done = 0, hits = 0, lastProgress = 0;
+  let cancelled = false, done = 0, hits = 0, lastProgress = 0, blocked = 0, blockedIp = null;
   const t0 = Date.now();
   const progress = (force) => {
     const now = Date.now();
@@ -117,7 +120,10 @@ function scan(targets, { method = 'both', ports = DEFAULT_PORTS, concurrency = 6
     const open = tcp.filter((r) => r.open);
     const alive = !!(ping && ping.alive);
     const rtt = alive && ping.ms !== null ? ping.ms : open.length ? Math.min(...open.map((r) => r.ms)) : null;
-    return { up: alive || open.length > 0, rtt, ports: open.map((r) => r.port) };
+    const up = alive || open.length > 0;
+    // nothing answered because this Mac refused to send: ping said "No route to host" or every connect got EHOSTUNREACH
+    const unreachable = !up && ((ping && ping.unreachable) || (tcp.length > 0 && tcp.every((r) => r.code === 'EHOSTUNREACH')));
+    return { up, rtt, ports: open.map((r) => r.port), unreachable };
   };
   const one = async (target) => {
     let addrs = [target], hostname = null;
@@ -129,7 +135,7 @@ function scan(targets, { method = 'both', ports = DEFAULT_PORTS, concurrency = 6
       if (cancelled) return;
       const r = await probe(ip);
       if (cancelled) return;
-      if (!r.up) continue;
+      if (!r.up) { if (r.unreachable) { blocked++; if (!blockedIp && localnet.isLocalAddress(ip)) blockedIp = ip; } continue; }
       if (reverseDns && !hostname) hostname = await reverse(ip);
       if (cancelled) return;
       hits++;
@@ -144,7 +150,9 @@ function scan(targets, { method = 'both', ports = DEFAULT_PORTS, concurrency = 6
     if (!cancelled) progress(false);
   }, () => cancelled).then(() => {
     progress(true);
-    emit({ type: 'done', done, total, hits, cancelled, ms: Date.now() - t0 });
+    const hint = blocked ? localnet.hint('No route to host', blockedIp) : null;
+    if (hint) localnet.notify(blockedIp);
+    emit({ type: 'done', done, total, hits, cancelled, ms: Date.now() - t0, blocked, hint });
   });
   const cancel = () => {
     if (cancelled) return;

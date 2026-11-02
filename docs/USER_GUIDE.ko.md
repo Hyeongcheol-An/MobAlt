@@ -414,6 +414,11 @@ macOS 키체인 기반 암호화), `settings.json`, `known_hosts`, `workspace.js
 
 - **"Timed out while waiting for handshake" / ETIMEDOUT**: 그 포트에서 아무 응답이 없습니다. 주소, VPN,
   공유기 포트 포워딩을 확인하고 로컬 터미널에서 `nc -vz host port`를 실행해 보세요.
+- **같은 네트워크의 호스트에 "connect EHOSTUNREACH …" / "No route to host"**: macOS 15 이상에서는 대개 *로컬 네트워크*
+  권한 문제입니다 — macOS가 아무것도 보내기 전에 이 Mac에서 연결을 거부하지만, 터미널의 `ssh`는 여전히
+  동작하고(명령줄 도구는 예외) 로컬 네트워크 밖의 호스트에는 정상적으로 연결됩니다. 시스템 설정 → 개인정보 보호 및
+  보안 → 로컬 네트워크에서 MobAlt를 켠 다음 다시 연결하세요. 페인에 같은 안내가 표시되고 MobAlt가 *시스템 설정
+  열기*를 제안합니다.
 - **"인증 실패 — 서버 허용: …, 시도: …"**: 서버가 MobAlt가 제시한 방법을 받지 않았습니다. "서버 허용" 목록과
   세션의 인증 방법을 비교하고, 키 전용 서버라면 알맞은 키 파일을 지정하세요. 실패가 반복되면 fail2ban이나
   sshd의 출발지별 제재(per-source penalty)로 IP가 잠시 차단될 수 있습니다.

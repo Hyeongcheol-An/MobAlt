@@ -1441,5 +1441,10 @@
   "Start over": "重新开始",
   "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": "不知道 shell 当前所在的文件夹（会话未跟随终端）。将 {n} 个项目上传到 {dir}？",
   "Upload": "上传",
-  "Uploading {n} item to {dir}": "正在上传 {n} 个项目到 {dir}"
+  "Uploading {n} item to {dir}": "正在上传 {n} 个项目到 {dir}",
+  "macOS may be blocking MobAlt from the local network": "macOS 可能阻止了 MobAlt 访问本地网络",
+  "No route to {where} (EHOSTUNREACH)": "没有到 {where} 的路由（EHOSTUNREACH）",
+  "On a Mac this usually means macOS has not allowed MobAlt on the local network: turn MobAlt on under System Settings → Privacy & Security → Local Network, then connect again.": "在 Mac 上，这通常表示 macOS 尚未允许 MobAlt 访问本地网络：请在“系统设置”→“隐私与安全”→“本地网络”中打开 MobAlt，然后重新连接。",
+  "Open System Settings": "打开系统设置",
+  "The connection to {host} was refused on this Mac before anything was sent (EHOSTUNREACH). On macOS 15 and later this usually means MobAlt is not allowed on the local network: turn it on under System Settings → Privacy & Security → Local Network, then connect again. Hosts outside the local network are not affected.": "在发送任何数据之前，与 {host} 的连接就已在这台 Mac 上被拒绝（EHOSTUNREACH）。在 macOS 15 及更高版本上，这通常表示 MobAlt 未被允许访问本地网络：请在“系统设置”→“隐私与安全”→“本地网络”中打开 MobAlt，然后重新连接。本地网络之外的主机不受影响。"
 }
