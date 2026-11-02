@@ -180,6 +180,15 @@
     app.action('multiexec'); await sleep(150); app.action('find'); await sleep(200);
     const fb = document.querySelector('#find-bar').getBoundingClientRect();
     check('findBarAtTheLeft', fb.left < W() / 2 && fb.left >= 0, { l: fb.left, r: fb.right });
+    // the counter "1 / 3" reads left to right (the bidi algorithm alone shows "3 / 1"); "No matches" stays a sentence
+    app.activePane().term.write('\r\nrtlfind rtlfind rtlfind\r\n'); await sleep(200);
+    const fin = document.querySelector('#find-input'), cnt = document.querySelector('#find-count');
+    fin.value = 'rtlfind'; fin.dispatchEvent(new Event('input')); await sleep(400);
+    const cs = getComputedStyle(cnt);
+    check('findCountLtr', /^\d+ \/ \d+$/.test(cnt.textContent) && cs.direction === 'ltr' && cs.unicodeBidi === 'isolate', { text: cnt.textContent, dir: cs.direction, ub: cs.unicodeBidi });
+    fin.value = 'zz-no-such-text-zz'; fin.dispatchEvent(new Event('input')); await sleep(400);
+    check('findNoMatchSentenceRtl', cnt.textContent === i18n.t('No matches') && getComputedStyle(cnt).direction === 'rtl', { text: cnt.textContent, dir: getComputedStyle(cnt).direction });
+    fin.value = 'rtlfind'; fin.dispatchEvent(new Event('input')); await sleep(300);
     ui.toast('Toast above the find bar', 'warn'); await sleep(200);
     await shot('rtl-split-find');
     app.action('find-close'); app.action('multiexec'); await sleep(150);

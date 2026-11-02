@@ -219,6 +219,8 @@ html[dir="rtl"] .tree-row .sub { direction: ltr; unicode-bidi: isolate; text-ali
 #find-bar button:hover { background: var(--bg-4); }
 #find-bar label { font-size: 11px; color: var(--fg-dim); display: flex; align-items: center; gap: 2px; }
 #find-bar .find-count { font-size: 11px; color: var(--fg-dim); min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+/* "1 / 6" is a number pair: left to right in Arabic as well (the bidi algorithm would show "6 / 1"); "No matches" is not */
+#find-bar .find-count.num { direction: ltr; unicode-bidi: isolate; }
 #find-bar.no-match #find-input { border-color: var(--red); }
 #find-bar.no-match .find-count { color: var(--danger-fg); }
 

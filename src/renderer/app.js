@@ -490,7 +490,7 @@ class App {
     // an unfinished regex (e.g. "h[ae") throws inside the search addon: show it as an invalid pattern instead
     const safeFind = (fn) => {
       try { fn(); fb.classList.remove('bad-pattern'); return true; }
-      catch { fb.classList.add('bad-pattern'); $('#find-count').textContent = t('Invalid pattern'); return false; }
+      catch { fb.classList.add('bad-pattern'); $('#find-count').classList.remove('num'); $('#find-count').textContent = t('Invalid pattern'); return false; }
     };
     // a browser pane searches its page (webview.findInPage: case toggle honoured, no regex); a terminal its buffer
     const inPage = (p, forward, findNext) => p.find(fi.value, { forward, findNext, matchCase: $('#find-case').checked });
@@ -974,6 +974,7 @@ class App {
     if (!el) return;
     this._findLast = { resultCount, resultIndex }; // redone in the new language on a switch (onLanguageChanged)
     el.textContent = resultCount > 0 ? `${resultIndex >= 0 ? resultIndex + 1 : '–'} / ${resultCount}` : fi.value ? t('No matches') : '';
+    el.classList.toggle('num', resultCount > 0); // "1 / 6" reads left to right in Arabic too (styles.css); "No matches" is a sentence
     $('#find-bar').classList.toggle('no-match', !!fi.value && resultCount === 0);
   }
 
