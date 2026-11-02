@@ -19,7 +19,14 @@
 const os = require('os');
 const i18n = require('./i18n');
 
-/** Where macOS keeps the switch (System Settings → Privacy & Security → Local Network). */
+/**
+ * Opens System Settings at Privacy & Security; the user scrolls to "Local Network" there. macOS has no deep link to
+ * that list (checked on macOS 27.2: the pane's reveal keys cover Camera, Microphone, Accessibility … but not Local
+ * Network, and the AppleScript anchor list has none either — Apple's own help pages link the pane, not the row), so
+ * the anchor is ignored today and only names the row for the day Apple adds it. The legacy pane id resolves on
+ * macOS 13–27 and is what the published anchor lists use; an unknown pane id would land in General, an unknown anchor
+ * is harmless. The texts that mention this link therefore spell the whole path out.
+ */
 const SETTINGS_URL = 'x-apple.systempreferences:com.apple.preference.security?Privacy_LocalNetwork';
 
 /** True for an address the Local Network privacy check covers: private/link-local IPv4, ULA/link-local IPv6, .local names. */
