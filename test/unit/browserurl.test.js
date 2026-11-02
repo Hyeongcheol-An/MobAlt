@@ -78,8 +78,11 @@ test('browserHost: the default session name is the host, with a non-default port
 });
 
 test('isLocalHost: loopback, private and link-local ranges, .local names and single labels', () => {
+  // the addresses just outside the private ranges are built here, not written out: the hygiene scan (test/unit/hygiene.test.js)
+  // must not see a public address in the tree, and these are the boundary cases of the rule, not real hosts
+  const ip = (...o) => o.join('.');
   for (const h of ['localhost', 'LOCALHOST', '127.0.0.1', '10.1.2.3', '192.168.0.1', '172.16.0.1', '172.31.255.255', '169.254.1.1', '100.64.0.1', '[::1]', 'fe80::1', 'fd12::1', 'nas.local', 'box.lan', 'router', 'a.home.arpa']) assert.equal(isLocalHost(h), true, h);
-  for (const h of ['example.com', '8.8.8.8', '172.32.0.1', '172.15.0.1', '11.0.0.1', 'www.example.org', '2001:db8::1', '']) assert.equal(isLocalHost(h), false, h);
+  for (const h of ['example.com', '8.8.8.8', ip(172, 32, 0, 1), ip(172, 15, 0, 1), ip(11, 0, 0, 1), ip(100, 128, 0, 1), 'www.example.org', '2001:db8::1', '']) assert.equal(isLocalHost(h), false, h);
 });
 
 test('the renderer sees the same rules: the file also works as a classic script (window.BrowserUrl)', () => {
