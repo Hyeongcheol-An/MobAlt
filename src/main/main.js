@@ -1444,6 +1444,7 @@ app.whenReady().then(() => {
     afterCheck: () => bundleWatch.check(),
     relaunch: () => relaunch(),
     progress: (info) => broadcast('app:update-progress', info), // the download's figures for every window's banner and Settings line
+    installFailed: (e) => { quitting = false; broadcast('app:notice', { level: 'error', text: (e && e.message) || String(e) }); }, // quitAndInstall threw: not quitting after all; the reason as an error toast
   });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

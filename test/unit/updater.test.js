@@ -367,3 +367,70 @@ test('install() twice (two clicks): beforeInstall and quitAndInstall run once', 
     answerLater();
   }
 });
+
+// ---------- last pass: quitAndInstall that throws, a native error after the download ----------
+test('install(): when quitAndInstall throws, nothing is quitting — the hook hears the reason, the done event puts the buttons back, and the next install() tries again', async () => {
+  const progress = [], calls = [], failed = [];
+  const u = fresh({ progress: (p) => progress.push(p), beforeInstall: () => calls.push('beforeInstall'), installFailed: (e) => failed.push(e.message) });
+  autoUpdater.downloadUpdate = async () => {};
+  let attempts = 0;
+  autoUpdater.quitAndInstall = () => { calls.push('quitAndInstall'); if (++attempts === 1) throw new Error('ShipIt is busy'); };
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    const n = progress.length;
+    assert.equal(u.install(), true);
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
+    assert.deepEqual(failed, ['ShipIt is busy']);
+    assert.equal(progress.length, n + 1);
+    assert.equal(progress[n].phase, 'done', 'the Restart now buttons come back');
+    assert.equal(u.install(), true, 'a later click tries again…');
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall', 'beforeInstall', 'quitAndInstall'], '…and runs the whole path again');
+    assert.equal(failed.length, 1);
+  } finally {
+    answerLater();
+  }
+});
+
+test('a native error after update-downloaded (no check running, nothing downloading) forgets the file: the windows hear why, install() is off, the next check offers the download again', async () => {
+  const progress = [], calls = [];
+  const u = fresh({ progress: (p) => progress.push(p), beforeInstall: () => calls.push('beforeInstall') });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  answerDownload();
+  try {
+    let p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.equal(dialogs.length, 2);
+    autoUpdater.emit('error', new Error('Code signature did not pass validation')); // Squirrel, after the download
+    const last = progress[progress.length - 1];
+    assert.equal(last.phase, 'error');
+    assert.equal(last.version, '0.17.0');
+    assert.equal(last.message, 'Code signature did not pass validation');
+    assert.equal(dialogs.length, 2, 'no sheet: nobody asked for a check');
+    assert.equal(u.install(), false, 'nothing to install any more');
+    assert.deepEqual(calls, []);
+    // the next check offers the download again instead of re-sending "done"
+    const n = progress.length;
+    p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(dialogs[dialogs.length - 1].message, 'MobAlt 0.17.0 is available');
+    assert.equal(progress[n].phase, 'downloading', 'a fresh download (answered Download), not the old done event');
+    assert.equal(progress[n].percent, 0);
+  } finally {
+    answerLater();
+  }
+});

@@ -72,6 +72,19 @@
     results.progressLiveRegion = banner().getAttribute('role') === 'status';
     log('progress', text(), 'bar', bar().value);
     await shot('65-update-progress');
+    // ten ticks whose figures change their digit count (1 → 2 digits, 0.9 → 12.3 MB/s, 2.6 → 13.2 MB): the bar leads the
+    // row and its left edge never moves
+    const ticks = [[1, 0.3, 0.9], [5, 1.5, 1.5], [9, 2.6, 2.2], [10, 2.9, 10.4], [23, 6.8, 12.3], [45, 13.2, 3.3], [67, 19.7, 0.8], [89, 26.2, 11.1], [95, 27.9, 2.0], [99, 29.1, 1.1]];
+    const edges = [];
+    for (const [pct, got, speed] of ticks) {
+      await progress({ phase: 'downloading', percent: pct, transferred: got * MB, total: 29.4 * MB, bytesPerSecond: speed * MB });
+      await sleep(120);
+      edges.push(Math.round(bar().getBoundingClientRect().left * 10) / 10);
+    }
+    results.barEdgeStable = new Set(edges).size === 1 && text() === 'Downloading MobAlt 0.17.0 — 99 % (29.1 of 29.4 MB, 1.1 MB/s)';
+    log('bar left edge over 10 ticks', edges.join(' '));
+    await progress({ phase: 'downloading', percent: 41.8, transferred: 12.3 * MB, total: 29.4 * MB, bytesPerSecond: 2.1 * MB }); // back to the figures the Settings checks expect
+    await sleep(300);
     // Settings → Updates: the same line (and the same bar), and it keeps following the download while the dialog is open
     app.action('settings');
     await sleep(400);
@@ -82,6 +95,12 @@
     const updBar = () => modal.querySelector('.upd-bar');
     results.settingsLineSameText = updStatus().textContent === mid && updStatus().getAttribute('aria-live') === 'polite';
     results.settingsBarSameValue = !!updBar() && !updBar().hidden && updBar().offsetParent !== null && Math.abs(updBar().value - 0.42) < 0.001;
+    // Check now while the download runs keeps the line and the bar; the check's answer (running from source here) is a toast
+    const checkNowBtn = [...modal.querySelectorAll('.modal-body button')].find((b) => b.textContent === 'Check now');
+    checkNowBtn.click();
+    await sleep(500);
+    const checkToast = [...document.querySelectorAll('#toast-root .toast')].find((x) => x.textContent === 'Updates are only checked in packaged builds');
+    results.checkNowKeepsLine = updStatus().textContent === mid && !updBar().hidden && !!checkToast && !checkNowBtn.disabled;
     await progress({ phase: 'downloading', percent: 77, transferred: 22.6 * MB, total: 29.4 * MB, bytesPerSecond: 2.4 * MB });
     await sleep(300);
     results.settingsLineFollows = updStatus().textContent === text() && text() === 'Downloading MobAlt 0.17.0 — 77 % (22.6 of 29.4 MB, 2.4 MB/s)';
@@ -99,11 +118,18 @@
     log('banner height', heightDownloading, '→', banner().offsetHeight, 'rows', rowsDownloading, '→', pane.term.rows);
     const settingsInstall = [...modal.querySelectorAll('.modal-body button')].find((b) => b.textContent === 'Restart now');
     results.settingsInstallShown = !!settingsInstall && !settingsInstall.hidden && settingsInstall.offsetParent !== null;
+    const ir = settingsInstall.getBoundingClientRect(), sl = updStatus().getBoundingClientRect();
+    results.settingsInstallUnderLine = Math.abs(ir.left - sl.left) < 1 && ir.top >= sl.bottom; // its own row, aligned under the line
+    checkNowBtn.click(); // Check now with the file complete keeps the done line and Restart now
+    await sleep(500);
+    results.checkNowKeepsDone = updStatus().textContent === doneText && !settingsInstall.hidden;
     results.noInstallBefore = (await window.api.app.testQuitCheck()).installRequested === false;
-    settingsInstall.click(); // the main process's install path (recorded in test mode, never performed)
+    settingsInstall.focus();
+    await window.api.app.testKey('Space'); // the main process's install path (recorded in test mode, never performed)
     await sleep(300);
     results.settingsInstallRequested = (await window.api.app.testQuitCheck()).installRequested === true;
     results.settingsInstallDisabled = settingsInstall.disabled === true; // one install per click
+    results.settingsInstallFocusKept = document.activeElement === checkNowBtn; // the keyboard focus went to Check now, not to <body>
     await shot('67-update-done-settings');
     document.querySelector('.modal .close').click();
     await sleep(250);
@@ -112,10 +138,24 @@
     btn('update-install').focus();
     results.installFocusable = document.activeElement === btn('update-install');
     await shot('68-update-done-banner');
+    await window.api.app.testKey('Space'); // Restart now from the keyboard: the focus moves to Later before the button disables itself
+    await sleep(300);
+    results.installKeyboardFocusKept = document.activeElement === btn('update-later') && btn('update-install').disabled;
     // Later hides the banner (nothing on disk is waiting) and the terminals get their rows back
     btn('update-later').click();
     await sleep(250);
     results.doneLaterHides = !visible() && pane.term.rows === rows0 && document.activeElement === pane.term.textarea;
+    // Later only hid the banner: Settings → Updates still has the done line and a usable Restart now
+    app.action('settings');
+    await sleep(400);
+    const modal2 = document.querySelector('.modal');
+    [...modal2.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Updates')?.click();
+    await sleep(150);
+    const install2 = [...modal2.querySelectorAll('.modal-body button')].find((b) => b.textContent === 'Restart now');
+    results.laterKeepsSettingsDone = modal2.querySelector('.upd-status').textContent === doneText && !!install2 && !install2.hidden && !install2.disabled && install2.offsetParent !== null && !visible();
+    await shot('70-update-later-settings');
+    document.querySelector('.modal .close').click();
+    await sleep(250);
     // a failed download: the reason, no bar and no buttons, gone by itself after a while (shortened here)
     app.updateErrorHideMs = 800;
     await progress({ phase: 'error', message: 'net::ERR_INTERNET_DISCONNECTED' });

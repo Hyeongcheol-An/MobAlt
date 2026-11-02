@@ -28,6 +28,8 @@ function loadAutoUpdater() {
  *              {bundleOnDisk?: (version) => void}      that version is already installed: show the relaunch banner
  *              {afterCheck?: () => void}               a check has concluded (the bundle watch looks at the disk again)
  *              {relaunch?: () => void}                 restart into the bundle on disk
+ *              {installFailed?: (e) => void}          quitAndInstall threw (Squirrel refused the bundle): the app is not quitting
+ *                                                      after all — main.js drops its quit flag and shows the user the reason
  *              {progress?: (info) => void}             the download as it goes, for every window's banner and Settings line:
  *                                                      { phase: 'downloading' | 'done' | 'error', version, percent, transferred,
  *                                                      total, bytesPerSecond, message? } — once at the start (0 %, no size yet),
@@ -112,7 +114,17 @@ function setupUpdater(store, getWin, hooks = {}) {
     if (state.installing) return true; // a second click while the quit is under way: nothing more to do (a second quitAndInstall would stack on MacUpdater)
     state.installing = true;
     try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}
-    setImmediate(() => autoUpdater.quitAndInstall());
+    setImmediate(() => {
+      try {
+        autoUpdater.quitAndInstall();
+      } catch (e) {
+        // Squirrel refused the bundle (a stale ShipIt job, a moved app…): nothing is quitting after all. The done event
+        // again puts the Restart now buttons back (a later click tries again); main.js hears the reason for the user.
+        state.installing = false;
+        try { hooks.installFailed && hooks.installFailed(e); } catch {}
+        if (state.lastDone) emit(state.lastDone);
+      }
+    });
     return true;
   };
   // The "ready to install" sheet: after the download, and again when a loud check finds the file already complete.
@@ -196,6 +208,20 @@ function setupUpdater(store, getWin, hooks = {}) {
     autoUpdater.on('error', (e) => {
       // A failed check. electron-updater fires this for a failed download too, but that one is reported from
       // downloadUpdate()'s rejection (startDownload): a check that fails while the file keeps coming must not end the download.
+      // With no check of ours running and nothing downloading, the event is Squirrel failing a stage after update-downloaded
+      // (the bundle did not verify): that file is of no use — forget it, so the next check offers the download again instead
+      // of latching Restart now onto an install that does nothing, and the windows hear why.
+      if (!state.pending && !state.download && state.downloaded) {
+        const version = state.downloaded;
+        state.downloaded = null;
+        state.lastDone = null;
+        if (state.installing) { // the quit was under way: main.js drops its quit flag
+          state.installing = false;
+          try { hooks.installFailed && hooks.installFailed(e); } catch {}
+        }
+        emit({ phase: 'error', version, percent: 100, transferred: 0, total: 0, bytesPerSecond: 0, message: (e && e.message) || t('Download failed') });
+        return;
+      }
       const manual = loud();
       finish({ status: 'error', message: t('Update check failed: {error}', { error: e.message }) });
       if (manual) dialogs.showMessageBox(win(), { type: 'error', message: t('Update check failed'), detail: e.message });

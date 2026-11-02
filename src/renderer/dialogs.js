@@ -909,6 +909,7 @@ export function settingsDialog(app) {
   const updStatus = h('span', { class: 'upd-status', 'aria-live': 'polite' });
   const updBar = h('progress', { class: 'upd-bar', value: 0, max: 1, 'aria-label': t('Download progress'), hidden: true });
   const updInstall = h('button', { class: 'btn small primary', type: 'button', hidden: true, onclick: () => {
+    if (document.activeElement === updInstall) checkNow.focus(); // Space / Enter: the focus must not fall to <body> when the button disables itself
     updInstall.disabled = true; // one install: a second click would stack a second quitAndInstall behind the first
     app.saveWorkspaceNow();
     window.api.app.installUpdate().then((ok) => { if (!ok) updInstall.disabled = false; }, () => { updInstall.disabled = false; });
@@ -930,17 +931,28 @@ export function settingsDialog(app) {
   };
   if (app.updateProgress) showProgress(app.updateProgress); // a download under way (or just finished) when the dialog opens
   const offProgress = window.api.app.onUpdateProgress(showProgress);
+  // A download under way or complete keeps its line and bar through a check: the answer goes to a toast, unless it names
+  // another release — then the usual flow (the line shows the answer, the sheet offers the download). After a failed
+  // download the check's own answer shows on the line.
+  const busy = () => { const dl = app.updateProgress; return dl && (dl.phase === 'downloading' || dl.phase === 'done') ? dl : null; };
   const checkNow = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+    checkNow.disabled = true; // one check at a time; the button itself shows that one is running
     updStatus.setAttribute('aria-live', 'polite'); // the outcome is announced, whatever the download's ticks set
-    updStatus.textContent = t('Checking…');
+    if (!busy()) updStatus.textContent = t('Checking…');
     try {
       const r = await window.api.app.checkUpdates();
-      const dl = app.updateProgress;
-      // that release is downloading already, or its file is complete: the figures stay; after a failed download the check's own answer shows
-      if (dl && dl.phase !== 'error' && r && r.status === 'available' && r.version === dl.version) return showProgress(dl);
+      const dl = busy(); // the check may have re-sent the done event meanwhile
+      const keep = dl && (!r || r.status === 'error' || r.status === 'up-to-date' || r.status === 'source' || r.version === dl.version);
+      if (keep) {
+        showProgress(dl);
+        if (r && r.message && r.status !== 'available') toast(r.message, r.status === 'error' ? 'error' : 'info'); // "available" is what the line says already
+        return;
+      }
       updStatus.textContent = (r && r.message) || '';
     } catch (e) {
       updStatus.textContent = e.message;
+    } finally {
+      checkNow.disabled = false;
     }
   } }, t('Check now'));
   // Five section tabs (General / Terminal / Features / Logging / Updates): each fits the 900×560 minimum window without scrolling.
@@ -975,7 +987,7 @@ export function settingsDialog(app) {
     ['updates', t('Updates'), h('div', { class: 'form-grid' },
       h('label', {}, t('Updates')), h('div', { class: 'checks' }, autoUpdate.el),
       h('div', { class: 'form-help' }, t('Releases on GitHub; a newer version is offered in a dialog and installed only when you agree')),
-      h('label', {}), h('div', { class: 'checks' }, checkNow, updStatus, updInstall, updBar)
+      h('label', {}), h('div', { class: 'checks' }, checkNow, h('div', { class: 'upd-col' }, updStatus, updBar, updInstall)) // the line, then the bar and Restart now under it at the same left edge
     )],
   ]);
   const body = h('div', { class: 'settings-tabs' }, tabs.strip, ...Object.values(tabs.pages));

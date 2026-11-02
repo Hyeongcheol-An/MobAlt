@@ -389,7 +389,8 @@ class App {
     for (const b of $$('#toolbar .tb-btn, #side-strip .strip-btn')) b.addEventListener('mousedown', (e) => e.preventDefault());
     // update banner: Relaunch restarts into the bundle on disk (the main process asks about live connections first),
     // Restart now installs the release the updater downloaded (the sheet's own path); Later hides the banner — until
-    // another version appears on disk, or for good for a finished download (it is installed at quit anyway). All are
+    // another version appears on disk, or, for a finished download, until the updater speaks again (Settings → Updates
+    // keeps the line and its Restart now meanwhile; the file is installed at quit anyway). All are
     // ordinary Tab stops; like the toolbar, a mouse click leaves the keyboard focus in the terminal.
     $('#update-relaunch').addEventListener('click', () => {
       this.saveWorkspaceNow(); // sent before app:relaunch on the same channel, so it lands first
@@ -397,12 +398,13 @@ class App {
     });
     $('#update-install').addEventListener('click', (e) => {
       const b = e.currentTarget;
+      if (document.activeElement === b) $('#update-later').focus(); // Space / Enter: the focus must not fall to <body> when the button disables itself
       b.disabled = true; // one install: a second click would stack a second quitAndInstall behind the first
       this.saveWorkspaceNow(); // as for Relaunch: the workspace is on disk before the quit
       window.api.app.installUpdate().then((ok) => { if (!ok) b.disabled = false; }, () => { b.disabled = false; });
     });
     $('#update-later').addEventListener('click', () => {
-      if (this.updateProgress) this.updateProgress = null;
+      if (this.updateProgress) this.updateProgress.dismissed = true; // the banner goes; Settings → Updates keeps the line and Restart now
       else this.updateDismissed = this.updateOnDisk;
       this._syncUpdateBanner();
       this.activePane()?.focus();
@@ -1231,7 +1233,7 @@ class App {
   /** What the banner shows: the download while one runs or has just ended, else the bundle on disk, else nothing. */
   _syncUpdateBanner() {
     const p = this.updateProgress;
-    const mode = p ? p.phase : this.updateOnDisk && this.updateOnDisk !== this.updateDismissed ? 'on-disk' : '';
+    const mode = p && !p.dismissed ? p.phase : this.updateOnDisk && this.updateOnDisk !== this.updateDismissed ? 'on-disk' : '';
     $('#update-banner').dataset.mode = mode;
     if (mode !== 'downloading') $('#update-banner').setAttribute('aria-live', 'polite'); // only the download's ticks are kept quiet (onUpdateProgress)
     const bar = $('#update-progress');
