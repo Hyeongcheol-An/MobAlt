@@ -62,6 +62,27 @@ test('a refused port reads as ECONNREFUSED through the socket ssh2 was given (th
   assert.match(ssh._explainError(error, ctx, { host: '127.0.0.1', port }), /nothing listens on that port/);
 });
 
+test('EHOSTUNREACH to a local address: _explainError names the macOS Local Network setting (on a Mac) and marks the context', () => {
+  const ssh = new SshManager(null, store, { status() {} });
+  const error = Object.assign(new Error('connect EHOSTUNREACH 192.168.77.5:22 - Local (192.168.77.9:50000)'), { code: 'EHOSTUNREACH', level: 'client-socket' });
+  const ctx = { out() {} };
+  const msg = ssh._explainError(error, ctx, { host: '192.168.77.5', port: 22 });
+  if (process.platform === 'darwin') {
+    assert.match(msg, /Local Network/);
+    assert.equal(ctx.localNetworkBlocked, '192.168.77.5', 'the host the dialog names');
+  } else {
+    assert.equal(msg, error.message);
+    assert.equal(ctx.localNetworkBlocked, undefined);
+  }
+  // a jump server that cannot reach the target says the same words in the channel open failure — its routing, not this Mac's
+  const hop = { out() {} };
+  assert.equal(ssh._explainError(new Error('(SSH) Channel open failure: No route to host'), hop, { host: '192.168.1.1', port: 22 }), '(SSH) Channel open failure: No route to host');
+  assert.equal(hop.localNetworkBlocked, undefined);
+  // the same error to a public address, or a refused port on the LAN, is not the permission
+  assert.equal(ssh._explainError(Object.assign(new Error('connect EHOSTUNREACH 203.0.113.5:22'), { code: 'EHOSTUNREACH' }), { out() {} }, { host: '203.0.113.5', port: 22 }), 'connect EHOSTUNREACH 203.0.113.5:22');
+  assert.match(ssh._explainError(Object.assign(new Error('connect ECONNREFUSED 192.168.77.5:22'), { code: 'ECONNREFUSED' }), { out() {} }, { host: '192.168.77.5', port: 22 }), /nothing listens/);
+});
+
 test('verifyHost connects through a noDelay socket too', async () => {
   const server = net.createServer((s) => s.end());
   await new Promise((r) => server.listen(0, '127.0.0.1', r));

@@ -1453,5 +1453,10 @@
   "Start over": "Bắt đầu lại",
   "The shell's folder is not known (the session does not follow the terminal). Upload {n} item to {dir}?": "Không rõ thư mục của shell (phiên không theo terminal). Tải lên {n} mục vào {dir}?",
   "Upload": "Tải lên",
-  "Uploading {n} item to {dir}": "Đang tải lên {n} mục vào {dir}"
+  "Uploading {n} item to {dir}": "Đang tải lên {n} mục vào {dir}",
+  "macOS may be blocking MobAlt from the local network": "macOS có thể đang chặn MobAlt truy cập mạng cục bộ",
+  "No route to {where} (EHOSTUNREACH)": "Không có đường đi tới {where} (EHOSTUNREACH)",
+  "On a Mac this usually means macOS has not allowed MobAlt on the local network: turn MobAlt on under System Settings → Privacy & Security → Local Network, then connect again.": "Trên máy Mac, điều này thường có nghĩa là macOS chưa cho phép MobAlt dùng mạng cục bộ: hãy bật MobAlt trong Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Mạng cục bộ, rồi kết nối lại.",
+  "Open System Settings": "Mở Cài đặt hệ thống",
+  "The connection to {host} was refused on this Mac before anything was sent (EHOSTUNREACH). On macOS 15 and later this usually means MobAlt is not allowed on the local network: turn it on under System Settings → Privacy & Security → Local Network, then connect again. Hosts outside the local network are not affected.": "Kết nối tới {host} đã bị từ chối ngay trên máy Mac này trước khi gửi đi bất cứ dữ liệu nào (EHOSTUNREACH). Trên macOS 15 trở lên, điều này thường có nghĩa là MobAlt chưa được phép dùng mạng cục bộ: hãy bật MobAlt trong Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Mạng cục bộ, rồi kết nối lại. Các máy chủ ngoài mạng cục bộ không bị ảnh hưởng."
 }

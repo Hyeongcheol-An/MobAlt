@@ -4,6 +4,7 @@
 const dgram = require('dgram');
 const net = require('net');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const localnet = require('./localnet'); // a Mac that refuses the broadcast: the Local Network permission
 
 /**
  * A MAC address in any of the usual spellings — `aa:bb:cc:dd:ee:ff`, `AA-BB-CC-DD-EE-FF`, Cisco's `aabb.ccdd.eeff` or
@@ -35,7 +36,12 @@ function magicPacket(mac) {
 function describeSendError(e, target, port) {
   const code = e && e.code;
   const where = `${target}:${port}`;
-  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') return new Error(t('No route to {target}; check the broadcast address ({code})', { target, code }));
+  if (code === 'EHOSTUNREACH' || code === 'ENETUNREACH') {
+    let msg = t('No route to {target}; check the broadcast address ({code})', { target, code });
+    const hint = code === 'EHOSTUNREACH' ? localnet.hint(e, target) : null;
+    if (hint) { msg = `${msg} — ${hint}`; localnet.notify(target); }
+    return new Error(msg);
+  }
   if (code === 'EACCES' || code === 'EPERM') return new Error(t('Sending to {where} is not allowed on this Mac ({code})', { where, code }));
   if (code === 'EADDRNOTAVAIL' || code === 'EINVAL') return new Error(t('Cannot send to {where}; check the broadcast address ({code})', { where, code }));
   return new Error(t('Cannot send to {where}: {error}', { where, error: code || (e && e.message) || e }));

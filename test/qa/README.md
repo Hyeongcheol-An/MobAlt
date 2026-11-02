@@ -47,6 +47,13 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `[Image #1]`, in a plain, split, zoomed and detached pane. It is a manual check, not an e2e suite (those never need
   the binary); it starts Claude Code in a fresh empty folder, answers the trust question and leaves with Ctrl+C, and it
   never submits a prompt (plain Enter is never pressed while the composer holds text).
+- `test/qa/localnet-check.sh` is the macOS Local Network permission as the app sees it (`src/main/localnet.js`): it
+  launches the app through `open`, so macOS judges the app itself and not the terminal the harness runs from (a run
+  started from a terminal is attributed to that terminal and connects fine), and `test/qa/localnet-check.js` then
+  connects to a LAN host by SSH and Telnet and pings it from the Tools panel. One RESULTS line says whether this Mac
+  refused the connections (EHOSTUNREACH), whether the pane carried the hint and whether the dialog came once and only
+  once; with the permission granted it reports `permissionGranted` instead, since nothing can be provoked then.
+  `MOBALT_APP=/Applications/MobAlt.app` runs the packaged app, `LOCALNET_HOST=` picks the host (default: the gateway).
 
 ## Renderer API available to scripts
 

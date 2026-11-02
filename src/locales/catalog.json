@@ -3100,6 +3100,7 @@
     },
     "Later": {
       "refs": [
+        "src/main/main.js",
         "src/main/updater.js",
         "src/renderer/index.html"
       ]
@@ -3315,6 +3316,11 @@
     "MAC address: aa:bb:cc:dd:ee:ff, aa-bb-cc-dd-ee-ff, aabb.ccdd.eeff or bare hex; the last 10 are remembered": {
       "refs": [
         "src/renderer/index.html"
+      ]
+    },
+    "macOS may be blocking MobAlt from the local network": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "macro name": {
@@ -3903,6 +3909,11 @@
         "src/main/wol.js"
       ]
     },
+    "No route to {where} (EHOSTUNREACH)": {
+      "refs": [
+        "src/main/ftp.js"
+      ]
+    },
     "No sample yet": {
       "refs": [
         "src/renderer/terminal.js"
@@ -4131,6 +4142,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "On a Mac this usually means macOS has not allowed MobAlt on the local network: turn MobAlt on under System Settings → Privacy & Security → Local Network, then connect again.": {
+      "refs": [
+        "src/main/localnet.js"
+      ]
+    },
     "One command per line, typed once the terminal is ready\ne.g. cd /var/log": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -4240,6 +4256,11 @@
     "Open SFTP for this host (via SSH)": {
       "refs": [
         "src/renderer/sftp.js"
+      ]
+    },
+    "Open System Settings": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "Open the SFTP browser for this Mosh session first (Sftp panel)": {
@@ -5938,6 +5959,11 @@
     "the connection closed": {
       "refs": [
         "src/main/zmodem.js"
+      ]
+    },
+    "The connection to {host} was refused on this Mac before anything was sent (EHOSTUNREACH). On macOS 15 and later this usually means MobAlt is not allowed on the local network: turn it on under System Settings → Privacy & Security → Local Network, then connect again. Hosts outside the local network are not affected.": {
+      "refs": [
+        "src/main/main.js"
       ]
     },
     "The first port must not be greater than the last": {

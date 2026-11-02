@@ -436,6 +436,11 @@ trên GitHub, ngoài ra không gì khác. Chi tiết: [SECURITY.md](../SECURITY.
 
 - **"Timed out while waiting for handshake" / ETIMEDOUT**: không có gì trả lời trên cổng đó. Kiểm tra
   địa chỉ, VPN và chuyển tiếp cổng trên router; thử `nc -vz host port` trong một terminal cục bộ.
+- **"connect EHOSTUNREACH …" / "No route to host" với một máy chủ trong chính mạng của bạn**: trên macOS 15 trở lên,
+  đây thường là do quyền *Mạng cục bộ* — macOS từ chối kết nối ngay trên máy Mac này trước khi gửi đi bất cứ dữ liệu
+  nào, trong khi `ssh` trong terminal vẫn chạy được (công cụ dòng lệnh được miễn) và các máy chủ ngoài mạng cục bộ
+  vẫn kết nối bình thường. Hãy bật MobAlt trong Cài đặt hệ thống → Quyền riêng tư & Bảo mật → Mạng cục bộ, rồi kết
+  nối lại; ngăn sẽ báo như vậy và MobAlt đề nghị mở cài đặt đó.
 - **"xác thực thất bại — máy chủ chấp nhận: …; đã thử: …"**: máy chủ không chấp nhận những gì MobAlt
   đưa ra. So sánh danh sách "chấp nhận" với phương thức xác thực của phiên; với máy chủ chỉ nhận khóa,
   hãy chọn đúng tệp khóa. Thất bại lặp lại có thể khiến IP của bạn bị fail2ban hoặc cơ chế phạt theo nguồn

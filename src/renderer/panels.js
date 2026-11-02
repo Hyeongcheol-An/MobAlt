@@ -265,6 +265,7 @@ export class ToolsPanel {
       this.syncScanButtons();
       const n = s.rows.length, p = { done: ev.done, total: ev.total, seconds: (ev.ms / 1000).toFixed(1) };
       toast(ev.cancelled ? tn('Scan stopped: {n} host up, {done}/{total} scanned', 'Scan stopped: {n} hosts up, {done}/{total} scanned', n, p) : tn('Scan finished: {n} host up of {total} in {seconds} s', 'Scan finished: {n} hosts up of {total} in {seconds} s', n, p), ev.cancelled ? 'warn' : 'success');
+      if (ev.hint) toast(ev.hint, 'warn', 10000); // this Mac refused the probes: the macOS Local Network permission
     }
   }
 

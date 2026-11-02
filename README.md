@@ -246,6 +246,9 @@ keychain when one is present; otherwise they are unsigned and need right-click �
 - If a connection fails with *Timed out while waiting for handshake* or `ETIMEDOUT`, check reachability
   with `nc -vz <host> <port>` first; repeated authentication failures can get your IP banned by
   fail2ban or sshd `PerSourcePenalties` on the server.
+- On macOS 15 and later a host on the local network needs the *Local Network* permission (System Settings →
+  Privacy & Security → Local Network → MobAlt); until it is granted the connection fails on this Mac with
+  `EHOSTUNREACH` and MobAlt points at the setting.
 
 ## License
 

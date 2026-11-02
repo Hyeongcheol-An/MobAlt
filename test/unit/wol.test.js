@@ -84,7 +84,11 @@ test('wake refuses 0.0.0.0 as a broadcast address and a port that is not a whole
 
 test('describeSendError: a socket error names the address to check instead of "send EHOSTUNREACH 0.0.0.0:9"', () => {
   const { describeSendError } = require('../../src/main/wol');
-  assert.equal(describeSendError(Object.assign(new Error('send EHOSTUNREACH 192.168.9.255:9'), { code: 'EHOSTUNREACH' }), '192.168.9.255', 9).message, 'No route to 192.168.9.255; check the broadcast address (EHOSTUNREACH)');
+  const refused = describeSendError(Object.assign(new Error('send EHOSTUNREACH 192.168.9.255:9'), { code: 'EHOSTUNREACH' }), '192.168.9.255', 9).message;
+  assert.match(refused, /^No route to 192\.168\.9\.255; check the broadcast address \(EHOSTUNREACH\)/);
+  // on macOS 15+ a refused LAN broadcast is usually the Local Network permission: the sentence about it follows
+  if (process.platform === 'darwin' && Number(require('os').release().split('.')[0]) >= 24) assert.match(refused, / — .*Local Network/);
+  else assert.equal(refused, 'No route to 192.168.9.255; check the broadcast address (EHOSTUNREACH)');
   assert.equal(describeSendError({ code: 'ENETUNREACH' }, '10.9.9.255', 7).message, 'No route to 10.9.9.255; check the broadcast address (ENETUNREACH)');
   assert.equal(describeSendError({ code: 'EACCES' }, '255.255.255.255', 9).message, 'Sending to 255.255.255.255:9 is not allowed on this Mac (EACCES)');
   assert.equal(describeSendError({ code: 'EADDRNOTAVAIL' }, '1.2.3.255', 9).message, 'Cannot send to 1.2.3.255:9; check the broadcast address (EADDRNOTAVAIL)');

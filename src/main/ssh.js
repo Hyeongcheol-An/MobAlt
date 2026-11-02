@@ -14,6 +14,7 @@ const knownhosts = require('./knownhosts');
 const x11 = require('./x11');
 const algorithms = require('./algorithms');
 const keygen = require('./keygen');
+const localnet = require('./localnet'); // the macOS Local Network permission, when EHOSTUNREACH is what it looks like
 
 const { execFile } = require('child_process');
 
@@ -427,6 +428,7 @@ class SshManager {
         if (settled) return;
         settled = true;
         try { client.end(); } catch {}
+        if (!ok && ctx.localNetworkBlocked) localnet.notify(ctx.localNetworkBlocked); // Mosh's host-key check: the same dialog as a session
         resolve(ok ? { ok: true, handshakeLine: ctx.handshake ? `${GREY}${this.handshakeLine(ctx.handshake)}${RESET}\r\n` : '' } : { ok: false, error: error || t('host key check failed') });
       };
       const ctx = {};
@@ -735,6 +737,7 @@ class SshManager {
         if (info.closed) return; // cancelled by disconnect(): the pane already says so
         const msg = this._explainError(e, ctx, cfg);
         this._out(id, `\r\n${RED}${t('Connection failed: {error}', { error: msg })}${RESET}\r\n`);
+        if (ctx.localNetworkBlocked) localnet.notify(ctx.localNetworkBlocked); // the dialog that opens the setting (once per run)
         this.prompter.status(id, 'failed', e.message);
         info.closed = true;
         this.conns.delete(id);
@@ -748,6 +751,9 @@ class SshManager {
     if (e.explained) return e.message; // a jump hop's failure, explained against the jump host in connectClient
     let msg = e.message;
     const limit = () => Math.round((this.store.getSettings().readyTimeout || 20000) / 1000);
+    // this Mac refused the socket (macOS Local Network privacy, see localnet.js): the socket's own error only — a jump
+    // server that cannot reach the target answers the channel open with the same words, and that is its routing
+    const refused = e.code === 'EHOSTUNREACH' ? localnet.hint(e, cfg.host) : null;
     // the regexes classify ssh2's own (English) messages; the hints are composed around them as {error}
     if (ctx.cancelled) msg = t('authentication cancelled');
     else if (e.level === 'client-authentication') {
@@ -758,6 +764,9 @@ class SshManager {
       } else if (!(ctx.tried || []).length && cfg.authMethod === 'key' && !cfg.privateKeyPath) {
         msg = t('{error}. The session uses key authentication but no key file is set.', { error: msg });
       }
+    } else if (refused) {
+      ctx.localNetworkBlocked = cfg.host; // the host it was (a jump hop's, when the hop's own socket failed)
+      msg = `${msg} — ${refused}`;
     } else if (e.code === 'ETIMEDOUT' || /ETIMEDOUT/.test(msg)) {
       msg = t('{error} — no TCP response from the host. Check network/VPN, the port forward on the router, or a temporary ban (fail2ban) after failed logins.', { error: msg });
     } else if (/Timed out while waiting for handshake/i.test(msg)) {

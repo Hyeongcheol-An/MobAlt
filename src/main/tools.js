@@ -7,18 +7,30 @@ const dns = require('dns');
 const os = require('os');
 const crypto = require('crypto');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const localnet = require('./localnet');
 
 const running = new Map();
 
-function streamCommand(win, cmd, args) {
+/** `host` is the target, for the hint when the tool reports "No route to host" on a Mac (the Local Network permission, see localnet.js). */
+function streamCommand(win, cmd, args, host) {
   const id = 'tool_' + crypto.randomBytes(4).toString('hex');
   const p = spawn(cmd, args, { env: { ...process.env, LANG: 'C' } });
   running.set(id, p);
+  let unreachable = false, resolved = null; // what ping/traceroute print for a name: "PING server (192.168.0.5)"
   const send = (text) => win && !win.isDestroyed() && win.webContents.send('tools:output', { id, text });
-  p.stdout.on('data', (d) => send(d.toString()));
-  p.stderr.on('data', (d) => send(d.toString()));
+  const relay = (d) => {
+    const s = d.toString();
+    if (/No route to host/.test(s)) unreachable = true;
+    const m = /^(?:PING|traceroute to) \S+ \(([^)]+)\)/m.exec(s);
+    if (m && !resolved) resolved = m[1];
+    send(s);
+  };
+  p.stdout.on('data', relay);
+  p.stderr.on('data', relay);
   p.on('error', (e) => send(t('error: {error}', { error: e.message }) + '\n'));
   p.on('close', (code) => {
+    const hint = unreachable && host ? localnet.hint('No route to host', resolved || host) : null;
+    if (hint) { send('\n' + hint + '\n'); localnet.notify(host); }
     send('\n' + (code === null ? t('[stopped]') : t('[exit {code}]', { code })) + '\n');
     running.delete(id);
     win && !win.isDestroyed() && win.webContents.send('tools:done', { id, code });
@@ -36,12 +48,12 @@ const v6Tool = (tool, host) => (net.isIPv6(host) ? (process.platform === 'linux'
 
 function ping(win, host, count = 5) {
   const tool = v6Tool('ping', host);
-  return streamCommand(win, tool.bin, [...tool.args, '-c', String(count), host]);
+  return streamCommand(win, tool.bin, [...tool.args, '-c', String(count), host], host);
 }
 
 function traceroute(win, host) {
   const tool = v6Tool('traceroute', host);
-  return streamCommand(win, tool.bin, [...tool.args, '-m', '30', '-q', '1', '-w', '2', host]);
+  return streamCommand(win, tool.bin, [...tool.args, '-m', '30', '-q', '1', '-w', '2', host], host);
 }
 
 /** Runs fn(item, index) over `items` with at most `concurrency` in flight; once isCancelled() is true no further item is taken. */
@@ -64,19 +76,19 @@ function tcpConnect(host, port, timeout = 800, sockets = null) {
   return new Promise((resolve) => {
     const s = new net.Socket();
     const t0 = Date.now();
-    let done = false;
+    let done = false, code = null; // code: the socket error's, when it failed that way (EHOSTUNREACH tells the scanner a Mac refused it)
     const fin = (open) => {
       if (done) return;
       done = true;
       if (sockets) sockets.delete(s);
       s.destroy();
-      resolve({ open, ms: Date.now() - t0 });
+      resolve({ open, ms: Date.now() - t0, code });
     };
     if (sockets) sockets.add(s);
     s.setTimeout(timeout);
     s.once('connect', () => fin(true));
     s.once('timeout', () => fin(false));
-    s.once('error', () => fin(false));
+    s.once('error', (e) => { code = (e && e.code) || 'ERROR'; fin(false); });
     s.once('close', () => fin(false));
     s.connect(port, host);
   });
@@ -109,7 +121,7 @@ function pingOnce(host, timeout = 600, procs = null) {
       : v6 ? ['-c', '1', '-n', host]
         : ['-c', '1', '-W', String(timeout), '-t', secs, '-n', host];
     let p;
-    try { p = spawn(bin, args, { env: { ...process.env, LANG: 'C' } }); } catch { return resolve({ alive: false, ms: null }); }
+    try { p = spawn(bin, args, { env: { ...process.env, LANG: 'C' } }); } catch { return resolve({ alive: false, ms: null, unreachable: false }); }
     if (procs) procs.add(p);
     let out = '', done = false, timer = null;
     const fin = (alive) => {
@@ -118,10 +130,11 @@ function pingOnce(host, timeout = 600, procs = null) {
       clearTimeout(timer);
       if (procs) procs.delete(p);
       const m = out.match(/time[=<]\s*([\d.]+)\s*ms/);
-      resolve({ alive, ms: alive && m ? parseFloat(m[1]) : null });
+      resolve({ alive, ms: alive && m ? parseFloat(m[1]) : null, unreachable: !alive && /No route to host/.test(out) });
     };
     timer = setTimeout(() => { try { p.kill(); } catch {} fin(false); }, timeout + 50);
     p.stdout.on('data', (d) => { out += d.toString(); });
+    p.stderr.on('data', (d) => { out += d.toString(); }); // "ping: sendto: No route to host" goes there
     p.on('error', () => fin(false));
     p.on('close', (code) => fin(code === 0 && /bytes from/.test(out)));
   });

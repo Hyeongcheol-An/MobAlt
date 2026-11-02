@@ -445,6 +445,12 @@ sur GitHub, et rien d'autre. Détails : [SECURITY.md](../SECURITY.md).
 
 - **« Timed out while waiting for handshake » / ETIMEDOUT** : rien n'a répondu sur ce port. Vérifiez
   l'adresse, le VPN et la redirection du routeur ; essayez `nc -vz host port` dans un terminal local.
+- **« connect EHOSTUNREACH … » / « No route to host » pour un hôte de votre propre réseau** : sous macOS 15 et versions
+  ultérieures, c'est généralement l'autorisation *Réseau local* — macOS refuse la connexion sur ce Mac avant même
+  l'envoi de la moindre donnée, alors que `ssh` dans un terminal fonctionne toujours (les outils en ligne de commande
+  en sont exemptés) et que les hôtes hors du réseau local se connectent normalement. Activez MobAlt dans
+  Réglages Système → Confidentialité et sécurité → Réseau local, puis reconnectez-vous ; le volet l'indique et
+  MobAlt propose d'ouvrir le réglage.
 - **« échec de l'authentification — le serveur accepte : … ; essayé : … »** : le serveur n'a pas accepté ce que MobAlt
   a proposé. Comparez la liste « accepte » avec la méthode d'authentification de votre session ; pour les serveurs
   n'acceptant que les clés, choisissez le bon fichier de clé. Des échecs répétés peuvent faire bannir votre IP un moment par fail2ban ou par les

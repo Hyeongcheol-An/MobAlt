@@ -441,6 +441,11 @@ on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
 
 - **"Timed out while waiting for handshake" / ETIMEDOUT**: nothing answered on that port. Check
   the address, VPN and router forwarding; try `nc -vz host port` in a local terminal.
+- **"connect EHOSTUNREACH …" / "No route to host" for a host on your own network**: on macOS 15 and later
+  this is usually the *Local Network* permission — macOS refuses the connection on this Mac before anything is
+  sent, while `ssh` in a terminal still works (command-line tools are exempt) and hosts outside the local network
+  connect normally. Turn MobAlt on under System Settings → Privacy & Security → Local Network, then connect again;
+  the pane says so and MobAlt offers to open the setting.
 - **"authentication failed — server accepts: …; tried: …"**: the server did not accept what MobAlt
   offered. Compare the "accepts" list with your session's authentication method; for key-only
   servers pick the right key file. Repeated failures can get your IP banned by fail2ban or sshd's
