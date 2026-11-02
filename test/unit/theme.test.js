@@ -153,3 +153,17 @@ test('find highlights follow the palette and stay readable under the theme text'
   }
   assert.notEqual(searchDecorations(THEMES.light).matchBackground, searchDecorations(THEMES['moba-dark']).matchBackground);
 });
+
+test('a disabled primary button reads at ≥ 3:1 in every theme: the dim text on a plain button face, no half opacity', async () => {
+  const { THEMES, chromePalette, contrast } = await load();
+  const css = require('fs').readFileSync(require('path').join(__dirname, '..', '..', 'src', 'renderer', 'styles.css'), 'utf8');
+  const rule = /\.btn\.primary\[disabled\], \.btn\.primary:disabled \{([^}]*)\}/.exec(css);
+  assert.ok(rule, 'the rule is there');
+  assert.match(rule[1], /opacity: 1;/);
+  assert.match(rule[1], /background: var\(--bg-control\)/);
+  assert.match(rule[1], /color: var\(--fg-dim\)/);
+  for (const name of Object.keys(THEMES)) {
+    const p = chromePalette(THEMES[name], name);
+    assert.ok(contrast(p['fg-dim'], p['bg-control']) >= 3, `${name}: ${p['fg-dim']} on ${p['bg-control']}`);
+  }
+});

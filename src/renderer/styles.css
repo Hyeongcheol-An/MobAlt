@@ -626,7 +626,9 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .ctx-item.danger:hover .k, .ctx-item.danger:focus-visible .k { color: var(--selection-fg-dim); }
 /* Disabled controls are visibly inert: dimmed, no hover, arrow cursor (a disabled primary button looked live). */
 .btn[disabled], .btn:disabled, .tb-btn:disabled, .icon-btn:disabled, .tools-form button:disabled, #find-bar button:disabled, .pane-head button:disabled, .quick button:disabled { opacity: .5; cursor: default; pointer-events: none; }
-.btn.primary[disabled], .btn.primary:disabled { background: var(--selection); border-color: var(--selection); }
+/* A disabled primary button is not the blue fill at half opacity (1.47:1 in the light theme): a plain button face with
+   the dim text, which the palette keeps at ≥ 4.5:1 on --bg-control in every theme (theme.js, test/unit/theme.test.js). */
+.btn.primary[disabled], .btn.primary:disabled { opacity: 1; background: var(--bg-control); border-color: var(--border); color: var(--fg-dim); }
 input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: default; }
 /* A session's colour is an accent (tab stripe, pane-head bar, tree dot), never a text colour: the tree shows it as a
    dot inside a 1px --border ring, which reads at ≥ 3:1 whatever colour was picked. */
