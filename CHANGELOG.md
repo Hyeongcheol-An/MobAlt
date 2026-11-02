@@ -115,9 +115,9 @@
 * **i18n:** wrap the main process's user-visible strings in t()/tn() ([6ec4292](https://github.com/Hyeongcheol-An/MobAlt/commit/6ec4292968237f5e89c8aafdcec30c9571102ea1))
 * **i18n:** wrap the Settings, host-key, password, paste-guard, shortcuts and key-generator dialogs ([09cbd5b](https://github.com/Hyeongcheol-An/MobAlt/commit/09cbd5bef0281b35122a4756a5be97c2ca786055))
 * **layout:** unsplit mode — the other panes become tabs of their own, close, or ask ([ef1b57e](https://github.com/Hyeongcheol-An/MobAlt/commit/ef1b57ea29fa96f81d43f61596796b3268164ae9))
-* **multiexec:** exclude individual panes — MobaXterm's per-terminal checkbox, bulk menu ([1be6679](https://github.com/Hyeongcheol-An/MobAlt/commit/1be66790cae70af603c7b0efdf9134ec0e94c1ab)), closes [#multiexec-count](https://github.com/Hyeongcheol-An/MobAlt/issues/multiexec-count)
+* **multiexec:** exclude individual panes — MobaXterm's per-terminal checkbox, bulk menu ([1be6679](https://github.com/Hyeongcheol-An/MobAlt/commit/1be66790cae70af603c7b0efdf9134ec0e94c1ab))
 * **pane:** pane menu — Rename Pane, Pane Settings, Background Label, Font Size, Read-Only ([dd24927](https://github.com/Hyeongcheol-An/MobAlt/commit/dd24927c5a06b9d18e1b81b2a7bb06953b194c2a))
-* **terminal:** Shift+Enter newline and image paste for Claude Code — keypress fix, Ctrl+V for a clipboard image ([c612002](https://github.com/Hyeongcheol-An/MobAlt/commit/c6120028c288ac54444c2272c4f7bd3a5944b8c4)), closes [#1](https://github.com/Hyeongcheol-An/MobAlt/issues/1)
+* **terminal:** Shift+Enter newline and image paste for Claude Code — keypress fix, Ctrl+V for a clipboard image ([c612002](https://github.com/Hyeongcheol-An/MobAlt/commit/c6120028c288ac54444c2272c4f7bd3a5944b8c4))
 * **ui:** right-to-left layout for Arabic — mirrored chrome, LTR islands, physical splits ([d03674d](https://github.com/Hyeongcheol-An/MobAlt/commit/d03674dd91d95465a563b832ad0be525ba0e9727))
 
 ### Bug Fixes
@@ -198,8 +198,8 @@
 ### Bug Fixes
 
 * **a11y:** keep the pane zoom button's name constant, aria-pressed carries the state ([7b333d7](https://github.com/Hyeongcheol-An/MobAlt/commit/7b333d7d6d3fc37aa5ffecbb6728882536de6c86))
-* **a11y:** name every form control, focus cues on find/tools boxes, editor tab roles, live toasts ([894a0af](https://github.com/Hyeongcheol-An/MobAlt/commit/894a0af2a7bd70e2b6feccbb0ab011c1db125e62)), closes [#find-input](https://github.com/Hyeongcheol-An/MobAlt/issues/find-input) [#tool-host](https://github.com/Hyeongcheol-An/MobAlt/issues/tool-host) [#sftp-path](https://github.com/Hyeongcheol-An/MobAlt/issues/sftp-path) [#qc-input](https://github.com/Hyeongcheol-An/MobAlt/issues/qc-input) [#session-filter](https://github.com/Hyeongcheol-An/MobAlt/issues/session-filter) [#toast-root](https://github.com/Hyeongcheol-An/MobAlt/issues/toast-root) [#multiexec-banner](https://github.com/Hyeongcheol-An/MobAlt/issues/multiexec-banner)
-* **sessions:** readable export errors, BOM/UTF-16 JSON, honest import counts, MobaXterm validation ([4f7e04e](https://github.com/Hyeongcheol-An/MobAlt/commit/4f7e04e97ba13a54c5e34e19c5bc693f2f193716)), closes [#130](https://github.com/Hyeongcheol-An/MobAlt/issues/130)
+* **a11y:** name every form control, focus cues on find/tools boxes, editor tab roles, live toasts ([894a0af](https://github.com/Hyeongcheol-An/MobAlt/commit/894a0af2a7bd70e2b6feccbb0ab011c1db125e62))
+* **sessions:** readable export errors, BOM/UTF-16 JSON, honest import counts, MobaXterm validation ([4f7e04e](https://github.com/Hyeongcheol-An/MobAlt/commit/4f7e04e97ba13a54c5e34e19c5bc693f2f193716))
 * **sessions:** validate imported JSON, strip exporter flags, dedup MobaXterm re-imports ([e8e99fb](https://github.com/Hyeongcheol-An/MobAlt/commit/e8e99fbf40f42dd8e7ada86b0af16831dee863fa))
 * **settings:** give macOptionIsMeta a stored default ([2c23d08](https://github.com/Hyeongcheol-An/MobAlt/commit/2c23d08459f15839c425c00b806c7d9ad229811b))
 * **settings:** hold the dialog at the height of its tallest section ([58d3898](https://github.com/Hyeongcheol-An/MobAlt/commit/58d3898d52919485203ed1b78258e0231d8d7e22))
@@ -220,7 +220,7 @@
 ### Bug Fixes
 
 * **a11y:** keyboard follow-ups in the SFTP list, session tree, panels and Shortcuts dialog ([156af50](https://github.com/Hyeongcheol-An/MobAlt/commit/156af50efcefff2b504d77c0e08a1bb4e44f3167))
-* **brand:** give the DMG labels a mid-tone band readable in light and dark Finder ([626e639](https://github.com/Hyeongcheol-An/MobAlt/commit/626e639cf5216c00309526b8c5b198a13f845955)), closes [#6b84b3](https://github.com/Hyeongcheol-An/MobAlt/issues/6b84b3)
+* **brand:** give the DMG labels a mid-tone band readable in light and dark Finder ([626e639](https://github.com/Hyeongcheol-An/MobAlt/commit/626e639cf5216c00309526b8c5b198a13f845955))
 * **build:** use the personal bundle id io.github.hyeongcheol-an.mobalt
 * **repo:** drop the node_modules symlink that slipped into v0.10.1 and ignore symlinked node_modules too ([0e16072](https://github.com/Hyeongcheol-An/MobAlt/commit/0e16072203d14fde303e100c9c586ff0cf72e16a))
 * **ssh:** announce a connection the server dropped ([9ea4a5e](https://github.com/Hyeongcheol-An/MobAlt/commit/9ea4a5e267dc3a4412fee0968e0df52bb593f6af))
@@ -228,7 +228,7 @@
 * **ui:** keep the all-tabs menu inside the window and clip long dialog titles ([6c7e30f](https://github.com/Hyeongcheol-An/MobAlt/commit/6c7e30f4cc82eeb2f92979df1f57b2dbda863b4b))
 * **ui:** light-theme find matches and FTP card contrast, unbreakable update call to action ([0910545](https://github.com/Hyeongcheol-An/MobAlt/commit/09105450a00d5274e0bed8ef0949344b0dff4cd1))
 * **ui:** name a tab after its session while other panes are used ([2d5b59a](https://github.com/Hyeongcheol-An/MobAlt/commit/2d5b59a6c4d40c6ba7eebf8b3f6ec22816e6fef9))
-* **ui:** toasts clear the find bar, long notices wrap, cards sit below the pane head ([a814719](https://github.com/Hyeongcheol-An/MobAlt/commit/a814719810e7f92a448afb450c677723e460b698)), closes [#toast-root](https://github.com/Hyeongcheol-An/MobAlt/issues/toast-root) [#multiexec-count](https://github.com/Hyeongcheol-An/MobAlt/issues/multiexec-count)
+* **ui:** toasts clear the find bar, long notices wrap, cards sit below the pane head ([a814719](https://github.com/Hyeongcheol-An/MobAlt/commit/a814719810e7f92a448afb450c677723e460b698))
 * **update:** quiet "Check now" in Settings; the relaunch question says Relaunch ([d7c6ccf](https://github.com/Hyeongcheol-An/MobAlt/commit/d7c6ccf9c885e9cee42737f1e5bde6a55bda8c51))
 * **update:** relaunch through LaunchServices and surface main-process notices ([7ceaa90](https://github.com/Hyeongcheol-An/MobAlt/commit/7ceaa90694613071a227ad33ea9cb94d0c0d58d2))
 
@@ -239,7 +239,7 @@
 * **a11y:** dialogs hand focus back to their opener; one Tab stop per picker ([2bd5540](https://github.com/Hyeongcheol-An/MobAlt/commit/2bd55408fe31567942b01d2ff9eadf61321b7f9c))
 * **a11y:** keyboard follow-ups in the session tree, macros list and SFTP list ([6d373bd](https://github.com/Hyeongcheol-An/MobAlt/commit/6d373bd3a4c3c75ee06acd8311cf819a4eff1fbb))
 * **a11y:** tab strip never drops keyboard focus on <body> ([5e41e9d](https://github.com/Hyeongcheol-An/MobAlt/commit/5e41e9dfa9b6e203e336082fc4f73b1575343bfe))
-* **a11y:** unclipped focus rings for the toolbar, tab bar arrows, SFTP list and pickers ([ed21b12](https://github.com/Hyeongcheol-An/MobAlt/commit/ed21b12cce2de8472e12239930d0c5ef2b6a6f86)), closes [#sftp-list](https://github.com/Hyeongcheol-An/MobAlt/issues/sftp-list)
+* **a11y:** unclipped focus rings for the toolbar, tab bar arrows, SFTP list and pickers ([ed21b12](https://github.com/Hyeongcheol-An/MobAlt/commit/ed21b12cce2de8472e12239930d0c5ef2b6a6f86))
 * **app:** quit confirmation for ⌘Q counts every live connection ([be99f80](https://github.com/Hyeongcheol-An/MobAlt/commit/be99f8012fead1cb2356e81c1e1217b8711e4605))
 * **ftp:** disconnect on close, readable errors, password prompt, safe rename and cancel ([fffcc0b](https://github.com/Hyeongcheol-An/MobAlt/commit/fffcc0bcfa7e0b5b4c721bf046f2644bb5cdc9c3))
 * **mosh:** verify the host key in the app before the bootstrap; failures read as failed ([0653b47](https://github.com/Hyeongcheol-An/MobAlt/commit/0653b476f1b640aa81bbd15e07746eccb2a5adeb))

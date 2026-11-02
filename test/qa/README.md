@@ -31,7 +31,7 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `shots/final.png`.
 - `console.log` output is echoed to the terminal prefixed with `[renderer:info]`.
 - `test/qa/docs-shots.js` makes the screenshots of the README and the user guides — `npm run docs:shots` runs it once
-  per interface language into `docs/images/<code>/` (English in `docs/images/`) and starts the FTP server it needs —
+  per interface language into `docs/images/<code>/` (English in `docs/images/`) and starts the FTP server and the web page (`test/httpsrv.js` on 48731) it needs —
   and `test/qa/demo-frames.js` the frames of the README demo GIF (`npm run demo` runs it and `scripts/make-demo-gif.sh`;
   start the FTP server from its header first). Nothing personal appears in the images.
 - `testKey(k)` sends keyDown/keyUp only (no char event), so the native Enter activation of a focused button cannot

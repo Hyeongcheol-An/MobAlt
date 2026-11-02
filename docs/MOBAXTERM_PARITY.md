@@ -36,9 +36,9 @@ last column says which parts are missing.
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
 | **Sections 1–7 (each feature once)** | **55** | **39** | **31** | **59** | **184** |
-| 8. Recent additions (24.3 → 26.6) | 4 | 17 | 6 | 3 | 30 |
+| 8. Recent additions (24.3 → 26.6) | 5 | 17 | 5 | 3 | 30 |
 | 9. UX details power users rely on | 9 | 9 | 1 | 1 | 20 |
-| **All tables** | **68** | **65** | **38** | **63** | **234** |
+| **All tables** | **69** | **65** | **37** | **63** | **234** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to

@@ -10,7 +10,7 @@ Siehe auch: [MobaXterm 26.6 feature parity](MOBAXTERM_PARITY.md) (Englisch) — 
 ![MobAlt mit zwei entfernten Shells nebeneinander](images/de/hero.png)
 
 Inhalt: [Installation](#installation) · [Aktualisieren](#aktualisieren) · [Sitzungen](#sitzungen) · [Verbinden](#verbinden) ·
-[Terminal](#terminal) · [Dateien (SFTP / FTP)](#dateien-sftp--ftp) · [Tunnel](#tunnel-portweiterleitung) ·
+[Terminal](#terminal) · [Dateien (SFTP / FTP)](#dateien-sftp--ftp) · [Browser-Sitzungen](#browser-sitzungen) · [Tunnel](#tunnel-portweiterleitung) ·
 [X11, Mosh, seriell, RDP/VNC](#x11-mosh-seriell-rdpvnc) · [Werkzeuge und Makros](#werkzeuge-und-makros) ·
 [Arbeitsbereich und Einstellungen](#arbeitsbereich-und-einstellungen) · [Tastaturkurzbefehle](#tastaturkurzbefehle) ·
 [Daten und Datenschutz](#daten-und-datenschutz) · [Fehlerbehebung](#fehlerbehebung)

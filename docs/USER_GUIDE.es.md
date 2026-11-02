@@ -10,7 +10,7 @@ Ver también: [Paridad de funciones con MobaXterm 26.6](MOBAXTERM_PARITY.md) —
 ![MobAlt con dos shells remotos lado a lado](images/es/hero.png)
 
 Contenido: [Instalación](#instalación) · [Actualización](#actualización) · [Sesiones](#sesiones) · [Conexión](#conexión) ·
-[Terminal](#terminal) · [Archivos (SFTP / FTP)](#archivos-sftp--ftp) · [Túneles](#túneles-reenvío-de-puertos) ·
+[Terminal](#terminal) · [Archivos (SFTP / FTP)](#archivos-sftp--ftp) · [Sesiones de navegador](#sesiones-de-navegador) · [Túneles](#túneles-reenvío-de-puertos) ·
 [X11, Mosh, serie, RDP/VNC](#x11-mosh-serie-rdpvnc) · [Herramientas y macros](#herramientas-y-macros) ·
 [Espacio de trabajo y ajustes](#espacio-de-trabajo-y-ajustes) · [Funciones rápidas de teclado](#funciones-rápidas-de-teclado) ·
 [Datos y privacidad](#datos-y-privacidad) · [Solución de problemas](#solución-de-problemas)

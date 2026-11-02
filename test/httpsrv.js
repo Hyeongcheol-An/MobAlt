@@ -23,6 +23,8 @@
 //   /redir-loop   302 to http://someone@<this host>/redir-loop, for ever (Chromium's redirect limit must end it)
 //   /count?path=P how many requests this server has had for path P so far (text/plain)
 //   /icon.png     a 16 × 16 PNG favicon
+//   /router       "Router admin — demo": a made-up status page (documentation addresses only) for the user guide's
+//                 browser picture (test/qa/docs-shots.js)
 //   anything else: 404 "Not found"
 // --log FILE appends one line per request (method, path, cookie, user agent), so a test inside the app can count
 // requests and read what they carried.
@@ -60,6 +62,9 @@ const routes = {
   '/bigicon-page': () => page('Big icon page', '<p>This page declares a 40 MB favicon.</p>', '<link rel="icon" href="/bigicon?mb=40&via=page">'),
   '/evil': () => page('Evil page', `<p id="e">A page with a download link.</p><p><a id="dl" href="/attachment" download="payload.bin">download</a></p>`),
   '/trap': () => page('Trap page', `<p id="t">This page tries to hold you.</p><script>window.onbeforeunload = () => 'stay';</script>`),
+  '/router': () => `<!doctype html><html><head><meta charset="utf-8"><title>Router admin — demo</title><link rel="icon" href="/icon.png">
+<style>body{font:15px -apple-system,Helvetica,sans-serif;margin:0;background:#f4f6f8;color:#222}header{background:#1f6feb;color:#fff;padding:14px 20px;font-weight:600}main{padding:20px}table{border-collapse:collapse;background:#fff}td,th{border:1px solid #ddd;padding:6px 12px;text-align:left}</style></head>
+<body><header>Demo router · 192.0.2.1</header><main><h2>Status</h2><table><tr><th>WAN</th><td>up · 203.0.113.9</td></tr><tr><th>LAN</th><td>192.0.2.0/24 · 14 clients</td></tr><tr><th>Wi-Fi</th><td>2.4 GHz · 5 GHz</td></tr><tr><th>Uptime</th><td>41 days</td></tr></table></main></body></html>`,
   '/keys': () => page('Keys page', `<p id="k">This page swallows every key.</p><input id="kf" placeholder="focus me">
 <script>window.__keys = []; window.addEventListener('keydown', (e) => { window.__keys.push((e.metaKey ? 'M' : '') + (e.ctrlKey ? 'C' : '') + (e.shiftKey ? 'S' : '') + e.key); e.preventDefault(); }, true);</script>`),
 };
