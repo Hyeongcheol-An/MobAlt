@@ -114,6 +114,26 @@
       await window.api.sessions.remove(s.id);
     }
 
+    // a shell that ends on the bottom row: the dim "── Session ended. … ──" line stays readable above the
+    // Reconnect / Close strip (the strip is taller than one row and covers the last rows of the terminal)
+    {
+      const pane = await app.newLocalTab();
+      await sleep(1200);
+      pane.term.input('seq 1 300; exit 3\r'); // a non-zero status: the pane stays, marked dead, after the screen filled
+      for (let i = 0; i < 100 && !pane.dead; i++) await sleep(100);
+      await sleep(400);
+      const buf = pane.term.buffer.active;
+      let row = -1;
+      for (let i = buf.length - 1; i >= 0; i--) if (/Session ended/.test(buf.getLine(i)?.translateToString(true) || '')) { row = i; break; }
+      const sr = pane.el.querySelector('.xterm-screen').getBoundingClientRect(), rowH = sr.height / pane.term.rows;
+      const y = row - buf.viewportY, lineBottom = sr.top + (y + 1) * rowH, stripTop = pane.overlay ? pane.overlay.getBoundingClientRect().top : -1;
+      results.deadLineAboveStrip = pane.dead && row >= 0 && y >= 0 && y < pane.term.rows && lineBottom <= stripTop + 1;
+      if (!results.deadLineAboveStrip) log('deadLine', JSON.stringify({ dead: pane.dead, row, y, rows: pane.term.rows, lineBottom, stripTop }));
+      await shot('19-dead-line-above-strip');
+      await app.closePane(pane, true);
+      await sleep(300);
+    }
+
     log('RESULTS ' + JSON.stringify(results));
     log('DONE');
   } catch (e) {

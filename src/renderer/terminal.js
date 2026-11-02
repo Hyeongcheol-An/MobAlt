@@ -977,6 +977,23 @@ export class TermPane {
     this.dead = true;
     this.term.write(`\r\n\x1b[2m${tt('── {what} Press Enter to reconnect, ⌘W to close. ──', { what: what || tt('Session ended.') })}\x1b[0m\r\n`);
     this.showOverlay(reason || (what ? 'lost' : null));
+    this._keepLineAboveOverlay();
+  }
+
+  /**
+   * The Reconnect / Close strip covers the bottom rows of the terminal (it is taller than one row): when the shell ended
+   * on the last row, the dim line just written would sit under it. Blank lines scroll it up above the strip — as many as
+   * the strip covers beyond the cursor's row; written anywhere higher they only move the cursor down.
+   */
+  _keepLineAboveOverlay() {
+    const screen = this.termEl.querySelector('.xterm-screen');
+    const sr = screen && screen.getBoundingClientRect();
+    let covered = 3; // a pane not on screen now (another tab): what the strip covers at the usual font sizes
+    if (sr && sr.height && this.term.rows && this.overlay) {
+      const rowH = sr.height / this.term.rows;
+      covered = Math.max(0, Math.ceil((sr.bottom - this.overlay.getBoundingClientRect().top) / rowH));
+    }
+    if (covered > 1) this.term.write('\n'.repeat(covered - 1));
   }
 
   /**
