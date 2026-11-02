@@ -1,6 +1,8 @@
 'use strict';
 const bootTimes = { mainStart: Date.now() }; // when main.js began loading; then the requires done, the app ready, the window loaded (test:perf)
 const { app, BrowserWindow, ipcMain, Menu, dialog, shell, clipboard, nativeTheme, webContents, screen } = require('electron');
+// Before anything else reads the environment: a release build ignores every test variable (testgate.js).
+require('./testgate').applyTestGate(app, require('../../package.json'));
 const path = require('path');
 const fs = require('fs');
 const os = require('os');

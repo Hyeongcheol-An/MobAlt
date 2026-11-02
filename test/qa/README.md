@@ -1,7 +1,13 @@
 # QA harness: drive the real app, take screenshots
 
 MobAlt can run with a renderer-side script injected and save screenshots of the real window.
-Nothing here is compiled into releases; the hooks only exist while `MOBALT_TEST_SCRIPT` is set.
+Nothing here works in a release: the hooks only exist while `MOBALT_TEST_SCRIPT` is set **and** the app runs from
+source (`electron .`, which is what `run.sh` does) or is a packaged build made with `npm run pack:qa` (output in
+`dist-qa/`, its `package.json` carries `"testHooks": true`). A plain `npm run pack` / `npm run dist` build — and every
+signed release — removes `MOBALT_TEST_SCRIPT`, `MOBALT_SCREENSHOT(_DELAY)`, `MOBALT_SHOT_DIR`, `MOBALT_QUIT_AFTER` and
+`MOBALT_ZMODEM_DEBUG` from its environment at start-up (`src/main/testgate.js`), and its asar-integrity and
+only-load-from-asar fuses keep anyone from adding the flag afterwards. `MOBALT_USER_DATA` and `MOBALT_LANG` work in
+every build.
 
 ```bash
 test/qa/run.sh <script.js> <out-dir> [auto-quit-ms]     # screenshots → <out-dir>/shots/*.png
@@ -67,7 +73,8 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   connects to a LAN host by SSH and Telnet and pings it from the Tools panel. One RESULTS line says whether this Mac
   refused the connections (EHOSTUNREACH), whether the pane carried the hint and whether the dialog came once and only
   once; with the permission granted it reports `permissionGranted` instead, since nothing can be provoked then.
-  `MOBALT_APP=/Applications/MobAlt.app` runs the packaged app, `LOCALNET_HOST=` picks the host (default: the gateway).
+  `MOBALT_APP=dist-qa/mac-arm64/MobAlt.app` runs a packaged app — it has to be a `npm run pack:qa` build (a release
+  such as `/Applications/MobAlt.app` ignores the test script and the run ends without a RESULTS line), `LOCALNET_HOST=` picks the host (default: the gateway).
 
 ## Renderer API available to scripts
 

@@ -168,6 +168,7 @@ npm install            # rebuilds node-pty for Electron
 npm start              # run from source
 npm test               # unit tests
 npm run pack           # dist/mac-arm64/MobAlt.app (unsigned)
+npm run pack:qa        # dist-qa/mac-arm64/MobAlt.app with the QA test hooks (never for release)
 npm run dist           # DMG + zip for arm64 and x64
 npm run install:local  # build arm64, sign if a Developer ID identity is available, install to /Applications
 npm run i18n           # refresh src/locales/catalog.json after adding or rewording interface strings

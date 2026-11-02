@@ -7,9 +7,9 @@
 //
 // Every launch is a QA-harness run (test/qa/README.md: a fresh user-data folder with autoUpdate off, the renderer
 // script injected through MOBALT_TEST_SCRIPT) of the Electron binary itself — `npx electron` would put a node process
-// in front of the timing — or of the packaged app (dist/mac-arm64/MobAlt.app from `npm run pack`; both when it
-// exists). The app's processes are found from the pid this runner started, never by name: the user's own MobAlt may
-// be running. --quick: 2 start-up runs and 15 s idle windows. Results: tables on stdout and <out>/perf.json
+// in front of the timing — or of the packaged app (dist-qa/mac-arm64/MobAlt.app from `npm run pack:qa`: a plain
+// `npm run pack` build ignores MOBALT_TEST_SCRIPT, src/main/testgate.js; both when it exists). The app's processes
+// are found from the pid this runner started, never by name: the user's own MobAlt may be running. --quick: 2 start-up runs and 15 s idle windows. Results: tables on stdout and <out>/perf.json
 // (default out: test/shots/perf/<timestamp>/, with every run's log and user data).
 const { spawn, execFileSync } = require('child_process');
 const fs = require('fs');
@@ -23,7 +23,7 @@ const runs = parseInt(opt('runs', quick ? 2 : 5), 10);
 const seconds = parseInt(opt('seconds', quick ? 15 : 60), 10);
 const only = new Set(opt('only', 'startup,require,idle,memory,size').split(','));
 const outDir = path.resolve(opt('out', path.join(root, 'test', 'shots', 'perf', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19))));
-const packagedApp = path.join(root, 'dist', 'mac-arm64', 'MobAlt.app');
+const packagedApp = path.join(root, 'dist-qa', 'mac-arm64', 'MobAlt.app'); // npm run pack:qa: the build that keeps the test hooks
 const appArg = opt('app', fs.existsSync(packagedApp) ? 'both' : 'dev');
 const apps = appArg === 'both' ? ['dev', 'packaged'] : [appArg];
 const devBin = path.join(root, 'node_modules', 'electron', 'dist', 'Electron.app', 'Contents', 'MacOS', 'Electron');
@@ -39,7 +39,7 @@ const say = (...a) => console.log(...a);
 function binaryFor(kind) {
   if (kind === 'packaged') {
     const bin = path.join(packagedApp, 'Contents', 'MacOS', 'MobAlt');
-    if (!fs.existsSync(bin)) throw new Error(`no packaged app at ${packagedApp} (npm run pack)`);
+    if (!fs.existsSync(bin)) throw new Error(`no packaged app at ${packagedApp} (npm run pack:qa)`);
     return { bin, args: [] };
   }
   return { bin: devBin, args: [root] };
@@ -277,7 +277,7 @@ function size() {
   const result = { at: new Date().toISOString(), host: require('os').cpus()[0].model, runs, seconds, apps: {} };
   say(`# MobAlt perf — ${result.at} (${result.host}); out: ${outDir}`);
   for (const kind of apps) {
-    if (kind === 'packaged' && !fs.existsSync(packagedApp)) { say(`\n(no packaged app at ${packagedApp}: npm run pack)`); continue; }
+    if (kind === 'packaged' && !fs.existsSync(packagedApp)) { say(`\n(no packaged app at ${packagedApp}: npm run pack:qa)`); continue; }
     const a = (result.apps[kind] = {});
     if (only.has('startup')) a.startup = await startup(kind);
     if (only.has('require') && kind === 'dev') a.requires = await requires();
