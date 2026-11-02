@@ -1027,6 +1027,8 @@
   "Resolving {host}…": "{host}を解決中…",
   "Restart now": "今すぐ再起動",
   "Restart now to install it, or keep working: it is installed when you quit.": "今すぐ再起動してインストールするか、作業を続けてください。終了時にインストールされます。",
+  "Another MobAlt window is open": "ほかのMobAltウインドウが開いています",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version}は、すべてのMobAltウインドウが終了したときにインストールされます。ほかのウインドウを終了してもう一度“今すぐ再起動”を選択するか、作業を続けてください。終了時にインストールされます。",
   "Restore defaults": "デフォルトを復元",
   "Restore Panes": "ペインを元に戻す",
   "Restore panes (⇧⌘⏎)": "ペインを元に戻す（⇧⌘⏎）",

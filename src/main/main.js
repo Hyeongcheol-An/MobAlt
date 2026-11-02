@@ -11,7 +11,7 @@ const { TerminalRegistry, spawnLocal, spawnTelnet, spawnSerial, listSerialPorts,
 const { SshManager } = require('./ssh');
 const { SftpManager } = require('./sftp');
 const { FtpManager } = require('./ftp');
-const { setupUpdater } = require('./updater');
+const { setupUpdater, otherInstancesSheet } = require('./updater');
 const { TunnelManager } = require('./tunnels');
 const importers = require('./importers');
 const tools = require('./tools');
@@ -53,6 +53,8 @@ let quitting = false; // a quit is under way (confirmed, test hook, update insta
 let bundleWatch = null; // notices a different MobAlt.app written over the running one (brew upgrade / dragged DMG)
 let relaunchRequested = false; // test mode: app:relaunch records the request instead of restarting the test run
 let installRequested = false; // test mode: app:install-update records the request instead of quitting into the install
+let testOtherInstances = []; // test mode: the pids app:install-update pretends are other running instances (test:other-instances)
+let testUpdateVersion = null; // test mode: the version of the last test:update-progress event (the sheet names it)
 
 /**
  * Ask before the app goes away with live connections (SSH / Mosh / SFTP companions / FTP). Shared by the
@@ -853,8 +855,16 @@ function registerIpc() {
   // the banner above the tabs and the Settings → Updates line are exercised without a release to download.
   ipcMain.handle('test:update-progress', (_e, info) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    if (info && info.version) testUpdateVersion = String(info.version);
     broadcast('app:update-progress', { ...(info && typeof info === 'object' ? info : {}) });
     return true;
+  });
+  // Test-only: what the other-instance check of "Restart now" finds (updater.js install(), instances.js), here a list of
+  // pids instead of ps — [] (the default) for none. app:install-update then shows the sheet instead of recording.
+  ipcMain.handle('test:other-instances', (_e, pids) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    testOtherInstances = Array.isArray(pids) ? pids.map(Number).filter(Number.isFinite) : [];
+    return testOtherInstances.length;
   });
   // Test-only: a few filesystem helpers the renderer test scripts have no bridge for — make a random file, hash a
   // file (sha256), read small text, stat, make a temp dir, remove. Only when a test script is injected; a release
@@ -1066,10 +1076,18 @@ function registerIpc() {
   // up-to-date / error / on-disk sheet; only a new release's "Download?" offer). Help → Check for Updates… keeps the sheets.
   ipcMain.handle('app:check-updates', () => updater && updater.check(true, { quiet: true }));
   // "Restart now" on the banner or in Settings → Updates once a download is complete: the sheet's path (quitAndInstall
-  // behind the beforeInstall hook). A test run records the request — the harness must never quit into an install.
-  ipcMain.handle('app:install-update', () => {
+  // behind the beforeInstall hook). A test run records the request — the harness must never quit into an install — after
+  // the same other-instance check, fed by test:other-instances instead of ps (other test runs are Electron instances too).
+  ipcMain.handle('app:install-update', async () => {
     if (!updater) return false;
-    if (process.env.MOBALT_TEST_SCRIPT) { installRequested = true; return true; }
+    if (process.env.MOBALT_TEST_SCRIPT) {
+      if (testOtherInstances.length) {
+        await otherInstancesSheet(win && !win.isDestroyed() ? win : undefined, testUpdateVersion || app.getVersion());
+        return false;
+      }
+      installRequested = true;
+      return true;
+    }
     return updater.install();
   });
   ipcMain.handle('serial:list', () => listSerialPorts());

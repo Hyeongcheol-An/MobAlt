@@ -1215,6 +1215,8 @@
   "Resolving {host}…": "{host} रिज़ॉल्व हो रहा है…",
   "Restart now": "अभी रीस्टार्ट करें",
   "Restart now to install it, or keep working: it is installed when you quit.": "इंस्टॉल करने के लिए अभी रीस्टार्ट करें, या काम जारी रखें: बाहर निकलने पर यह इंस्टॉल होगा।",
+  "Another MobAlt window is open": "एक और MobAlt विंडो खुली है",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version} तब इंस्टॉल होगा जब सभी MobAlt विंडो बंद हो जाएँगी। दूसरी विंडो से बाहर निकलें और फिर से “अभी रीस्टार्ट करें” चुनें, या काम जारी रखें: बाहर निकलने पर यह इंस्टॉल होगा।",
   "Restore defaults": "डिफ़ॉल्ट रीस्टोर करें",
   "Restore Panes": "पेन रीस्टोर करें",
   "Restore panes (⇧⌘⏎)": "पेन रीस्टोर करें (⇧⌘⏎)",

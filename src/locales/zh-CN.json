@@ -1031,6 +1031,8 @@
   "Resolving {host}…": "正在解析 {host}…",
   "Restart now": "立即重新启动",
   "Restart now to install it, or keep working: it is installed when you quit.": "立即重新启动以安装，或继续工作：退出时会自动安装。",
+  "Another MobAlt window is open": "另一个 MobAlt 窗口已打开",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "所有 MobAlt 窗口都退出后才会安装 MobAlt {version}。请退出另一个窗口并再次选择“立即重新启动”，或继续工作：退出时会自动安装。",
   "Restore defaults": "恢复默认值",
   "Restore Panes": "恢复窗格",
   "Restore panes (⇧⌘⏎)": "恢复窗格（⇧⌘⏎）",

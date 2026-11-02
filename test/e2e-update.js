@@ -4,7 +4,8 @@
 // performed, in test mode. The updater's download (app:update-progress, fed by the test hook) uses the same bar: the
 // progress line with a thin bar and no buttons while it runs (Settings → Updates shows the same line and follows
 // it), Restart now / Later once the file is complete (Restart now is recorded, never performed, and the clicked button
-// is disabled), the reason for a moment when it failed. The bar keeps one height across its states (no second re-fit),
+// is disabled; with another MobAlt instance running it shows the sheet instead and the button comes back), the reason
+// for a moment when it failed. The bar keeps one height across its states (no second re-fit),
 // and only the start, the end and a failure are announced (aria-live off for the ticks in between). Also: a
 // main-process notice (app:notice) shows up as an error toast that wraps an unbroken
 // path, an empty notice shows nothing, and the toast stack stays above the open find bar (also with both banners up
@@ -124,6 +125,22 @@
     await sleep(500);
     results.checkNowKeepsDone = updStatus().textContent === doneText && !settingsInstall.hidden;
     results.noInstallBefore = (await window.api.app.testQuitCheck()).installRequested === false;
+    // another MobAlt instance is running (Squirrel would install only once it quits): Restart now — in Settings and on the
+    // banner — shows the sheet (the queued answer is taken), records no install and gives the button back
+    await window.api.app.testOtherInstances([4242]);
+    await window.api.app.testNextDialog({ response: 0 });
+    settingsInstall.click();
+    await sleep(400);
+    results.otherInstanceSheetSettings = (await window.api.app.testNextDialog()).pending === 0;
+    results.otherInstanceNoInstallSettings = (await window.api.app.testQuitCheck()).installRequested === false;
+    results.otherInstanceButtonBackSettings = settingsInstall.disabled === false && !settingsInstall.hidden;
+    await window.api.app.testNextDialog({ response: 0 });
+    btn('update-install').click();
+    await sleep(400);
+    results.otherInstanceSheetBanner = (await window.api.app.testNextDialog()).pending === 0;
+    results.otherInstanceNoInstallBanner = (await window.api.app.testQuitCheck()).installRequested === false;
+    results.otherInstanceButtonBackBanner = btn('update-install').disabled === false && !btn('update-install').hidden;
+    results.otherInstanceHookOff = (await window.api.app.testOtherInstances([])) === 0; // alone again: the normal path below
     settingsInstall.focus();
     await window.api.app.testKey('Space'); // the main process's install path (recorded in test mode, never performed)
     await sleep(300);
