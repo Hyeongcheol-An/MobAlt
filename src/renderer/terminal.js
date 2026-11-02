@@ -898,6 +898,7 @@ export class TermPane {
       }
       if (this.session?.logging && this.kind !== 'ftp') this.toggleLog(true);
     } catch (e) {
+      this._cancelRequested = false; // a Cancel pressed before main answered: the attempt is over anyway, the next Reconnect is the user's
       const { why, line } = startErrorText(e);
       this.term.write(`\r\n\x1b[31m${tt('Failed to start: {why}', { why: line })}\x1b[0m\r\n`);
       if (this.kind === 'ftp') this.showFtpInfo('failed', why); // the card covers the terminal text
