@@ -1,3 +1,17 @@
+## [0.17.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.16.1...v0.17.0) (2026-11-02)
+
+### Features
+
+* **i18n:** shorten the German download lines ([43bb2b6](https://github.com/Hyeongcheol-An/MobAlt/commit/43bb2b68fddc63cb3f68d8fe612eb06b08b46e5f))
+* **i18n:** translate the download-progress strings ([4ccd809](https://github.com/Hyeongcheol-An/MobAlt/commit/4ccd809ef557ad8ff4f5a83bac3f052a5bec2b16))
+* **updater:** show download progress ([c2d7e39](https://github.com/Hyeongcheol-An/MobAlt/commit/c2d7e399802333c97ad8481988ba9902cb7ab85d))
+
+### Bug Fixes
+
+* **updater:** keep the download reachable after Later, stable row, install hardening ([f9f0752](https://github.com/Hyeongcheol-An/MobAlt/commit/f9f0752bcdc0f342dab31e5e37efe32908c16a18))
+* **updater:** Later on the on-disk banner after a dismissed download ([d6fbf8b](https://github.com/Hyeongcheol-An/MobAlt/commit/d6fbf8b6c82c2fe6039ad5f4fd3d310f5bab045f))
+* **updater:** review fixes for the download progress ([71b817d](https://github.com/Hyeongcheol-An/MobAlt/commit/71b817dc7b232d5bc36324fabc6dc641c373c1ef))
+
 ## [0.16.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.16.0...v0.16.1) (2026-11-02)
 
 ### Bug Fixes
