@@ -1473,7 +1473,8 @@ const BROWSER_PARTITION = /^persist:browser(-[A-Za-z0-9_-]{1,64})?$/;
 const guardedSessions = new WeakSet(); // the session-level handlers are per session, set once
 /** The guest webContents `id` names, when it is a webview the calling window embeds; null for anything else. */
 function guestOf(sender, id) {
-  const wc = webContents.fromId(Number(id));
+  if (!Number.isInteger(id)) return null; // fromId throws on anything but an integer: an odd value is "no such guest", not an error
+  const wc = webContents.fromId(id);
   return wc && !wc.isDestroyed() && wc.getType() === 'webview' && wc.hostWebContents && !wc.hostWebContents.isDestroyed() && wc.hostWebContents.id === sender.id ? wc : null;
 }
 function hardenWebviews() {
