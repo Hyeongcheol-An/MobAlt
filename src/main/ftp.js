@@ -477,7 +477,8 @@ class FtpManager extends EventEmitter {
     }
     this._emitTransfer(t);
 
-    editor.openInEditor(settings.editorCommand, local); // program + arguments, the path one argument: no shell
+    // program + arguments, the path one argument: no shell; a program that cannot start is told (main: app:notice)
+    editor.openInEditor(settings.editorCommand, local, (e, program) => this.emit('editor-error', { connId, program, error: e.message }));
 
     let lastMtime = fs.statSync(local).mtimeMs;
     let timer = null;

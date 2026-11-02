@@ -57,3 +57,32 @@ test('editTarget keeps the remote name a plain file name and removeEditDirs dele
   assert.equal(fs.existsSync(other), true);
   fs.rmSync(other, { recursive: true, force: true });
 });
+
+test('resolveProgram: a bare name is found in the Homebrew folders, then through the login shell, and cached', () => {
+  const calls = [];
+  // Homebrew first
+  assert.equal(editor.resolveProgram('ed-brew', { exists: (p) => p === '/opt/homebrew/bin/ed-brew', shell: (n) => { calls.push(n); return ''; } }), '/opt/homebrew/bin/ed-brew');
+  assert.deepEqual(calls, []);
+  // not there: the login shell's `command -v` (its last line: a profile may print first)
+  const shellOut = 'welcome banner\n/Users/me/.local/bin/ed-shell\n';
+  assert.equal(editor.resolveProgram('ed-shell', { exists: (p) => p === '/Users/me/.local/bin/ed-shell', shell: (n) => { calls.push(n); return shellOut; } }), '/Users/me/.local/bin/ed-shell');
+  assert.deepEqual(calls, ['ed-shell']);
+  // cached: the shell is not asked again
+  assert.equal(editor.resolveProgram('ed-shell', { exists: () => false, shell: (n) => { calls.push(n); return ''; } }), '/Users/me/.local/bin/ed-shell');
+  assert.deepEqual(calls, ['ed-shell']);
+  // an alias / function (no path), a missing file or a failing shell: the name as is (spawn reports ENOENT)
+  assert.equal(editor.resolveProgram('ed-alias', { exists: () => false, shell: () => 'ed-alias: aliased to vim' }), 'ed-alias');
+  assert.equal(editor.resolveProgram('ed-throw', { exists: () => false, shell: () => { throw new Error('timeout'); } }), 'ed-throw');
+  // a path is never looked up
+  assert.equal(editor.resolveProgram('/usr/bin/vi', { exists: () => false, shell: () => { throw new Error('asked'); } }), '/usr/bin/vi');
+});
+
+test('openInEditor: a program that cannot start is reported with its error', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mobalt-editor-'));
+  const errors = [];
+  const argv = editor.openInEditor(path.join(dir, 'no-such-editor'), path.join(dir, 'f.txt'), (e, program) => errors.push([e.code, program]));
+  await new Promise((r) => setTimeout(r, 200));
+  assert.equal(argv[0], path.join(dir, 'no-such-editor'));
+  assert.deepEqual(errors, [['ENOENT', path.join(dir, 'no-such-editor')]]);
+  fs.rmSync(dir, { recursive: true, force: true });
+});

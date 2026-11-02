@@ -236,6 +236,14 @@ sftp.on('edit-synced', toOwner('sftp:edit-synced'));
 zmodem.on('transfer', toOwner('sftp:transfer')); // same list, same Cancel
 ftp.on('transfer', toOwner('sftp:transfer'));
 ftp.on('edit-synced', toOwner('sftp:edit-synced'));
+// the external editor could not be started (not installed, not on the login shell's PATH): an error toast in the
+// window showing the connection — "<program>: <error>"
+const editorError = (x) => {
+  const wc = (x && x.connId && ownerOf(x.connId)) || (win && !win.isDestroyed() ? win.webContents : null);
+  if (wc && !wc.isDestroyed()) wc.send('app:notice', { level: 'error', text: t('{entry}: {reason}', { entry: x.program, reason: x.error }) });
+};
+sftp.on('editor-error', editorError);
+ftp.on('editor-error', editorError);
 tunnels.on('changed', (list) => broadcast('tunnels:changed', list));
 
 // ---------- workspace file: the main window's tabs plus one entry per detached window ----------

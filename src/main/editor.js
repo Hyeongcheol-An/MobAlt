@@ -57,16 +57,63 @@ function editorArgv(command, file) {
   return argv;
 }
 
-/** Start the editor on `file`, detached; a program that cannot be started is ignored like before (no crash). */
-function openInEditor(command, file) {
+// An app started from the Finder / Dock gets launchd's PATH (/usr/bin:/bin:/usr/sbin:/sbin), so `code` or `subl`
+// from Homebrew are not found by name. A bare program name is looked up like findMosh (terminals.js) does: the usual
+// Homebrew / MacPorts folders, then the login shell's `command -v` (the user's PATH). Cached per name for the run.
+const PROGRAM_DIRS = ['/opt/homebrew/bin', '/usr/local/bin', '/opt/local/bin'];
+const resolved = new Map();
+
+function loginShellLookup(name) {
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  // the name is a positional argument, never part of the script
+  return require('child_process').execFileSync('/bin/zsh', ['-lc', 'command -v -- "$1"', 'zsh', name], { encoding: 'utf8', timeout: 5000, env }).trim();
+}
+
+/**
+ * The program to start for a setting's first word: a path (anything with a '/') as is; a bare name from the usual
+ * folders or the login shell, else the name unchanged (spawn then searches PATH and reports ENOENT).
+ * `deps` (tests): { exists(path), shell(name) → output of `command -v` }.
+ */
+function resolveProgram(name, deps = {}) {
+  if (!name || name.includes('/')) return name;
+  if (resolved.has(name)) return resolved.get(name);
+  const exists = deps.exists || ((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } });
+  const shell = deps.shell || loginShellLookup;
+  let found = PROGRAM_DIRS.map((d) => path.join(d, name)).find(exists) || null;
+  if (!found) {
+    try {
+      const out = String(shell(name) || '').split('\n').map((l) => l.trim()).filter(Boolean).pop() || '';
+      if (path.isAbsolute(out) && exists(out)) found = out; // an alias or a function prints no path: not used
+    } catch {}
+  }
+  const result = found || name;
+  resolved.set(name, result);
+  return result;
+}
+
+/**
+ * Start the editor on `file`, detached. `onError(error, program)` hears a program that could not be started (not
+ * installed, not executable) — the caller shows it; nothing else is reported (the editor's own exit status is its
+ * business).
+ */
+function openInEditor(command, file, onError) {
   let argv;
   try {
     argv = editorArgv(command, file);
   } catch {
     argv = ['open', '-t', file]; // an unusable setting (an open quote): TextEdit rather than nothing
   }
-  const child = spawn(argv[0], argv.slice(1), { detached: true, stdio: 'ignore' });
-  child.on('error', () => {});
+  argv[0] = resolveProgram(argv[0]);
+  const report = (e) => { try { onError && onError(e, argv[0]); } catch {} };
+  let child;
+  try {
+    child = spawn(argv[0], argv.slice(1), { detached: true, stdio: 'ignore' });
+  } catch (e) {
+    report(e);
+    return argv;
+  }
+  child.on('error', report);
   child.unref();
   return argv;
 }
@@ -95,4 +142,4 @@ function removeEditDirs() {
   }
 }
 
-module.exports = { splitCommand, editorArgv, openInEditor, editTarget, removeEditDirs };
+module.exports = { splitCommand, editorArgv, resolveProgram, openInEditor, editTarget, removeEditDirs };
