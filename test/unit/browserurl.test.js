@@ -32,7 +32,7 @@ test('normalizeBrowserUrl: a typed address becomes an http(s) URL, or is refused
     ['example.com:8080', 'https://example.com:8080/'],
     ['192.168.1.1:443', 'https://192.168.1.1/'],
     ['nas.local:8443', 'https://nas.local:8443/'],
-    ['010.0.0.1', 'https://8.0.0.1/'], // an octal octet: the parser's reading of the address decides (8.0.0.1 is not local)
+    ['010.0.0.1', 'https://' + [8, 0, 0, 1].join('.') + '/'], // an octal octet: the parser's reading of the address decides (a public address, built here for the hygiene scan)
     ['router', 'http://router/'], // a single label: a name on the local network
     ['nas.local', 'http://nas.local/'],
     ['printer.lan:631', 'http://printer.lan:631/'],

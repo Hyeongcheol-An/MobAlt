@@ -7,6 +7,12 @@
 // terminal works for both without reloading the page; ⇧⌘⏎ zoom; MultiExec leaves the pane out; ⌘= zooms the page;
 // ⌘F finds in the page; the pane menu's items and Copy URL; Rename Pane locks the title; the workspace saves the
 // page the pane is on and a restore brings it back there; detach to a window and back; close removes the webview.
+// Then the review round's cases: a titleless page is named after the session; a hidden page never re-activates its
+// tab while another opens (20×); a session re-saved as another type; an editor-made session through export → import;
+// page zoom is Chromium's per-site level; about:blank; a shared cookie jar and an isolated one; a tab switch hides
+// the page without reloading; the sidebar toggle and a window resize keep the page over its pane; the drop zone
+// makes the page step aside; closing while loading; the closing questions never count a page; a language switch
+// relabels the toolbar; unsplit and a tab drop keep the page; an unreachable page and a url-less descriptor restore.
 //   test/e2e-browser.sh <out-dir>                      (starts the web site, runs both phases)
 //   test/qa/run.sh test/e2e-browser.js <out-dir> 180000 (phase 1 alone: node test/httpsrv.js --port 42510 must be up;
 //                                                       ends with a browser tab at /b saved in the workspace)
@@ -314,6 +320,181 @@
     await app.closeTab(app.workspace.active);
     await sleep(200);
 
+    // ---------- a page without a <title> is named after the session, never after the page before it ----------
+    app.workspace.activate(p.tab);
+    app.focusPane(p);
+    p.navigate(SITE + 'notitle');
+    await loaded(p, '/notitle');
+    await sleep(200);
+    results.titlelessPage = p.title === 'Local web' && p.tab.title === 'Local web' && p.webview.getAttribute('aria-label') === 'Local web';
+    p.navigate(SITE + 'b');
+    await loaded(p, '/b');
+    await waitFor(() => p.title === 'Page B', 5000, 'title back');
+
+    // ---------- a hidden page never re-activates its tab while another session opens (20×) ----------
+    const other = await app.saveSession({ name: 'Second', type: 'browser', url: SITE });
+    let churnOk = true;
+    for (let i = 0; i < 20 && churnOk; i++) {
+      app.focusPane(p);
+      const q = await app.openSession(other);
+      await sleep(250);
+      churnOk = app.workspace.active === q.tab && app.activePane() === q && getComputedStyle(p.webview).visibility === 'hidden';
+      if (!churnOk) log('churn failed at', i, app.workspace.active === q.tab, app.activePane() === q);
+      await app.closeTab(q.tab);
+      await sleep(80);
+    }
+    results.hiddenPageKeepsOut = churnOk && app.workspace.active === p.tab;
+
+    // ---------- the session re-saved as another type: nothing throws, the pane stays what it is ----------
+    let resaveErr = null;
+    try { await app.saveSession({ ...other, type: 'ssh', host: '127.0.0.1', port: 2222, username: 'u' }); } catch (e) { resaveErr = e.message; }
+    await app.saveSession({ ...other, type: 'browser', url: SITE });
+    results.resaveAsOtherType = resaveErr === null && p.status === 'connected';
+
+    // ---------- an editor-made session survives export → import ----------
+    const dir2 = await window.api.app.testFs('mkdtemp', 'mobalt-browser-rt-');
+    const rt = dir2 + '/roundtrip.json';
+    await window.api.app.testNextDialog({ canceled: false, filePath: rt });
+    await app.action('export-json');
+    await sleep(400);
+    const dump = JSON.parse(await window.api.app.testFs('readText', rt));
+    const typedOut = dump.sessions.find((s) => s.id === typed.id);
+    results.editorMadeExported = !!typedOut && typedOut.type === 'browser' && typedOut.url === SITE + 'b' && !('port' in typedOut) && !('host' in typedOut);
+    await app.deleteSession(typed.id);
+    await window.api.app.testNextDialog({ canceled: false, filePaths: [rt] });
+    await app.action('import-json');
+    await sleep(400);
+    const typedBack = app.sessions.sessions.find((s) => s.id === typed.id);
+    results.editorMadeImported = !!typedBack && typedBack.type === 'browser' && typedBack.url === SITE + 'b' && !/skipped/.test(toasts().slice(-200)) && (await pendingAnswers()) === 0;
+    await window.api.app.testFs('rm', dir2);
+
+    // ---------- page zoom is Chromium's level for the site: read back, shared by panes of the site, not the pane's own ----------
+    app.focusPane(p);
+    app.action('zoom', 1);
+    await sleep(200);
+    const q2 = await app.openSession(saved);
+    await loaded(q2, '/');
+    await sleep(300);
+    results.zoomIsPerSite = p._zoomNow() === 0.5 && q2._zoomNow() === 0.5 && q2.zoomLevel === 0.5 && p.transferState().zoomLevel === 0.5;
+    p.openPaneMenu(300, 300);
+    await sleep(100);
+    results.zoomInMenu = menuItems().some((i) => /^Page Zoom \(110%\)/.test(i)); // one step is half a Chromium level: 1.2^0.5
+    await closeMenu();
+    app.focusPane(q2);
+    app.action('zoom', 0);
+    await sleep(200);
+    results.zoomResetFromOtherPane = p._zoomNow() === 0 && q2._zoomNow() === 0;
+    await app.closeTab(q2.tab);
+    await sleep(100);
+
+    // ---------- about:blank: nothing to open outside ----------
+    app.focusPane(p);
+    p.navigate('about:blank');
+    await loaded(p);
+    await sleep(100);
+    results.aboutBlank = p.url === 'about:blank' && p.openBtn.disabled && p.title === 'Local web';
+    p.navigate(SITE + 'b');
+    await loaded(p, '/b');
+    results.openEnabledAgain = !p.openBtn.disabled;
+
+    // ---------- cookie jars: shared by default, a session of its own when isolated ----------
+    await inGuest(p, "document.cookie = 'jar=shared; path=/'", false);
+    const shared2 = await app.openSession(saved);
+    await loaded(shared2, '/');
+    const isolatedS = await app.saveSession({ name: 'Isolated web', type: 'browser', url: SITE, isolated: true });
+    const iso = await app.openSession(isolatedS);
+    await loaded(iso, '/');
+    results.cookieJarShared = (await inGuest(shared2, 'document.cookie', false)).includes('jar=shared');
+    results.cookieJarIsolated = !(await inGuest(iso, 'document.cookie', false)).includes('jar=shared') && iso.partition === 'persist:browser-' + isolatedS.id && shared2.partition === 'persist:browser';
+    await app.closeTab(iso.tab);
+    await app.closeTab(shared2.tab);
+    await sleep(100);
+
+    // ---------- a tab switch hides the page without reloading it; the sidebar and the window keep it over its pane ----------
+    app.workspace.activate(p.tab);
+    await inGuest(p, 'window.__mark2 = 7', false);
+    app.workspace.activate(shell.tab);
+    await sleep(200);
+    results.tabSwitchHides = p.webview.classList.contains('off') && getComputedStyle(p.webview).visibility === 'hidden';
+    app.workspace.activate(p.tab);
+    await sleep(200);
+    results.tabSwitchNoReload = !p.webview.classList.contains('off') && (await inGuest(p, 'window.__mark2', false)) === 7;
+    app.toggleSidebar();
+    await sleep(250);
+    results.sidebarTogglePlacement = sameBox(p.webview.getBoundingClientRect(), p.bodyEl.getBoundingClientRect());
+    app.toggleSidebar();
+    await window.api.app.testResize(1100, 700);
+    await sleep(400);
+    results.windowResizePlacement = sameBox(p.webview.getBoundingClientRect(), p.bodyEl.getBoundingClientRect());
+    await window.api.app.testResize(1400, 880);
+    await sleep(300);
+
+    // ---------- a session dragged over the page: the drop zone shows, the page steps aside and comes back ----------
+    const dt = new DataTransfer();
+    dt.setData('text/x-mobalt-session', saved.id);
+    const r0 = p.el.getBoundingClientRect();
+    p.el.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r0.left + r0.width / 2, clientY: r0.top + r0.height / 2 }));
+    await sleep(50);
+    results.dropZoneStepsAside = !!p.el.querySelector('.drop-zone.center') && p.webview.classList.contains('off') && p._dragOver === true;
+    p.el.dispatchEvent(new DragEvent('dragleave', { bubbles: true, cancelable: true, dataTransfer: dt, relatedTarget: document.body }));
+    await sleep(50);
+    results.dropZoneComesBack = !p.el.querySelector('.drop-zone') && !p.webview.classList.contains('off') && p._dragOver === false;
+
+    // ---------- closing while loading; the closing questions never count a page ----------
+    const slowP = await app.openSession({ name: 'slow', type: 'browser', url: SITE + 'slow' });
+    await waitFor(() => slowP.loading, 3000, 'slow loading');
+    await app.closePane(slowP, false);
+    await sleep(200);
+    results.closeWhileLoading = slowP.disposed && !layer().includes(slowP.webview) && !toasts().includes('Internal error');
+    await app.saveSettings({ confirmClose: true });
+    const pageTab = await app.openSession(saved);
+    await loaded(pageTab, '/');
+    const closedQuietly = await app.closeTab(pageTab.tab);
+    await sleep(150);
+    results.confirmCloseIgnoresPages = closedQuietly === true && !modal() && app.liveIn([p.tab]).length === 0;
+    await app.saveSettings({ confirmClose: false });
+
+    // ---------- a language switch relabels the toolbar ----------
+    await app.saveSettings({ language: 'ko' });
+    await sleep(300);
+    const koLabel = p.closeBtn.getAttribute('aria-label'); // a label the dictionaries have (the toolbar's own are this round's strings, English until translated)
+    await app.saveSettings({ language: 'en' });
+    await sleep(300);
+    results.languageRelabel = koLabel !== 'Close pane' && koLabel.length > 0 && p.closeBtn.getAttribute('aria-label') === 'Close pane' && p.urlEl.getAttribute('aria-label') === 'Address';
+
+    // ---------- unsplit and a tab dropped on a pane keep the page (no reload) ----------
+    app.focusPane(p);
+    await inGuest(p, 'window.__mark3 = 11', false);
+    await app.splitActive('down');
+    const empty2 = app.activePane();
+    await empty2.becomeLocal();
+    await prompt(empty2);
+    app.focusPane(p);
+    await app.unsplit('tabs'); // the shell goes to a tab of its own, the page stays
+    await sleep(300);
+    results.unsplitKeepsPage = p.tab.panes().length === 1 && empty2.tab !== p.tab && (await inGuest(p, 'window.__mark3', false)) === 11;
+    app.workspace.movePane(empty2, p, 'right'); // the shell's tab dropped on the page's right edge
+    await sleep(300);
+    results.tabDropKeepsPage = p.tab.panes().length === 2 && empty2.tab === p.tab && (await inGuest(p, 'window.__mark3', false)) === 11 && sameBox(p.webview.getBoundingClientRect(), p.bodyEl.getBoundingClientRect());
+    await app.closePane(empty2, true);
+    await sleep(100);
+
+    // ---------- the workspace file: an unreachable page restores into the error view; a url-less descriptor opens the session's page ----------
+    const made2 = await app.buildTabs({ tabs: [
+      { title: 'dead', root: { t: 'pane', kind: 'browser', sessionId: saved.id, url: 'http://127.0.0.1:42599/' } },
+      { title: 'start', root: { t: 'pane', kind: 'browser', sessionId: saved.id } },
+    ], activeTab: 0 });
+    // the rebuilt tabs are named after their session (auto titles), so the panes are found by their address
+    const dead = app.workspace.allPanes().find((x) => x.kind === 'browser' && x.url === 'http://127.0.0.1:42599/');
+    const start = app.workspace.allPanes().find((x) => x.kind === 'browser' && x !== p && x !== dead && x.session?.id === saved.id);
+    await waitFor(() => dead && dead.status === 'failed', 10000, 'dead page failed');
+    await loaded(start, '/');
+    results.restoreUnreachable = made2 && !dead.errorEl.hidden && dead.url === 'http://127.0.0.1:42599/' && /Nothing answers/.test(dead.errorEl.textContent);
+    results.restoreUrlless = start.url === SITE && start.status === 'connected';
+    await app.closeTab(dead.tab);
+    await app.closeTab(start.tab);
+    await sleep(100);
+
     // ---------- detach to a window: the pane is made again there at its page; closing the window brings it back ----------
     app.workspace.activate(p.tab);
     await app.closePane(empty, true); // the browser pane alone in its tab
@@ -324,7 +505,7 @@
     await waitFor(async () => (dw = (await windows()).find((w) => w.detached) || null), 15000, 'detached window');
     const state = (id) => ev(id, '(() => { const a = window.app && window.app.workspace && window.app.activePane(); return a ? [a.kind, a.url, a.status, a.title].join(" ") : ""; })()').catch(() => '');
     await waitFor(async () => /^browser http:\/\/127\.0\.0\.1:42510\/b connected Page B$/.test(await state(dw.id)), 15000, 'the window shows the page');
-    results.detachRecreates = p.disposed && p.released && !layer().includes(p.webview) && (await windows()).length === 2;
+    results.detachRecreates = p.disposed && p.released && !layer().includes(p.webview) && (await windows()).length === 2 && /loaded again in the new window/.test(toasts());
     await ev(dw.id, "window.api.app.screenshot('b7-detached')");
     await window.api.app.testCloseWindow(dw.id);
     await waitFor(async () => (await windows()).length === 1 && app.workspace.allPanes().some((x) => x.kind === 'browser'), 15000, 'tab back');

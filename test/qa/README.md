@@ -42,13 +42,20 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   named — what a terminal pane sees from a user's Shift+Enter (test/e2e-claude-keys.js).
 - `npm run perf` (`test/qa/perf.js`) measures start-up, idle CPU, memory and the bundle size through this harness,
   on the dev checkout and on `dist/mac-arm64/MobAlt.app`; `docs/PERFORMANCE.md` has the method and the numbers.
-- `test/e2e-browser.sh <out-dir>` is the browser-session check (`test/e2e-browser.js`, then `test/e2e-browser-verify.js`
-  into the same folder for the workspace restore): it starts the web site the pane opens, `test/httpsrv.js` on
-  127.0.0.1:42510 (two pages that link to each other, a slow page, a 404, a favicon), and stops it afterwards. A browser
-  pane in a script: `const p = await app.openSession({ type: 'browser', url })` — `p.webview` (the `<webview>`, in
-  `#webview-layer`, placed over `p.bodyEl`), `p.url`, `p.navigate(text)`, `p.urlEl`, `p.backBtn` / `fwdBtn` /
-  `reloadBtn`, `p.errorEl`, `p.failed`; a click inside the page is `p.webview.executeJavaScript(code, true)` (the
-  `true` is the user gesture a real click carries — without it Chromium skips the entry on Back).
+- `test/e2e-browser.sh <out-dir>` is the browser-session check: `test/e2e-browser.js`, then `test/e2e-browser-verify.js`
+  into the same folder (the workspace restore), then `test/e2e-browser-security.js` under `<out-dir>/security` (the
+  hostile-page side: favicon fetches, downloads, beforeunload, window.close, HTTP Basic authentication, the app's
+  shortcuts, passwords in addresses). It starts the web site the pane opens, `test/httpsrv.js` on 127.0.0.1:42510
+  (pages that link to each other, a slow one, a titleless one, a 404, a favicon, a Basic-auth page, a cross-origin
+  favicon, a 40 MB favicon, an attachment, a beforeunload trap, a key-swallowing page; `--log` writes one line per
+  request with its cookie and user agent, which the security phase reads through `testFs('readText')`), and stops it
+  afterwards. A browser pane in a script: `const p = await app.openSession({ type: 'browser', url })` — `p.webview`
+  (the `<webview>`, in `#webview-layer`, placed over `p.bodyEl`), `p.url`, `p.navigate(text)`, `p.urlEl`, `p.backBtn`
+  / `fwdBtn` / `reloadBtn`, `p.errorEl`, `p.failed`; a click inside the page is `p.webview.executeJavaScript(code,
+  true)` (the `true` is the user gesture a real click carries — without it Chromium skips the entry on Back); a key
+  pressed while the page has the keyboard is `testKey({ keyCode, modifiers, guest: p.webview.getWebContentsId() })`.
+  A page's HTTP sign-in prompt is the app's `.modal` ("Sign in to host"); never open a page that calls `alert()` in a
+  test: the sheet blocks the window until a person dismisses it.
 - `test/qa/claude-code-check.js` drives the real Claude Code CLI (`claude` on the login shell's PATH or in
   `~/.local/bin`, signed in): Shift+Enter as a newline in its composer and ⌘V with an image on the clipboard as
   `[Image #1]`, in a plain, split, zoomed and detached pane. It is a manual check, not an e2e suite (those never need
@@ -69,7 +76,7 @@ const app = window.app;                     // controller
 await window.api.app.screenshot('name');    // → <out-dir>/shots/name.png (window capture)
 await window.api.app.testResize(1000, 650); // resize the window (test mode only)
 await window.api.app.testKey('F19');        // one real key press: keyboard mode, so :focus-visible rings show on programmatic focus (test mode only)
-await window.api.app.testKey({ keyCode: 'Enter', modifiers: ['shift'], char: '\r' }); // a real press with modifiers and its keypress; windowId for another window (test mode only)
+await window.api.app.testKey({ keyCode: 'Enter', modifiers: ['shift'], char: '\r' }); // a real press with modifiers and its keypress; windowId for another window, guest: <webContents id> for a browser pane's page (test mode only)
 await window.api.app.testClipboardReal(true);            // this run uses the Mac's clipboard from now on instead of its own in-memory one (test mode only)
 await window.api.app.testPaste(windowId?);               // Edit → Paste: a real paste event with the Mac's clipboard, text or image (test mode only; needs testClipboardReal)
 await window.api.app.testClipboardPng(dataUrl, text?);   // a PNG on the clipboard (the run's own, or the Mac's after testClipboardReal), with text beside it or alone (test mode only)
