@@ -8,6 +8,9 @@
   const results = {};
   const closeModal = () => document.querySelector('.modal .close')?.click();
   try {
+    // the side strip names the panel as the protocol is written: SFTP
+    results.sftpStripLabel = document.querySelector('.strip-btn[data-panel="sftp"] span').textContent.trim() === 'SFTP';
+
     // session editor
     app.action('new-session');
     await sleep(400);

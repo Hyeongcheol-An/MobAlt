@@ -5708,7 +5708,7 @@
         "src/main/main.js"
       ]
     },
-    "Sftp": {
+    "SFTP": {
       "refs": [
         "src/renderer/index.html"
       ]

@@ -39,7 +39,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Host key checking | ✅ | `~/.ssh/known_hosts` plus the app's own list; changed keys are flagged |
 | MobaKeyGen (SSH key generator) | ✅ Generate SSH Key… | Ed25519 / RSA 4096 / ECDSA through `ssh-keygen`, passphrase, public key + fingerprint, add to ssh-agent, install on a server like `ssh-copy-id`; *Generate…* in the session editor fills the key field |
 | Expert SSH settings (KEX / host key / ciphers / MACs, post-quantum) | ✅ | Per-session algorithm lists in Advanced SSH, validated against ssh2, "Legacy algorithms" as a preset; a mismatch says what both sides offer; "Post-quantum key exchange" offers the ML-KEM-768 and sntrup761 hybrids first (sntrup761: OpenSSH 8.5+, on by default from 9.0; ML-KEM: 9.9+) |
-| SFTP browser on connect | ✅ Sftp panel | Upload/download (recursive, progress, cancel, resumable downloads), mkdir, rename, chmod, delete, hidden files, name filter |
+| SFTP browser on connect | ✅ SFTP panel | Upload/download (recursive, progress, cancel, resumable downloads), mkdir, rename, chmod, delete, hidden files, name filter |
 | Follow terminal folder | ✅ | OSC 7 shell hook for bash/zsh, per session |
 | Remote monitoring bar | ✅ | CPU, memory, root disk, network rates, load, uptime and host name under every SSH pane, polled every 3 s (2–30 s) by one `sh` snippet over the session's own connection; per session, per pane (pane head, View menu) or for all in Settings |
 | Remote file editing | ✅ | Built-in editor (⌘S saves back) or your external editor with auto-upload |
@@ -66,7 +66,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Colour themes / dark mode | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark and Light colour the whole window (toolbar, sidebar, tabs, dialogs), not only the terminals; a session can override its own terminal theme |
 | Keyword highlighting | ✅ | Errors, warnings, OK, IP addresses, URLs and sizes coloured in every terminal by an editable rule table (plain text or regex, colour / background / bold / underline; Settings → Features), colours from the theme; a session can switch it on or off |
 | Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
-| FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |
+| FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the SFTP panel |
 
 Full feature-by-feature comparison with MobaXterm 26.6: [docs/MOBAXTERM_PARITY.md](docs/MOBAXTERM_PARITY.md).
 
