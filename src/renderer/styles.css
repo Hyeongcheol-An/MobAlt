@@ -938,7 +938,7 @@ html[dir="rtl"] .sftp-row:not(.sftp-head) .size { text-align: left; }
 body.divider-drag #webview-layer webview, body.pane-drag #webview-layer webview { pointer-events: none; }
 .pane.browser .pane-browser { flex: 1; min-height: 0; position: relative; background: var(--bg); }
 /* the toolbar: the window's chrome tokens, so it follows the theme like the pane head */
-.pane.browser .bt-bar { position: relative; display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 6px; background: var(--bg-2); border-bottom: 1px solid var(--divider); flex: none; }
+.pane.browser .bt-bar { position: relative; display: flex; align-items: center; gap: 4px; height: 32px; padding: 0 6px; background: var(--bg-2); border-bottom: 1px solid var(--divider); flex: none; container-type: inline-size; } /* the container the narrow-pane rule below measures */
 .pane.browser.show-head.focused .bt-bar { background: var(--bg-3); }
 .pane.browser .bt-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 24px; flex: none; border: 1px solid transparent; border-radius: var(--radius-s); background: transparent; color: var(--fg); padding: 0; }
 .pane.browser .bt-btn:hover { background: var(--bg-4); border-color: var(--divider); }
@@ -961,8 +961,14 @@ html[dir="rtl"] .pane.browser .bt-back svg.i, html[dir="rtl"] .pane.browser .bt-
 .pane.browser .bt-error { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; text-align: center; color: var(--fg-dim); background: var(--bg); }
 .pane.browser .bt-error .big { font-size: 16px; font-weight: 600; color: var(--fg); }
 .pane.browser .bt-error .url { font-family: var(--font-mono); font-size: 12px; color: var(--fg); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; direction: ltr; }
+.pane.browser .bt-error .hint { font-size: 13px; color: var(--fg); max-width: 520px; }
 .pane.browser .bt-error .why { font-size: 12px; color: var(--danger-fg); }
+.pane.browser .bt-error .glyph { unicode-bidi: isolate; } /* the ↻ keeps its place before the word in a right-to-left interface */
+/* a page that stopped answering (the guest's unresponsive event): a strip under the toolbar with Stop / Reload */
+.pane.browser .bt-note { display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: var(--warn-bg); color: var(--warn-fg); border-bottom: 1px solid var(--divider); font-size: 12px; flex: none; }
+.pane.browser .bt-note .btn.small { height: 22px; padding: 0 8px; }
 .pane.browser .bt-error .btns { display: flex; gap: 6px; margin-top: 6px; }
 /* the page's favicon in the pane head's icon slot (no emoji chosen for the session) */
 .pane-head .picon .picon-img { width: 12px; height: 12px; vertical-align: -2px; }
-@container (max-width: 230px) { .pane.browser .bt-open { display: none; } } /* a narrow pane keeps the address field usable */
+@container (max-width: 230px) { .pane.browser .bt-open { display: none; } } /* a narrow pane keeps the address field usable (the toolbar is the container) */
+.form-grid input.invalid { border-color: var(--danger); } /* the session editor's URL field after a refused address */

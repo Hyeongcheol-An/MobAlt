@@ -10,12 +10,14 @@ import { t, tn, onChange } from './i18n.js'; // interface language: every label 
 const STATUS_RE = /\x1b\]7704;(dim|fail)\x07/g;
 
 /**
- * The label of a drop zone while a tab (isTab) or a session is dragged over the pane: 'center' (an empty pane takes
- * it), 'replace' (a pane in use is replaced), or the edge the pane would be split at. One literal per case: a sentence
- * is never assembled from pieces.
+ * The label of a drop zone while something is dragged over a pane: `what` is 'tab' (a tab dropped on a terminal: its
+ * terminal moves here), 'pane' (a tab dropped on a browser pane, where the thing moving may be a page as well — the
+ * neutral word) or 'session'; `zone` is 'center' (an empty pane takes it), 'replace' (a pane in use is replaced), or
+ * the edge the pane would be split at. One literal per case: a sentence is never assembled from pieces. Shared with
+ * browser.js.
  */
-function zoneLabel(isTab, zone) {
-  if (isTab) {
+export function zoneLabel(what, zone) {
+  if (what === 'tab') {
     switch (zone) {
       case 'center': return t('Move terminal here');
       case 'replace': return t('Move terminal here (replace)');
@@ -23,6 +25,15 @@ function zoneLabel(isTab, zone) {
       case 'right': return t('Move terminal right');
       case 'up': return t('Move terminal up');
       default: return t('Move terminal down');
+    }
+  }
+  if (what === 'pane') {
+    switch (zone) {
+      case 'center': case 'replace': return t('Move pane here (replace)');
+      case 'left': return t('Move pane left');
+      case 'right': return t('Move pane right');
+      case 'up': return t('Move pane up');
+      default: return t('Move pane down');
     }
   }
   switch (zone) {
@@ -272,7 +283,7 @@ export class TermPane {
         const isTab = e.dataTransfer.types.includes('text/x-mobalt-tab');
         e.dataTransfer.dropEffect = isTab ? 'move' : 'copy';
         const zone = this._dropZone(e);
-        this._showZone(zone, zoneLabel(isTab, zone === 'center' && this.kind !== 'empty' ? 'replace' : zone));
+        this._showZone(zone, zoneLabel(isTab ? 'tab' : 'session', zone === 'center' && this.kind !== 'empty' ? 'replace' : zone));
         return;
       }
       if (e.dataTransfer.types.includes('Files') || e.dataTransfer.types.includes('text/plain')) {

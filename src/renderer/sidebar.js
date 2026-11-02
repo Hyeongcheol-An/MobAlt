@@ -97,7 +97,7 @@ export class SessionTree {
     for (const f of this.app.sessions.folders || []) ensure(f);
     const q = this.filterEl.value.trim().toLowerCase();
     for (const s of this.app.sessions.sessions) {
-      if (q && !`${s.name} ${s.host || ''} ${s.username || ''} ${s.folder || ''}`.toLowerCase().includes(q)) continue;
+      if (q && !`${s.name} ${s.host || ''} ${s.username || ''} ${s.folder || ''} ${s.url || ''}`.toLowerCase().includes(q)) continue; // a browser session is found by its address too
       ensure(s.folder || '').sessions.push(s);
     }
     return root;

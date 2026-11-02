@@ -9,10 +9,13 @@
 // change. So every pane's webview lives in #webview-layer (index.html), a fixed layer over the window, and is
 // positioned over the pane's body (place) whenever that moves or resizes; a pane that is not on screen (another tab,
 // behind a zoomed sibling) keeps its webview hidden. The main process hardens every guest (main.js hardenWebviews):
-// sandboxed, isolated, no preload, http(s) only, popups into the same pane, no permissions.
+// sandboxed, isolated, no preload, http(s) only, popups into the same pane, no permissions, no save sheet, no
+// beforeunload trap, the app's shortcuts kept; a page's HTTP authentication is asked through the app's own prompt.
 import { h, contextMenu, closeContextMenu, contextMenuAnchor, toast, icon, promptDialog, isRtl } from './ui.js';
 import { t, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
-import { normalizeBrowserUrl, browserHost } from './browserurl.js';
+import { normalizeBrowserUrl, isBrowserUrl, browserHost } from './browserurl.js';
+import { zoneLabel } from './terminal.js'; // the drop-zone words (a session over the pane, a tab over the pane)
+import { urlProblem } from './dialogs.js'; // why an address was refused, worded once for the editor and the address field
 
 let seq = 0;
 let layerWired = false;
@@ -23,43 +26,41 @@ const ERR_ABORTED = -3;
 /** ⌘= / ⌘- step the page's zoom level by this (Chromium: 0.5 = one of the browser's own zoom steps). */
 const ZOOM_STEP = 0.5;
 
-/** The layer the webviews live in (index.html; made here should the markup lack it), with the drag hooks it needs, once. */
+/** The layer the webviews live in (index.html #webview-layer), with the drag hooks it needs, wired once. */
 function layer() {
-  let el = document.getElementById('webview-layer');
-  if (!el) {
-    el = h('div', { id: 'webview-layer' });
-    document.body.append(el);
-  }
+  const el = document.getElementById('webview-layer');
   if (!layerWired) {
     layerWired = true;
     // a session or a tab dragged anywhere in the window: the web pages let the drag through to the panes under them
-    // (styles.css: body.pane-drag), or a drop onto a browser pane could never reach it
+    // (styles.css: body.pane-drag), or a drop onto a browser pane could never reach it. The flag goes with the drag's
+    // end — or, should the dragged row leave the DOM first (the tree re-renders on a status change, and dragend never
+    // comes), a moment after the last dragover.
     const ours = (e) => !!e.dataTransfer && (e.dataTransfer.types.includes('text/x-mobalt-session') || e.dataTransfer.types.includes('text/x-mobalt-tab'));
+    let watchdog = null;
+    const done = () => { clearTimeout(watchdog); watchdog = null; document.body.classList.remove('pane-drag'); };
     document.addEventListener('dragstart', (e) => { if (ours(e)) document.body.classList.add('pane-drag'); });
-    const done = () => document.body.classList.remove('pane-drag');
+    document.addEventListener('dragover', (e) => { if (!ours(e)) return; clearTimeout(watchdog); watchdog = setTimeout(done, 300); });
     document.addEventListener('dragend', done);
     document.addEventListener('drop', done);
   }
   return el;
 }
 
-/** The label of a drop zone while a tab (isTab) or a session is dragged over the pane (the same words as terminal.js). */
-function zoneLabel(isTab, zone) {
-  if (isTab) {
-    switch (zone) {
-      case 'replace': return t('Move terminal here (replace)');
-      case 'left': return t('Move terminal left');
-      case 'right': return t('Move terminal right');
-      case 'up': return t('Move terminal up');
-      default: return t('Move terminal down');
-    }
-  }
-  switch (zone) {
-    case 'replace': return t('Open session here (replace)');
-    case 'left': return t('Open session left');
-    case 'right': return t('Open session right');
-    case 'up': return t('Open session up');
-    default: return t('Open session down');
+/**
+ * Chromium's net error codes a user is likely to meet, said plainly (the raw name and number stay on the line below).
+ * Certificates: Electron refuses an untrusted one and the page fails; the default browser shows what is wrong with it.
+ */
+function errorHint(code) {
+  switch (code) {
+    case -102: return t('Nothing answers at this address and port.'); // CONNECTION_REFUSED
+    case -105: return t('The host name could not be found.'); // NAME_NOT_RESOLVED
+    case -7: case -118: return t('The server did not answer in time.'); // TIMED_OUT, CONNECTION_TIMED_OUT
+    case -106: return t('There is no network connection.'); // INTERNET_DISCONNECTED
+    case -310: return t('The page keeps redirecting to itself.'); // TOO_MANY_REDIRECTS
+    case -312: return t('This port is one Chromium refuses to use for web pages.'); // UNSAFE_PORT
+    default:
+      if (code <= -200 && code >= -299) return t('The site\'s certificate is not trusted (self-signed, expired or for another name): open the page in your browser to inspect it.'); // CERT_*
+      return '';
   }
 }
 
@@ -93,14 +94,13 @@ export class BrowserPane {
     this.multiexecExcluded = false;
     this.zoomed = false;
     this.tab = null;
-    this.from = opts.from || null;
     this.sftpConnId = null;
     this.sftpStatus = 'idle';
     this.connectedAt = null;
     this.pageTitle = ''; // what the page calls itself (page-title-updated)
     this.titleLocked = false; // Rename Pane…: the page's title no longer renames the pane
     this.title = this.session?.name || browserHost(this.url) || this.url;
-    this.zoomLevel = 0; // ⌘= / ⌘- on this pane: the page's zoom, kept with the pane (transferState)
+    this.zoomLevel = 0; // the page's zoom level as Chromium last reported it (per site and cookie jar, not per pane: see zoom())
     this.loading = false;
     this.failed = null; // { code, description, url } while the last load failed (the error view is up)
     this.ready = false; // dom-ready happened once: the webview's methods may be called
@@ -108,6 +108,7 @@ export class BrowserPane {
     this.canFwd = false;
     this.mounted = false;
     this._dragOver = false; // a session / tab is dragged over the pane: the page steps aside for the drop zone
+    this._pendingUrl = null; // an address given before the guest exists (loadUrl): opened on dom-ready
 
     this.el = h('div', { class: 'pane browser', dataset: { pane: this.id } },
       // the same head as a terminal pane (shown while the tab is split): status dot, icon, title, zoom chip, ⚙, ⤢, splits, ✕
@@ -131,17 +132,24 @@ export class BrowserPane {
           (this.favEl = h('img', { class: 'bt-favicon', alt: '', 'aria-hidden': 'true', hidden: true })),
           (this.urlEl = h('input', { class: 'bt-url', type: 'text', value: this.url, dir: 'ltr', spellcheck: false, autocomplete: 'off', autocapitalize: 'off',
             onkeydown: (e) => this._urlKey(e), onfocus: () => this.urlEl.select() }))),
-        (this.openBtn = h('button', { class: 'bt-btn bt-open', type: 'button', onmousedown: (e) => e.preventDefault(), onclick: () => this.openExternal() }, icon('external'))),
+        // Tab from the last button goes into the page itself (the webview sits at the end of the document, out of the natural order)
+        (this.openBtn = h('button', { class: 'bt-btn bt-open', type: 'button', onmousedown: (e) => e.preventDefault(), onclick: () => this.openExternal(), onkeydown: (e) => { if (e.key === 'Tab' && !e.shiftKey && !this.webview.classList.contains('off')) { e.preventDefault(); this.webview.focus(); } } }, icon('external'))),
         (this.progressEl = h('div', { class: 'bt-progress', 'aria-hidden': 'true' }))
       )),
+      // the page stopped answering (the guest's unresponsive event): a strip with the two ways out
+      (this.noteEl = h('div', { class: 'bt-note', role: 'status', hidden: true },
+        (this.noteText = h('span')),
+        h('button', { class: 'btn small', type: 'button', onclick: () => this.stop() }, t('Stop')),
+        h('button', { class: 'btn small', type: 'button', onclick: () => this.retry() }, t('Reload')))),
       // the body: the webview is placed over it (place); the error view sits in it while a load failed
       (this.bodyEl = h('div', { class: 'pane-browser' },
         (this.errorEl = h('div', { class: 'bt-error', role: 'alert', hidden: true },
           h('div', { class: 'big' }),
           h('div', { class: 'url', dir: 'ltr' }),
+          h('div', { class: 'hint' }),
           h('div', { class: 'why' }),
           h('div', { class: 'btns' },
-            (this.retryBtn = h('button', { class: 'btn small', type: 'button', onclick: () => this.retry() })),
+            (this.retryBtn = h('button', { class: 'btn small', type: 'button', onclick: () => this.retry() }, h('span', { class: 'glyph', 'aria-hidden': 'true' }, '↻ '), (this.retryLabel = h('span')))),
             h('button', { class: 'btn small bt-error-open', type: 'button', onclick: () => this.openExternal() }))))))
     );
     this.webview = this._makeWebview();
@@ -169,6 +177,9 @@ export class BrowserPane {
     // Electron blocks popups before that handler sees them, and a target=_blank link would do nothing at all.
     wv.setAttribute('allowpopups', '');
     wv.setAttribute('src', this.url);
+    wv.setAttribute('tabindex', '-1'); // reached from the toolbar's last button (Tab) or ⌘L's Esc, not in the document's own order
+    wv.setAttribute('role', 'document');
+    wv.setAttribute('aria-label', this.title);
     wv.classList.add('off');
     wv.addEventListener('did-start-loading', () => this._onLoadStart());
     wv.addEventListener('did-stop-loading', () => this._onLoadStop());
@@ -181,7 +192,12 @@ export class BrowserPane {
     wv.addEventListener('found-in-page', (e) => this._onFound(e.result));
     wv.addEventListener('context-menu', (e) => this._pageMenu(e.params));
     wv.addEventListener('render-process-gone', (e) => this._onGone(e.details));
-    wv.addEventListener('focus', () => { if (this.app.focused !== this && !this.disposed) this.app.focusPane(this); }); // a click into the page: this pane is the active one
+    wv.addEventListener('close', () => this._onGone({ reason: 'closed' })); // window.close(): the guest is destroyed — the error view with Retry, never a frozen frame shown as loaded
+    wv.addEventListener('unresponsive', () => this._syncNote(true));
+    wv.addEventListener('responsive', () => this._syncNote(false));
+    // a click into the page: this pane is the active one. Only while it is on screen — Electron also fires focus on
+    // the webview of the pane being left while another tab opens, which would flip the view back to it
+    wv.addEventListener('focus', () => { if (!this.disposed && this.app.focused !== this && this.visibleInTab()) this.app.focusPane(this); });
     return wv;
   }
 
@@ -277,9 +293,9 @@ export class BrowserPane {
   }
 
   // ---------- moving to another window (app.js detachTab / adoptTabs) ----------
-  /** What another window needs to show this pane again: the page it is on and the state the page does not carry (no live guest moves between windows: the page loads again there). */
+  /** What another window needs to show this pane again: the page it is on and the name the user gave it (no live guest moves between windows: the page loads again there; its zoom is the site's, kept by Chromium). */
   transferState() {
-    return { url: this.url, title: this.title, titleLocked: !!this.titleLocked, pageTitle: this.pageTitle, zoomLevel: this.zoomLevel, status: this.status };
+    return { url: this.url, title: this.title, titleLocked: !!this.titleLocked, pageTitle: this.pageTitle, zoomLevel: this._zoomNow() };
   }
 
   release() {
@@ -291,7 +307,6 @@ export class BrowserPane {
   async attach(d) {
     if (d.titleLocked && d.title) { this.title = d.title; this.titleLocked = true; }
     this.pageTitle = d.pageTitle || '';
-    this.zoomLevel = typeof d.zoomLevel === 'number' ? d.zoomLevel : 0;
     this.updateTitle();
     return this.start();
   }
@@ -301,22 +316,29 @@ export class BrowserPane {
   navigate(input) {
     const r = normalizeBrowserUrl(input);
     if (!r.url) {
-      toast(r.error === 'empty' ? t('Type an address first') : r.error === 'scheme' ? t('Only http:// and https:// addresses can be opened in a browser pane') : t('That is not a valid URL'), 'warn');
+      toast(r.error === 'empty' ? t('Type an address first') : urlProblem(r.error), 'warn');
       return false;
     }
     this.loadUrl(r.url);
     return true;
   }
 
-  /** Load a URL that is already in the form normalizeBrowserUrl gives (callers that typed one go through navigate). */
+  /**
+   * Load a URL that is already in the form normalizeBrowserUrl gives (callers that typed one go through navigate);
+   * checked once more here, since a URL can also come from a workspace file or from the page's own failed load.
+   */
   loadUrl(url) {
-    if (this.disposed) return;
+    if (this.disposed || !isBrowserUrl(url)) return;
     this.url = url;
     this.failed = null;
     this._showError(false);
     this.urlEl.value = url;
+    this.openBtn.disabled = !/^https?:/i.test(url); // about:blank: nothing to open outside
     if (this.ready) this.webview.loadURL(url).catch(() => {}); // a failed load is reported by did-fail-load; the promise's rejection says the same
-    else this.webview.setAttribute('src', url); // not attached yet: the attribute is what the guest will open
+    else { // no guest yet (just mounted): the attribute is what it will open, and dom-ready opens the address again should the first load have won the race
+      this._pendingUrl = url;
+      this.webview.setAttribute('src', url);
+    }
     this.setStatus('connecting');
     this.app.saveWorkspaceSoon?.();
   }
@@ -324,14 +346,32 @@ export class BrowserPane {
   back() { return this._nav('back'); }
   forward() { return this._nav('forward'); }
   reload() {
-    if (!this.ready) return;
-    if (this.failed) return this.retry();
-    this.failed = null;
+    if (this.failed || !this.ready) return this.retry(); // a failed page, or a guest that is gone: the address again (a new guest when needed)
     this.webview.reload();
   }
   stop() { if (this.ready) this.webview.stop(); }
-  /** The error view's Retry: the address that failed, once more. */
-  retry() { this.loadUrl(this.failed ? this.failed.url : this.url); }
+  /**
+   * The error view's Retry (and Reload after a failure): the address that failed, once more. A guest that is gone —
+   * the page called window.close(), its process crashed — cannot be revived: the <webview> element is made anew.
+   */
+  retry() {
+    const url = this.failed ? this.failed.url : this.url;
+    if (!isBrowserUrl(url)) return;
+    if (!this.ready && this.mounted && this.failed) {
+      this.webview.remove();
+      this.url = url;
+      this.failed = null;
+      this._showError(false);
+      this._syncNote(false);
+      this.webview = this._makeWebview();
+      layer().append(this.webview);
+      this.urlEl.value = url;
+      this.setStatus('connecting');
+      this.place();
+      return;
+    }
+    this.loadUrl(url);
+  }
   /** Reconnect / Disconnect on a page: load it again / stop loading. */
   reconnect() { return this.reload(); }
   disconnect() { return this.stop(); }
@@ -386,7 +426,12 @@ export class BrowserPane {
   // ---------- webview events ----------
   _onDomReady() {
     this.ready = true;
-    if (this.zoomLevel) { try { this.webview.setZoomLevel(this.zoomLevel); } catch {} }
+    this.zoomLevel = this._zoomNow();
+    if (this._pendingUrl) { // an address given before the guest existed: the first load may have raced it
+      const pending = this._pendingUrl;
+      this._pendingUrl = null;
+      if (pending !== this._pageUrl()) this.webview.loadURL(pending).catch(() => {});
+    }
     this._syncNav();
   }
 
@@ -394,6 +439,7 @@ export class BrowserPane {
     this.loading = true;
     this.failed = null;
     this._showError(false);
+    this._syncNote(false);
     this.el.classList.add('loading');
     this.bodyEl.setAttribute('aria-busy', 'true');
     this._syncReload();
@@ -436,6 +482,7 @@ export class BrowserPane {
     this.failed = { code: 0, description: t('The page\'s process ended ({reason})', { reason }), url: this.url };
     this.ready = false;
     this.loading = false;
+    this._syncNote(false);
     this.el.classList.remove('loading');
     this._showError(true);
     this.place();
@@ -446,10 +493,11 @@ export class BrowserPane {
     if (!url) return;
     this.url = url;
     if (document.activeElement !== this.urlEl) this.urlEl.value = url; // never over what the user is typing
+    this.openBtn.disabled = !/^https?:/i.test(url);
     if (newDocument) {
       this.pageTitle = '';
       this._setFavicon(null); // the next page's own, when it has one
-      if (!this.titleLocked) this.updateTitle();
+      if (!this.titleLocked) { this.title = this._autoTitle(); this.updateTitle(); } // a page without a <title> is named after the session, never after the page before it
     }
     this._syncNav();
     if (this.app.activePane() === this) this.app.updateStatus(this);
@@ -459,19 +507,42 @@ export class BrowserPane {
   _onPageTitle(title) {
     this.pageTitle = String(title || '').trim();
     if (this.titleLocked) return; // Rename Pane…: the name stands
-    this.title = this.pageTitle || this.session?.name || browserHost(this.url) || this.url;
+    this.title = this._autoTitle();
     this.updateTitle();
+  }
+
+  /**
+   * The automatic title: the page's own, else the session's name, else the host. A page opened without a saved
+   * session (quick connect) carries its host after the title — a page can call itself anything.
+   */
+  _autoTitle() {
+    const host = browserHost(this.url);
+    if (!this.pageTitle) return this.session?.name || host || this.url;
+    return this.session?.id ? this.pageTitle : (host ? `${this.pageTitle} (${host})` : this.pageTitle);
+  }
+
+  /** The unresponsive strip: shown while the page does not answer, gone when it does again (or on a new load). */
+  _syncNote(on) {
+    if (this.disposed) return;
+    this.noteText.textContent = on ? t('This page is not responding.') : '';
+    this.noteEl.hidden = !on;
+    this.place(); // the strip takes a row from the page
   }
 
   /** The page's icon: fetched by the main process through this pane's partition (the window's CSP allows data: images only), cached per URL. */
   async _onFavicon(favicons) {
-    const src = Array.isArray(favicons) ? favicons.find((u) => /^https?:\/\//i.test(u)) : null;
+    // only an icon on the page's own origin: fetching one elsewhere would be a request made on the page's behalf
+    const origin = (u) => { try { return new URL(u).origin; } catch { return null; } };
+    const own = origin(this.url);
+    const src = Array.isArray(favicons) && own ? favicons.find((u) => /^https?:\/\//i.test(u) && origin(u) === own) : null;
     if (!src) return this._setFavicon(null);
     const pageUrl = this.url;
     let data = faviconCache.get(src);
     if (data === undefined) {
       data = null;
-      try { data = (window.api.browser && await window.api.browser.favicon(this.partition, src)) || null; } catch {}
+      let id = null;
+      try { id = this.webview.getWebContentsId(); } catch {}
+      try { data = (id !== null && window.api.browser && await window.api.browser.favicon(id, src)) || null; } catch {}
       if (faviconCache.size >= FAVICON_CACHE_MAX) faviconCache.delete(faviconCache.keys().next().value);
       faviconCache.set(src, data);
     }
@@ -508,8 +579,11 @@ export class BrowserPane {
     const f = this.failed || {};
     this.errorEl.querySelector('.big').textContent = t('This page could not be loaded');
     this.errorEl.querySelector('.url').textContent = f.url || this.url;
+    const hint = f.code ? errorHint(f.code) : '';
+    this.errorEl.querySelector('.hint').textContent = hint;
+    this.errorEl.querySelector('.hint').hidden = !hint;
     this.errorEl.querySelector('.why').textContent = f.code ? `${f.description} (${f.code})` : f.description || '';
-    this.retryBtn.textContent = t('↻ Retry');
+    this.retryLabel.textContent = t('Retry');
     this.errorEl.querySelector('.bt-error-open').textContent = t('Open in Browser');
     this.errorEl.querySelector('.bt-error-open').hidden = !/^https?:/i.test(f.url || this.url);
   }
@@ -517,6 +591,7 @@ export class BrowserPane {
   // ---------- title ----------
   updateTitle() {
     this.headTitle.textContent = this.title;
+    this.webview.setAttribute('aria-label', this.title);
     this.app.onPaneTitle(this);
   }
 
@@ -538,7 +613,7 @@ export class BrowserPane {
       this.titleLocked = true;
     } else {
       this.titleLocked = false;
-      this.title = this.pageTitle || this.session?.name || browserHost(this.url) || this.url;
+      this.title = this._autoTitle();
     }
     this.updateTitle();
     this.app.saveWorkspaceSoon?.();
@@ -560,6 +635,7 @@ export class BrowserPane {
     this.urlEl.placeholder = t('Address (⌘L)');
     this._syncReload();
     if (this.failed) this._showError(true);
+    if (!this.noteEl.hidden) this._syncNote(true);
   }
 
   // ---------- what the terminal panes do and a page does not ----------
@@ -576,11 +652,26 @@ export class BrowserPane {
   toggleLog() { toast(t('Session logs need a terminal pane'), 'info'); }
   toggleMonitor() { toast(t('The remote monitoring bar needs an SSH or Mosh session'), 'info'); }
 
-  /** ⌘= / ⌘- / ⌘0 on this pane: the page's zoom level (Chromium's steps), not the terminal font. */
+  /**
+   * ⌘= / ⌘- / ⌘0 on this pane: the page's zoom level in Chromium's steps, not the terminal font. The level belongs to
+   * the site in the pane's cookie jar (Chromium keeps it per host and session, like Safari): every pane showing that
+   * site follows, and the site opens at that level next time. So it is read back, never kept by the pane.
+   */
   zoom(delta) {
-    this.zoomLevel = delta === 0 ? 0 : Math.max(-4, Math.min(4, this.zoomLevel + delta * ZOOM_STEP));
-    if (this.ready) { try { this.webview.setZoomLevel(this.zoomLevel); } catch {} }
-    this.app.saveWorkspaceSoon?.();
+    if (!this.ready) return;
+    const next = delta === 0 ? 0 : Math.max(-4, Math.min(4, this._zoomNow() + delta * ZOOM_STEP));
+    try { this.webview.setZoomLevel(next); } catch {}
+    this.zoomLevel = this._zoomNow();
+  }
+
+  /** The page's zoom level as Chromium has it right now (0 = 100 %), 0 before the guest exists. */
+  _zoomNow() {
+    try { return this.ready ? Number(this.webview.getZoomLevel()) || 0 : 0; } catch { return 0; }
+  }
+
+  /** The zoom as a percentage for the menu: Chromium's factor is 1.2 to the level. */
+  _zoomPercent() {
+    return Math.round(100 * Math.pow(1.2, this._zoomNow()));
   }
 
   // ---------- find (⌘F: the window's find bar, app.js) ----------
@@ -654,7 +745,7 @@ export class BrowserPane {
       { label: t('Find…'), key: '⌘F', action: () => this.app.action('find') },
       '-',
       { label: t('Rename Pane…'), action: () => this.renamePrompt() },
-      { label: t('Page Zoom'), items: [
+      { label: this._zoomPercent() === 100 ? t('Page Zoom') : t('Page Zoom ({pct}%)', { pct: this._zoomPercent() }), items: [
         { label: t('Increase'), key: '⌘=', action: () => this.zoom(1) },
         { label: t('Decrease'), key: '⌘-', action: () => this.zoom(-1) },
         { label: t('Reset'), key: '⌘0', action: () => this.zoom(0) },
@@ -710,7 +801,7 @@ export class BrowserPane {
       e.dataTransfer.dropEffect = isTab ? 'move' : 'copy';
       const zone = this._dropZone(e);
       if (!this._dragOver) { this._dragOver = true; this.place(); } // the page steps aside: the zone is drawn in the pane, under the webview layer
-      this._showZone(zone, zoneLabel(isTab, zone === 'center' ? 'replace' : zone));
+      this._showZone(zone, zoneLabel(isTab ? 'pane' : 'session', zone === 'center' ? 'replace' : zone));
     });
     el.addEventListener('dragleave', (e) => { if (!el.contains(e.relatedTarget)) this._hideZone(); });
     el.addEventListener('drop', (e) => {

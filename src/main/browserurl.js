@@ -78,7 +78,8 @@
     if (explicit) u = parse(candidate);
     else {
       // no scheme typed: chosen from the typed port and host, then checked again on the host as the parser reads it
-      // (an octal "010.0.0.1" is 8.0.0.1 — not local), since the choice must follow the address that will be loaded
+      // (an octal "010.0.0.1" is a public address once parsed, not a local one), since the choice must follow the
+      // address that will be loaded
       const bare = candidate.replace(/^\/+/, '');
       const port = portOf(bare);
       let scheme = schemeFor(hostOf(bare), port);
