@@ -2022,6 +2022,17 @@
         "src/renderer/sftp.js"
       ]
     },
+    "Download of MobAlt {version} failed: {error}": {
+      "refs": [
+        "src/renderer/updateprogress.js"
+      ]
+    },
+    "Download progress": {
+      "refs": [
+        "src/renderer/dialogs.js",
+        "src/renderer/index.html"
+      ]
+    },
     "Download selected": {
       "refs": [
         "src/renderer/index.html"
@@ -2030,6 +2041,16 @@
     "Download to…": {
       "refs": [
         "src/main/main.js"
+      ]
+    },
+    "Downloading MobAlt {version} — {percent} % ({transferred} of {total} MB, {speed} MB/s)": {
+      "refs": [
+        "src/renderer/updateprogress.js"
+      ]
+    },
+    "Downloading MobAlt {version}…": {
+      "refs": [
+        "src/renderer/updateprogress.js"
       ]
     },
     "Drag a session from the Sessions panel here, or:": {
@@ -3410,6 +3431,11 @@
         "src/main/main.js"
       ]
     },
+    "MobAlt {version} downloaded — it is installed when you quit, or restart now": {
+      "refs": [
+        "src/renderer/updateprogress.js"
+      ]
+    },
     "MobAlt {version} is already installed on disk; relaunch to use it": {
       "refs": [
         "src/main/updater.js"
@@ -4699,6 +4725,11 @@
         "src/main/main.js"
       ]
     },
+    "Quit and install the downloaded update": {
+      "refs": [
+        "src/renderer/index.html"
+      ]
+    },
     "Quit and start the version on disk": {
       "refs": [
         "src/renderer/index.html"
@@ -4982,7 +5013,9 @@
     },
     "Restart now": {
       "refs": [
-        "src/main/updater.js"
+        "src/renderer/dialogs.js",
+        "src/main/updater.js",
+        "src/renderer/index.html"
       ]
     },
     "Restart now to install it, or keep working: it is installed when you quit.": {

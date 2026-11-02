@@ -5,6 +5,7 @@ import { mix, contrast } from './theme.js';
 import { analysePaste, KIND_LABEL, DANGER_KINDS, PASTE_CONFIRM_CHARS } from './pasteguard.js';
 import { DEFAULT_RULES, COLOR_KEYS, compileRules, normalizeRule } from './highlight.js';
 import { t, tn, LANGUAGES, SYSTEM_LOCALE, languageOf } from './i18n.js';
+import { progressLine, progressParts } from './updateprogress.js'; // the updater's download on the Settings → Updates line, worded as on the banner
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -902,12 +903,28 @@ export function settingsDialog(app) {
   // a choice applies at once to menus, panels and dialogs of every window (app.js _applyLanguage) — terminals are never touched
   const sysLang = languageOf(SYSTEM_LOCALE) || LANGUAGES[0];
   const language = select([['system', t('System default ({name})', { name: sysLang.name })], ...LANGUAGES.map((l) => [l.code, l.name])], languageOf(s.language) ? languageOf(s.language).code : 'system', { 'aria-label': t('Language') });
-  // "Check now" reports on its own line, e.g. "0.11.0 is already installed on disk; relaunch to use it"
+  // "Check now" reports on its own line, e.g. "0.11.0 is already installed on disk; relaunch to use it". A release the
+  // check offered and the user chose to download then takes the line over: the same event, figures and wording as the
+  // banner above the tabs (app.js onUpdateProgress), a thin bar under it and, once the file is complete, Restart now.
   const updStatus = h('span', { class: 'upd-status', 'aria-live': 'polite' });
+  const updBar = h('progress', { class: 'upd-bar', value: 0, max: 1, 'aria-label': t('Download progress'), hidden: true });
+  const updInstall = h('button', { class: 'btn small primary', type: 'button', hidden: true, onclick: () => { app.saveWorkspaceNow(); window.api.app.installUpdate(); } }, t('Restart now'));
+  const showProgress = (p) => {
+    const line = progressLine(p, t);
+    if (!line) return;
+    updStatus.textContent = line;
+    updBar.hidden = p.phase !== 'downloading';
+    if (!updBar.hidden) updBar.value = progressParts(p).percent / 100;
+    updInstall.hidden = p.phase !== 'done';
+  };
+  if (app.updateProgress) showProgress(app.updateProgress); // a download under way (or just finished) when the dialog opens
+  const offProgress = window.api.app.onUpdateProgress(showProgress);
   const checkNow = h('button', { class: 'btn small', type: 'button', onclick: async () => {
     updStatus.textContent = t('Checking…');
     try {
       const r = await window.api.app.checkUpdates();
+      const dl = app.updateProgress;
+      if (dl && r && r.status === 'available' && r.version === dl.version) return showProgress(dl); // that release is downloading already: the figures stay
       updStatus.textContent = (r && r.message) || '';
     } catch (e) {
       updStatus.textContent = e.message;
@@ -945,13 +962,14 @@ export function settingsDialog(app) {
     ['updates', t('Updates'), h('div', { class: 'form-grid' },
       h('label', {}, t('Updates')), h('div', { class: 'checks' }, autoUpdate.el),
       h('div', { class: 'form-help' }, t('Releases on GitHub; a newer version is offered in a dialog and installed only when you agree')),
-      h('label', {}), h('div', { class: 'checks' }, checkNow, updStatus)
+      h('label', {}), h('div', { class: 'checks' }, checkNow, updStatus, updInstall, updBar)
     )],
   ]);
   const body = h('div', { class: 'settings-tabs' }, tabs.strip, ...Object.values(tabs.pages));
   const m = showModal({
     title: t('Settings'),
     width: 'wide',
+    onClose: () => offProgress(), // the dialog's progress listener goes with it
     body,
     buttons: [
       { label: t('Cancel'), value: null },

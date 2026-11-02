@@ -126,3 +126,108 @@ test('electron-updater is wired on the first check, not at setup (its require is
   autoUpdater.emit('update-not-available');
   await p;
 });
+
+// ---------- the download's progress (hooks.progress → app:update-progress) and install() ----------
+const settled = async () => { for (let i = 0; i < 4; i++) await settle(); };
+// the "Download?" sheet answered with its first button, every other sheet with its last (Later / Cancel)
+const answerDownload = () => { electron.dialog.showMessageBox = async (_w, opts) => { dialogs.push(opts); return { response: opts.buttons && opts.buttons[0] === 'Download' ? 0 : 1 }; }; };
+const answerLater = () => { electron.dialog.showMessageBox = async (_w, opts) => { dialogs.push(opts); return { response: 1 }; }; };
+
+test('Download: the progress hook hears the start (0 %, no size), every download-progress event, the end with the size, and nothing outside a download', async () => {
+  const progress = [];
+  const u = fresh({ progress: (p) => progress.push(p) });
+  autoUpdater.downloadUpdate = async () => {};
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.deepEqual(dialogs.map((d) => d.message), ['MobAlt 0.17.0 is available']);
+    assert.deepEqual(progress, [{ phase: 'downloading', version: '0.17.0', percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 }], 'the line appears before the first byte');
+    autoUpdater.emit('download-progress', { percent: 41.8, transferred: 12900000, total: 30800000, bytesPerSecond: 2200000, delta: 12900000 });
+    assert.deepEqual(progress[1], { phase: 'downloading', version: '0.17.0', percent: 41.8, transferred: 12900000, total: 30800000, bytesPerSecond: 2200000 }, 'the figures as electron-updater sends them, with the version (delta dropped)');
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.deepEqual(progress[2], { phase: 'done', version: '0.17.0', percent: 100, transferred: 30800000, total: 30800000, bytesPerSecond: 2200000 }, 'done repeats the size');
+    assert.equal(dialogs[dialogs.length - 1].message, 'MobAlt 0.17.0 is ready to install', 'the sheet still comes (answered Later here)');
+    autoUpdater.emit('download-progress', { percent: 50, transferred: 1, total: 2, bytesPerSecond: 1 });
+    assert.equal(progress.length, 3, 'nothing is downloading any more');
+    // a second check that finds the same release: no second "Download?" offer, the Settings line gets its answer
+    const again = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    assert.deepEqual(await again, { status: 'available', version: '0.17.0', message: 'MobAlt 0.17.0 is available' });
+    await settled();
+    assert.equal(dialogs.filter((d) => d.message === 'MobAlt 0.17.0 is available').length, 1);
+  } finally {
+    answerLater();
+  }
+});
+
+test('a download that breaks off: one error report with the message (the error event and the rejection are the same failure), then the "Download failed" sheet', async () => {
+  const progress = [];
+  const u = fresh({ progress: (p) => progress.push(p) });
+  let reject;
+  autoUpdater.downloadUpdate = () => new Promise((_r, rj) => { reject = rj; });
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(progress.length, 1);
+    const e = new Error('net::ERR_INTERNET_DISCONNECTED');
+    autoUpdater.emit('error', e); // electron-updater dispatches the event…
+    reject(e); // …and rejects the download promise
+    await settled();
+    assert.deepEqual(progress[1], { phase: 'error', version: '0.17.0', percent: 0, transferred: 0, total: 0, bytesPerSecond: 0, message: 'net::ERR_INTERNET_DISCONNECTED' });
+    assert.equal(progress.length, 2, 'reported once');
+    assert.equal(dialogs[dialogs.length - 1].message, 'Download failed');
+    assert.equal(dialogs.filter((d) => d.message === 'Update check failed').length, 0, 'a quiet check never shows the check-failed sheet');
+    // a cancellation rejects without an event: still reported once
+    const p2 = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p2;
+    await settled();
+    assert.equal(progress.length, 3);
+    reject(new Error('cancelled'));
+    await settled();
+    assert.equal(progress[3].phase, 'error');
+    assert.equal(progress[3].message, 'cancelled');
+  } finally {
+    answerLater();
+  }
+});
+
+test('install(): nothing before a download completed; afterwards the beforeInstall hook, then quitAndInstall', async () => {
+  const calls = [];
+  const u = fresh({ beforeInstall: () => calls.push('beforeInstall') });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  assert.equal(u.install(), false, 'nothing downloaded yet');
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(u.install(), false, 'still downloading');
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.deepEqual(calls, [], 'the sheet was answered Later: nothing installed by itself');
+    assert.equal(u.install(), true);
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
+  } finally {
+    answerLater();
+  }
+});
+
+test('running from source: install() is a no-op', async () => {
+  electron.app.isPackaged = false;
+  try {
+    assert.equal(fresh().install(), false);
+  } finally {
+    electron.app.isPackaged = true;
+  }
+});

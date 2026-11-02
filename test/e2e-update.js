@@ -1,9 +1,12 @@
 // On-disk update banner: a different MobAlt.app written over the running one (brew upgrade --cask mobalt, a
 // dragged DMG) is announced by the main process; the banner offers a relaunch, "Later" silences that version
 // only, and Relaunch goes through the quit question (nothing is live here) before restarting — recorded, not
-// performed, in test mode. Also: a main-process notice (app:notice) shows up as an error toast that wraps an
-// unbroken path, an empty notice shows nothing, and the toast stack stays above the open find bar (also with both
-// banners up in a small window).
+// performed, in test mode. The updater's download (app:update-progress, fed by the test hook) uses the same bar: the
+// progress line with a thin bar and no buttons while it runs (Settings → Updates shows the same line and follows
+// it), Restart now / Later once the file is complete (Restart now is recorded, never performed), the reason for a
+// moment when it failed. Also: a main-process notice (app:notice) shows up as an error toast that wraps an unbroken
+// path, an empty notice shows nothing, and the toast stack stays above the open find bar (also with both banners up
+// in a small window).
 //   test/qa/run.sh test/e2e-update.js <out-dir>
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -43,6 +46,76 @@
     results.laterHides = !visible();
     results.panesRefitBack = pane.term.rows === rows0;
     results.focusBackToTerminal = document.activeElement === pane.term.textarea;
+
+    // the updater's download takes the same bar: the line, a thin bar, no buttons; terminals re-fit around it
+    const MB = 1024 * 1024;
+    const progress = (p) => window.api.app.testUpdateProgress({ version: '0.17.0', ...p });
+    const bar = () => document.getElementById('update-progress');
+    const btn = (id) => document.getElementById(id);
+    await progress({ phase: 'downloading', percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 });
+    await sleep(300);
+    results.progressStartText = visible() && text() === 'Downloading MobAlt 0.17.0…';
+    results.progressBarShown = !bar().hidden && bar().offsetParent !== null && bar().value === 0 && bar().getAttribute('aria-label') === 'Download progress';
+    results.progressNoButtons = ['update-relaunch', 'update-install', 'update-later'].every((id) => btn(id).hidden && btn(id).offsetParent === null);
+    results.progressPanesRefit = pane.term.rows < rows0;
+    await progress({ phase: 'downloading', percent: 41.8, transferred: 12.3 * MB, total: 29.4 * MB, bytesPerSecond: 2.1 * MB });
+    await sleep(300);
+    const mid = 'Downloading MobAlt 0.17.0 — 42 % (12.3 of 29.4 MB, 2.1 MB/s)';
+    results.progressMidText = text() === mid;
+    results.progressBarValue = Math.abs(bar().value - 0.42) < 0.001;
+    results.progressLiveRegion = banner().getAttribute('role') === 'status';
+    log('progress', text(), 'bar', bar().value);
+    await shot('65-update-progress');
+    // Settings → Updates: the same line (and the same bar), and it keeps following the download while the dialog is open
+    app.action('settings');
+    await sleep(400);
+    const modal = document.querySelector('.modal');
+    [...modal.querySelectorAll('.mtabs button')].find((b) => b.textContent === 'Updates')?.click();
+    await sleep(150);
+    const updStatus = () => modal.querySelector('.upd-status');
+    const updBar = () => modal.querySelector('.upd-bar');
+    results.settingsLineSameText = updStatus().textContent === mid && updStatus().getAttribute('aria-live') === 'polite';
+    results.settingsBarSameValue = !!updBar() && !updBar().hidden && updBar().offsetParent !== null && Math.abs(updBar().value - 0.42) < 0.001;
+    await progress({ phase: 'downloading', percent: 77, transferred: 22.6 * MB, total: 29.4 * MB, bytesPerSecond: 2.4 * MB });
+    await sleep(300);
+    results.settingsLineFollows = updStatus().textContent === text() && text() === 'Downloading MobAlt 0.17.0 — 77 % (22.6 of 29.4 MB, 2.4 MB/s)';
+    results.settingsBarFollows = Math.abs(updBar().value - 0.77) < 0.001 && Math.abs(bar().value - 0.77) < 0.001;
+    await shot('66-update-progress-settings');
+    // done: both say the file is complete; the banner offers Restart now / Later, Settings its own Restart now
+    await progress({ phase: 'done', percent: 100, transferred: 29.4 * MB, total: 29.4 * MB, bytesPerSecond: 2.4 * MB });
+    await sleep(300);
+    const doneText = 'MobAlt 0.17.0 downloaded — it is installed when you quit, or restart now';
+    results.doneText = text() === doneText && updStatus().textContent === doneText;
+    results.doneControls = !btn('update-install').hidden && !btn('update-later').hidden && btn('update-relaunch').hidden && bar().hidden && updBar().hidden;
+    const settingsInstall = [...modal.querySelectorAll('.modal-body button')].find((b) => b.textContent === 'Restart now');
+    results.settingsInstallShown = !!settingsInstall && !settingsInstall.hidden && settingsInstall.offsetParent !== null;
+    results.noInstallBefore = (await window.api.app.testQuitCheck()).installRequested === false;
+    settingsInstall.click(); // the main process's install path (recorded in test mode, never performed)
+    await sleep(300);
+    results.settingsInstallRequested = (await window.api.app.testQuitCheck()).installRequested === true;
+    await shot('67-update-done-settings');
+    document.querySelector('.modal .close').click();
+    await sleep(250);
+    results.settingsClosed = !document.querySelector('.modal');
+    results.doneButtonsTabbable = ['update-install', 'update-later'].every((id) => btn(id).tabIndex === 0 && !btn(id).disabled && btn(id).offsetParent !== null);
+    btn('update-install').focus();
+    results.installFocusable = document.activeElement === btn('update-install');
+    await shot('68-update-done-banner');
+    // Later hides the banner (nothing on disk is waiting) and the terminals get their rows back
+    btn('update-later').click();
+    await sleep(250);
+    results.doneLaterHides = !visible() && pane.term.rows === rows0 && document.activeElement === pane.term.textarea;
+    // a failed download: the reason, no bar and no buttons, gone by itself after a while (shortened here)
+    app.updateErrorHideMs = 800;
+    await progress({ phase: 'error', message: 'net::ERR_INTERNET_DISCONNECTED' });
+    await sleep(300);
+    results.errorText = visible() && text() === 'Download of MobAlt 0.17.0 failed: net::ERR_INTERNET_DISCONNECTED';
+    results.errorNoControls = bar().hidden && btn('update-install').hidden && btn('update-later').hidden && btn('update-relaunch').hidden;
+    await shot('69-update-error');
+    await sleep(900);
+    results.errorGoesAway = !visible() && pane.term.rows === rows0;
+    app.updateErrorHideMs = 10000;
+
     await window.api.app.testBundleUpdated('0.11.0');
     await sleep(300);
     results.sameVersionStaysHidden = !visible();

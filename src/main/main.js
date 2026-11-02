@@ -51,6 +51,7 @@ const wsParts = new Map(); // …and one { tabs, activeTab, bounds } per detache
 let quitting = false; // a quit is under way (confirmed, test hook, update install or relaunch): no more questions, tear down
 let bundleWatch = null; // notices a different MobAlt.app written over the running one (brew upgrade / dragged DMG)
 let relaunchRequested = false; // test mode: app:relaunch records the request instead of restarting the test run
+let installRequested = false; // test mode: app:install-update records the request instead of quitting into the install
 
 /**
  * Ask before the app goes away with live connections (SSH / Mosh / SFTP companions / FTP). Shared by the
@@ -820,13 +821,20 @@ function registerIpc() {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     const live = liveConnections(registry, ftp);
     const wouldAsk = !quitting && live.total > 0 && !!store.getSettings().confirmClose;
-    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live, verb === 'Relaunch' || verb === 'relaunch' ? 'relaunch' : 'quit') : null, relaunchRequested };
+    return { live, wouldAsk, question: wouldAsk ? quitQuestion(live, verb === 'Relaunch' || verb === 'relaunch' ? 'relaunch' : 'quit') : null, relaunchRequested, installRequested };
   });
   // Test-only: pretend that MobAlt `version` is now on disk — the same renderer event the bundle watch sends
   // (no de-duplication here, so the renderer's own "Later" logic is what gets exercised).
   ipcMain.handle('test:bundle-updated', (_e, version) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
     return bundleWatch ? bundleWatch.send(String(version)) : false;
+  });
+  // Test-only: the updater's download event as every window hears it (app:update-progress, see updater.js hooks.progress) —
+  // the banner above the tabs and the Settings → Updates line are exercised without a release to download.
+  ipcMain.handle('test:update-progress', (_e, info) => {
+    if (!process.env.MOBALT_TEST_SCRIPT) return null;
+    broadcast('app:update-progress', { ...(info && typeof info === 'object' ? info : {}) });
+    return true;
   });
   // Test-only: a few filesystem helpers the renderer test scripts have no bridge for — make a random file, hash a
   // file (sha256), read small text, stat, make a temp dir, remove. Only when a test script is injected; a release
@@ -1037,6 +1045,13 @@ function registerIpc() {
   // Settings → Updates "Check now": the outcome goes on the dialog's own status line, so this check is quiet (no
   // up-to-date / error / on-disk sheet; only a new release's "Download?" offer). Help → Check for Updates… keeps the sheets.
   ipcMain.handle('app:check-updates', () => updater && updater.check(true, { quiet: true }));
+  // "Restart now" on the banner or in Settings → Updates once a download is complete: the sheet's path (quitAndInstall
+  // behind the beforeInstall hook). A test run records the request — the harness must never quit into an install.
+  ipcMain.handle('app:install-update', () => {
+    if (!updater) return false;
+    if (process.env.MOBALT_TEST_SCRIPT) { installRequested = true; return true; }
+    return updater.install();
+  });
   ipcMain.handle('serial:list', () => listSerialPorts());
   ipcMain.on('term:write', (_e, id, data) => registry.write(id, data));
   ipcMain.on('term:resize', (_e, id, cols, rows) => registry.resize(id, cols, rows));
@@ -1428,6 +1443,7 @@ app.whenReady().then(() => {
     bundleOnDisk: (v) => bundleWatch.announce(v), // …the relaunch banner is shown instead
     afterCheck: () => bundleWatch.check(),
     relaunch: () => relaunch(),
+    progress: (info) => broadcast('app:update-progress', info), // the download's figures for every window's banner and Settings line
   });
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

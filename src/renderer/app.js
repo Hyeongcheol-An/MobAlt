@@ -9,6 +9,7 @@ import { ToolsPanel, MacrosPanel } from './panels.js';
 import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog, paneSettingsDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
 import { t, tn, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
+import { progressLine, progressParts } from './updateprogress.js'; // the updater's download on the banner, worded as in Settings → Updates
 
 translateDom(document); // the static labels of index.html, before anything else is rendered (the preload fetched the dictionary)
 
@@ -33,6 +34,8 @@ class App {
     this.focused = null;
     this.updateOnDisk = null; // version of the MobAlt.app on disk when it differs from the running one
     this.updateDismissed = null; // "Later" on the banner: that version stays quiet until another shows up
+    this.updateProgress = null; // the updater's download as last reported (app:update-progress), or null: the banner and Settings → Updates draw from it
+    this.updateErrorHideMs = 10000; // a failed download stays on the banner this long (test/e2e-update.js shortens it)
     this.detached = false; // a window opened for tabs moved out of another one (detachTab): same page, sidebar out of the way
   }
 
@@ -361,6 +364,7 @@ class App {
       this.updateStatusRight();
     });
     window.api.app.onBundleUpdated((info) => this.onBundleUpdated(info));
+    window.api.app.onUpdateProgress((p) => this.onUpdateProgress(p));
     // main-process errors (uncaughtException) reach the user instead of only the terminal that launched the app.
     // A notice is {text, level} or a bare string; one without text shows nothing (never "[object Object]").
     window.api.app.onNotice((n) => {
@@ -383,16 +387,22 @@ class App {
     });
     // toolbar clicks must not steal keyboard focus from the terminal
     for (const b of $$('#toolbar .tb-btn, #side-strip .strip-btn')) b.addEventListener('mousedown', (e) => e.preventDefault());
-    // on-disk update banner: Relaunch restarts into the bundle on disk (the main process asks about live
-    // connections first); Later hides it until another version appears. Both are ordinary Tab stops; like
-    // the toolbar, a mouse click leaves the keyboard focus in the terminal.
+    // update banner: Relaunch restarts into the bundle on disk (the main process asks about live connections first),
+    // Restart now installs the release the updater downloaded (the sheet's own path); Later hides the banner — until
+    // another version appears on disk, or for good for a finished download (it is installed at quit anyway). All are
+    // ordinary Tab stops; like the toolbar, a mouse click leaves the keyboard focus in the terminal.
     $('#update-relaunch').addEventListener('click', () => {
       this.saveWorkspaceNow(); // sent before app:relaunch on the same channel, so it lands first
       window.api.app.relaunch();
     });
+    $('#update-install').addEventListener('click', () => {
+      this.saveWorkspaceNow(); // as for Relaunch: the workspace is on disk before the quit
+      window.api.app.installUpdate();
+    });
     $('#update-later').addEventListener('click', () => {
-      this.updateDismissed = this.updateOnDisk;
-      this.showUpdateBanner(false);
+      if (this.updateProgress) this.updateProgress = null;
+      else this.updateDismissed = this.updateOnDisk;
+      this._syncUpdateBanner();
       this.activePane()?.focus();
     });
     for (const b of $$('#update-banner button')) b.addEventListener('mousedown', (e) => e.preventDefault());
@@ -1182,22 +1192,62 @@ class App {
     if (wasHidden !== banner.hidden) this.workspace.allPanes().forEach((p) => p.fit()); // the banner takes a row from the terminals
   }
 
-  // ---------- on-disk update (brew upgrade / dragged DMG while MobAlt runs) ----------
+  // ---------- update banner: a bundle on disk (brew upgrade / dragged DMG while MobAlt runs) or the updater's download ----------
   /** The main process found a different MobAlt.app on disk: offer a relaunch, unless "Later" silenced that version. */
   onBundleUpdated({ version, current }) {
     if (!version || version === this.updateDismissed) return;
     this.updateOnDisk = version;
     this._updateCurrent = current || this.info.version;
-    this._renderUpdateBanner();
-    this.showUpdateBanner(true);
+    this._syncUpdateBanner();
   }
 
-  /** The banner's sentence (test/e2e-update.js asserts the English): the two versions in bold wherever the translation puts them. */
+  /**
+   * The updater's download (app:update-progress, at most one event a second): the banner follows it — the line with a
+   * thin bar while it runs, Restart now / Later once the file is complete, the reason for a few seconds when it failed.
+   * Settings → Updates hears the same event and words it the same way (dialogs.js, updateprogress.js).
+   */
+  onUpdateProgress(p) {
+    if (!p || typeof p !== 'object' || !p.phase) return;
+    clearTimeout(this._updateErrorTimer);
+    this.updateProgress = p;
+    if (p.phase === 'error') {
+      this._updateErrorTimer = setTimeout(() => {
+        if (this.updateProgress !== p) return; // another download has started meanwhile
+        this.updateProgress = null;
+        this._syncUpdateBanner();
+      }, this.updateErrorHideMs);
+    }
+    this._syncUpdateBanner();
+  }
+
+  /** What the banner shows: the download while one runs or has just ended, else the bundle on disk, else nothing. */
+  _syncUpdateBanner() {
+    const p = this.updateProgress;
+    const mode = p ? p.phase : this.updateOnDisk && this.updateOnDisk !== this.updateDismissed ? 'on-disk' : '';
+    $('#update-banner').dataset.mode = mode;
+    const bar = $('#update-progress');
+    bar.hidden = mode !== 'downloading';
+    if (!bar.hidden) bar.value = progressParts(p).percent / 100;
+    $('#update-relaunch').hidden = mode !== 'on-disk';
+    $('#update-install').hidden = mode !== 'done';
+    $('#update-later').hidden = mode !== 'on-disk' && mode !== 'done';
+    this._renderUpdateBanner();
+    this.showUpdateBanner(!!mode);
+  }
+
+  /**
+   * The banner's sentence (test/e2e-update.js asserts the English): for the bundle on disk the two versions in bold
+   * wherever the translation puts them; for the download the line updateprogress.js words.
+   */
   _renderUpdateBanner() {
-    if (!this.updateOnDisk) return;
-    const versions = { version: h('b', {}, this.updateOnDisk), current: h('b', {}, this._updateCurrent) };
-    // one sentence key: a translation places the {relaunch} part (kept visible when the banner is narrow) and the spacing itself
-    $('#update-banner-text').replaceChildren(...fillNodes(t('MobAlt {version} is installed on disk — you are running {current}. {relaunch}'), { ...versions, relaunch: h('span', { class: 'keep' }, t('Relaunch to use it.')) }));
+    const mode = $('#update-banner').dataset.mode;
+    if (mode === 'on-disk') {
+      const versions = { version: h('b', {}, this.updateOnDisk), current: h('b', {}, this._updateCurrent) };
+      // one sentence key: a translation places the {relaunch} part (kept visible when the banner is narrow) and the spacing itself
+      $('#update-banner-text').replaceChildren(...fillNodes(t('MobAlt {version} is installed on disk — you are running {current}. {relaunch}'), { ...versions, relaunch: h('span', { class: 'keep' }, t('Relaunch to use it.')) }));
+    } else if (mode) {
+      $('#update-banner-text').textContent = progressLine(this.updateProgress, t);
+    }
   }
 
   showUpdateBanner(on) {
