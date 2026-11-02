@@ -42,6 +42,13 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   named — what a terminal pane sees from a user's Shift+Enter (test/e2e-claude-keys.js).
 - `npm run perf` (`test/qa/perf.js`) measures start-up, idle CPU, memory and the bundle size through this harness,
   on the dev checkout and on `dist/mac-arm64/MobAlt.app`; `docs/PERFORMANCE.md` has the method and the numbers.
+- `test/e2e-browser.sh <out-dir>` is the browser-session check (`test/e2e-browser.js`, then `test/e2e-browser-verify.js`
+  into the same folder for the workspace restore): it starts the web site the pane opens, `test/httpsrv.js` on
+  127.0.0.1:42510 (two pages that link to each other, a slow page, a 404, a favicon), and stops it afterwards. A browser
+  pane in a script: `const p = await app.openSession({ type: 'browser', url })` — `p.webview` (the `<webview>`, in
+  `#webview-layer`, placed over `p.bodyEl`), `p.url`, `p.navigate(text)`, `p.urlEl`, `p.backBtn` / `fwdBtn` /
+  `reloadBtn`, `p.errorEl`, `p.failed`; a click inside the page is `p.webview.executeJavaScript(code, true)` (the
+  `true` is the user gesture a real click carries — without it Chromium skips the entry on Back).
 - `test/qa/claude-code-check.js` drives the real Claude Code CLI (`claude` on the login shell's PATH or in
   `~/.local/bin`, signed in): Shift+Enter as a newline in its composer and ⌘V with an image on the clipboard as
   `[Image #1]`, in a plain, split, zoomed and detached pane. It is a manual check, not an e2e suite (those never need

@@ -150,6 +150,34 @@ test('parseSessionsJson: normalises the usable entries and skips the rest with a
   ]);
 });
 
+test('parseSessionsJson: a browser session needs an http(s) URL; other schemes are skipped, a bare host is completed', () => {
+  const r = parseSessionsJson(JSON.stringify({ sessions: [
+    { name: 'grafana', type: 'browser', url: 'http://127.0.0.1:3000/dashboards', isolated: true },
+    { name: 'router', type: 'Browser', url: '192.168.1.1' },
+    { name: 'public', type: 'browser', url: 'example.com', isolated: 'yes' },
+    { name: 'blank', type: 'browser', url: 'about:blank' },
+    { name: 'no-url', type: 'browser' },
+    { name: 'file-url', type: 'browser', url: 'file:///etc/hosts' },
+    { name: 'js-url', type: 'browser', url: 'javascript:alert(1)' },
+    { name: 'data-url', type: 'browser', url: 'data:text/html,<b>x</b>' },
+    { name: 'bad-url', type: 'browser', url: 'http://exa mple.com' },
+  ] }));
+  assert.equal(r.error, undefined);
+  assert.deepEqual(r.sessions.map((s) => [s.name, s.type, s.url, s.isolated]), [
+    ['grafana', 'browser', 'http://127.0.0.1:3000/dashboards', true],
+    ['router', 'browser', 'http://192.168.1.1/', false],
+    ['public', 'browser', 'https://example.com/', false], // isolated is a boolean or nothing
+    ['blank', 'browser', 'about:blank', false],
+  ]);
+  assert.deepEqual(r.skipped, [
+    { entry: '"no-url"', reason: 'no URL' },
+    { entry: '"file-url"', reason: 'bad URL "file:///etc/hosts"' },
+    { entry: '"js-url"', reason: 'bad URL "javascript:alert(1)"' },
+    { entry: '"data-url"', reason: 'bad URL "data:text/html,<b>x</b>"' },
+    { entry: '"bad-url"', reason: 'bad URL "http://exa mple.com"' },
+  ]);
+});
+
 test('decodeText: BOMs, UTF-16 LE without a BOM (a short file too), plain UTF-8', () => {
   assert.equal(decodeText(Buffer.from('﻿{"sessions": []}', 'utf8')), '{"sessions": []}');
   assert.equal(decodeText(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('[Bookmarks]', 'utf16le')])), '[Bookmarks]');
