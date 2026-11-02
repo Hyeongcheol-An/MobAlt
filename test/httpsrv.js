@@ -19,6 +19,9 @@
 //   /attachment   Content-Disposition: attachment (a download); /evil has a link with `download` to it
 //   /trap         a page whose beforeunload tries to hold the pane
 //   /keys         a page that swallows every keydown and records the keys it saw (window.__keys)
+//   /redir-user   302 to http://someone@<this host>/b (a redirect carrying a user name: followed, the name dropped)
+//   /redir-loop   302 to http://someone@<this host>/redir-loop, for ever (Chromium's redirect limit must end it)
+//   /count?path=P how many requests this server has had for path P so far (text/plain)
 //   /icon.png     a 16 × 16 PNG favicon
 //   anything else: 404 "Not found"
 // --log FILE appends one line per request (method, path, cookie, user agent), so a test inside the app can count
@@ -68,9 +71,11 @@ const authPage = (res, realm, ok) => {
 };
 
 let n = 0;
+const hits = new Map(); // path → requests so far (/count)
 const srv = http.createServer((req, res) => {
   const id = ++n;
   const path = (req.url || '/').split('?')[0];
+  hits.set(path, (hits.get(path) || 0) + 1);
   log(`#${id} ${req.method} ${req.url} cookie=${JSON.stringify(req.headers.cookie || '-')} ua=${JSON.stringify(req.headers['user-agent'] || '')}`);
   if (path === '/icon.png') { res.writeHead(200, { 'content-type': 'image/png', 'content-length': ICON.length }); return res.end(ICON); }
   if (path === '/probe-icon') { res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'no-store' }); return res.end(ICON); }
@@ -101,6 +106,13 @@ const srv = http.createServer((req, res) => {
     const cred = Buffer.from(String(req.headers.authorization || '').replace(/^Basic /, ''), 'base64').toString();
     return authPage(res, realm, cred === (path === '/auth' ? 'demo:demo' : 'other:other'));
   }
+  if (path === '/count') {
+    const which = new URL(req.url, 'http://x').searchParams.get('path') || '';
+    res.writeHead(200, { 'content-type': 'text/plain', 'cache-control': 'no-store' });
+    return res.end(String(hits.get(which) || 0));
+  }
+  if (path === '/redir-user') { res.writeHead(302, { location: `http://someone@127.0.0.1:${port}/b` }); return res.end(); }
+  if (path === '/redir-loop') { res.writeHead(302, { location: `http://someone@127.0.0.1:${port}/redir-loop` }); return res.end(); }
   const route = routes[path];
   if (!route) { res.writeHead(404, { 'content-type': 'text/html; charset=utf-8' }); return res.end(page('Not found', `<p>No page at ${path.replace(/[<>&]/g, '')}.</p>`)); }
   const send = () => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(route()); };

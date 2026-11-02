@@ -135,4 +135,7 @@ test('the renderer sees the same rules: the file also works as a classic script 
   same(sandbox.BrowserUrl.normalizeBrowserUrl('localhost:3000'), normalizeBrowserUrl('localhost:3000'));
   same(sandbox.BrowserUrl.normalizeBrowserUrl('file:///x'), { error: 'scheme' });
   same(sandbox.BrowserUrl.isBrowserUrl('http://example.com/'), true);
+  assert.equal(typeof sandbox.BrowserUrl.browserUrlWithoutUser, 'function');
+  same(sandbox.BrowserUrl.browserUrlWithoutUser('http://user@example.com/x'), 'http://example.com/x');
+  same(sandbox.BrowserUrl.browserUrlWithoutUser('http://u:p@example.com/'), null);
 });

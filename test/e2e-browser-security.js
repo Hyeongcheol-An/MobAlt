@@ -6,7 +6,9 @@
 // and Retry brings the page back; HTTP Basic authentication is asked through the app's own prompt (Cancel shows the
 // 401 page, demo / demo signs in, a prompt still up when the pane closes is withdrawn); a page that swallows every
 // keydown does not take ⌘L from the app, yet gets ⌘K / ⌘B / ⌘D (they are the page's); a page's link with a user name
-// is followed without it, one with a password is not; an address with a password is refused everywhere.
+// is followed without it, one with a password is not; a redirect to user@ is followed without the name and a
+// user@ redirect loop ends in the error view after a bounded number of requests; the address field drops a user
+// name; an address with a password is refused everywhere.
 //   test/e2e-browser.sh <out-dir>                               (all phases, the site started for them)
 //   test/qa/run.sh test/e2e-browser-security.js <out-dir> 180000 (alone: node test/httpsrv.js --port 42510 --log <out-dir>/httpsrv.log)
 (async () => {
@@ -180,6 +182,30 @@
     await inGuest(p, "location = 'http://admin:admin@127.0.0.1:42510/notitle?pw=1'", false);
     await sleep(1000);
     results.passwordLinkRefused = p.url === SITE + 'b' && (await requests(/notitle\?pw=/)).length === 0;
+    // a redirect to user@: followed (Chromium drops the name on the wire), recorded and shown without the name
+    p.focus(); // the address field keeps what is typed into it while it has the keyboard (⌘L left it there)
+    p.navigate(SITE + 'redir-user');
+    await loaded(p, '/b');
+    results.userNameRedirectFollowed = p.url === SITE + 'b' && p.urlEl.value === SITE + 'b' && !/someone/.test(p.urlEl.value) && p.errorEl.hidden;
+    log('after the user@ redirect', p.url, p.urlEl.value, (await requests(/GET \/redir-user /)).length + ' request(s)');
+    // a server that redirects to user@itself for ever: Chromium's redirect limit ends it — a bounded number of
+    // requests and the error view, not a pane stuck loading
+    p.navigate(SITE + 'redir-loop');
+    await waitFor(() => p.status === 'failed', 10000, 'redirect loop → error view').catch(() => {});
+    await sleep(1500); // any request still coming would show in the count
+    const loopFailed = p.status === 'failed' && !p.errorEl.hidden && /REDIRECT/i.test(p.errorEl.textContent);
+    log('redirect loop error', p.errorEl.textContent.trim().slice(0, 120));
+    p.navigate(SITE + 'count?path=/redir-loop'); // the server's own count (the window's CSP keeps fetch() out of the app)
+    await loaded(p, 'redir-loop');
+    const loopHits = Number(await inGuest(p, 'document.body.textContent', false));
+    log('redirect loop requests', loopHits);
+    results.redirectLoopBounded = loopFailed && loopHits > 0 && loopHits <= 25;
+    // the address field (the renderer's loadUrl path): a user name is dropped, the page loads without it
+    p.urlEl.focus();
+    p.urlEl.value = 'http://u@127.0.0.1:42510/b';
+    p.urlEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await loaded(p, '/b');
+    results.fieldDropsUserName = p.url === SITE + 'b' && p.urlEl.value === SITE + 'b' && p.errorEl.hidden;
     p.navigate(SITE + 'keys');
     await loaded(p, '/keys');
 
