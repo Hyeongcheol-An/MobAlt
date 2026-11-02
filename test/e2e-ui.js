@@ -133,6 +133,20 @@
       results.deadLineAboveStrip = pane.dead && row >= 0 && y >= 0 && y < pane.term.rows && lineBottom <= stripTop + 1;
       if (!results.deadLineAboveStrip) log('deadLine', JSON.stringify({ dead: pane.dead, row, y, rows: pane.term.rows, lineBottom, stripTop }));
       await shot('19-dead-line-above-strip');
+      // Reconnect: the new shell starts one blank row below the dead line, as it did before the padding
+      await pane.reconnect();
+      await sleep(1500);
+      const rowsText = []; for (let i = row; i < buf.length && i < row + 6; i++) rowsText.push(pane.term.buffer.active.getLine(i)?.translateToString(true) || '');
+      results.reconnectOneBlankRow = pane.status === 'connected' && rowsText[1].trim() === '' && rowsText[2].trim() !== '';
+      if (!results.reconnectOneBlankRow) log('reconnect rows', JSON.stringify(rowsText));
+      // a shell that ends high on the screen gets no padding at all
+      const fresh = await app.newLocalTab();
+      await sleep(1000);
+      fresh.term.input('clear; exit 4\r');
+      for (let i = 0; i < 60 && !fresh.dead; i++) await sleep(100);
+      await sleep(400);
+      results.noPadHighUp = fresh.dead && fresh._deadPad === 0;
+      await app.closePane(fresh, true);
       await app.closePane(pane, true);
       await sleep(300);
     }

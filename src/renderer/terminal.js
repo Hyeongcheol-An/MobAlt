@@ -989,25 +989,30 @@ export class TermPane {
    */
   markDead(what, reason) {
     this.dead = true;
-    this.term.write(`\r\n\x1b[2m${tt('── {what} Press Enter to reconnect, ⌘W to close. ──', { what: what || tt('Session ended.') })}\x1b[0m\r\n`);
+    this._deadPad = 0;
+    // the callback runs once xterm has parsed the line, when the cursor position is the real one
+    this.term.write(`\r\n\x1b[2m${tt('── {what} Press Enter to reconnect, ⌘W to close. ──', { what: what || tt('Session ended.') })}\x1b[0m\r\n`, () => this._keepLineAboveOverlay());
     this.showOverlay(reason || (what ? 'lost' : null));
-    this._keepLineAboveOverlay();
   }
 
   /**
    * The Reconnect / Close strip covers the bottom rows of the terminal (it is taller than one row): when the shell ended
-   * on the last row, the dim line just written would sit under it. Blank lines scroll it up above the strip — as many as
-   * the strip covers beyond the cursor's row; written anywhere higher they only move the cursor down.
+   * near the last row, the dim line just written would sit under it. Blank lines scroll it up above the strip — only as
+   * many as the strip would still cover (cursorY + covered − rows), none when the line is higher up. reconnect() takes
+   * them back so the next attempt starts one blank row below the line, as without the strip.
    */
   _keepLineAboveOverlay() {
+    if (!this.dead || !this.overlay || this.disposed) return;
     const screen = this.termEl.querySelector('.xterm-screen');
     const sr = screen && screen.getBoundingClientRect();
     let covered = 3; // a pane not on screen now (another tab): what the strip covers at the usual font sizes
-    if (sr && sr.height && this.term.rows && this.overlay) {
+    if (sr && sr.height && this.term.rows) {
       const rowH = sr.height / this.term.rows;
       covered = Math.max(0, Math.ceil((sr.bottom - this.overlay.getBoundingClientRect().top) / rowH));
     }
-    if (covered > 1) this.term.write('\n'.repeat(covered - 1));
+    const pad = Math.max(0, this.term.buffer.active.cursorY + covered - this.term.rows);
+    this._deadPad = pad;
+    if (pad) this.term.write('\n'.repeat(pad));
   }
 
   /**
@@ -1066,7 +1071,9 @@ export class TermPane {
       this.app.unregisterPane(this);
       this.termId = null;
     }
-    this.term.write('\r\n');
+    const pad = this._deadPad || 0; // the blank lines that lifted the dead line above the strip: the cursor goes back up
+    this._deadPad = 0;
+    this.term.write((pad ? `\x1b[${pad}A` : '') + '\r\n');
     await this.start();
     this.focus();
   }
