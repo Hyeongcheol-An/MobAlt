@@ -6,10 +6,15 @@
 // watch's relaunch banner takes over. The download itself is reported to the windows as it goes
 // (hooks.progress → app:update-progress): a 30–40 MB zip takes a while, and the banner above the tabs and
 // Settings → Updates show the figures instead of leaving the user to wonder whether "Download" did anything.
+// "Restart now" first looks for other instances of this MobAlt.app (instances.js): Squirrel installs only once every
+// one of them has quit, so with another MobAlt open quitAndInstall would quit this window and leave the install (and a
+// relaunch) for whenever the other one quits. Instead nothing quits and a sheet says so; install on quit stays on, so the
+// update still goes in when the last MobAlt quits.
 const { app } = require('electron');
 const dialogs = require('./dialogs'); // sheets go through the wrapper so that test runs can answer them
 const { compareVersions } = require('./bundlewatch');
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const { otherInstances } = require('./instances');
 
 // electron-updater is loaded on the first check, 15 s after start or from the menu: its require (~25 ms warm, more
 // from a cold disk) is nothing the window should wait for. null until then; false when the module is missing.
@@ -30,6 +35,8 @@ function loadAutoUpdater() {
  *              {relaunch?: () => void}                 restart into the bundle on disk
  *              {installFailed?: (e) => void}          quitAndInstall threw (Squirrel refused the bundle): the app is not quitting
  *                                                      after all — main.js drops its quit flag and shows the user the reason
+ *              {otherInstances?: () => Promise<number[]>} the pids of the other running instances of this bundle (default:
+ *                                                      instances.js on app.getPath('exe')); any → install() does not quit
  *              {progress?: (info) => void}             the download as it goes, for every window's banner and Settings line:
  *                                                      { phase: 'downloading' | 'done' | 'error', version, percent, transferred,
  *                                                      total, bytesPerSecond, message? } — once at the start (0 %, no size yet),
@@ -40,8 +47,20 @@ function loadAutoUpdater() {
  * whose caller reports that outcome itself (that line): no up-to-date / error / on-disk sheet, only the
  * "Download?" offer for a new release. Help → Check for Updates… is a loud manual check: every outcome is a sheet.
  * install() quits into the downloaded update — the sheet's "Restart now", the banner's and the one in Settings → Updates
- * all come here; false (nothing happens) while no download has completed.
+ * all come here. It resolves with false (nothing happens; the renderer gives the button back) while no download has
+ * completed, and when another MobAlt instance is running (after the sheet that says so).
  */
+// "Restart now" with another instance of the bundle running: nothing quits (see the header). Also used by main.js in test
+// mode, where the install itself is only recorded.
+function otherInstancesSheet(win, version) {
+  return dialogs.showMessageBox(win, {
+    type: 'info',
+    message: t('Another MobAlt window is open'),
+    detail: t('MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.', { version }),
+    buttons: [t('OK')], defaultId: 0, cancelId: 0,
+  });
+}
+
 function setupUpdater(store, getWin, hooks = {}) {
   const win = () => {
     const w = getWin();
@@ -58,7 +77,7 @@ function setupUpdater(store, getWin, hooks = {}) {
     }
     return { status: 'source', version: app.getVersion(), message };
   };
-  if (!app.isPackaged) return { check: sourceCheck, install: () => false };
+  if (!app.isPackaged) return { check: sourceCheck, install: async () => false };
 
   // download: { version, last } while a download runs (last: the latest figures, so "done" can repeat the size);
   // downloaded: the version whose file is complete and waits for the quit (or install()); lastDone: that event, sent
@@ -108,24 +127,39 @@ function setupUpdater(store, getWin, hooks = {}) {
       dialogs.showMessageBox(win(), { type: 'error', message: t('Download failed'), detail: (e && e.message) || String(e) });
     });
   };
-  const install = () => {
+  const others = async () => {
+    try {
+      const pids = hooks.otherInstances ? await hooks.otherInstances() : await otherInstances(app.getPath('exe'));
+      return Array.isArray(pids) ? pids : [];
+    } catch { return []; } // an unknown answer must not take Restart now away
+  };
+  const install = async () => {
     const autoUpdater = loadAutoUpdater();
     if (!autoUpdater || !state.downloaded) return false;
-    if (state.installing) return true; // a second click while the quit is under way: nothing more to do (a second quitAndInstall would stack on MacUpdater)
-    state.installing = true;
-    try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}
-    setImmediate(() => {
-      try {
-        autoUpdater.quitAndInstall();
-      } catch (e) {
-        // Squirrel refused the bundle (a stale ShipIt job, a moved app…): nothing is quitting after all. The done event
-        // again puts the Restart now buttons back (a later click tries again); main.js hears the reason for the user.
+    if (state.installing) return state.installing; // a second click while the quit is under way: the same answer (a second quitAndInstall would stack on MacUpdater)
+    state.installing = (async () => {
+      const blocking = (await others()).length;
+      if (blocking || !state.downloaded) { // (a Squirrel error during the look forgot the file: nothing to install)
+        const version = state.downloaded;
         state.installing = false;
-        try { hooks.installFailed && hooks.installFailed(e); } catch {}
-        if (state.lastDone) emit(state.lastDone);
+        if (blocking && version) await otherInstancesSheet(win(), version);
+        return false;
       }
-    });
-    return true;
+      try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}
+      setImmediate(() => {
+        try {
+          autoUpdater.quitAndInstall();
+        } catch (e) {
+          // Squirrel refused the bundle (a stale ShipIt job, a moved app…): nothing is quitting after all. The done event
+          // again puts the Restart now buttons back (a later click tries again); main.js hears the reason for the user.
+          state.installing = false;
+          try { hooks.installFailed && hooks.installFailed(e); } catch {}
+          if (state.lastDone) emit(state.lastDone);
+        }
+      });
+      return true;
+    })();
+    return state.installing;
   };
   // The "ready to install" sheet: after the download, and again when a loud check finds the file already complete.
   const offerInstall = async (version) => {
@@ -243,4 +277,4 @@ function setupUpdater(store, getWin, hooks = {}) {
   return { check, install };
 }
 
-module.exports = { setupUpdater };
+module.exports = { setupUpdater, otherInstancesSheet };
