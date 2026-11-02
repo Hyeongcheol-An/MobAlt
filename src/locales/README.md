@@ -19,6 +19,9 @@ and is the key the dictionaries translate, gettext style, with no identifiers in
 A change that adds, removes or rewords a string the user sees brings all eleven dictionaries along before it merges.
 `npm test` is strict about it — a branch with an untranslated string fails the unit tests, locally and in CI — so the
 order on a feature branch is **feature → `npm run i18n` → delta translation, every language → `npm test` → merge**.
+While the translations are still to come, `I18N_STRICT=0 npm test` lets the dictionaries lack the new keys (and keep
+stale ones): only the `missing` / `stale` findings are waived; a wrong placeholder, an empty value or English left in
+a long value still fails, in every language.
 
 1. **Write the string in English, through `t()`**: `t('Close Tab')`, `t('Connected to {host}', { host })`,
    `tn('{n} tab', '{n} tabs', n)`; in `index.html`, `data-i18n` / `data-i18n-title` / `data-i18n-placeholder` /
@@ -42,7 +45,8 @@ order on a feature branch is **feature → `npm run i18n` → delta translation,
 6. **The guide**: a change the user can see gets its paragraph in `docs/USER_GUIDE.md` and the same paragraph, in
    the same place, in every `docs/USER_GUIDE.<code>.md`, with the labels as the dictionary now has them.
    `npm run docs:shots` renews the pictures in every language when the screens changed.
-7. **`npm test`** passes. `I18N_STRICT=0` relaxes the dictionary checks only while a new language is being written.
+7. **`npm test`** passes. `I18N_STRICT=0` waives only the `missing` / `stale` findings of the dictionaries (a feature
+   branch whose strings are not translated yet, a language still being written); everything else stays strict.
 
 ## The dictionary
 
