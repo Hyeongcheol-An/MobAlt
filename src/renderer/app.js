@@ -404,7 +404,8 @@ class App {
       window.api.app.installUpdate().then((ok) => { if (!ok) b.disabled = false; }, () => { b.disabled = false; });
     });
     $('#update-later').addEventListener('click', () => {
-      if (this.updateProgress) this.updateProgress.dismissed = true; // the banner goes; Settings → Updates keeps the line and Restart now
+      // what the banner shows decides, not what is stored: a dismissed download stays in updateProgress for Settings → Updates
+      if ($('#update-banner').dataset.mode === 'done') this.updateProgress.dismissed = true; // the banner goes; Settings → Updates keeps the line and Restart now
       else this.updateDismissed = this.updateOnDisk;
       this._syncUpdateBanner();
       this.activePane()?.focus();

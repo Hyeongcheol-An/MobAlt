@@ -175,6 +175,21 @@
     await sleep(300);
     results.newVersionShows = visible() && text().includes('0.12.0');
 
+    // a download dismissed with Later stays in app.updateProgress for Settings; Later on the on-disk banner that follows
+    // must still hide that banner (it decides by what the banner shows, not by what is stored)
+    await progress({ phase: 'done', percent: 100, transferred: 29.4e6, total: 29.4e6, bytesPerSecond: 0 });
+    await sleep(200);
+    btn('update-later').click();
+    await sleep(200);
+    await window.api.app.testBundleUpdated('0.13.0');
+    await sleep(300);
+    results.onDiskAfterDismissedDone = visible() && text().includes('0.13.0') && !btn('update-relaunch').hidden;
+    btn('update-later').click();
+    await sleep(300);
+    results.laterHidesOnDiskAfterDismissedDone = !visible() && app.updateDismissed === '0.13.0' && app.updateProgress && app.updateProgress.dismissed === true;
+    await window.api.app.testBundleUpdated('0.12.0'); // back to the version the Relaunch check below expects
+    await sleep(300);
+
     // Relaunch with no live connections: no question, the workspace is saved and the restart requested
     const before = await window.api.app.testQuitCheck();
     results.noRelaunchBefore = before.relaunchRequested === false && before.live.total === 0 && !before.wouldAsk;
