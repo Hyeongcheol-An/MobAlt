@@ -1107,6 +1107,8 @@ export function passwordDialog(p) {
  */
 export function httpAuthDialog(p) {
   const field = (type, label, autocomplete) => h('input', { type, autocomplete, 'aria-label': label, spellcheck: false, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)', marginBottom: '8px' } });
+  // each field under its visible name (a <label> around both: a click on the name focuses the field)
+  const labelled = (label, input) => h('label', { style: { display: 'block' } }, h('div', { style: { marginBottom: '4px' } }, label), input);
   const user = field('text', t('User name'), 'username');
   const password = field('password', t('Password'), 'current-password');
   const where = p.port && p.port !== 80 && p.port !== 443 ? `${p.host}:${p.port}` : p.host;
@@ -1116,7 +1118,7 @@ export function httpAuthDialog(p) {
     closeOnBackdrop: false,
     body: h('div', {},
       p.realm ? h('div', { style: { marginBottom: '8px', color: 'var(--fg-dim)' } }, t('The site says: {realm}', { realm: p.realm })) : null,
-      user, password),
+      labelled(t('User name'), user), labelled(t('Password'), password)),
     buttons: [
       { label: t('Cancel'), value: null },
       { label: t('Sign in'), primary: true, action: (api) => api.close({ username: user.value, password: password.value }) },

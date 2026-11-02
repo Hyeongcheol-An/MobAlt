@@ -29,7 +29,7 @@ const i18n = require('./i18n'); // interface language: t() for every label built
 const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 const { ZmodemManager, fmtBytes } = require('./zmodem');
-const { isBrowserUrl } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
+const { isBrowserUrl, browserUrlWithoutUser } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
 
 const pkg = require('../../package.json');
 bootTimes.mainLoaded = Date.now();
@@ -1502,11 +1502,21 @@ function hardenWebviews() {
       guest.setWindowOpenHandler(({ url }) => {
         // a popup / target=_blank to a web page: the same pane goes there. Never about:blank — Chromium opens a
         // window.open('javascript:…') as about:blank and runs the script in it afterwards — nor anything else.
-        if (/^https?:\/\//i.test(url) && isBrowserUrl(url)) guest.loadURL(url).catch(() => {});
+        // A user name in the address (http://user@host/) is dropped, as everywhere: the page asks for it when it needs it.
+        const to = /^https?:\/\//i.test(url) ? browserUrlWithoutUser(url) : null;
+        if (to) guest.loadURL(to).catch(() => {});
         return { action: 'deny' };
       });
-      guest.on('will-navigate', (ev, url) => { if (!isBrowserUrl(url)) ev.preventDefault(); });
-      guest.on('will-redirect', (ev, url) => { if (!isBrowserUrl(url)) ev.preventDefault(); });
+      // a link or a redirect the page makes: refused unless it is a browser URL; one that only carries a user name goes
+      // to the same address without it (a password in an address is still refused, never followed)
+      const guardNavigation = (ev, url) => {
+        if (isBrowserUrl(url)) return;
+        ev.preventDefault();
+        const to = browserUrlWithoutUser(url);
+        if (to) guest.loadURL(to).catch(() => {});
+      };
+      guest.on('will-navigate', guardNavigation);
+      guest.on('will-redirect', guardNavigation);
       guest.on('will-prevent-unload', (ev) => ev.preventDefault()); // a page's beforeunload never holds the pane: Back, Reload and a typed address always go
       guest.on('select-bluetooth-device', (ev, _devices, callback) => { ev.preventDefault(); callback(''); }); // never the first device by default (and no system prompt)
       // HTTP authentication (Basic / Digest, a router's admin page): the app's own prompt in the pane's window; Cancel
@@ -1520,10 +1530,17 @@ function hardenWebviews() {
           .then((r) => { try { if (r && typeof r.username === 'string') callback(r.username, String(r.password || '')); else callback(); } catch {} });
       });
       guest.on('destroyed', () => cancelPrompts(guest));
-      // the app's shortcuts (⌘W, ⌘T, ⌘L, ⌘1-4, ⌘Q…) while the page has the keyboard: a page that swallows keydown
-      // would otherwise keep them — the menu item runs here instead, like a browser's reserved shortcuts
+      // the shortcuts a browser keeps from its pages (⌘W, ⌘T, ⌘N, ⌘L, ⌘Q, ⌘1-9, ⌃Tab, the zoom keys, ⌘F…, see
+      // RESERVED_FROM_PAGES) while the page has the keyboard: a page that swallows keydown would otherwise keep them, so
+      // the menu item runs here instead. Every other accelerator (⌘K, ⌘B, ⌘D…) belongs to the page — a web console's
+      // ⌘K palette, an editor's ⌘B —, and one the page leaves alone still reaches the menu the usual way.
       guest.on('before-input-event', (ev, input) => {
         if (input.type !== 'keyDown' || !(input.meta || input.control)) return;
+        if (input.meta && !input.control && !input.shift && !input.alt && String(input.key || '').toLowerCase() === 'q') {
+          ev.preventDefault(); // Quit is a role item: Electron keeps its accelerator natively, so it is not found by menuItemFor
+          app.quit();
+          return;
+        }
         const item = menuItemFor(input);
         if (!item) return;
         ev.preventDefault();
@@ -1544,9 +1561,21 @@ function hardenWebviews() {
 hardenWebviews();
 
 /**
- * The application menu item an accelerator of the app matches `input` (a guest's before-input-event): only items
- * with a click handler of their own (the app's actions) and Quit — the editing roles (copy, paste, select all…) stay
- * with the page.
+ * The accelerators (spelled as in the menu template) a browser pane keeps from the page it shows, like a browser's
+ * reserved shortcuts: window and tab management, the address bar, Settings, the panes, and the keys that act on the
+ * page itself (zoom, find). Only menu items are looked up, so a key listed here with no menu item does nothing.
+ */
+const RESERVED_FROM_PAGES = new Set([
+  'Cmd+W', 'Cmd+Shift+W', 'Cmd+T', 'Cmd+N', 'Cmd+Shift+N', 'Cmd+Shift+T', 'Cmd+Alt+N', 'Cmd+L', 'Cmd+Q', 'Cmd+,',
+  'Cmd+1', 'Cmd+2', 'Cmd+3', 'Cmd+4', 'Cmd+5', 'Cmd+6', 'Cmd+7', 'Cmd+8', 'Cmd+9',
+  'Ctrl+Tab', 'Ctrl+Shift+Tab', 'Cmd+]', 'Cmd+[', 'Cmd+Shift+Return',
+  'Cmd+=', 'Cmd+-', 'Cmd+0', 'Cmd+F',
+]);
+
+/**
+ * The application menu item `input` (a guest's before-input-event) triggers when the pane keeps that key from the
+ * page: an item whose accelerator is in RESERVED_FROM_PAGES and that has a click handler of its own (the app's
+ * actions) or is Quit — the editing roles (copy, paste, select all…) and every other shortcut stay with the page.
  */
 function menuItemFor(input) {
   const menu = Menu.getApplicationMenu();
@@ -1557,7 +1586,7 @@ function menuItemFor(input) {
     for (const item of items || []) {
       if (found) return;
       if (item.submenu) { walk(item.submenu.items); continue; }
-      if (!item.accelerator || !item.enabled || !(item.role === 'quit' || (!item.role && typeof item.click === 'function'))) continue;
+      if (!item.accelerator || !RESERVED_FROM_PAGES.has(item.accelerator) || !item.enabled || !(item.role === 'quit' || (!item.role && typeof item.click === 'function'))) continue;
       const a = parseAccelerator(item.accelerator);
       if (a && a.meta === want.meta && a.control === want.control && a.shift === want.shift && a.alt === want.alt && a.key === want.key) found = item;
     }

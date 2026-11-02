@@ -325,8 +325,10 @@ the pane; a page opened from Quick connect carries its host after the title, sin
 The status bar reads `BROWSER · url · loaded`. ⌘= / ⌘- / ⌘0 zoom the page, not the terminal font — the zoom belongs
 to the site, as in Safari: it applies in every pane that shares the site's sign-ins and the site opens at that level
 next time; the pane menu shows the current percentage. ⌘F searches the page with the find bar (the case toggle
-applies, the regex toggle does not), ⌘C / ⌘V and the Edit menu work in the page, and MobAlt's own shortcuts (⌘W, ⌘T,
-⌘N, ⌘L, ⌘1–4, ⌘Q…) reach MobAlt even when the page tries to keep them. The pane menu (⚙ in the pane head of a split
+applies, the regex toggle does not), ⌘C / ⌘V and the Edit menu work in the page. The shortcuts a browser keeps
+from its pages reach MobAlt even when the page tries to keep them: ⌘W, ⇧⌘W, ⌘T, ⌘N, ⇧⌘N, ⇧⌘T, ⌥⌘N, ⌘L, ⌘Q, ⌘,,
+⌘1–4, ⌃Tab, ⌃⇧Tab, ⌘], ⇧⌘↩, ⌘= / ⌘- / ⌘0 and ⌘F. Every other shortcut (⌘K, ⌘B, ⌘D…) goes to the page first — a web
+console's ⌘K palette, an editor's ⌘B — and does its MobAlt action only when the page does not use it. The pane menu (⚙ in the pane head of a split
 tab, a right-click in the page or on the toolbar) offers Back, Forward, Reload, Copy URL, Open in Browser, Find…,
 Rename Pane…, Page Zoom, the splits, Zoom Pane and Close Pane; a right-click on a link adds *Open Link in Browser* and
 *Copy Link*, on selected text *Copy*.

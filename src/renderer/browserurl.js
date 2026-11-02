@@ -3,4 +3,5 @@
 const api = window.BrowserUrl || {};
 export const normalizeBrowserUrl = api.normalizeBrowserUrl;
 export const isBrowserUrl = api.isBrowserUrl;
+export const browserUrlWithoutUser = api.browserUrlWithoutUser;
 export const browserHost = api.browserHost;

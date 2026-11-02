@@ -13,7 +13,7 @@
 // beforeunload trap, the app's shortcuts kept; a page's HTTP authentication is asked through the app's own prompt.
 import { h, contextMenu, closeContextMenu, contextMenuAnchor, toast, icon, promptDialog, isRtl } from './ui.js';
 import { t, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
-import { normalizeBrowserUrl, isBrowserUrl, browserHost } from './browserurl.js';
+import { normalizeBrowserUrl, browserUrlWithoutUser, browserHost } from './browserurl.js';
 import { zoneLabel } from './terminal.js'; // the drop-zone words (a session over the pane, a tab over the pane)
 import { urlProblem } from './dialogs.js'; // why an address was refused, worded once for the editor and the address field
 
@@ -327,18 +327,21 @@ export class BrowserPane {
    * Load a URL that is already in the form normalizeBrowserUrl gives (callers that typed one go through navigate);
    * checked once more here, since a URL can also come from a workspace file or from the page's own failed load.
    */
-  loadUrl(url) {
-    if (this.disposed || !isBrowserUrl(url)) return;
+  loadUrl(to) {
+    const url = browserUrlWithoutUser(to); // a user name in a saved or failed address is dropped, a password refused
+    if (this.disposed || !url) return;
+    if (!this.ready && this.mounted && this.failed) return this._remake(url); // the guest is gone: only a new one loads anything
     this.url = url;
     this.failed = null;
     this._showError(false);
     this.urlEl.value = url;
     this.openBtn.disabled = !/^https?:/i.test(url); // about:blank: nothing to open outside
     if (this.ready) this.webview.loadURL(url).catch(() => {}); // a failed load is reported by did-fail-load; the promise's rejection says the same
-    else { // no guest yet (just mounted): the attribute is what it will open, and dom-ready opens the address again should the first load have won the race
+    else if (this.mounted) {
+      // the guest is being made and its first load is under way: dom-ready opens this address (changing src now would
+      // race that load, and the loser is logged by Electron as an ERR_ABORTED "Unexpected error while loading URL")
       this._pendingUrl = url;
-      this.webview.setAttribute('src', url);
-    }
+    } else this.webview.setAttribute('src', url); // not attached yet: the attribute is what it will open
     this.setStatus('connecting');
     this.app.saveWorkspaceSoon?.();
   }
@@ -355,22 +358,25 @@ export class BrowserPane {
    * the page called window.close(), its process crashed — cannot be revived: the <webview> element is made anew.
    */
   retry() {
-    const url = this.failed ? this.failed.url : this.url;
-    if (!isBrowserUrl(url)) return;
-    if (!this.ready && this.mounted && this.failed) {
-      this.webview.remove();
-      this.url = url;
-      this.failed = null;
-      this._showError(false);
-      this._syncNote(false);
-      this.webview = this._makeWebview();
-      layer().append(this.webview);
-      this.urlEl.value = url;
-      this.setStatus('connecting');
-      this.place();
-      return;
-    }
+    const url = browserUrlWithoutUser(this.failed ? this.failed.url : this.url);
+    if (!url) return;
     this.loadUrl(url);
+  }
+  /** A new <webview> for `url` in place of one whose guest is gone (closed, crashed): a guest cannot be revived. */
+  _remake(url) {
+    this.webview.remove();
+    this.url = url;
+    this.failed = null;
+    this._pendingUrl = null;
+    this._showError(false);
+    this._syncNote(false);
+    this.webview = this._makeWebview();
+    layer().append(this.webview);
+    this.urlEl.value = url;
+    this.openBtn.disabled = !/^https?:/i.test(url);
+    this.setStatus('connecting');
+    this.place();
+    this.app.saveWorkspaceSoon?.();
   }
   /** Reconnect / Disconnect on a page: load it again / stop loading. */
   reconnect() { return this.reload(); }
@@ -456,6 +462,10 @@ export class BrowserPane {
       const cur = this._pageUrl();
       if (cur && cur !== this.url) { this.url = cur; if (document.activeElement !== this.urlEl) this.urlEl.value = cur; }
     }
+    if (!this.pageTitle && !this.titleLocked) { // the document that loaded has no <title>: the session's name (or the host), not the page before it
+      const auto = this._autoTitle();
+      if (auto !== this.title) { this.title = auto; this.updateTitle(); }
+    }
     if (this.failed) this.setStatus('failed', this.failed.description);
     else this.setStatus('connected');
     this.place(); // the error view may have gone (a retry that worked): the page comes back on screen
@@ -497,7 +507,8 @@ export class BrowserPane {
     if (newDocument) {
       this.pageTitle = '';
       this._setFavicon(null); // the next page's own, when it has one
-      if (!this.titleLocked) { this.title = this._autoTitle(); this.updateTitle(); } // a page without a <title> is named after the session, never after the page before it
+      // the title stays the previous page's while the new one loads (its <title> usually comes in a moment);
+      // _onLoadStop names a page that has none after the session, never after the page before it
     }
     this._syncNav();
     if (this.app.activePane() === this) this.app.updateStatus(this);

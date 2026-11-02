@@ -139,6 +139,22 @@
     }
   }
 
+  /**
+   * A URL a page or a saved session hands over (a link, a redirect, a popup, a workspace file) as the browser pane may
+   * load it: the URL itself when isBrowserUrl, the same address without its user name when that is all that stops it
+   * ("http://user@host/" → "http://host/": the page asks for the name when it needs one, as for a typed address), else
+   * null — a password in the address, another scheme, not a URL. Never anything isBrowserUrl would refuse.
+   */
+  function browserUrlWithoutUser(url) {
+    if (isBrowserUrl(url)) return url.trim();
+    if (typeof url !== 'string' || !/^https?:\/\//i.test(url.trim())) return null;
+    let u;
+    try { u = new URL(url.trim()); } catch { return null; }
+    if (u.password || !u.username) return null;
+    u.username = '';
+    return isBrowserUrl(u.href) ? u.href : null;
+  }
+
   /** The name a browser session gets by default: the host, with the port when it is not the scheme's own ("nas:8080", "example.com"); "" for about:blank. */
   function browserHost(url) {
     try {
@@ -150,5 +166,5 @@
     }
   }
 
-  return { normalizeBrowserUrl, isBrowserUrl, browserHost, isLocalHost };
+  return { normalizeBrowserUrl, isBrowserUrl, browserUrlWithoutUser, browserHost, isLocalHost };
 });
