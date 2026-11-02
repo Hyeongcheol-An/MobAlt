@@ -71,7 +71,9 @@ a long value still fails, in every language.
   the first form is used for n = 1 and the second for everything else. A key without `plural` is one string.
 - A string that stays as in English on purpose (a protocol name standing alone, "Ping", "RTT", key glyphs) is listed
   under `@keep` **and** still mapped to itself; the test flags any key of three words or more whose value equals the
-  key unless `@keep` has it. Keep that list short and honest.
+  key unless `@keep` has it. Keep that list short and honest: the test also flags a `@keep` entry that is not a key
+  of the catalog (a word such as "DNS" that only appears inside longer strings, a key that was reworded) or whose value
+  is translated after all.
 - Keys that start with `@` are the translator's (`@language`, `@glyphs`, `@glossary`, `@keep`, `@notes`); nothing
   else. Glyphs and symbols stay: ⌘ ⇧ ⌥ ⌃ ⏎ ⎋ ▾ ‹ › ● — … ×; shortcut text such as `(⌘N)` stays. Product and protocol
   names stay in Latin script: MobAlt, MobaXterm, SSH, SFTP, FTP, Mosh, Telnet, RDP, VNC, X11, XQuartz, Zmodem,

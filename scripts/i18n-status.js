@@ -10,7 +10,8 @@
 // The catalog is extracted from the sources here (not read from disk), so the numbers are right before `npm run i18n`
 // too. The checks are the ones test/unit/i18n.test.js enforces (it uses this module): every catalog string present and
 // non-empty, no stale key, the source's placeholders byte for byte ({n} of a tn() pair as the catalog's plural form
-// allows), [one, other] only for a tn() string, nothing of three words or more left in English unless listed in @keep.
+// allows), [one, other] only for a tn() string, nothing of three words or more left in English unless listed in @keep,
+// and @keep itself honest: catalog keys only, each one left as it is.
 const fs = require('fs');
 const path = require('path');
 const ROOT = path.join(__dirname, '..');
@@ -20,10 +21,18 @@ const extractor = require('./i18n-extract');
 const placeholders = (s) => [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort();
 const words = (s) => String(s).split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length;
 
-/** One dictionary against a catalog: { missing: [key], stale: [key], other: [message] } — all empty when it is complete. */
+/**
+ * One dictionary against a catalog: { missing: [key], stale: [key], keep: [message], other: [message] } — all empty
+ * when it is complete. `keep`: an @keep entry that is no catalog key (a word, not a string of the interface, or a key
+ * that was reworded) or whose value is translated after all — the list says what stays English, so it must be true.
+ */
 function check(dict, catalog) {
   const keep = new Set(Array.isArray(dict['@keep']) ? dict['@keep'] : []); // strings that stay as in English on purpose (names, acronyms)
-  const r = { missing: [], stale: [], other: [] };
+  const r = { missing: [], stale: [], keep: [], other: [] };
+  for (const k of keep) {
+    if (!catalog.strings[k]) r.keep.push(`@keep lists a string that is not in the catalog: ${JSON.stringify(k)}`);
+    else if (dict[k] !== undefined && dict[k] !== k) r.keep.push(`@keep lists a string that is translated: ${JSON.stringify(k)} → ${JSON.stringify(dict[k])}`);
+  }
   for (const k of Object.keys(dict)) if (!k.startsWith('@') && !catalog.strings[k]) r.stale.push(k);
   for (const k of Object.keys(catalog.strings)) {
     const v = dict[k];
@@ -49,7 +58,7 @@ function check(dict, catalog) {
 /** Every problem of a dictionary as one list of messages (empty = complete; what the unit test asserts). */
 function problems(dict, catalog) {
   const r = check(dict, catalog);
-  return [...r.stale.map((k) => `stale key (not in the catalog any more): ${JSON.stringify(k)}`), ...r.missing.map((k) => `missing: ${JSON.stringify(k)}`), ...r.other];
+  return [...r.stale.map((k) => `stale key (not in the catalog any more): ${JSON.stringify(k)}`), ...r.missing.map((k) => `missing: ${JSON.stringify(k)}`), ...r.keep, ...r.other];
 }
 
 /** Print the state of the dictionaries (all shipped languages, or `codes`); true when every one is complete. */
@@ -63,12 +72,13 @@ function status(codes = [], { list = false, out = console.log } = {}) {
     const file = path.join(ROOT, 'src', 'locales', l.code + '.json');
     if (!fs.existsSync(file)) { out(`${l.code.padEnd(6)} TODO  no dictionary (src/locales/${l.code}.json)  (${l.name})`); complete = false; continue; }
     const r = check(JSON.parse(fs.readFileSync(file, 'utf8')), catalog);
-    const ok = !r.missing.length && !r.stale.length && !r.other.length;
+    const ok = !r.missing.length && !r.stale.length && !r.keep.length && !r.other.length;
     if (!ok) complete = false;
-    out(`${l.code.padEnd(6)} ${ok ? 'ok  ' : 'TODO'}  missing ${String(r.missing.length).padStart(4)}  stale ${String(r.stale.length).padStart(4)}  other ${String(r.other.length).padStart(3)}  (${l.name})`);
+    out(`${l.code.padEnd(6)} ${ok ? 'ok  ' : 'TODO'}  missing ${String(r.missing.length).padStart(4)}  stale ${String(r.stale.length).padStart(4)}  @keep ${String(r.keep.length).padStart(3)}  other ${String(r.other.length).padStart(3)}  (${l.name})`);
     if (list) {
       for (const k of r.missing) out(`  missing: ${JSON.stringify(k)}${catalog.strings[k].plural ? '  plural: ' + JSON.stringify(catalog.strings[k].plural) : ''}`);
       for (const k of r.stale) out(`  stale:   ${JSON.stringify(k)}`);
+      for (const m of r.keep) out(`  ${m}`);
       for (const m of r.other) out(`  ${m}`);
     }
   }

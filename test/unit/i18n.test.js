@@ -143,6 +143,10 @@ test('scripts/i18n-status: check() reports missing, stale, placeholder and left-
   assert.ok(r.other.includes('left in English: "Open the file {name}"'));
   assert.ok(!r.other.some((m) => /Ping|Keep this one/.test(m))); // one word may stay; @keep lists the rest
   assert.deepEqual(status.check({}, cat).missing, Object.keys(cat.strings));
+  // @keep says what stays English: only catalog keys, each one mapped to itself
+  const k = status.check({ '@keep': ['Ping', 'Keep this one', 'RTT', 'Close Tab'], 'Close Tab': 'x', '{n} tab': ['{n} a', '{n} b'], 'Open the file {name}': 'y {name}', 'Ping': 'Ping', 'Keep this one': 'Keep this one' }, cat);
+  assert.deepEqual(k.keep, ['@keep lists a string that is not in the catalog: "RTT"', '@keep lists a string that is translated: "Close Tab" → "x"']);
+  assert.ok(status.problems({ '@keep': ['RTT'] }, cat).includes('@keep lists a string that is not in the catalog: "RTT"'));
   assert.deepEqual(status.problems({ 'Close Tab': '' }, { strings: { 'Close Tab': {} } }), ['empty: "Close Tab"']);
 });
 
@@ -156,9 +160,9 @@ for (const lang of i18n.LANGUAGES) {
     // every catalog string present and non-empty, no stale key, the placeholders of the source, [one, other] only for
     // a tn() pair, nothing of three words or more left in English unless @keep lists it (scripts/i18n-status.js)
     // I18N_STRICT=0 (a feature branch whose strings are not translated yet): a key the dictionary lacks or no longer
-    // needs is the translators' work in progress, not a failure; everything else (placeholders, empty values, English
-    // left in a long value) still is
-    const problems = status.problems(dict, catalog).filter((p) => strict || !/^(missing: |stale key )/.test(p));
+    // needs, and an @keep entry that a reworded key left behind, are the translators' work in progress, not a failure;
+    // everything else (placeholders, empty values, English left in a long value) still is
+    const problems = status.problems(dict, catalog).filter((p) => strict || !/^(missing: |stale key |@keep lists )/.test(p));
     assert.deepEqual(problems, [], `${problems.length} problem(s) — npm run i18n:status -- --list ${lang.code}:\n${problems.slice(0, 40).join('\n')}`);
   });
 }
