@@ -85,6 +85,16 @@ test('tt / inTerminal: terminal lines in English where xterm cannot draw the scr
   assert.equal(i18n.tt('Session ended.'), 'Session ended.');
 });
 
+test('errorFor: the message in the interface language, terminalMessage in the terminal language', () => {
+  i18n._use('ar', { 'host is required': 'المضيف مطلوب' });
+  const e = i18n.errorFor(() => i18n.t('host is required'));
+  assert.equal(e.message, 'المضيف مطلوب');
+  assert.equal(e.terminalMessage, 'host is required');
+  i18n._use('ko', { 'host is required': '호스트가 필요합니다' });
+  assert.equal(i18n.errorFor(() => i18n.t('host is required')).terminalMessage, '호스트가 필요합니다');
+  i18n.setLocale('en');
+});
+
 test('extractor: tt() keys are catalog keys like t()', () => {
   const js = extractor.extractJs('x.js', "tt('Alpha'); i18n.tt('Beta {x}', { x }); tt(name);");
   assert.deepEqual(js.found.map((f) => f.key), ['Alpha', 'Beta {x}']);

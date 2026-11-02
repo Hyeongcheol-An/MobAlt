@@ -142,9 +142,19 @@ function tt(source, params) {
   return inTerminal(() => t(source, params));
 }
 
+/**
+ * errorFor(() => t('…', params)): an Error in the interface language (the status bar, a toast) that also carries
+ * `terminalMessage`, the same text in the terminal language — for an error the pane prints as "Failed to start: …".
+ */
+function errorFor(build) {
+  const e = new Error(build());
+  e.terminalMessage = inTerminal(build);
+  return e;
+}
+
 /** The user guide in the current language (GitHub). */
 function guideUrl(code = current) {
   return GUIDE_BASE + (byCode(code) || LANGUAGES[0]).guide;
 }
 
-module.exports = { LANGUAGES, resolveLocale, loadDict, setLocale, locale, language, t, tn, tt, inTerminal, format, guideUrl, byCode, _use };
+module.exports = { LANGUAGES, resolveLocale, loadDict, setLocale, locale, language, t, tn, tt, inTerminal, errorFor, format, guideUrl, byCode, _use };

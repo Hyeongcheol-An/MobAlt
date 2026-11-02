@@ -159,3 +159,21 @@ test('Disconnect of an open shell still ends as "closed"', async () => {
   await tick();
   assert.deepEqual(exits.map((e) => e.reason), ['closed']);
 });
+
+test('verifyHost fails with the reason in the interface language and, for the Mosh pane, in the terminal language', async () => {
+  const i18n = require('../../src/main/i18n');
+  const refused = net.createServer();
+  await new Promise((r) => refused.listen(0, '127.0.0.1', r));
+  const port = refused.address().port;
+  await new Promise((r) => refused.close(r));
+  i18n._use('ar', { '{error} — the host is reachable but nothing listens on that port.': '{error} — المضيف متاح لكن لا شيء يستمع على هذا المنفذ.' });
+  try {
+    const ssh = new SshManager(null, store, { status() {} });
+    const r = await ssh.verifyHost({ host: '127.0.0.1', port, username: 'u' });
+    assert.equal(r.ok, false);
+    assert.match(r.error, /المضيف متاح/);
+    assert.match(r.terminalError, /ECONNREFUSED.* — the host is reachable but nothing listens on that port\./);
+  } finally {
+    i18n.setLocale('en');
+  }
+});

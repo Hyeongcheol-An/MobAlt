@@ -433,21 +433,25 @@ class SshManager {
       const settings = this.store.getSettings();
       const client = new (ssh2().Client)();
       let settled = false;
-      const finish = (ok, error) => {
+      // why: a function building the reason with t() — it is built twice, for the status bar and (terminalError,
+      // inTerminal) for the Mosh pane's "Failed to start: …" line
+      const finish = (ok, why) => {
         if (settled) return;
         settled = true;
         try { client.end(); } catch {}
         if (!ok && ctx.localNetworkBlocked) localnet.notify(ctx.localNetworkBlocked); // Mosh's host-key check: the same dialog as a session
-        resolve(ok ? { ok: true, handshakeLine: ctx.handshake ? `${GREY}${this.handshakeLine(ctx.handshake)}${RESET}\r\n` : '' } : { ok: false, error: error || t('host key check failed') });
+        if (ok) return resolve({ ok: true, handshakeLine: ctx.handshake ? `${GREY}${this.handshakeLine(ctx.handshake)}${RESET}\r\n` : '' });
+        const build = () => (why && why()) || t('host key check failed');
+        resolve({ ok: false, error: build(), terminalError: inTerminal(build) });
       };
       const ctx = {};
       const verifier = this._hostVerifier(cfg, ctx);
       client.once('handshake', (negotiated) => { ctx.handshake = negotiated; });
-      client.on('error', (e) => finish(false, this._explainError(e, ctx, cfg)));
-      client.on('close', () => finish(false, t('connection closed during the host key check')));
+      client.on('error', (e) => finish(false, () => this._explainError(e, ctx, cfg)));
+      client.on('close', () => finish(false, () => t('connection closed during the host key check')));
       client.on('ready', () => finish(true));
       ctx.readyTimer = this._readyTimer(client, settings.readyTimeout || 20000, (err) => {
-        finish(false, this._explainError(err, ctx, cfg));
+        finish(false, () => this._explainError(err, ctx, cfg));
         try { client.destroy(); } catch {}
       });
       try {
@@ -461,7 +465,7 @@ class SshManager {
               try { knownhosts.ensure(cfg.host, cfg.port || 22, key); } catch {}
             }
             cb(ok);
-            if (!ok) return finish(false, t('host key not accepted'));
+            if (!ok) return finish(false, () => t('host key not accepted'));
             // accepted: the exchange completes (NEWKEYS, ssh2's `handshake` with what was negotiated), then the
             // connection is ended before any authentication; a server that drops it first ends in error / close
             if (ctx.handshake) finish(true);
@@ -473,7 +477,7 @@ class SshManager {
           debug: this._debugHook(ctx),
         });
       } catch (e) {
-        finish(false, e.message);
+        finish(false, () => e.message);
       }
     });
   }

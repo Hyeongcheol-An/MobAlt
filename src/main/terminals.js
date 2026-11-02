@@ -8,7 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { StringDecoder } = require('string_decoder');
 const { ensureZdotdir } = require('./zdotdir');
-const { t, tn, tt, inTerminal } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn(); a line written into a terminal through tt() (English where xterm cannot draw the script)
+const { t, tn, tt, inTerminal, errorFor } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn(); a line written into a terminal through tt() (English where xterm cannot draw the script)
 const localnet = require('./localnet');
 
 /**
@@ -420,8 +420,8 @@ function shQuote(s) {
 function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, username, privateKeyPath, moshServer, moshPredict, knownHostsFile } = {}) {
   const pty = require('node-pty');
   const bin = findMosh();
-  if (!bin) throw new Error(t('mosh client not found — install it with "brew install mosh"'));
-  if (!host) throw new Error(t('host is required'));
+  if (!bin) throw errorFor(() => t('mosh client not found — install it with "brew install mosh"')); // printed in the pane too: errorFor
+  if (!host) throw errorFor(() => t('host is required'));
   const keyFile = privateKeyPath ? privateKeyPath.replace(/^~(?=\/|$)/, os.homedir()) : '';
   const hostKeyOpts = knownHostsFile
     ? ['-o', 'StrictHostKeyChecking=yes', '-o', shQuote(`UserKnownHostsFile="${String(knownHostsFile).replace(/"/g, '')}"`)]

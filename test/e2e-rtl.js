@@ -85,6 +85,24 @@
       await app.closePane(sp, true); await sleep(300);
     }
 
+    // a start that fails in main (a Mosh host-key check against a closed port): "Failed to start: …" in the terminal
+    // is English all through, the status bar keeps the Arabic reason (main.js forPane, terminal.js startErrorText)
+    {
+      const msgs = [], orig = app.onPaneStatus;
+      app.onPaneStatus = function (pane, msg) { if (msg) msgs.push(msg); return orig.call(this, pane, msg); };
+      const ms = await app.saveSession({ name: 'rtl-mosh', type: 'mosh', host: '127.0.0.1', port: 1, username: 'u' });
+      const mp = await app.openSession(ms);
+      for (let i = 0; i < 60 && !mp.dead; i++) await sleep(100);
+      await sleep(300); // xterm parses a write on the next frame
+      const text = [...Array(mp.term.buffer.active.length)].map((_, i) => mp.term.buffer.active.getLine(i)?.translateToString(true) || '').join('\n');
+      const from = text.indexOf('Failed to start: ');
+      const failed = from < 0 ? '' : text.slice(from).split(/\n\s*\n|──/)[0].replace(/\n/g, '').trim(); // the line wraps in the narrow pane
+      app.onPaneStatus = orig;
+      check('startFailureEnglish', /^Failed to start: .*ECONNREFUSED.* — the host is reachable but nothing listens on that port\./.test(failed) && !/[\u0600-\u06ff]/.test(text), { failed, text: text.trim().slice(0, 300) });
+      check('startFailureStatusArabic', msgs.some((m) => /ECONNREFUSED/.test(m) && /[\u0600-\u06ff]/.test(m) && !/\u001f/.test(m)), msgs);
+      await app.closePane(mp, true); await sleep(300);
+    }
+
     // ---- toasts: bottom-left quadrant ----
     ui.toast('RTL toast sample', 'info'); await sleep(250);
     const toastEl = [...document.querySelectorAll('#toast-root .toast')].pop();

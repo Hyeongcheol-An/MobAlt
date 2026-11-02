@@ -52,8 +52,15 @@ const MONITOR_NOTES = {
   'monitor unavailable': () => t('monitor unavailable'),
 };
 
-/** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
-const startErrorText = (e) => errMsg(e);
+/**
+ * Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg) → { why, line }:
+ * `why` for the status bar and the FTP card, `line` for the terminal — main's terminal-language text when it sent one
+ * after a U+001F (main.js forPane: English for Arabic and Hindi), else the same.
+ */
+const startErrorText = (e) => {
+  const [why, line] = String((e && e.message) || e).split('\u001f');
+  return { why: errMsg({ message: why }), line: line || errMsg({ message: why }) };
+};
 /** A Mosh client that exits this soon after its spawn never got past the ssh bootstrap. */
 const MOSH_BOOTSTRAP_MS = 3000;
 
@@ -891,8 +898,8 @@ export class TermPane {
       }
       if (this.session?.logging && this.kind !== 'ftp') this.toggleLog(true);
     } catch (e) {
-      const why = startErrorText(e);
-      this.term.write(`\r\n\x1b[31m${tt('Failed to start: {why}', { why })}\x1b[0m\r\n`);
+      const { why, line } = startErrorText(e);
+      this.term.write(`\r\n\x1b[31m${tt('Failed to start: {why}', { why: line })}\x1b[0m\r\n`);
       if (this.kind === 'ftp') this.showFtpInfo('failed', why); // the card covers the terminal text
       this.setStatus('failed', why);
       this.markDead();
