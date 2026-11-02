@@ -10,7 +10,7 @@ Siehe auch: [MobaXterm 26.6 feature parity](MOBAXTERM_PARITY.md) (Englisch) — 
 ![MobAlt mit zwei entfernten Shells nebeneinander](images/de/hero.png)
 
 Inhalt: [Installation](#installation) · [Aktualisieren](#aktualisieren) · [Sitzungen](#sitzungen) · [Verbinden](#verbinden) ·
-[Terminal](#terminal) · [Dateien (SFTP / FTP)](#dateien-sftp--ftp) · [Tunnel](#tunnel-portweiterleitung) ·
+[Terminal](#terminal) · [Dateien (SFTP / FTP)](#dateien-sftp--ftp) · [Browser-Sitzungen](#browser-sitzungen) · [Tunnel](#tunnel-portweiterleitung) ·
 [X11, Mosh, seriell, RDP/VNC](#x11-mosh-seriell-rdpvnc) · [Werkzeuge und Makros](#werkzeuge-und-makros) ·
 [Arbeitsbereich und Einstellungen](#arbeitsbereich-und-einstellungen) · [Tastaturkurzbefehle](#tastaturkurzbefehle) ·
 [Daten und Datenschutz](#daten-und-datenschutz) · [Fehlerbehebung](#fehlerbehebung)
@@ -40,7 +40,9 @@ Drei Wege führen zu einem neuen Release; alle enden mit dem neuen Bundle unter 
   „Einstellungen“ → „Updates“ eine Fortschrittszeile — *Download von MobAlt 0.17.0 — 42 % (12.3 von 29.4 MB,
   2.1 MB/s)* — mit einem schmalen Balken; sobald die Datei vollständig ist, bieten beide **Jetzt neu starten** an
   (oder **Später**: die Installation erfolgt beim Beenden), und ein fehlgeschlagener Download nennt einige Sekunden
-  lang den Grund.
+  lang den Grund. Das Update lässt sich erst installieren, wenn alle MobAlt-Fenster beendet sind; solange eine
+  andere MobAlt-Instanz geöffnet ist, beendet „Jetzt neu starten“ daher nichts: Ein Dialog weist darauf hin, und das
+  Update wird installiert, wenn die letzte Instanz beendet wird.
 - **Homebrew**: `brew upgrade --cask mobalt` ersetzt das Programm im Ordner „Programme“.
 - **DMG**: Laden Sie das neue DMG von [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) und ziehen Sie
   MobAlt in den Ordner „Programme“; die alte Version wird ersetzt.

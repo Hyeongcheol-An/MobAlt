@@ -1089,6 +1089,8 @@
   "Resolving {host}…": "Đang phân giải {host}…",
   "Restart now": "Khởi động lại ngay",
   "Restart now to install it, or keep working: it is installed when you quit.": "Khởi động lại ngay để cài, hoặc tiếp tục làm việc: nó sẽ được cài khi bạn thoát.",
+  "Another MobAlt window is open": "Một cửa sổ MobAlt khác đang mở",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version} sẽ được cài khi mọi cửa sổ MobAlt đã thoát. Hãy thoát cửa sổ kia rồi chọn lại “Khởi động lại ngay”, hoặc tiếp tục làm việc: nó sẽ được cài khi bạn thoát.",
   "Restore defaults": "Khôi phục mặc định",
   "Restore Panes": "Khôi phục ngăn",
   "Restore panes (⇧⌘⏎)": "Khôi phục ngăn (⇧⌘⏎)",

@@ -957,6 +957,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Another MobAlt window is open": {
+      "refs": [
+        "src/main/updater.js"
+      ]
+    },
     "Apply to this pane": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -3548,6 +3553,11 @@
         "src/renderer/app.js"
       ]
     },
+    "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": {
+      "refs": [
+        "src/main/updater.js"
+      ]
+    },
     "MobAlt {version} is ready to install": {
       "refs": [
         "src/main/updater.js"
@@ -4292,7 +4302,8 @@
     "OK": {
       "refs": [
         "src/renderer/dialogs.js",
-        "src/renderer/ui.js"
+        "src/renderer/ui.js",
+        "src/main/updater.js"
       ]
     },
     "On": {

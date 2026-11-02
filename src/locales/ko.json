@@ -1007,6 +1007,8 @@
   "Resolving {host}…": "{host} 해석 중…",
   "Restart now": "지금 재시작",
   "Restart now to install it, or keep working: it is installed when you quit.": "지금 재시작하여 설치하거나 계속 작업하세요. 종료할 때 설치됩니다.",
+  "Another MobAlt window is open": "다른 MobAlt 창이 열려 있음",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version}은(는) 모든 MobAlt 창이 종료되면 설치됩니다. 다른 창을 종료한 뒤 ‘지금 재시작’을 다시 선택하거나 계속 작업하세요. 종료할 때 설치됩니다.",
   "Restore defaults": "기본값 복원",
   "Restore Panes": "페인 복원",
   "Restore panes (⇧⌘⏎)": "페인 복원(⇧⌘⏎)",

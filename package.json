@@ -6,6 +6,26 @@
   "main": "src/main/main.js",
   "author": "Hyeongcheol An (https://github.com/Hyeongcheol-An)",
   "license": "MIT",
+  "keywords": [
+    "mobaxterm",
+    "ssh",
+    "sftp",
+    "terminal",
+    "macos",
+    "electron",
+    "xterm",
+    "tunnel",
+    "port-forwarding",
+    "x11",
+    "mosh",
+    "telnet",
+    "serial",
+    "multiexec",
+    "session-manager"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "private": true,
   "scripts": {
     "start": "electron .",

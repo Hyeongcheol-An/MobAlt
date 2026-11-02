@@ -12,15 +12,16 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 
-<p align="center"><a href="README.ko.md">한국어 README</a> · <a href="docs/USER_GUIDE.md">User guide</a></p>
+<p align="center"><a href="README.ko.md">한국어 README</a> · <a href="docs/USER_GUIDE.md">User guide</a> · <a href="docs/MOBAXTERM_PARITY.md">MobaXterm parity</a> · <a href="CHANGELOG.md">Changelog</a></p>
 <p align="center">User guide in: <a href="docs/USER_GUIDE.md">English</a> · <a href="docs/USER_GUIDE.ko.md">한국어</a> · <a href="docs/USER_GUIDE.zh-CN.md">简体中文</a> · <a href="docs/USER_GUIDE.ja.md">日本語</a> · <a href="docs/USER_GUIDE.vi.md">Tiếng Việt</a> · <a href="docs/USER_GUIDE.hi.md">हिन्दी</a> · <a href="docs/USER_GUIDE.de.md">Deutsch</a> · <a href="docs/USER_GUIDE.fr.md">Français</a> · <a href="docs/USER_GUIDE.es.md">Español</a> · <a href="docs/USER_GUIDE.pt.md">Português</a> · <a href="docs/USER_GUIDE.ar.md">العربية</a></p>
 
 ![MobAlt: session tree, two remote shells side by side](docs/images/hero.png)
 
 If you lived in MobaXterm on Windows and miss it on a Mac, MobAlt gives you the same workflow in one
 window: a session tree, tabbed and split terminals, an SFTP browser that opens with every SSH
-connection, port forwarding, MultiExec, X11 forwarding, macros, network tools and serial consoles.
-It is a native-feeling Electron app built on xterm.js, ssh2 and node-pty.
+connection, port forwarding, MultiExec, X11 forwarding, macros, network tools, serial consoles and a
+browser pane for the web UIs of the machines you manage. It is a native-feeling Electron app built on
+xterm.js, ssh2 and node-pty, with no telemetry and no account.
 
 ## Demo
 
@@ -67,6 +68,7 @@ panes, a zoomed pane and a theme change (made-up hosts; `npm run demo` regenerat
 | Keyword highlighting | ✅ | Errors, warnings, OK, IP addresses, URLs and sizes coloured in every terminal by an editable rule table (plain text or regex, colour / background / bold / underline; Settings → Features), colours from the theme; a session can switch it on or off |
 | Mosh | ✅ | Runs the mosh client in a pane (needs `brew install mosh`); ssh bootstrap with keys or interactive prompts; SFTP via a companion SSH connection |
 | FTP / FTPS | ✅ | Explicit-TLS FTPS, anonymous FTP; browsed, transferred and edited in the Sftp panel |
+| Web browser tab | ✅ Browser session | A web page in a pane next to your terminals — a router's admin page, Grafana, a tunnelled `localhost:port`; http/https only, sandboxed, Back / Forward / Reload, ⌘L address field; splits, zooms, detaches and is restored like any pane; sign-ins shared or per session |
 
 Full feature-by-feature comparison with MobaXterm 26.6: [docs/MOBAXTERM_PARITY.md](docs/MOBAXTERM_PARITY.md).
 
@@ -88,7 +90,8 @@ startup (Settings → Updates, or Help → Check for Updates…) and installs th
 ## Install
 
 **Requirements**: macOS 13 Ventura or later, Apple Silicon or Intel. Optional: [XQuartz](https://www.xquartz.org/)
-for X11 forwarding, [Windows App](https://apps.apple.com/app/windows-app/id1295203466) for RDP.
+for X11 forwarding, `brew install mosh` for Mosh, [Windows App](https://apps.apple.com/app/windows-app/id1295203466)
+for RDP.
 
 ### Homebrew
 
@@ -101,7 +104,8 @@ brew install --cask mobalt
 Later updates: `brew upgrade --cask mobalt`. The cask is also kept in this repository (`Casks/mobalt.rb`).
 
 **Updating**: the in-app updater, `brew upgrade --cask mobalt` or a new DMG all work while MobAlt is running —
-the app then shows a relaunch banner. See [Updating](docs/USER_GUIDE.md#updating) in the user guide.
+the app then shows a relaunch banner. See [Updating](docs/USER_GUIDE.md#updating) in the user guide; what a version
+number promises about your sessions and settings is in [docs/VERSIONING.md](docs/VERSIONING.md).
 
 ### DMG
 
@@ -124,7 +128,7 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
 - **Browser sessions**: a web page in a pane next to the shells that manage it — a router, Grafana, a tunnelled
   `localhost:port`. `＋ Session → Browser` or an `http://` / `https://` address in Quick connect; Back / Forward /
   Reload, an address field (⌘L), the page title on the tab, Open in default browser, an error view with Retry; it
-  splits, zooms, detaches and is restored with the workspace like any pane. `http(s)` only, sandboxed, no popups or
+  splits, zooms, detaches and is restored with the workspace like any pane. `http(s)` only, sandboxed, popups stay in the pane, no device
   permissions; sign-ins shared across browser sessions unless a session asks for its own.
 - **SFTP**: opens automatically for SSH sessions. Double-click to navigate or edit, `>_` sends `cd` to
   the terminal, the terminal can follow your shell's folder (session option).
@@ -149,12 +153,23 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
   copies. Shift+Enter and Option+Enter send ESC+CR, which TUI apps such as Claude Code treat as a newline;
   with an image on the clipboard, ⌘V hands it to Claude Code (`[Image #1]`).
 
-## Data and privacy
+## Security and privacy
+
+MobAlt is a terminal workbench: whoever controls it can run commands as you, so it is built to keep three kinds of
+input from taking control. **Remote servers and networks**: host keys are checked against `~/.ssh/known_hosts` and
+MobAlt's own file before a password or key is used; X11 and agent forwarding are off unless a session turns them on;
+tunnels listen on 127.0.0.1 unless you choose another address. **Content you look at**: terminal output, remote file
+names and web pages are treated as data; browser panes run sandboxed, without access to MobAlt or your files, and
+load http(s) only. **Files you import**: a sessions file can carry commands (startup commands, a local shell), so
+import one only from a source you trust. Saved passwords and passphrases are encrypted with a key held in the macOS
+Keychain, never handed to the interface and never written to an export. Out of scope: someone who already runs code
+as your macOS user.
 
 Everything lives in `~/Library/Application Support/MobAlt/`: `sessions.json` (passwords and
 passphrases encrypted through the macOS Keychain), `settings.json`, `known_hosts`, `workspace.json`.
 Session logs default to `~/Documents/MobAlt Logs/`. MobAlt talks only to the hosts you configure;
-there is no telemetry; the optional update check only downloads the release manifest from GitHub. Details in [SECURITY.md](SECURITY.md).
+there is no telemetry; the optional update check only downloads the release manifest from GitHub. Details, and how
+to report a vulnerability privately, in [SECURITY.md](SECURITY.md).
 
 ## Development
 
@@ -183,36 +198,66 @@ In shells that export `ELECTRON_RUN_AS_NODE=1` (VS Code's integrated terminal), 
 ### Layout
 
 ```
-src/main/        Electron main process
-  main.js        window, menu, IPC routing, test hooks
-  preload.js     window.api (contextBridge)
-  store.js       sessions.json / settings.json / workspace.json (secrets via safeStorage)
-  terminals.js   terminal registry, local pty (node-pty), telnet, serial
-  ssh.js         ssh2 connection: auth handler, jump hosts, X11, shell
-  sftp.js        SFTP listing, file operations, transfers, remote edit
-  tunnels.js     -L / -R / -D (SOCKS5) forwarding
-  x11.js         XQuartz discovery/start and X11 channel proxy
-  knownhosts.js  host key verification
-  importers.js   ~/.ssh/config and MobaXterm.ini import
-  tools.js       ping / traceroute / port scan / DNS, and the probes the scanner uses
-  wol.js         Wake-on-LAN magic packet
-  netscan.js     network scanner: CIDR / range expansion, worker queue
-  zdotdir.js     zsh integration for local shells (OSC 7)
-src/renderer/    renderer (plain ES modules, no framework)
-  app.js         controller: actions, events, status bar
-  terminal.js    xterm.js pane: themes, search, drag & drop, reconnect
-  layout.js      tabs and the split tree
-  sidebar.js     session tree
-  sftp.js        SFTP panel
-  panels.js      Tools / Macros panels
-  dialogs.js     session editor, settings, tunnels, host key and password prompts
-src/locales/     the catalog of interface strings and one dictionary per language — src/locales/README.md
+src/main/            Electron main process (CommonJS)
+  main.js            window, menu, IPC routing, browser-pane guard, test hooks
+  preload.js         window.api (contextBridge)
+  store.js           sessions.json / settings.json / workspace.json (secrets via safeStorage)
+  terminals.js       terminal registry, local pty (node-pty), telnet, serial
+  ssh.js             ssh2 connection: auth handler, jump hosts, X11, shell
+  algorithms.js      SSH algorithm lists, the "Legacy algorithms" preset, mismatch explanations
+  pqkex.js           post-quantum key exchange (ML-KEM-768, sntrup761) for the patched ssh2
+  pq/                sntrup761 compiled to WebAssembly from vendor/sntrup761
+  knownhosts.js      host key verification
+  sftp.js            SFTP listing, file operations, transfers, remote edit
+  ftp.js             FTP / FTPS behind the same file API as SFTP
+  tunnels.js         -L / -R / -D (SOCKS5) forwarding
+  x11.js             XQuartz discovery/start and X11 channel proxy
+  zmodem.js          rz / sz transfers inside a terminal
+  monitor.js         remote monitoring bar: the sh snippet and its parser
+  keygen.js          SSH key generator around /usr/bin/ssh-keygen
+  importers.js       ~/.ssh/config and MobaXterm.ini import
+  browserurl.js      what a browser session may open (shared with the renderer)
+  tools.js           ping / traceroute / port scan / DNS, and the probes the scanner uses
+  wol.js             Wake-on-LAN magic packet
+  netscan.js         network scanner: CIDR / range expansion, worker queue
+  localnet.js        macOS Local Network permission (EHOSTUNREACH hint)
+  zdotdir.js         zsh integration for local shells (OSC 7)
+  dialogs.js         native open / save / message dialogs, answerable from test runs
+  live.js            count of live connections for the quit question
+  updater.js         update check and install (electron-updater, GitHub Releases)
+  bundlewatch.js     notices a new MobAlt.app written over the running one (relaunch banner)
+  i18n.js            t() / tn() and the interface language
+src/renderer/        renderer (plain ES modules, no framework)
+  index.html         window markup
+  styles.css         all styles
+  app.js             controller: actions, events, status bar
+  terminal.js        xterm.js pane: themes, search, drag & drop, reconnect
+  browser.js         browser pane (<webview>): address field, history, errors
+  browserurl.js      src/main/browserurl.js as an ES module
+  layout.js          tabs and the split tree
+  sidebar.js         session tree
+  sftp.js            SFTP panel
+  panels.js          Tools / Macros panels
+  nettools.js        Wake-on-LAN and scanner helpers of the Tools panel
+  dialogs.js         session editor, settings, tunnels, host key and password prompts
+  ui.js              DOM helpers, context menus, modals, toasts
+  theme.js           terminal palettes and the window colours derived from them
+  highlight.js       keyword highlighting
+  pasteguard.js      what a paste contains before it reaches a terminal
+  monitor.js         formatting of the monitoring bar
+  updateprogress.js  wording of the update download banner
+  i18n.js            t() / tn() in the renderer
+src/locales/         the catalog of interface strings and one dictionary per language — src/locales/README.md
+patches/             ssh2+1.17.0.patch: post-quantum key exchange (patch-package, applied on install)
+vendor/sntrup761/    OpenSSH's sntrup761 reference code and its WebAssembly build script
+scripts/             build, install, cask, assets, demo GIF, docs screenshots, i18n tools
 test/
-  unit/          node --test unit tests
-  start-sshd.sh  user-level test sshd on port 2222 (keys, SFTP, X11, forwarding)
-  e2e-*.js       scripts executed inside the app (SSH/SFTP/X11/tunnels, UI, auth, serial, workspace, FTP, Mosh)
-  ftpd.py        throwaway FTP server for e2e-ftp.js (pip install pyftpdlib)
-  qa/            harness for driving the real app with a script and taking screenshots
+  unit/              node --test unit tests
+  start-sshd.sh      user-level test sshd on port 2222 (keys, SFTP, X11, forwarding)
+  e2e-*.js           scripts executed inside the app (SSH/SFTP/X11/tunnels, UI, auth, serial, workspace, FTP, Mosh, browser)
+  ftpd.py            throwaway FTP server for e2e-ftp.js (pip install pyftpdlib)
+  httpsrv.js         small web site for the browser-session checks
+  qa/                harness for driving the real app with a script and taking screenshots
 ```
 
 ### End-to-end tests
@@ -248,14 +293,26 @@ keychain when one is present; otherwise they are unsigned and need right-click �
 - Setting `DISPLAY` in `~/.zprofile` or similar on the remote side overrides the forwarded X11 display.
 - MobaXterm.ini is an undocumented format: hosts, ports, users, folders and the X11 flag are imported,
   passwords are not. Convert `.ppk` keys with `puttygen` to OpenSSH format.
-- Mosh needs the `mosh` client on this Mac and `mosh-server` on the remote host (UDP 60000-61000).
+- Mosh needs the `mosh` client on this Mac and `mosh-server` on the remote host (UDP 60000-61000). The pane runs
+  the mosh client, so Zmodem does not work there, and the Sftp panel reaches the host through a separate SSH
+  connection.
 - If a connection fails with *Timed out while waiting for handshake* or `ETIMEDOUT`, check reachability
   with `nc -vz <host> <port>` first; repeated authentication failures can get your IP banned by
   fail2ban or sshd `PerSourcePenalties` on the server.
 - On macOS 15 and later a host on the local network needs the *Local Network* permission (System Settings →
   Privacy & Security → Local Network → MobAlt); until it is granted the connection fails on this Mac with
   `EHOSTUNREACH` and MobAlt points at the setting.
+- X11 forwarding needs [XQuartz](https://www.xquartz.org/) on this Mac; MobAlt starts it on demand but does not
+  install it.
+- RDP and VNC are hand-offs: an `.rdp` file opened in Windows App, a `vnc://` address opened in Screen Sharing.
+  Those windows are not MobAlt tabs.
+- Serial: only devices macOS exposes as serial ports (`/dev/cu.*`) are listed; an adapter that needs a vendor driver
+  (some CH34x / PL2303 chips) shows up once that driver is installed. Unplugging the device ends the session; the
+  pane says the connection was lost.
 
 ## License
 
 [MIT](LICENSE) © Hyeongcheol An
+
+MobaXterm is a trademark of Mobatek. MobAlt is an independent project, not affiliated with or endorsed by Mobatek;
+the name says what it is an alternative to.

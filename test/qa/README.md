@@ -37,7 +37,7 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `shots/final.png`.
 - `console.log` output is echoed to the terminal prefixed with `[renderer:info]`.
 - `test/qa/docs-shots.js` makes the screenshots of the README and the user guides — `npm run docs:shots` runs it once
-  per interface language into `docs/images/<code>/` (English in `docs/images/`) and starts the FTP server it needs —
+  per interface language into `docs/images/<code>/` (English in `docs/images/`) and starts the FTP server and the web page (`test/httpsrv.js` on 48731) it needs —
   and `test/qa/demo-frames.js` the frames of the README demo GIF (`npm run demo` runs it and `scripts/make-demo-gif.sh`;
   start the FTP server from its header first). Nothing personal appears in the images.
 - `testKey(k)` sends keyDown/keyUp only (no char event), so the native Enter activation of a focused button cannot
@@ -105,6 +105,7 @@ await window.api.clipboard.kinds();                      // { text, image, forma
 await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
 (await window.api.app.testQuitCheck()).relaunchRequested; // true once the banner's Relaunch ran (test mode records, never restarts)
 await window.api.app.testUpdateProgress({ phase: 'downloading', version: '0.17.0', percent: 42, transferred, total, bytesPerSecond }); // the updater's download event (app:update-progress) → the banner and the Settings → Updates line; phase 'done' or 'error' (with message) too (test mode only)
+await window.api.app.testOtherInstances([4242]); // "Restart now" (app:install-update) finds another instance of the bundle: the sheet, not the recorded install; [] for none (test mode only)
 (await window.api.app.testQuitCheck()).installRequested;  // true once "Restart now" asked to install a downloaded update (recorded, never performed)
 await window.api.app.testNotice('Internal error: x'); // a main-process notice (app:notice) → error toast (test mode only)
 await window.api.app.testSilentListen(2213);            // → { port }: a TCP listener on 127.0.0.1 that accepts and never speaks — an SSH connection to it waits for the banner (test mode only)
