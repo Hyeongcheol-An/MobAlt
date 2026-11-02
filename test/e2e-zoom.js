@@ -76,7 +76,7 @@
     // --- MultiExec while zoomed: 1 target (the zoomed pane), the hidden pane gets nothing; back to 2 after the restore
     app.action('multiexec');
     await sleep(150);
-    results.multiexecCountZoomed = app.multiexec && !banner().hidden && bannerCount() === '1' && /keystrokes go to 1 visible terminal\(s\) in this tab \(the zoomed pane only\)/.test(banner().textContent);
+    results.multiexecCountZoomed = app.multiexec && !banner().hidden && bannerCount() === '1' && /keystrokes go to 1 visible terminal in this tab \(the zoomed pane only\)/.test(banner().textContent);
     results.multiexecTargetsZoomed = app.multiexecTargets().length === 1 && app.multiexecTargets()[0] === b;
     results.multiexecZoomedToast = toasts().includes('MultiExec ON: only the zoomed pane is visible — restore the panes (⇧⌘⏎) to broadcast') && !toasts().includes('split the tab to broadcast');
     const m1 = mark();

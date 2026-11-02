@@ -3753,12 +3753,14 @@
         "src/renderer/app.js"
       ]
     },
-    "MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab": {
+    "MultiExec is ON — keystrokes go to {n} visible terminal in this tab": {
+      "plural": "MultiExec is ON — keystrokes go to {n} visible terminals in this tab",
       "refs": [
         "src/renderer/app.js"
       ]
     },
-    "MultiExec is ON — keystrokes go to {count} visible terminal(s) in this tab (the zoomed pane only)": {
+    "MultiExec is ON — keystrokes go to {n} visible terminal in this tab (the zoomed pane only)": {
+      "plural": "MultiExec is ON — keystrokes go to {n} visible terminals in this tab (the zoomed pane only)",
       "refs": [
         "src/renderer/app.js"
       ]
