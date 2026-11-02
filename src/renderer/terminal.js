@@ -830,12 +830,12 @@ export class TermPane {
         this.setStatus('connected');
         this._sendStartup();
       } else if (this.kind === 'ssh') {
-        this._cancelRequested = false;
+        // one attempt at a time: a start() that a later one overtook (or a pane that went away) while main was still
+        // answering with the connection's id hands that connection back at once — never a second, invisible socket
+        const gen = this._startGen = (this._startGen || 0) + 1;
         this.setStatus('connecting');
         const r = await window.api.ssh.connect(this.session, size);
-        // the pane went away, or Cancel was pressed, before main answered with the connection's id (the Keychain read
-        // and openShell take a few milliseconds): the attempt behind it is cancelled now that it can be named
-        if (this.disposed) { window.api.ssh.disconnect(r.id); return; }
+        if (this.disposed || gen !== this._startGen) { window.api.ssh.disconnect(r.id); return; }
         this.termId = r.id;
         this.app.registerPane(this);
         if (this._cancelRequested) {
@@ -1050,6 +1050,8 @@ export class TermPane {
   }
 
   async reconnect() {
+    // an SSH attempt still waiting for its id (Cancel at +0 ms): it ends by itself in a moment, then Reconnect works
+    if (this.kind === 'ssh' && this.status === 'connecting' && !this.termId) return;
     if (this.termId) {
       await this.disconnect();
       // the old backend's exit event may still be in flight: forget its id now so it cannot be

@@ -81,7 +81,7 @@ contextBridge.exposeInMainWorld('api', {
     testWolPackets: () => invoke('test:wol-packets'), // what it received: [{ from, port, length, hex }]
     testSilentListen: (port) => invoke('test:silent-listen', port), // TCP listener on 127.0.0.1:<port> that accepts and never speaks (test mode only)
     testConnSocket: (id) => invoke('test:conn-socket', id), // an SSH connection's TCP socket: { noDelay, remoteAddress, remotePort } (test mode only)
-    testMonitorStats: () => invoke('test:monitor-stats'), // { execCount, samples }: exec channels opened, monitor polls started (test mode only)
+    testMonitorStats: () => invoke('test:monitor-stats'), // { execCount, samples, sshConnections }: exec channels opened, monitor polls started, SSH connections held by main (test mode only)
     testMonitorCommand: (cmd) => invoke('test:monitor-command', cmd), // run this instead of the monitoring snippet (null = the snippet; test mode only)
     testPerf: (opts) => invoke('test:perf', opts), // boot timestamps, memory and every process's CPU share / working set; { gc, domCounters, detached, heapSnapshot: path, profile: ms } (test mode only; test/qa/perf.js)
     testFs: (op, ...args) => invoke('test:fs', op, ...args),

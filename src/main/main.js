@@ -1000,7 +1000,7 @@ function registerIpc() {
   // the monitoring bar's polling, counted (does it stop off screen?) and made to fail (the "unavailable" path)
   ipcMain.handle('test:monitor-stats', () => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
-    return { execCount: ssh.execCount, samples: monitor.samples };
+    return { execCount: ssh.execCount, samples: monitor.samples, sshConnections: ssh.conns.size }; // sshConnections: open or opening SSH connections (a ghost shows here)
   });
   ipcMain.handle('test:monitor-command', (_e, cmd) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;

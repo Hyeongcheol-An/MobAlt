@@ -138,6 +138,30 @@
       return r;
     });
 
+    // 1c. Cancel at +0 ms and Reconnect at once (Enter / the button while the id is still on its way): one attempt only —
+    //     no second ssh.connect whose id overwrites the first and leaves a ghost connection open in main until quit
+    await step('cancelThenReconnect', async () => {
+      const conns = async () => (await window.api.app.testMonitorStats()).sshConnections;
+      const n0 = await conns();
+      const s = await app.saveSession({ ...base, name: 'cancel-reconnect', port: 2222 });
+      const opening = app.openSession(s);
+      const p = app.activePane();
+      pane = p;
+      p.el.querySelector('.pane-overlay.connecting button').click();
+      const again = p.reconnect(); // a no-op while the attempt waits for its id
+      await opening; await again;
+      await waitFor(() => p.dead, 5000, 'pane dead after Cancel + Reconnect');
+      await sleep(1500);
+      const afterCancel = await conns();
+      await p.reconnect();
+      await waitFor(() => p.status === 'connected', 15000, 'reconnected');
+      const whileConnected = await conns();
+      await close(p);
+      await sleep(500);
+      const afterClose = await conns();
+      return { n0, afterCancel, whileConnected, afterClose, noGhost: afterCancel === n0 && whileConnected === n0 + 1 && afterClose === n0 };
+    });
+
     // 2. the same against a black hole (TCP never connects)
     await step('blackholeCancel', async () => {
       pane = await app.openSession(await app.saveSession({ ...base, name: 'no-route-cancel', host: '10.255.255.1', port: 22 }));
