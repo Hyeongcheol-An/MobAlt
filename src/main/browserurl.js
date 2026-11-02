@@ -37,12 +37,15 @@
 
   /**
    * The address a user typed, as a URL the browser pane may load, or why not:
-   *   { url }                — http(s) with a host, or about:blank; scheme and host lower-cased, a path added ("/")
-   *   { error: 'empty' }     — nothing typed
-   *   { error: 'scheme' }    — file:, javascript:, data:, blob:, ftp:, ssh:, mailto:… (never loaded, whatever the rest)
-   *   { error: 'invalid' }   — not a URL (no host, bad characters, a bad port)
-   * A bare host gets a scheme (isLocalHost: http:// for the local network, https:// otherwise); "localhost:3000" is a
-   * host and a port, not a scheme (a scheme is followed by "//" or is one that is known).
+   *   { url }                   — http(s) with a host, or about:blank; scheme and host lower-cased, a path added ("/")
+   *   { error: 'empty' }        — nothing typed
+   *   { error: 'scheme' }       — file:, javascript:, data:, blob:, ftp:, ssh:, mailto:… (never loaded, whatever the rest)
+   *   { error: 'credentials' }  — a password in the address (user:password@host): never kept anywhere, the page asks
+   *   { error: 'invalid' }      — not a URL (no host, bad characters, a bad port, "http:8080")
+   * A bare host gets a scheme: http:// for an explicit :80, https:// for :443 / :8443, else by the host (isLocalHost:
+   * http:// on the local network, https:// otherwise). "localhost:3000" is a host and a port, not a scheme (a scheme
+   * is followed by "//" or is one that is known); a bare IPv6 address is bracketed. A user name without a password is
+   * dropped (the page asks for both when it needs them).
    */
   function normalizeBrowserUrl(input) {
     const s = String(input == null ? '' : input).trim();
@@ -50,31 +53,72 @@
     if (s.toLowerCase() === ABOUT_BLANK) return { url: ABOUT_BLANK };
     if (/[\s\u0000-\u001f]/.test(s)) return { error: 'invalid' }; // a space or a control character is never part of an address
     let candidate = s;
-    const m = /^([a-z][a-z0-9+.-]*):(.*)$/i.exec(s);
+    const bareV6 = /^[0-9a-f:]+$/i.test(s) && (s.match(/:/g) || []).length >= 2; // "fe80::1", "::1": the colons are the address, not a scheme or a port
+    if (bareV6) candidate = '[' + s + ']';
+    const m = bareV6 ? null : /^([a-z][a-z0-9+.-]*):(.*)$/i.exec(s);
     if (m) {
       const scheme = m[1].toLowerCase() + ':';
       const rest = m[2];
       if (!ALLOWED.includes(scheme)) {
-        // "localhost:3000", "nas:8080": a host and a port; "file:…", "data:…", "ssh://…", "x-foo://…": a scheme
-        const hostPort = /^\d{1,5}([/?#].*)?$/.test(rest) && !/^(file|javascript|data|blob|ftp|ftps|ssh|mailto|tel|about|chrome|devtools|view-source|vbscript|ws|wss)$/i.test(m[1]);
-        if (!hostPort) return { error: 'scheme' };
-      } else if (!/^\/\//.test(rest)) candidate = scheme + '//' + rest.replace(/^\/+/, ''); // "http:example.com", "https:/example.com": the slashes the user left out
+        // "localhost:3000", "nas:8080": a host and a port; "user:pw@host": a user part (refused below, as credentials);
+        // "file:…", "data:…", "ssh://…", "x-foo://…": a scheme
+        const known = /^(file|javascript|data|blob|ftp|ftps|ssh|mailto|tel|about|chrome|devtools|view-source|vbscript|ws|wss)$/i.test(m[1]);
+        const hostPort = /^\d{1,5}([/?#].*)?$/.test(rest);
+        const userInfo = /^[^/?#]*@/.test(rest);
+        if (known || !(hostPort || userInfo)) return { error: 'scheme' };
+      } else {
+        const body = rest.replace(/^\/+/, '');
+        if (/^\d+([/?#].*)?$/.test(body)) return { error: 'invalid' }; // "http:8080": a port with no host (the parser would read it as an address)
+        if (!/^\/\//.test(rest)) candidate = scheme + '//' + body; // "http:example.com", "https:/example.com": the slashes the user left out
+      }
     }
-    if (!/^https?:\/\//i.test(candidate)) candidate = (isLocalHost(hostOf(candidate)) ? 'http://' : 'https://') + candidate.replace(/^\/+/, '');
+    const explicit = /^https?:\/\//i.test(candidate);
+    const parse = (c) => { try { return new URL(c); } catch { return null; } };
     let u;
-    try { u = new URL(candidate); } catch { return { error: 'invalid' }; }
+    if (explicit) u = parse(candidate);
+    else {
+      // no scheme typed: chosen from the typed port and host, then checked again on the host as the parser reads it
+      // (an octal "010.0.0.1" is 8.0.0.1 — not local), since the choice must follow the address that will be loaded
+      const bare = candidate.replace(/^\/+/, '');
+      const port = portOf(bare);
+      let scheme = schemeFor(hostOf(bare), port);
+      u = parse(scheme + bare);
+      if (u && schemeFor(u.hostname, port) !== scheme) { scheme = schemeFor(u.hostname, port); u = parse(scheme + bare); }
+    }
+    if (!u) return { error: 'invalid' };
     if (!ALLOWED.includes(u.protocol)) return { error: 'scheme' }; // the parser may have read another scheme out of it
     if (!u.hostname) return { error: 'invalid' };
+    if (u.password) return { error: 'credentials' };
+    if (u.username) u.username = '';
     return { url: u.href };
+  }
+
+  /** The scheme a scheme-less address gets: the typed port decides when it is one of the web's own, else the host. */
+  function schemeFor(host, port) {
+    if (port === '80') return 'http://';
+    if (port === '443' || port === '8443') return 'https://';
+    return isLocalHost(host) ? 'http://' : 'https://';
+  }
+
+  /** The authority of a scheme-less address without its user part: "nas:8080/x" → "nas:8080", "user@[::1]:9/x" → "[::1]:9". */
+  function authorityOf(s) {
+    const noPath = String(s).replace(/^\/+/, '').split(/[/?#]/)[0];
+    return noPath.includes('@') ? noPath.slice(noPath.lastIndexOf('@') + 1) : noPath;
   }
 
   /** The host part of a scheme-less address ("nas:8080/x" → "nas", "user@[::1]:9/x" → "[::1]"), for the scheme choice. */
   function hostOf(s) {
-    const noPath = String(s).replace(/^\/+/, '').split(/[/?#]/)[0];
-    const noUser = noPath.includes('@') ? noPath.slice(noPath.lastIndexOf('@') + 1) : noPath;
-    const bracket = /^(\[[^\]]*\])/.exec(noUser);
+    const a = authorityOf(s);
+    const bracket = /^(\[[^\]]*\])/.exec(a);
     if (bracket) return bracket[1];
-    return noUser.split(':')[0];
+    return a.split(':')[0];
+  }
+
+  /** The port typed after the host ("nas:8080/x" → "8080", "[::1]:9" → "9"), '' when none. */
+  function portOf(s) {
+    const a = authorityOf(s);
+    const m = /^(\[[^\]]*\]|[^:]*):(\d+)$/.exec(a);
+    return m ? m[2] : '';
   }
 
   /**
@@ -88,7 +132,7 @@
     if (!/^https?:\/\//i.test(s)) return false;
     try {
       const u = new URL(s);
-      return ALLOWED.includes(u.protocol) && !!u.hostname;
+      return ALLOWED.includes(u.protocol) && !!u.hostname && !u.username && !u.password; // credentials never travel in an address
     } catch {
       return false;
     }

@@ -25,10 +25,18 @@ test('normalizeBrowserUrl: a typed address becomes an http(s) URL, or is refused
     ['10.0.0.5:9090', 'http://10.0.0.5:9090/'],
     ['172.20.0.1', 'http://172.20.0.1/'],
     ['[::1]:8080', 'http://[::1]:8080/'],
+    ['::1', 'http://[::1]/'], // a bare IPv6 address is bracketed, never read as a scheme or a port
+    ['fe80::1', 'http://[fe80::1]/'],
+    ['2001:db8::1', 'https://[2001:db8::1]/'],
+    ['example.com:80', 'http://example.com/'], // the web's own ports decide the scheme
+    ['example.com:8080', 'https://example.com:8080/'],
+    ['192.168.1.1:443', 'https://192.168.1.1/'],
+    ['nas.local:8443', 'https://nas.local:8443/'],
+    ['010.0.0.1', 'https://8.0.0.1/'], // an octal octet: the parser's reading of the address decides (8.0.0.1 is not local)
     ['router', 'http://router/'], // a single label: a name on the local network
     ['nas.local', 'http://nas.local/'],
     ['printer.lan:631', 'http://printer.lan:631/'],
-    ['user@example.com', 'https://user@example.com/'],
+    ['user@example.com', 'https://example.com/'], // a user name alone is dropped: the page asks for it
     ['http:example.com', 'http://example.com/'], // the slashes the user left out
     ['https:/example.com/x', 'https://example.com/x'],
     ['https:///example.com/x', 'https://example.com/x'], // extra slashes are the parser's business
@@ -49,14 +57,19 @@ test('normalizeBrowserUrl: a typed address becomes an http(s) URL, or is refused
     ['chrome://settings', 'scheme'],
     ['x-custom://thing', 'scheme'],
     ['http://', 'invalid'],
+    ['http:8080', 'invalid'], // a port with no host
+    ['https://8080/', 'invalid'],
     ['http://exa mple.com', 'invalid'],
     ['http://example.com:99999', 'invalid'],
     ['not a url', 'invalid'],
     ['http://example.com/\u0001', 'invalid'],
+    ['https://user:pw@example.com/x', 'credentials'], // a password never goes into a session, a file or the address field
+    ['user:pw@example.com', 'credentials'],
+    ['http://admin:admin@192.168.1.1/', 'credentials'],
   ];
   for (const [typed, want] of table) {
     const r = normalizeBrowserUrl(typed);
-    if (want === 'empty' || want === 'scheme' || want === 'invalid') assert.deepEqual(r, { error: want }, JSON.stringify(typed));
+    if (want === 'empty' || want === 'scheme' || want === 'invalid' || want === 'credentials') assert.deepEqual(r, { error: want }, JSON.stringify(typed));
     else assert.deepEqual(r, { url: want }, JSON.stringify(typed));
   }
   assert.deepEqual(normalizeBrowserUrl(null), { error: 'empty' });
@@ -65,7 +78,7 @@ test('normalizeBrowserUrl: a typed address becomes an http(s) URL, or is refused
 
 test('isBrowserUrl: only an http(s) URL with a host, or about:blank — what the webview guard lets through', () => {
   for (const ok of ['http://example.com/', 'https://example.com', 'HTTPS://example.com/x', 'http://127.0.0.1:8080/', 'http://[::1]:3000/', 'about:blank', ' about:blank ']) assert.equal(isBrowserUrl(ok), true, ok);
-  for (const bad of ['', null, undefined, 42, 'example.com', 'file:///etc/hosts', 'javascript:alert(1)', 'data:text/html,x', 'ftp://example.com', 'http://', 'about:config', 'blob:http://example.com/x', 'http:example.com']) assert.equal(isBrowserUrl(bad), false, String(bad));
+  for (const bad of ['', null, undefined, 42, 'example.com', 'file:///etc/hosts', 'javascript:alert(1)', 'data:text/html,x', 'ftp://example.com', 'http://', 'about:config', 'blob:http://example.com/x', 'http:example.com', 'http://u:p@example.com/', 'http://u@example.com/']) assert.equal(isBrowserUrl(bad), false, String(bad));
 });
 
 test('browserHost: the default session name is the host, with a non-default port', () => {
