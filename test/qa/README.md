@@ -97,7 +97,7 @@ app.action('new-session' | 'new-local' | 'quick-connect' | 'duplicate' | 'reconn
            'toggle-sidebar' | 'sidebar' | 'multiexec' | 'tunnels' | 'toggle-log' | 'settings' |
            'new-folder' | 'import-sshconfig' | 'import-moba' | 'import-json' | 'export-json' | 'shortcuts', arg?)
 app.showPanel('sessions' | 'sftp' | 'tools' | 'macros');
-const s = await app.saveSession({ name, type: 'ssh'|'local'|'telnet'|'serial'|'rdp'|'vnc', folder, host, port, username, ... });
+const s = await app.saveSession({ name, type: 'ssh'|'mosh'|'local'|'telnet'|'serial'|'ftp'|'rdp'|'vnc'|'browser', folder, host, port, username, url, ... });
 const pane = await app.openSession(s, { split: 'right'|'down', target: pane });
 app.editSession(s);                         // opens the session editor on s
 app.activePane(); pane.term (xterm.js); pane.status; pane.cwd; pane.disconnect(); pane.term.input('ls\r');

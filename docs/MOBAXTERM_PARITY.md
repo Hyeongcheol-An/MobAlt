@@ -28,22 +28,22 @@ last column says which parts are missing.
 
 | Category | ✅ | 🟡 | ❌ | ➖ | Rows |
 |---|---|---|---|---|---|
-| 1. Session types | 7 | 6 | 4 | 4 | 21 |
+| 1. Session types | 8 | 6 | 3 | 4 | 21 |
 | 2. SSH specifics | 19 | 9 | 7 | 2 | 37 |
 | 3. Terminal | 12 | 12 | 7 | 1 | 32 |
 | 4. X server and embedded Unix tools | 2 | 1 | 1 | 17 | 21 |
 | 5. Network and admin tools, embedded servers, Moba* utilities | 7 | 2 | 7 | 19 | 35 |
 | 6. Workspace features | 7 | 9 | 6 | 3 | 25 |
 | 7. Professional-only items and Home Edition limits | 0 | 0 | 0 | 13 | 13 |
-| **Sections 1–7 (each feature once)** | **54** | **39** | **32** | **59** | **184** |
+| **Sections 1–7 (each feature once)** | **55** | **39** | **31** | **59** | **184** |
 | 8. Recent additions (24.3 → 26.6) | 4 | 17 | 6 | 3 | 30 |
 | 9. UX details power users rely on | 9 | 9 | 1 | 1 | 20 |
-| **All tables** | **67** | **65** | **39** | **63** | **234** |
+| **All tables** | **68** | **65** | **38** | **63** | **234** |
 
 Sections 8 and 9 follow the inventory's own structure and restate features that sections 1–7
 already cover, so the "all tables" line counts some features twice; the 1–7 line is the one to
 quote. Read another way: of the 125 features that apply on macOS at all (sections 1–7 minus ➖),
-MobAlt has 54 in full, 39 in a narrower or different form and lacks 32.
+MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 
 ## 1. Session types
 
@@ -62,7 +62,7 @@ MobAlt has 54 in full, 39 in a narrower or different form and lacks 32.
 | Serial (COM) session | ✅ | Serial type: USB-serial discovery, baud, data/stop bits, parity, flow control, local echo, Enter sends CR/LF/CRLF; no named pipes |
 | File session (local folder tab) | ❌ | no local file-browser tab; Finder or `open .` from a Local terminal |
 | Shell session (local terminal) | ✅ | Local type: your login shell (or any path, Settings → General → Local shell), Start folder, startup commands; ⌘T for a quick one |
-| Browser session | ❌ | no embedded browser tab |
+| Browser session | ✅ | Browser type: a web page (Chromium webview, http/https only, sandboxed, no popups or permissions) in a pane next to the terminals — Back / Forward / Reload, address field (⌘L), page title on the tab, error view with Retry, a cookie jar per session on request; splits, zooms, detaches and is restored with the workspace like any pane |
 | Mosh session | ✅ | Mosh type: key/agent/prompt bootstrap over SSH, `mosh-server` path, prediction mode; needs `brew install mosh` |
 | Aws S3 session | ❌ | no S3 browser |
 | WSL session | ➖ | Windows-only; a Local session already is a Unix shell |
@@ -297,7 +297,7 @@ MobAlt has 54 in full, 39 in a narrower or different form and lacks 32.
 | 24.3 — graphical macros, macro folders, encrypted macros, VNC IPv6, 64-bit default, close inactive tabs | ❌ | none (macros are stored in `settings.json`) |
 | 24.2 — Expert RDP settings, fullscreen across monitors, MultiExec sync-scroll, `X11MCAuth` | 🟡 | MultiExec's Synchronize mouse wheel scrolling (right-click menu); RDP is Windows App's; no `X11MCAuth` |
 | 24.0 — Expert terminal settings, host-key prompt in the SFTP browser | 🟡 | a subset of terminal settings; the host key is checked for every connection |
-| 23.x — Edge browser engine, editable shared sessions, NTRU Prime + AES-GCM, Telnet keepalive, tab pinning, Terrapin fixes | 🟡 | strict KEX (Terrapin) through ssh2; AES-GCM in ssh2's defaults; tab pinning (⇧⌘P); no browser, shared sessions or telnet keepalive |
+| 23.x — Edge browser engine, editable shared sessions, NTRU Prime + AES-GCM, Telnet keepalive, tab pinning, Terrapin fixes | 🟡 | strict KEX (Terrapin) through ssh2; AES-GCM in ssh2's defaults; tab pinning (⇧⌘P); browser sessions (Chromium webview); no shared sessions or telnet keepalive |
 
 ## 9. UX details power users rely on
 
@@ -362,7 +362,6 @@ expert SSH algorithm settings (all ✅ rows above). P2 is the next priority.
 
 | Item | Why | Size |
 |---|---|---|
-| Embedded browser session (Electron webview) | web consoles next to the shell that manages them | M |
 | Shared credentials manager (one credential used by many sessions, incl. jump hosts) | password rotation across fleets | M |
 | PuTTY / SecureCRT / mRemoteNG / Remote Desktop Manager / CSV session import | migration from other Windows tools, not only MobaXterm | M |
 | Font ligatures (`@xterm/addon-ligatures`) | Fira Code and friends | S |
