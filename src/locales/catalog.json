@@ -2667,6 +2667,11 @@
         "src/renderer/highlight.js"
       ]
     },
+    "Grey": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Grid 2 / 4 / 6 / 8 panes": {
       "refs": [
         "src/renderer/dialogs.js"
@@ -2938,6 +2943,11 @@
       "refs": [
         "src/renderer/browser.js",
         "src/renderer/terminal.js"
+      ]
+    },
+    "Indigo": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "Input": {
@@ -4497,6 +4507,11 @@
         "src/renderer/dialogs.js"
       ]
     },
+    "Orange": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Overwrite": {
       "refs": [
         "src/renderer/sftp.js"
@@ -4724,6 +4739,11 @@
         "src/renderer/index.html"
       ]
     },
+    "Pink": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "Pinned": {
       "refs": [
         "src/renderer/layout.js"
@@ -4870,6 +4890,11 @@
       ]
     },
     "Public key copied": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
+    "Purple": {
       "refs": [
         "src/renderer/dialogs.js"
       ]
@@ -6153,6 +6178,11 @@
     "TCP ports to try (comma-separated, ranges allowed)": {
       "refs": [
         "src/renderer/index.html"
+      ]
+    },
+    "Teal": {
+      "refs": [
+        "src/renderer/dialogs.js"
       ]
     },
     "Telnet error: {error}": {
