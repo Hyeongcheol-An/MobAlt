@@ -59,3 +59,11 @@ test('rdpFile: an imported host or user name cannot add lines to the .rdp file',
   assert.match(r.name, /^[\w.-]+\.rdp$/);
   assert.equal(P.rdpFile({ host: 'h.example.com' }).text.split('\r\n')[0], 'full address:s:h.example.com');
 });
+
+test('openPathAllowed: the app\'s own folders count wherever they are, still folders only', () => {
+  const appDir = '/Applications'; // stands for a userData moved outside home and tmp
+  assert.equal(P.openPathAllowed(appDir), false);
+  assert.equal(P.openPathAllowed(appDir, { appDirs: [appDir] }), true);
+  assert.equal(P.openPathAllowed('/System', { appDirs: [appDir] }), false);
+  assert.equal(P.openPathAllowed('/bin/ls', { appDirs: ['/bin'] }), false, 'a file in an app folder is still refused');
+});

@@ -1394,7 +1394,12 @@ function registerIpc() {
   ipcMain.handle('shell:show-item', (_e, p) => shell.showItemInFolder(p));
   // folders under home / the temporary folder / the download folder only: opening a file could start an app or run a
   // .command script that came from a server
-  ipcMain.handle('shell:open-path', (_e, p) => (urlpolicy.openPathAllowed(p, { downloadDir: store.getSettings().downloadDir }) ? shell.openPath(p) : 'refused'));
+  const appDirs = () => ['userData', 'logs'].map((k) => { try { return app.getPath(k); } catch { return null; } }).filter(Boolean);
+  ipcMain.handle('shell:open-path', (_e, p) => {
+    if (!urlpolicy.openPathAllowed(p, { downloadDir: store.getSettings().downloadDir, appDirs: appDirs() })) return 'refused';
+    if (process.env.MOBALT_TEST_SCRIPT) return ''; // test mode: allowed, but no Finder window on the Mac running the tests
+    return shell.openPath(p);
+  });
 
   ipcMain.handle('launch:rdp', (_e, cfg) => {
     const dir = path.join(os.tmpdir(), 'mobalt-rdp');

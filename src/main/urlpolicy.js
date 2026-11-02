@@ -31,17 +31,18 @@ const real = (p) => { try { return fs.realpathSync(p); } catch { return null; } 
 
 /**
  * May shell:open-path open this? Only an existing folder (Finder shows it; a file could be an app or a .command
- * script that macOS would run) inside the home folder, the temporary folder or the download folder of the settings.
- * Symbolic links are resolved first, so a link inside home that points elsewhere does not count.
+ * script that macOS would run) inside the home folder, the temporary folder, the download folder of the settings or
+ * one of `appDirs` — the app's own folders (main passes userData and logs: a QA run puts userData under /private/tmp,
+ * a user may have moved it). Symbolic links are resolved first, so a link that points elsewhere does not count.
  */
-function openPathAllowed(p, { downloadDir } = {}) {
+function openPathAllowed(p, { downloadDir, appDirs = [] } = {}) {
   if (typeof p !== 'string' || !path.isAbsolute(p)) return false;
   const target = real(p);
   if (!target) return false;
   let st;
   try { st = fs.statSync(target); } catch { return false; }
   if (!st.isDirectory()) return false;
-  const roots = [os.homedir(), os.tmpdir(), downloadDir].filter((r) => typeof r === 'string' && path.isAbsolute(r)).map(real).filter(Boolean);
+  const roots = [os.homedir(), os.tmpdir(), downloadDir, ...appDirs].filter((r) => typeof r === 'string' && path.isAbsolute(r)).map(real).filter(Boolean);
   return roots.some((r) => isUnder(target, r));
 }
 

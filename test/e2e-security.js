@@ -25,6 +25,11 @@
     R.openPathSystemRefused = (await window.api.shell.openPath('/System/Applications')) === 'refused';
     R.openPathDotDotRefused = (await window.api.shell.openPath(info.userData + '/..'.repeat(20) + '/Applications')) === 'refused';
     await window.api.app.testFs('rm', tmp);
+    // the app's own folders are allowed wherever they are (a QA run's userData is under /private/tmp, outside home
+    // and $TMPDIR): '' is success (test mode answers without opening Finder); a file in them still is not
+    R.openPathUserDataAllowed = (await window.api.shell.openPath(info.userData)) === '';
+    await window.api.app.testFs('writeText', info.userData + '/x.command', '#!/bin/sh\n');
+    R.openPathUserDataFileRefused = (await window.api.shell.openPath(info.userData + '/x.command')) === 'refused';
     // vnc: a host that would change the URL is refused
     R.vncBadHostRefused = (await window.api.launch.vnc({ host: 'x@example.com/a', port: 5900 })) === false;
     // the window stays on index.html: a navigation is cancelled, window.open opens nothing
