@@ -30,3 +30,8 @@ start_site "$OUT/security/httpsrv.log"
 bash "$ROOT/test/qa/run.sh" "$ROOT/test/e2e-browser-security.js" "$OUT/security" 180000 | tee "$OUT/phase3.log"
 echo "---- results"
 grep -h "RESULTS\|ALL OK\|FAILED" "$OUT/phase1.log" "$OUT/phase2.log" "$OUT/phase3.log" || true
+# run.sh exits 0 whenever the app quit, so a script that never ran its checks (a syntax error, a crash) would pass
+# unnoticed: every phase has to say ALL OK for this driver to.
+status=0
+for n in 1 2 3; do grep -q "ALL OK" "$OUT/phase$n.log" || { echo "phase $n: no ALL OK"; status=1; }; done
+exit $status
