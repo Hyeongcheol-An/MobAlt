@@ -1,3 +1,48 @@
+## [1.0.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.18.0...v1.0.0) (2026-11-02)
+
+### Features
+
+* **i18n:** translate the 1.0 polish strings ([50b559f](https://github.com/Hyeongcheol-An/MobAlt/commit/50b559fb127f7d85e440fc925ec3e249a8862a92))
+* **i18n:** translate the other-window install sheet ([8a7fdd5](https://github.com/Hyeongcheol-An/MobAlt/commit/8a7fdd5fb54b8b581cd0519738dc312d83dac97a))
+* **i18n:** translate the security-review strings ([2bb0eee](https://github.com/Hyeongcheol-An/MobAlt/commit/2bb0eee976b1d3864e426ebbd0592bf39cb5d202))
+
+### Bug Fixes
+
+* **a11y:** close the find bar with Esc from any of its controls ([171cf5c](https://github.com/Hyeongcheol-An/MobAlt/commit/171cf5c56bc2ac18fd3d6ecfc4de38c103ab41e2))
+* **a11y:** make a disabled primary button readable in every theme ([b3a4ee2](https://github.com/Hyeongcheol-An/MobAlt/commit/b3a4ee2cea68d76c5ac2dc6408da041d23ca5580))
+* **a11y:** name the session editor's colour swatches ([8b886e0](https://github.com/Hyeongcheol-An/MobAlt/commit/8b886e02d47ffafe8f3cfc0b283966536ab80a8c))
+* **a11y:** stop the endless animations under Reduce motion ([4b7addb](https://github.com/Hyeongcheol-An/MobAlt/commit/4b7addb6783440c1e3308ff07aa1d2580c8742df))
+* **editor:** find the external editor on the login shell's PATH and report a failed start ([c78c228](https://github.com/Hyeongcheol-An/MobAlt/commit/c78c228ea93c8f3cc2747cc9d26d6b7c706c020b))
+* **editor:** sweep edit folders a killed run left behind ([c8c54ff](https://github.com/Hyeongcheol-An/MobAlt/commit/c8c54ff61c1d3582e75b4939532507acde6026c7))
+* **find:** close the find bar when the last tab closes ([b1e2ae1](https://github.com/Hyeongcheol-An/MobAlt/commit/b1e2ae1c3b9a5a3a7302bf4ba3569c9716fec1dd))
+* **i18n:** accept a tn() pair kept in English in the [@keep](https://github.com/keep) check ([f7a1380](https://github.com/Hyeongcheol-An/MobAlt/commit/f7a13801d55396a18e05fab59bdd7bd40a226f61))
+* **i18n:** keep terminal status lines in English for Arabic and Hindi ([635628e](https://github.com/Hyeongcheol-An/MobAlt/commit/635628ea33266d39a456f1f9937a0e51eea61173))
+* **i18n:** print a failed start in the terminal language too ([0fe54a9](https://github.com/Hyeongcheol-An/MobAlt/commit/0fe54a981ce5e317d8197e3ff1951e1fe2b61c73))
+* **import:** RDP files take one line per setting; JSON import counts commands ([e8f8b0d](https://github.com/Hyeongcheol-An/MobAlt/commit/e8f8b0d3b4712ec7ebed9f2287bca3566118b14b))
+* **main:** keep the test hooks out of release builds ([88e22e8](https://github.com/Hyeongcheol-An/MobAlt/commit/88e22e8b690b230eda3d2bf88c8c58c68070f3fc))
+* **main:** keep the window on its page and allowlist what it may open ([3ea1bec](https://github.com/Hyeongcheol-An/MobAlt/commit/3ea1becb5225ea09004941b156e729339c38b499))
+* **main:** open-path also allows the app's own userData and logs folders ([a857574](https://github.com/Hyeongcheol-An/MobAlt/commit/a8575743a79f0a2d03c598eca8790e7761b1cce2))
+* **multiexec:** plural forms for the banner's visible-terminal count ([bfd678f](https://github.com/Hyeongcheol-An/MobAlt/commit/bfd678fa74ecea27dff3463da8ea3e6065e86e4f))
+* **rtl:** read the find counter left to right in Arabic ([dc2d63a](https://github.com/Hyeongcheol-An/MobAlt/commit/dc2d63a6b098d947a198ee17421d5e8fdeb4d837))
+* **sftp:** start the external editor without a shell ([d943994](https://github.com/Hyeongcheol-An/MobAlt/commit/d94399495efa5a84ba0a5ff8bf41c98cf17e804b))
+* **ssh:** a refused connection drops a pending Cancel ([bf48632](https://github.com/Hyeongcheol-An/MobAlt/commit/bf4863255f000c2c5adfc73ec91c815c8558d989))
+* **ssh:** close known_hosts gaps (revoked keys, other key types, case, patterns) ([46801ee](https://github.com/Hyeongcheol-An/MobAlt/commit/46801ee0945dff369dca1afcee25b55ccf5ff1da))
+* **ssh:** honour Cancel in the first milliseconds of "Connecting…" ([ae8add3](https://github.com/Hyeongcheol-An/MobAlt/commit/ae8add3110acdf52dfcace9041e393ee37642b66))
+* **ssh:** one connection attempt per pane when Reconnect races Cancel ([23e8167](https://github.com/Hyeongcheol-An/MobAlt/commit/23e81672b3665851b728fb22f29b380db6308d8a))
+* **ssh:** say "Connection attempt cancelled." when cancelled before the shell opened ([9a4b720](https://github.com/Hyeongcheol-An/MobAlt/commit/9a4b7202fa7c43898f437cf84def7c3ab66531e3))
+* **store:** 0600 user files and a warning when secrets cannot be encrypted ([dbc6d3d](https://github.com/Hyeongcheol-An/MobAlt/commit/dbc6d3dc557f3c9d1a818547f03e8760f1baa0a2))
+* **terminal:** keep the dead line above the Reconnect / Close strip ([3e4dae3](https://github.com/Hyeongcheol-An/MobAlt/commit/3e4dae3c202e4db8c793b592239a36d86c79fde0))
+* **terminal:** open OSC 8 links through the allowlisted external-open IPC ([363ada6](https://github.com/Hyeongcheol-An/MobAlt/commit/363ada6c679f6f3eedfb2a1a747ce49adf00a94f))
+* **terminal:** pad under the dead line only as far as the strip needs ([1fbdd75](https://github.com/Hyeongcheol-An/MobAlt/commit/1fbdd752fa5cc9f643a0943c8b989cab055833a4))
+* **tools:** a host is never read as an option of ping, traceroute or mosh ([308c992](https://github.com/Hyeongcheol-An/MobAlt/commit/308c9920f25ed354139d57748ad27e7877123491))
+* **ui:** a changed host key is not accepted by pressing Enter ([58bcb2c](https://github.com/Hyeongcheol-An/MobAlt/commit/58bcb2c94259b357b8b30203e27074dcfc39b7ad))
+* **ui:** label the side strip's file browser "SFTP" ([8abb47c](https://github.com/Hyeongcheol-An/MobAlt/commit/8abb47c1532b643386c9608efae8b234bed8eebf))
+* **updater:** count this user's instances only; hold the latch while the sheet is open ([69422e0](https://github.com/Hyeongcheol-An/MobAlt/commit/69422e0a5db226f14aac1b2cbf09de75a4e712d1))
+* **updater:** say when another MobAlt window blocks the install ([1aed61e](https://github.com/Hyeongcheol-An/MobAlt/commit/1aed61eeb7916b64bc46c25d205012bd75ca148c))
+* **x11:** never block main on xauth; time out a shell that does not open ([098a3df](https://github.com/Hyeongcheol-An/MobAlt/commit/098a3dfcc7f01768f272f9991979f6eecd4e84a3))
+* **x11:** refuse forwarded X clients that lack the session's fake cookie ([fc4bc6d](https://github.com/Hyeongcheol-An/MobAlt/commit/fc4bc6da0cfbe84ca29f5e2ade7b894b1b8f5904))
+* **zmodem:** keep the failure reason English in the terminal line too ([f2ee096](https://github.com/Hyeongcheol-An/MobAlt/commit/f2ee09697cfd5acdcc1f6248f84c1182841c211e))
+
 ## [0.18.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.17.0...v0.18.0) (2026-11-02)
 
 ### Features

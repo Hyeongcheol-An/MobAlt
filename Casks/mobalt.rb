@@ -1,9 +1,9 @@
 cask "mobalt" do
   arch arm: "arm64", intel: "x64"
 
-  version "0.18.0"
-  sha256 arm:   "816c9519b1426d00850019ea02da3929f13d4ba6349a441b48e9e7583b86a2d1",
-         intel: "d3b9fceceace61264fb2fb2bcea93a97c66ac23cb5d8d4407b18e10fdd43aed6"
+  version "1.0.0"
+  sha256 arm:   "8c6d8889624ab7485210e1d1eb150675d1af91be305ad68f4df0079117b3c0a5",
+         intel: "8c921615885e83958fd97010dc7405276b173948035cb07f99ceb0f192114b0d"
 
   url "https://github.com/Hyeongcheol-An/MobAlt/releases/download/v#{version}/MobAlt-#{version}-#{arch}.dmg"
   name "MobAlt"
