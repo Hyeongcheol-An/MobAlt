@@ -4,6 +4,7 @@
 //
 //   import { t, tn } from './i18n.js';
 //   h('button', {}, t('Connect'))                    t('Connected to {host}', { host })     tn('{n} tab', '{n} tabs', n)
+//   this.term.write(tt('Session ended.'))           a line written into a terminal: tt() (English in Arabic and Hindi)
 //
 // Static text in index.html carries data-i18n hooks instead: data-i18n (the element's own text nodes),
 // data-i18n-title, data-i18n-placeholder, data-i18n-aria-label (that attribute). translateDom() applies them; the
@@ -60,6 +61,20 @@ export function t(source, params) {
   const entry = dict[source];
   const str = typeof entry === 'string' && entry ? entry : Array.isArray(entry) && entry.length ? entry[entry.length - 1] : source;
   return format(str, params);
+}
+
+/**
+ * tt('Source text', { placeholders }): t() for a line written into a terminal buffer — English for a language whose
+ * script xterm.js cannot draw (LANGUAGES `terminal`: Arabic and Hindi, see src/main/i18n.js), the translation
+ * otherwise. Values are never wrapped in bidi isolates there: xterm would draw the control characters as cells.
+ * Toasts, dialogs and the status bar keep t().
+ */
+export function tt(source, params) {
+  const lang = languageOf(current);
+  if (!lang || !lang.terminal || lang.terminal === current) return t(source, params);
+  // only English is at hand in a window (the dictionary of another language is not loaded): the source itself
+  if (!params) return source;
+  return String(source).replace(/\{(\w+)\}/g, (m, k) => (k in params ? String(params[k]) : m));
 }
 
 /** tn('{n} item', '{n} items', n, params) → the plural form for n ({n} is filled in). */

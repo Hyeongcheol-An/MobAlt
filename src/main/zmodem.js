@@ -485,10 +485,10 @@ class ZmodemManager extends EventEmitter {
     g.held = null;
     const lead = leadingText(held);
     if (lead.length) this._out(g, lead);
-    const kind = g.role === 'receive' ? i18n.t('download') : i18n.t('upload');
+    const kind = g.role === 'receive' ? i18n.tt('download') : i18n.tt('upload'); // in the terminal line only
     if (!answer || !det.is_valid()) {
       try { det.deny(); } catch {}
-      this._line(g, GREY, g.lastError ? i18n.t('Zmodem {kind} declined: {reason}', { kind, reason: g.lastError }) : i18n.t('Zmodem {kind} declined', { kind }));
+      this._line(g, GREY, g.lastError ? i18n.tt('Zmodem {kind} declined: {reason}', { kind, reason: g.lastError }) : i18n.tt('Zmodem {kind} declined', { kind }));
       g.lastError = null;
       return;
     }
@@ -496,7 +496,7 @@ class ZmodemManager extends EventEmitter {
     try {
       session = det.confirm();
     } catch (e) {
-      this._line(g, RED, i18n.t('Zmodem: {error}', { error: explainError(e) }));
+      this._line(g, RED, i18n.tt('Zmodem: {error}', { error: i18n.inTerminal(() => explainError(e)) }));
       return;
     }
     g.session = session;
@@ -559,7 +559,7 @@ class ZmodemManager extends EventEmitter {
       ws = fs.createWriteStream(local);
     } catch (e) {
       g.lastError = i18n.t('cannot write to {dir}: {error}', { dir, error: e.message });
-      this._line(g, RED, i18n.t('Zmodem: {error}', { error: g.lastError }));
+      this._line(g, RED, i18n.tt('Zmodem: {error}', { error: g.lastError }));
       try { offer.skip(); } catch {}
       return;
     }
@@ -570,7 +570,7 @@ class ZmodemManager extends EventEmitter {
       g.lastError = i18n.t('cannot write {file}: {error}', { file: local, error: e.message });
       this._abort(g);
     });
-    this._line(g, GREY, d.size ? i18n.t('Zmodem: receiving {name} ({size}) → {path}', { name, size: fmtBytes(d.size), path: local }) : i18n.t('Zmodem: receiving {name} → {path}', { name, path: local }));
+    this._line(g, GREY, d.size ? i18n.tt('Zmodem: receiving {name} ({size}) → {path}', { name, size: fmtBytes(d.size), path: local }) : i18n.tt('Zmodem: receiving {name} → {path}', { name, path: local }));
     offer
       .accept({
         on_input: (payload) => {
@@ -588,7 +588,7 @@ class ZmodemManager extends EventEmitter {
           }
           t._partial = null;
           this._finish(t, 'done');
-          this._line(g, GREY, i18n.t('Zmodem: received {name} ({size}) → {path}', { name, size: fmtBytes(t.transferred), path: local }));
+          this._line(g, GREY, i18n.tt('Zmodem: received {name} ({size}) → {path}', { name, size: fmtBytes(t.transferred), path: local }));
         });
       })
       .catch((e) => this._fail(g, e));
@@ -610,13 +610,13 @@ class ZmodemManager extends EventEmitter {
     for (const f of batch) {
       const xfer = await this._race(g, session.send_offer({ name: f.name, size: f.size, mtime: f.mtime, mode: f.mode, files_remaining: f.files_remaining, bytes_remaining: f.bytes_remaining }));
       if (!xfer) { // ZSKIP: the receiver has it already (rz without -y) or does not want it
-        this._line(g, GREY, i18n.t('Zmodem: {name} skipped by the remote side', { name: f.name }));
+        this._line(g, GREY, i18n.tt('Zmodem: {name} skipped by the remote side', { name: f.name }));
         t.filesDone++;
         t.transferred += f.size;
         this._emit(t);
         continue;
       }
-      this._line(g, GREY, i18n.t('Zmodem: sending {name} ({size})', { name: f.name, size: fmtBytes(f.size) }));
+      this._line(g, GREY, i18n.tt('Zmodem: sending {name} ({size})', { name: f.name, size: fmtBytes(f.size) }));
       dbg('send start', f.name, 'offerOffset', xfer.get_offset());
       const fd = fs.openSync(f.path, 'r');
       try {
@@ -648,7 +648,7 @@ class ZmodemManager extends EventEmitter {
     await this._race(g, session.close());
     dbg('closed');
     this._finish(t, 'done');
-    this._line(g, GREY, i18n.t('Zmodem: sent {name} ({size})', { name: t.name, size: fmtBytes(t.transferred) }));
+    this._line(g, GREY, i18n.tt('Zmodem: sent {name} ({size})', { name: t.name, size: fmtBytes(t.transferred) }));
   }
 
   /** Wait for a protocol promise, or for the session's abort (cancel, stall, dropped connection) — whichever comes first. */
@@ -691,8 +691,8 @@ class ZmodemManager extends EventEmitter {
       const why = t.cancelled ? null : g.lastError || (aborted && !g.aborting ? i18n.t('cancelled by the remote side') : i18n.t('the remote side ended the session'));
       this._finish(t, t.cancelled ? 'cancelled' : 'error', why);
       if (this.guards.has(g.id)) this.registry.data(g.id, ST); // whatever a stray byte opened is closed before the status line
-      const kind = t.kind === 'upload' ? i18n.t('upload') : i18n.t('download');
-      this._line(g, t.cancelled ? GREY : RED, t.cancelled ? i18n.t('Zmodem {kind} of {name} cancelled', { kind, name: t.name }) : i18n.t('Zmodem {kind} of {name} failed: {reason}', { kind, name: t.name, reason: why }));
+      const kind = t.kind === 'upload' ? i18n.tt('upload') : i18n.tt('download'); // in the terminal line only
+      this._line(g, t.cancelled ? GREY : RED, t.cancelled ? i18n.tt('Zmodem {kind} of {name} cancelled', { kind, name: t.name }) : i18n.tt('Zmodem {kind} of {name} failed: {reason}', { kind, name: t.name, reason: why }));
     }
     g.lastError = null;
     if (aborted) this._startDrain(g, session && Array.isArray(session._input_buffer) ? session._input_buffer : []);

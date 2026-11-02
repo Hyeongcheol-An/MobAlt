@@ -2,7 +2,9 @@
 // edge, the terminals on the left, toasts bottom-left, menus opening towards the left of the pointer and staying in the
 // window, the dialog's ✕ on the left of its title — while the terminal, the technical fields (quick connect, paths)
 // and the split directions keep their left-to-right / physical meaning. Switching back to English restores it all.
-//   env -u ELECTRON_RUN_AS_NODE MOBALT_LANG=ar test/qa/run.sh test/e2e-rtl.js <out-dir> 180000
+//   env -u ELECTRON_RUN_AS_NODE MOBALT_LANG=ar test/qa/run.sh test/e2e-rtl.js <out-dir> 180000   (test/start-sshd.sh start first)
+// The lines MobAlt itself writes into a terminal ("Connecting to …", "── Session ended. … ──") stay in English: xterm.js
+// draws Arabic reversed and unjoined (src/main/i18n.js LANGUAGES `terminal`).
 // (without an Arabic dictionary the labels stay English: the direction follows the language code, not the strings)
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -57,6 +59,31 @@
     const i18n = await import('./i18n.js');
     const iso = i18n.format('{path} / {n}', { path: '~/Downloads', n: 3 });
     check('valuesIsolated', iso === '\u2068~/Downloads\u2069 / 3', JSON.stringify(iso));
+
+    // ---- the lines MobAlt writes into a terminal stay in English (xterm.js has no bidi and no shaping) ----
+    // needs the test sshd (test/start-sshd.sh start); the host-key dialog of this fresh run is accepted on sight
+    {
+      const user = app.info.home.split('/').pop(), keyDir = app.info.appPath + '/test/sshd-runtime';
+      const hk = new MutationObserver(() => { const b = document.querySelector('#modal-root .modal .btn.primary'); if (b) b.click(); });
+      hk.observe(document.getElementById('modal-root'), { childList: true, subtree: true });
+      const ss = await app.saveSession({ name: 'rtl-sshd', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'key', privateKeyPath: keyDir + '/client_ed25519', sftpAuto: false, monitor: false });
+      const sp = await app.openSession(ss);
+      for (let i = 0; i < 150 && sp.status !== 'connected' && !sp.dead; i++) await sleep(100);
+      await sleep(600);
+      const lines = () => [...Array(sp.term.buffer.active.length)].map((_, i) => sp.term.buffer.active.getLine(i)?.translateToString(true) || '');
+      const first = lines().filter((l) => l.trim()).slice(0, 3); // "Connecting to …", "Server accepts: …", "Key exchange …"
+      check('sshConnected', sp.status === 'connected', sp.status);
+      check('terminalLinesEnglish', first.length === 3 && /^Connecting to /.test(first[0]) && first.some((l) => /^Server accepts: /.test(l)) && first.some((l) => /^Key exchange /.test(l)) && first.every((l) => /^[\x20-\x7e]+$/.test(l)), first);
+      sp.term.input('exit\r');
+      for (let i = 0; i < 80 && !sp.dead; i++) await sleep(100);
+      await sleep(300);
+      const dead = lines().find((l) => /──/.test(l)) || '';
+      check('deadLineEnglish', /── Session ended\. Press Enter to reconnect, ⌘W to close\. ──/.test(dead), dead);
+      check('overlayTranslated', !!sp.overlay && sp.overlay.querySelector('span').textContent === i18n.t('Session ended.'), sp.overlay && sp.overlay.textContent);
+      await shot('rtl-terminal-lines');
+      hk.disconnect();
+      await app.closePane(sp, true); await sleep(300);
+    }
 
     // ---- toasts: bottom-left quadrant ----
     ui.toast('RTL toast sample', 'info'); await sleep(250);

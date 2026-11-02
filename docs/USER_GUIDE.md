@@ -424,7 +424,10 @@ text right-aligned; terminals stay left-to-right). By default (**System default*
 the language list of macOS (System Settings → General → Language & Region): the first language in that list that
 MobAlt ships wins, English when none does. Settings → General → **Language** picks one explicitly; the change
 applies at once in every window — nothing restarts, connections stay up — and is remembered. Terminal output is never
-translated: what a remote host prints is shown as it is. The user guide exists in the same eleven languages
+translated: what a remote host prints is shown as it is. The lines MobAlt itself prints into a terminal ("Connecting
+to …", "Key exchange …", "Connection failed: …", "── Session ended. … ──") follow the interface language, except in
+Arabic and Hindi, where they stay in English: a terminal draws one character per cell, left to right, and cannot join
+Arabic letters or shape Devanagari. The user guide exists in the same eleven languages
 (`docs/USER_GUIDE.<language>.md`); Help → **User Guide** opens the one for the current language.
 
 In Arabic the whole window reads right to left: the side strip and the sidebar move to the right edge and the

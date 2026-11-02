@@ -66,6 +66,31 @@ test('t / tn with a dictionary: one string or [one, other], the source for anyth
   i18n.setLocale('en');
 });
 
+test('tt / inTerminal: terminal lines in English where xterm cannot draw the script (Arabic, Hindi), translated elsewhere', () => {
+  // xterm.js has no bidi and no shaping: the languages whose script needs either name English as their terminal language
+  assert.deepEqual(i18n.LANGUAGES.filter((l) => l.terminal).map((l) => [l.code, l.terminal]), [['hi', 'en'], ['ar', 'en']]);
+  const ar = { 'Connecting to {target}...': 'جارٍ الاتصال بـ {target}...', 'Session ended.': 'انتهت الجلسة.', '{error} — wrapped': '{error} — ملفوف' };
+  i18n._use('ar', ar);
+  assert.equal(i18n.t('Session ended.'), 'انتهت الجلسة.'); // toasts, dialogs, the status bar: translated
+  assert.equal(i18n.tt('Session ended.'), 'Session ended.'); // the terminal: English
+  assert.equal(i18n.tt('Connecting to {target}...', { target: 'u@h:22' }), 'Connecting to u@h:22...');
+  // nested t() calls (a hint composed around an error) take the terminal language inside inTerminal, and only there
+  assert.equal(i18n.inTerminal(() => i18n.t('{error} — wrapped', { error: i18n.t('Session ended.') })), 'Session ended. — wrapped');
+  assert.equal(i18n.t('Session ended.'), 'انتهت الجلسة.'); // the dictionary is back afterwards
+  assert.throws(() => i18n.inTerminal(() => { throw new Error('x'); }));
+  assert.equal(i18n.t('Session ended.'), 'انتهت الجلسة.'); // …even when fn throws
+  i18n._use('ko', { 'Session ended.': '세션이 끝났습니다.' });
+  assert.equal(i18n.tt('Session ended.'), '세션이 끝났습니다.'); // Korean draws fine in a terminal: translated there too
+  i18n.setLocale('en');
+  assert.equal(i18n.tt('Session ended.'), 'Session ended.');
+});
+
+test('extractor: tt() keys are catalog keys like t()', () => {
+  const js = extractor.extractJs('x.js', "tt('Alpha'); i18n.tt('Beta {x}', { x }); tt(name);");
+  assert.deepEqual(js.found.map((f) => f.key), ['Alpha', 'Beta {x}']);
+  assert.equal(js.errors.length, 1);
+});
+
 test('loadDict: English is empty, an unknown code is empty, a shipped language reads its file', () => {
   assert.deepEqual(i18n.loadDict('en'), {});
   assert.deepEqual(i18n.loadDict('xx'), {});

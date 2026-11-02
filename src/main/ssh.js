@@ -19,7 +19,7 @@ const localnet = require('./localnet'); // the macOS Local Network permission, w
 const { execFile } = require('child_process');
 
 const { STATUS_DIM, STATUS_FAIL } = require('./terminals');
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const { t, tn, tt, inTerminal } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn(); a line written into the terminal through tt() (English where xterm cannot draw the script)
 const GREY = STATUS_DIM; // status lines are painted by the renderer from the pane's palette (SGR 90 is invisible on Solarized Dark)
 const RED = STATUS_FAIL;
 const RESET = '\x1b[0m';
@@ -127,14 +127,14 @@ class SshManager {
       try {
         raw = fs.readFileSync(expandHome(file));
       } catch (e) {
-        ctx.out(`${RED}${t('Cannot read private key {key}: {error}', { key: display, error: e.message })}${RESET}\r\n`);
+        ctx.out(`${RED}${tt('Cannot read private key {key}: {error}', { key: display, error: e.message })}${RESET}\r\n`);
         return null;
       }
       let passphrase = savePassphrase ? cfg.passphrase || undefined : undefined;
       const hadSaved = !!passphrase;
       let parsed = ssh2().utils.parseKey(raw, passphrase);
       let tries = 0;
-      const triedPassphrase = () => { if (tries || hadSaved) ctx.tried.push(t('{key} (passphrase)', { key: display })); };
+      const triedPassphrase = () => { if (tries || hadSaved) ctx.tried.push(tt('{key} (passphrase)', { key: display })); };
       while (parsed instanceof Error && /passphrase/i.test(parsed.message) && tries < 3) {
         // only a retry (or a saved passphrase that no longer fits) is blamed on the passphrase
         const message = tries ? t('Incorrect passphrase. Enter passphrase for key {key}', { key: display })
@@ -155,7 +155,7 @@ class SshManager {
         }
       }
       if (parsed instanceof Error) {
-        ctx.out(`${RED}${t('Invalid private key {key}: {error}', { key: display, error: parsed.message })}${RESET}\r\n`);
+        ctx.out(`${RED}${tt('Invalid private key {key}: {error}', { key: display, error: parsed.message })}${RESET}\r\n`);
         triedPassphrase();
         return null;
       }
@@ -167,7 +167,7 @@ class SshManager {
     }
     // "auto" order: configured key → saved password → ssh-agent keys → default ~/.ssh keys (like the
     // ssh CLI) → keyboard-interactive with the saved password → interactive prompts.
-    const savedPasswordLabel = t('saved password');
+    const savedPasswordLabel = tt('saved password');
     if ((method === 'password' || method === 'auto') && cfg.password) {
       steps.push({ type: 'password', label: savedPasswordLabel, run: async () => ({ type: 'password', username, password: cfg.password }) });
     }
@@ -175,11 +175,11 @@ class SshManager {
     // saved and the server accepts passwords, keys from the agent / default files are not tried.
     const keysWanted = () => !(cfg.password && Array.isArray(ctx.serverMethods) && ctx.serverMethods.includes('password'));
     if ((method === 'agent' || method === 'auto') && process.env.SSH_AUTH_SOCK) {
-      steps.push({ type: 'agent', label: t('ssh-agent keys'), guard: keysWanted, run: async () => {
+      steps.push({ type: 'agent', label: tt('ssh-agent keys'), guard: keysWanted, run: async () => {
         const agent = await agentPublicKeys();
         if (agent.keys.size) return { type: 'agent', username, agent: process.env.SSH_AUTH_SOCK };
         // nothing to offer: say why before the summary ("tried: nothing" alone reads like the agent was skipped)
-        ctx.out(`${GREY}${agent.reachable ? t('ssh-agent: no keys loaded (ssh-add -l)') : t('ssh-agent not reachable at SSH_AUTH_SOCK')}${RESET}\r\n`);
+        ctx.out(`${GREY}${agent.reachable ? tt('ssh-agent: no keys loaded (ssh-add -l)') : tt('ssh-agent not reachable at SSH_AUTH_SOCK')}${RESET}\r\n`);
         return null;
       } });
     }
@@ -243,11 +243,11 @@ class SshManager {
         },
       }),
     });
-    if (cfg.password) steps.push(kbdStep(t('keyboard-interactive (saved password)')));
+    if (cfg.password) steps.push(kbdStep(tt('keyboard-interactive (saved password)')));
     for (let i = 0; i < MAX_PROMPTS; i++) {
       steps.push({
         type: 'password',
-        label: t('password prompt'),
+        label: tt('password prompt'),
         guard: () => promptCount < MAX_PROMPTS,
         run: async () => {
           promptCount++;
@@ -263,7 +263,7 @@ class SshManager {
           return { type: 'password', username, password: ans.password };
         },
       });
-      steps.push(kbdStep(t('keyboard-interactive prompt')));
+      steps.push(kbdStep(tt('keyboard-interactive prompt')));
     }
 
     // ssh2 reports the server's remaining methods by SSH name; agent auth is "publickey" on the wire.
@@ -272,7 +272,7 @@ class SshManager {
     return (methodsLeft, partialSuccess, cb) => {
       if (Array.isArray(methodsLeft) && !ctx.serverMethods) {
         ctx.serverMethods = methodsLeft.slice();
-        ctx.out(`${GREY}${t('Server accepts: {methods}', { methods: methodsLeft.join(', ') || t('(none)') })}${RESET}\r\n`);
+        ctx.out(`${GREY}${tt('Server accepts: {methods}', { methods: methodsLeft.join(', ') || tt('(none)') })}${RESET}\r\n`);
       }
       if (ctx.currentLabel && ctx.currentLabel !== 'none') { // previous attempt was rejected
         ctx.tried.push(ctx.currentLabel);
@@ -393,9 +393,9 @@ class SshManager {
    * hybrid — the host key type and the cipher (both directions, when they differ), from ssh2's `handshake` event.
    */
   handshakeLine(neg) {
-    const kex = algorithms.isPostQuantum(neg.kex) ? t('{kex} (post-quantum)', { kex: neg.kex }) : neg.kex;
+    const kex = algorithms.isPostQuantum(neg.kex) ? tt('{kex} (post-quantum)', { kex: neg.kex }) : neg.kex;
     const cipher = neg.cs.cipher === neg.sc.cipher ? neg.cs.cipher : `${neg.cs.cipher} / ${neg.sc.cipher}`;
-    return t('Key exchange {kex}, host key {hostKey}, cipher {cipher}', { kex, hostKey: neg.serverHostKey, cipher });
+    return tt('Key exchange {kex}, host key {hostKey}, cipher {cipher}', { kex, hostKey: neg.serverHostKey, cipher });
   }
 
   /**
@@ -531,7 +531,7 @@ class SshManager {
       let jump = null;
       let sock;
       if (jumpCfg) {
-        ctx.out(`${GREY}${t('Connecting to jump host {target}...', { target: `${jumpCfg.username || ''}@${jumpCfg.host}:${jumpCfg.port || 22}` })}${RESET}\r\n`);
+        ctx.out(`${GREY}${tt('Connecting to jump host {target}...', { target: `${jumpCfg.username || ''}@${jumpCfg.host}:${jumpCfg.port || 22}` })}${RESET}\r\n`);
         try {
           const j = await this.connectClient(jumpCfg, ctx, depth + 1);
           jump = j.client;
@@ -539,13 +539,14 @@ class SshManager {
             jump.forwardOut('127.0.0.1', 0, cfg.host, cfg.port || 22, (err, stream) => (err ? rej(err) : res(stream)))
           );
           if (ctx.cancelled) throw cancelledError();
-          ctx.out(`${GREY}${t('Jump established, connecting to {target}...', { target: `${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
+          ctx.out(`${GREY}${tt('Jump established, connecting to {target}...', { target: `${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
         } catch (e) {
           if (jump) jump.end();
           if (ctx.cancelled) return fail(cancelledError());
           // the failure is the jump hop's: explained against the jump host — the "nc -vz" hint names its host and port,
           // never the target's — and marked, so the caller's _explainError leaves it as it is
-          const err = new Error(t('Jump host failed: {error}', { error: e.explained ? e.message : this._explainError(e, ctx, jumpCfg) }));
+          const explain = () => t('Jump host failed: {error}', { error: e.explained ? e.message : this._explainError(e, ctx, jumpCfg) });
+          const err = new Error(ctx.terminal ? inTerminal(explain) : explain()); // a shell pane prints it: the terminal language
           err.explained = true;
           return fail(err);
         }
@@ -633,10 +634,11 @@ class SshManager {
     });
 
     const ctx = {
+      terminal: true, // what fails is printed into the pane: messages in the terminal language (tt / inTerminal)
       out: (t) => this._out(id, t),
       onError: (e) => {
         info.lastError = e.message; // e.g. "Keepalive timeout": the reason a lost connection is reported with
-        this._out(id, `\r\n${RED}${t('SSH error: {error}', { error: e.message })}${RESET}\r\n`);
+        this._out(id, `\r\n${RED}${tt('SSH error: {error}', { error: e.message })}${RESET}\r\n`);
       },
       onClose: () => {
         if (info.closed) return;
@@ -650,7 +652,7 @@ class SshManager {
 
     info.ctx = ctx; // disconnect() while still connecting aborts the attempt through it
     this.prompter.status(id, 'connecting');
-    this._out(id, `${GREY}${t('Connecting to {target}...', { target: `${cfg.username || os.userInfo().username}@${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
+    this._out(id, `${GREY}${tt('Connecting to {target}...', { target: `${cfg.username || os.userInfo().username}@${cfg.host}:${cfg.port || 22}` })}${RESET}\r\n`);
 
     // a pane that went away while this was connecting: whatever came up for it goes down again, nothing is shown
     const gone = (client, jump) => {
@@ -678,7 +680,7 @@ class SshManager {
         // requested with the defaults (vt100, 80×24, no modes), so the X11 request goes in its own argument
         const sessOpts = {};
         if (cfg.x11) {
-          const xp = await x11.prepare((msg) => this._out(id, `${GREY}${t('X11: {message}', { message: msg })}${RESET}\r\n`));
+          const xp = await x11.prepare((msg) => this._out(id, `${GREY}${tt('X11: {message}', { message: msg })}${RESET}\r\n`));
           if (gone(client, jump)) return;
           if (xp) {
             info.x11 = xp;
@@ -689,14 +691,14 @@ class SshManager {
                 x11.proxy(accept(), xp, (msg) => {
                   if (x11Warned) return;
                   x11Warned = true;
-                  this._out(id, `\r\n${RED}${t('X11: {message}', { message: msg })}${RESET}\r\n`);
+                  this._out(id, `\r\n${RED}${tt('X11: {message}', { message: msg })}${RESET}\r\n`);
                 });
               } catch (e) {
                 reject();
               }
             });
           } else {
-            this._out(id, `${RED}${t('X11 forwarding requested but no local X server found (install/start XQuartz).')}${RESET}\r\n`);
+            this._out(id, `${RED}${tt('X11 forwarding requested but no local X server found (install/start XQuartz).')}${RESET}\r\n`);
           }
         }
         client.on('tcp connection', (details, accept, reject) => {
@@ -707,7 +709,7 @@ class SshManager {
         client.shell(shellOpts, sessOpts, (err, stream) => {
           if (gone(client, jump)) return;
           if (err) {
-            this._out(id, `${RED}${t('Failed to open shell: {error}', { error: err.message })}${RESET}\r\n`);
+            this._out(id, `${RED}${tt('Failed to open shell: {error}', { error: err.message })}${RESET}\r\n`);
             info.closing = true; // our own end, not a drop
             client.end();
             return;
@@ -735,8 +737,8 @@ class SshManager {
       })
       .catch((e) => {
         if (info.closed) return; // cancelled by disconnect(): the pane already says so
-        const msg = this._explainError(e, ctx, cfg);
-        this._out(id, `\r\n${RED}${t('Connection failed: {error}', { error: msg })}${RESET}\r\n`);
+        const msg = inTerminal(() => this._explainError(e, ctx, cfg)); // the hints composed around it too, for the terminal
+        this._out(id, `\r\n${RED}${tt('Connection failed: {error}', { error: msg })}${RESET}\r\n`);
         if (ctx.localNetworkBlocked) localnet.notify(ctx.localNetworkBlocked); // the dialog that opens the setting (once per run)
         this.prompter.status(id, 'failed', e.message);
         info.closed = true;

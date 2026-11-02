@@ -6,7 +6,7 @@ const fs = require('fs');
 const net = require('net');
 const crypto = require('crypto');
 const { execFileSync, spawn } = require('child_process');
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const { t, tn, tt } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn(); these are printed into the SSH pane, so tt()
 
 const XAUTH_CANDIDATES = ['/opt/X11/bin/xauth', '/usr/X11/bin/xauth', 'xauth'];
 
@@ -100,7 +100,7 @@ async function ensureServer(onStatus, timeoutMs = 12000) {
   if (d) return d;
   const appPath = XQUARTZ_APPS.find((p) => fs.existsSync(p));
   if (!appPath) return null;
-  onStatus && onStatus(t('starting XQuartz…'));
+  onStatus && onStatus(tt('starting XQuartz…'));
   try {
     spawn('open', ['-g', '-a', appPath], { stdio: 'ignore', detached: true }).unref();
   } catch {
@@ -137,7 +137,7 @@ async function prepare(onStatus) {
 /** Pipe an accepted ssh2 x11 channel to the local X server. */
 function proxy(channel, x11, onError) {
   const sock = x11.socketPath ? net.connect(x11.socketPath) : net.connect(tcpTarget(x11.display) || { port: 6000 });
-  sock.once('error', (e) => onError && onError(t('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
+  sock.once('error', (e) => onError && onError(tt('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
   let header = Buffer.alloc(0);
   let done = !x11.realCookie; // nothing to swap if we have no local cookie
 

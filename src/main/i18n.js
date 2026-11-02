@@ -5,6 +5,8 @@
 //   t('Connected to {host}', { host })              → placeholders are {name}; a translation keeps the same names
 //   tn('{n} session', '{n} sessions', n)            → the entry for the SINGULAR key: one string (languages without plural
 //                                                     forms, e.g. Korean) or [one, other]; n fills {n}
+//   tt('Connecting to {target}...', { target })     → t() for a line written into a terminal: English for a language whose
+//                                                     script xterm.js cannot draw (Arabic, Hindi: LANGUAGES `terminal`)
 //
 // A dictionary is src/locales/<code>.json: { "Close Tab": "탭 닫기", "{n} session": ["…", "…"], … }. Keys starting
 // with "@" are notes for translators, not strings. scripts/i18n-extract.js collects every t()/tn() source string and
@@ -19,19 +21,26 @@
 const fs = require('fs');
 const path = require('path');
 
-/** The languages the interface ships in, in the order the Language list shows them. `guide` is the user guide in docs/; `dir` is 'rtl' for a right-to-left script (default ltr). */
+/**
+ * The languages the interface ships in, in the order the Language list shows them. `guide` is the user guide in docs/;
+ * `dir` is 'rtl' for a right-to-left script (default ltr); `terminal` is the language of the lines MobAlt itself writes
+ * into a terminal ("Connecting to …", "── Session ended. … ──") when it is not this one: xterm.js draws one cell per
+ * code point, left to right, with no bidi and no shaping, so Arabic comes out reversed and unjoined and Devanagari
+ * loses its conjuncts and vowel signs — those lines stay in English there (tt()), everything around the terminal is
+ * translated.
+ */
 const LANGUAGES = [
   { code: 'en', name: 'English', guide: 'USER_GUIDE.md' },
   { code: 'ko', name: '한국어', guide: 'USER_GUIDE.ko.md' },
   { code: 'zh-CN', name: '简体中文', guide: 'USER_GUIDE.zh-CN.md' },
   { code: 'ja', name: '日本語', guide: 'USER_GUIDE.ja.md' },
   { code: 'vi', name: 'Tiếng Việt', guide: 'USER_GUIDE.vi.md' },
-  { code: 'hi', name: 'हिन्दी', guide: 'USER_GUIDE.hi.md' },
+  { code: 'hi', name: 'हिन्दी', guide: 'USER_GUIDE.hi.md', terminal: 'en' }, // Devanagari needs shaping: terminal lines in English
   { code: 'de', name: 'Deutsch', guide: 'USER_GUIDE.de.md' },
   { code: 'fr', name: 'Français', guide: 'USER_GUIDE.fr.md' },
   { code: 'es', name: 'Español', guide: 'USER_GUIDE.es.md' },
   { code: 'pt', name: 'Português', guide: 'USER_GUIDE.pt.md' },
-  { code: 'ar', name: 'العربية', guide: 'USER_GUIDE.ar.md', dir: 'rtl' }, // right-to-left: the renderer mirrors the chrome (src/renderer/i18n.js, styles.css)
+  { code: 'ar', name: 'العربية', guide: 'USER_GUIDE.ar.md', dir: 'rtl', terminal: 'en' }, // right-to-left: the renderer mirrors the chrome (src/renderer/i18n.js, styles.css); terminal lines in English
 ];
 const GUIDE_BASE = 'https://github.com/Hyeongcheol-An/MobAlt/blob/main/docs/';
 const LOCALES_DIR = path.join(__dirname, '..', 'locales');
@@ -115,9 +124,27 @@ function tn(one, other, n, params) {
   return format(str, { n, ...(params || {}) });
 }
 
+/**
+ * Run fn (synchronous) with the dictionary of the terminal language — the current one, or what its `terminal` names
+ * (English for Arabic and Hindi, see LANGUAGES) — so that every t() inside it, the nested ones that compose a hint
+ * included, writes text a terminal can draw. Returns fn's value.
+ */
+function inTerminal(fn) {
+  const target = language().terminal;
+  if (!target || target === current) return fn();
+  const saved = dict;
+  dict = loadDict(target);
+  try { return fn(); } finally { dict = saved; }
+}
+
+/** tt('Source text', { placeholders }): t() for a line written into a terminal buffer (not for toasts, dialogs or the status bar). */
+function tt(source, params) {
+  return inTerminal(() => t(source, params));
+}
+
 /** The user guide in the current language (GitHub). */
 function guideUrl(code = current) {
   return GUIDE_BASE + (byCode(code) || LANGUAGES[0]).guide;
 }
 
-module.exports = { LANGUAGES, resolveLocale, loadDict, setLocale, locale, language, t, tn, format, guideUrl, byCode, _use };
+module.exports = { LANGUAGES, resolveLocale, loadDict, setLocale, locale, language, t, tn, tt, inTerminal, format, guideUrl, byCode, _use };
