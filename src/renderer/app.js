@@ -518,7 +518,14 @@ class App {
     };
     fi.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); step(!e.shiftKey); }
-      if (e.key === 'Escape') this.action('find-close');
+    });
+    // Esc closes the bar from any of its controls (the field, the arrows, the Aa / .* boxes, ✕), not only from the
+    // field: the keyboard user who tabbed to a checkbox would otherwise be stuck there; the terminal gets the focus back
+    fb.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || e.isComposing) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.action('find-close');
     });
     for (const b of $$('[data-find]')) b.addEventListener('click', () => {
       const k = b.dataset.find;

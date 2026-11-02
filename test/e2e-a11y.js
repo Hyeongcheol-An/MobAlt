@@ -851,6 +851,15 @@
       await shot('84-find-input-focus');
       app.action('find-close');
       await sleep(100);
+      // Esc closes the find bar from any of its controls (a checkbox, an arrow), not only from the field; the terminal has the focus back
+      for (const sel of ['#find-case', '#find-bar [data-find="next"]']) {
+        app.action('find');
+        await sleep(120);
+        $(sel).focus();
+        key(active(), 'Escape');
+        await sleep(120);
+        results['findEscFrom' + (sel === '#find-case' ? 'Checkbox' : 'Button')] = $('#find-bar').hidden && inTerminal();
+      }
       app.showPanel('tools');
       await sleep(100);
       const th = $('#tool-host'), tp = $('#tool-port-from');
