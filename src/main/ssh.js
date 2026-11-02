@@ -680,6 +680,22 @@ class SshManager {
         if (gone(client, jump)) return;
         info.client = client;
         info.jump = jump;
+        // Logged in, the shell not open yet (X11 preparation, the shell request): the same limit as the connection
+        // itself — a server that never answers the request, or a local step that hangs, ends the pane as failed with
+        // a reason instead of leaving it "Connecting…" for good.
+        const limitMs = this.store.getSettings().readyTimeout || 20000;
+        const shellTimer = setTimeout(() => {
+          if (info.closed || info.stream) return;
+          const why = tt('timed out after {s} s', { s: Math.round(limitMs / 1000) });
+          this._out(id, `${RED}${tt('Failed to open shell: {error}', { error: why })}${RESET}\r\n`);
+          this.prompter.status(id, 'failed', t('timed out after {s} s', { s: Math.round(limitMs / 1000) }));
+          info.closed = true;
+          this.conns.delete(id);
+          try { client.end(); } catch {}
+          if (jump) try { jump.end(); } catch {}
+          registry.exit(id, 1, 'failed');
+        }, limitMs);
+        if (shellTimer.unref) shellTimer.unref();
         if (ctx.handshake) this._out(id, `${GREY}${this.handshakeLine(ctx.handshake)}${RESET}\r\n`);
         // Remember a prompted password if the user asked to save it.
         if (ctx.lastPrompted && ctx.lastPrompted.save && cfg.id && ctx.currentAuth === 'password') {
@@ -721,6 +737,7 @@ class SshManager {
           else reject();
         });
         client.shell(shellOpts, sessOpts, (err, stream) => {
+          clearTimeout(shellTimer);
           if (gone(client, jump)) return;
           if (err) {
             this._out(id, `${RED}${tt('Failed to open shell: {error}', { error: err.message })}${RESET}\r\n`);

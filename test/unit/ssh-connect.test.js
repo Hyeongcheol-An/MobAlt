@@ -116,11 +116,12 @@ test('a jump hop that times out is explained against the jump host: the nc hint 
 });
 
 /** openShell over a stubbed connectClient: a fake client whose end() closes the connection (ctx.onClose), as ssh2's does. */
-function shellHarness({ openShell = false } = {}) {
+function shellHarness({ openShell = false, settings = null } = {}) {
   const exits = [];
+  const out = [];
   let n = 0;
-  const registry = { newId: () => 'ssh-' + ++n, register() {}, data() {}, bytes() {}, exit: (id, code, reason) => exits.push({ id, code, reason }) };
-  const ssh = new SshManager(registry, store, { status() {} });
+  const registry = { newId: () => 'ssh-' + ++n, register() {}, data: (id, d) => out.push(d), bytes() {}, exit: (id, code, reason) => exits.push({ id, code, reason }) };
+  const ssh = new SshManager(registry, settings ? { getSettings: () => settings } : store, { status() {} });
   const EventEmitter = require('events');
   ssh.connectClient = (cfg, ctx) => {
     const client = new EventEmitter();
@@ -136,7 +137,7 @@ function shellHarness({ openShell = false } = {}) {
     };
     return Promise.resolve({ client, jump: null });
   };
-  return { ssh, exits };
+  return { ssh, exits, out };
 }
 const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
 
@@ -176,4 +177,15 @@ test('verifyHost fails with the reason in the interface language and, for the Mo
   } finally {
     i18n.setLocale('en');
   }
+});
+
+test('a shell request that never gets an answer ends the pane as failed after the connection time limit', async () => {
+  const { ssh, exits, out } = shellHarness({ settings: { readyTimeout: 1000 } });
+  const { id } = ssh.openShell({ host: '127.0.0.1', port: 2222, username: 'u' });
+  await tick(300);
+  assert.deepEqual(exits, [], 'still waiting');
+  await tick(1000);
+  assert.deepEqual(exits.map((e) => e.reason), ['failed']);
+  assert.ok(out.join('').includes('Failed to open shell: timed out after 1 s'), out.join(''));
+  assert.equal(ssh.get(id), undefined);
 });

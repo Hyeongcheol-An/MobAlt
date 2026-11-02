@@ -116,3 +116,17 @@ test('cookieMatches compares in constant time and rejects other lengths', () => 
   assert.equal(x11.cookieMatches(Buffer.from('bb', 'hex'), FAKE), false);
   assert.equal(x11.cookieMatches(Buffer.from(FAKE, 'hex'), null), false);
 });
+
+test('localCookie: xauth asked with -i (no lock wait); one that hangs is given up after the time limit, no cookie', async () => {
+  const fs = require('fs'), os = require('os'), path = require('path');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mobalt-xauth-'));
+  const slow = path.join(dir, 'xauth-slow');
+  fs.writeFileSync(slow, '#!/bin/sh\nsleep 10\n', { mode: 0o755 });
+  const good = path.join(dir, 'xauth-good');
+  // answers only when called with -i first, like `xauth -i list :0`
+  fs.writeFileSync(good, '#!/bin/sh\n[ "$1" = "-i" ] || exit 3\necho "Studio.local/unix:0  MIT-MAGIC-COOKIE-1  00112233445566778899aabbccddeeff"\n', { mode: 0o755 });
+  const t0 = Date.now();
+  assert.equal(await x11.localCookie(':0', { candidates: [slow, good], timeout: 300 }), null);
+  assert.ok(Date.now() - t0 < 3000, `gave up in ${Date.now() - t0} ms`);
+  assert.equal(await x11.localCookie(':0', { candidates: [path.join(dir, 'missing'), good], timeout: 300 }), '00112233445566778899aabbccddeeff');
+});
