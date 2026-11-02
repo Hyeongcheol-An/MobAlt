@@ -39,7 +39,9 @@ Có ba cách để lên bản phát hành mới; cách nào cũng kết thúc b�
   hoặc ngay lập tức với "Khởi động lại ngay". Trong lúc tải, một dòng tiến trình —
   *Đang tải về MobAlt 0.17.0 — 42% (12.3/29.4 MB, 2.1 MB/s)* — cùng một thanh mỏng hiện phía trên các tab và trong
   Cài đặt → Cập nhật; khi tệp đã tải xong, cả hai nơi đều đưa ra **Khởi động lại ngay** (hoặc **Để sau**: sẽ được
-  cài khi bạn thoát), còn một lần tải về thất bại sẽ cho biết lý do trong vài giây.
+  cài khi bạn thoát), còn một lần tải về thất bại sẽ cho biết lý do trong vài giây. Bản cập nhật chỉ có thể được cài khi mọi cửa sổ
+  MobAlt đã thoát, nên khi một bản MobAlt khác đang mở, "Khởi động lại ngay" sẽ không thoát: một hộp thoại cho
+  biết điều đó, và bản cập nhật được cài khi bản cuối cùng thoát.
 - **Homebrew**: `brew upgrade --cask mobalt` thay thế ứng dụng trong Applications.
 - **DMG**: tải DMG mới từ [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) rồi
   kéo MobAlt vào Applications, thay thế bản cũ.

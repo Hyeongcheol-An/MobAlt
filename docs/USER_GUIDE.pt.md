@@ -39,7 +39,9 @@ Três caminhos levam a uma nova versão; todos terminam com o novo pacote em `/A
   ou na hora com “Reiniciar agora”. Enquanto baixa, uma linha de progresso — *Baixando o MobAlt 0.17.0 — 42% (12.3
   de 29.4 MB, 2.1 MB/s)* — com uma barra fina aparece acima das abas e em Ajustes → Atualizações; quando o arquivo
   está completo, as duas oferecem **Reiniciar agora** (ou **Depois**: será instalado ao encerrar), e um download que
-  falhou diz o motivo por alguns segundos.
+  falhou diz o motivo por alguns segundos. A atualização só pode ser instalada quando todas as janelas do
+  MobAlt tiverem sido encerradas; por isso, enquanto outra instância do MobAlt estiver aberta, “Reiniciar agora” não
+  encerra o app: um diálogo avisa, e a atualização é instalada quando a última instância for encerrada.
 - **Homebrew**: `brew upgrade --cask mobalt` substitui o app em Aplicativos.
 - **DMG**: baixe o novo DMG em [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) e
   arraste o MobAlt para Aplicativos, substituindo o antigo.

@@ -1173,6 +1173,8 @@
   "Resolving {host}…": "Resolvendo {host}…",
   "Restart now": "Reiniciar agora",
   "Restart now to install it, or keep working: it is installed when you quit.": "Reinicie agora para instalar, ou continue trabalhando: ela será instalada quando você encerrar.",
+  "Another MobAlt window is open": "Outra janela do MobAlt está aberta",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "O MobAlt {version} é instalado quando todas as janelas do MobAlt tiverem sido encerradas. Encerre a outra janela e escolha “Reiniciar agora” novamente, ou continue trabalhando: ele será instalado quando você encerrar.",
   "Restore defaults": "Restaurar padrões",
   "Restore Panes": "Restaurar Painéis",
   "Restore panes (⇧⌘⏎)": "Restaurar painéis (⇧⌘⏎)",
