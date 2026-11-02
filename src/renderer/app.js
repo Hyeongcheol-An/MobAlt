@@ -774,7 +774,10 @@ class App {
   _afterClose() {
     const ap = this.activePane();
     if (ap) this.focusPane(ap, true);
-    else this.updateStatus(null);
+    else {
+      this.updateStatus(null);
+      this.action('find-close'); // nothing left to search: the find bar does not stay over the "No terminal open" card
+    }
     this.updateMultiexec();
   }
 

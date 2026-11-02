@@ -134,6 +134,21 @@
       await sleep(300);
     }
 
+    // the find bar closes with the last tab: it does not stay over the "No terminal open" card
+    {
+      await app.saveSettings({ confirmClose: false });
+      while (app.workspace.tabs.length) { await app.closeTab(app.workspace.tabs[0]); await sleep(150); }
+      const pane = await app.newLocalTab();
+      await sleep(600);
+      app.action('find');
+      await sleep(150);
+      const openBefore = !document.getElementById('find-bar').hidden;
+      await app.closeTab(pane.tab);
+      await sleep(400);
+      results.findBarClosesWithLastTab = openBefore && !app.workspace.tabs.length && document.getElementById('find-bar').hidden && !document.body.classList.contains('find-open') && !!document.querySelector('#tab-content .workspace-empty');
+      await shot('20-no-tab-no-find-bar');
+    }
+
     log('RESULTS ' + JSON.stringify(results));
     log('DONE');
   } catch (e) {
