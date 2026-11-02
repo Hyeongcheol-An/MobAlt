@@ -157,6 +157,9 @@ test('scripts/i18n-status: check() reports missing, stale, placeholder and left-
   const k = status.check({ '@keep': ['Ping', 'Keep this one', 'RTT', 'Close Tab'], 'Close Tab': 'x', '{n} tab': ['{n} a', '{n} b'], 'Open the file {name}': 'y {name}', 'Ping': 'Ping', 'Keep this one': 'Keep this one' }, cat);
   assert.deepEqual(k.keep, ['@keep lists a string that is not in the catalog: "RTT"', '@keep lists a string that is translated: "Close Tab" → "x"']);
   assert.ok(status.problems({ '@keep': ['RTT'] }, cat).includes('@keep lists a string that is not in the catalog: "RTT"'));
+  // a tn() pair kept as in English: [one, other] equal to the key and its plural form is "kept", a translated pair is not
+  assert.deepEqual(status.check({ '@keep': ['{n} tab'], '{n} tab': ['{n} tab', '{n} tabs'] }, cat).keep, []);
+  assert.equal(status.check({ '@keep': ['{n} tab'], '{n} tab': ['{n} onglet', '{n} onglets'] }, cat).keep.length, 1);
   assert.deepEqual(status.problems({ 'Close Tab': '' }, { strings: { 'Close Tab': {} } }), ['empty: "Close Tab"']);
 });
 

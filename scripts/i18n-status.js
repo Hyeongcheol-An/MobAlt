@@ -21,6 +21,9 @@ const extractor = require('./i18n-extract');
 const placeholders = (s) => [...new Set([...String(s).matchAll(/\{(\w+)\}/g)].map((m) => m[1]))].sort();
 const words = (s) => String(s).split(/\s+/).filter((w) => /[A-Za-z]{2,}/.test(w)).length;
 
+/** A value left as in English: the key itself, or for a tn() pair the two English forms [key, plural]. */
+const keptAsIs = (v, k, spec) => v === k || (Array.isArray(v) && !!spec.plural && v.length === 2 && v[0] === k && v[1] === spec.plural);
+
 /**
  * One dictionary against a catalog: { missing: [key], stale: [key], keep: [message], other: [message] } — all empty
  * when it is complete. `keep`: an @keep entry that is no catalog key (a word, not a string of the interface, or a key
@@ -31,7 +34,7 @@ function check(dict, catalog) {
   const r = { missing: [], stale: [], keep: [], other: [] };
   for (const k of keep) {
     if (!catalog.strings[k]) r.keep.push(`@keep lists a string that is not in the catalog: ${JSON.stringify(k)}`);
-    else if (dict[k] !== undefined && dict[k] !== k) r.keep.push(`@keep lists a string that is translated: ${JSON.stringify(k)} → ${JSON.stringify(dict[k])}`);
+    else if (dict[k] !== undefined && !keptAsIs(dict[k], k, catalog.strings[k])) r.keep.push(`@keep lists a string that is translated: ${JSON.stringify(k)} → ${JSON.stringify(dict[k])}`);
   }
   for (const k of Object.keys(dict)) if (!k.startsWith('@') && !catalog.strings[k]) r.stale.push(k);
   for (const k of Object.keys(catalog.strings)) {
