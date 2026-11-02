@@ -214,6 +214,8 @@ function parseMobaXtermIniDetailed(file) {
 }
 
 const SESSION_TYPES = ['ssh', 'mosh', 'local', 'telnet', 'serial', 'ftp', 'rdp', 'vnc', 'browser'];
+/** Types with no port of their own: whatever the file says there (the editor used to write 0) is dropped, never judged. */
+const PORTLESS_TYPES = ['local', 'serial', 'browser'];
 
 /**
  * Validate the text of a MobAlt sessions export, or a hand-written file of the same shape. Returns
@@ -247,7 +249,7 @@ function parseSessionsJson(text) {
     const type = given === undefined || given === null || given === '' ? 'ssh' : given;
     if (!SESSION_TYPES.includes(type)) return skip(t('unknown type {type}', { type: JSON.stringify(s.type) }));
     const out = { ...s, name: s.name.trim(), type, id: typeof s.id === 'string' && s.id ? s.id : crypto.randomUUID(), folder: typeof s.folder === 'string' ? s.folder : '' };
-    if (s.port === undefined || s.port === null || s.port === '') delete out.port;
+    if (s.port === undefined || s.port === null || s.port === '' || PORTLESS_TYPES.includes(type)) delete out.port;
     else {
       const port = typeof s.port === 'number' ? s.port : /^\s*\d+\s*$/.test(String(s.port)) ? parseInt(s.port, 10) : NaN;
       if (!Number.isInteger(port) || port < 1 || port > 65535) return skip(t('bad port {port}', { port: JSON.stringify(s.port) }));
@@ -259,6 +261,7 @@ function parseSessionsJson(text) {
       if (!r.url) return skip(r.error === 'empty' ? t('no URL') : t('bad URL {url}', { url: JSON.stringify(s.url) }));
       out.url = r.url;
       out.isolated = s.isolated === true;
+      delete out.host; delete out.username; delete out.authMethod; delete out.privateKeyPath; // a page has none of these; a file that carries them (an older export) loses them here
     }
     if (seenIds.has(out.id)) return skip(t('duplicate id'));
     seenIds.add(out.id);

@@ -617,8 +617,9 @@ export function sessionEditor(app, initial = {}) {
       ftpsInsecure: ftpsInsecure.cb.checked,
       tunnels,
     };
-    if (type === 'browser') { out.url = browserUrl; out.isolated = isolated.cb.checked; }
+    if (type === 'browser') { out.url = browserUrl; out.isolated = isolated.cb.checked; delete out.host; delete out.username; delete out.authMethod; delete out.privateKeyPath; }
     else { delete out.url; delete out.isolated; }
+    if (type === 'local' || type === 'serial' || type === 'browser') delete out.port; // no port of their own: a 0 here was refused by the JSON importer as a bad port
     delete out._connect;
     if (algo && (type === 'ssh' || type === 'mosh')) { // Mosh: used by its host-key check and SFTP companion (main.js, terminal.js)
       for (const [cat] of ALGO_CATS) {
