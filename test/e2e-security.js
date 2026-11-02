@@ -26,7 +26,7 @@
     R.openPathDotDotRefused = (await window.api.shell.openPath(info.userData + '/..'.repeat(20) + '/Applications')) === 'refused';
     await window.api.app.testFs('rm', tmp);
     // vnc: a host that would change the URL is refused
-    R.vncBadHostRefused = (await window.api.launch.vnc({ host: 'x@evil.example.com/a', port: 5900 })) === false;
+    R.vncBadHostRefused = (await window.api.launch.vnc({ host: 'x@example.com/a', port: 5900 })) === false;
     // the window stays on index.html: a navigation is cancelled, window.open opens nothing
     location.href = 'file:///private/tmp/';
     await sleep(800);
