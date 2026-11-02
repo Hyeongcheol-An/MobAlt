@@ -48,3 +48,14 @@ test('windowNavigationAllowed: the window stays on its own index.html', () => {
   assert.equal(P.windowNavigationAllowed('https://example.com/', index), false);
   assert.equal(P.windowNavigationAllowed('garbage', index), false);
 });
+
+test('rdpFile: an imported host or user name cannot add lines to the .rdp file', () => {
+  const r = P.rdpFile({ name: 'win/../x', host: '192.0.2.7\r\ndrivestoredirect:s:*', username: 'bob\nalternate shell:s:cmd.exe', port: 3390 });
+  const lines = r.text.split('\r\n').filter(Boolean);
+  assert.equal(lines.length, 9);
+  assert.equal(lines[0], 'full address:s:192.0.2.7drivestoredirect:s:*:3390');
+  assert.equal(lines[1], 'username:s:bobalternate shell:s:cmd.exe');
+  assert.ok(!lines.some((l) => /^(drivestoredirect|alternate shell)/.test(l)));
+  assert.match(r.name, /^[\w.-]+\.rdp$/);
+  assert.equal(P.rdpFile({ host: 'h.example.com' }).text.split('\r\n')[0], 'full address:s:h.example.com');
+});

@@ -55,6 +55,28 @@ function vncUrl(cfg) {
   return `vnc://${user}${host}:${port}`;
 }
 
+/**
+ * The .rdp file Microsoft's Remote Desktop app opens for an RDP session: { name, text }. One line per setting, so a
+ * CR / LF (or any control character) in an imported host or user name — which would add settings of its own: a drive
+ * redirection, an alternate shell — is removed.
+ */
+function rdpFile(cfg) {
+  const oneLine = (v) => String(v ?? '').replace(/[\x00-\x1f\x7f]/g, '');
+  const port = Number(cfg && cfg.port) || 3389;
+  const lines = [
+    `full address:s:${oneLine(cfg.host)}${port !== 3389 ? ':' + port : ''}`,
+    `username:s:${oneLine(cfg.username)}`,
+    'screen mode id:i:2',
+    'use multimon:i:0',
+    'session bpp:i:32',
+    'audiomode:i:0',
+    'redirectclipboard:i:1',
+    'authentication level:i:2',
+    'prompt for credentials:i:1',
+  ];
+  return { name: `${oneLine(cfg.name || cfg.host).replace(/[^\w.-]+/g, '_')}.rdp`, text: lines.join('\r\n') + '\r\n' };
+}
+
 /** May a window (the app's own page) navigate to `url`? Only to its own index.html (any query: detached windows). */
 function windowNavigationAllowed(url, indexFile) {
   try {
@@ -66,4 +88,4 @@ function windowNavigationAllowed(url, indexFile) {
   }
 }
 
-module.exports = { externalUrlAllowed, openPathAllowed, vncUrl, windowNavigationAllowed };
+module.exports = { externalUrlAllowed, openPathAllowed, vncUrl, rdpFile, windowNavigationAllowed };

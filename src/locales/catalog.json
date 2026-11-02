@@ -6,6 +6,12 @@
         "src/main/live.js"
       ]
     },
+    ", {n} of them runs commands when opened (startup commands or a custom shell)": {
+      "plural": ", {n} of them run commands when opened (startup commands or a custom shell)",
+      "refs": [
+        "src/renderer/app.js"
+      ]
+    },
     ", skipped {n}: {reasons}": {
       "refs": [
         "src/renderer/app.js"

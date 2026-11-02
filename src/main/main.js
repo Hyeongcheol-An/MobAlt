@@ -1252,7 +1252,10 @@ function registerIpc() {
       updated++;
     }
     if (imported || updated) peers(e, 'sessions:changed');
-    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
+    // a sessions file from someone else can carry commands that run on opening (startup commands typed into the
+    // terminal, a local session's shell): the summary says how many, so they are looked at before use
+    const commands = parsed.sessions.filter((x) => String(x.startupCommand || '').trim() || String(x.shell || '').trim()).length;
+    return { imported, updated, skipped: parsed.skipped.length, commands, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
   });
   // The chosen path on success, null when cancelled, { error } when the file could not be written (a read-only or
   // vanished folder): the renderer shows the reason instead of an unhandled rejection in the console.
@@ -1293,7 +1296,10 @@ function registerIpc() {
       await store.saveSessions({ sessions: d.sessions, folders: [...new Set([...d.folders, ...parsed.folders])] });
     }
     if (imported || updated || parsed.folders.length) peers(e, 'sessions:changed');
-    return { imported, updated, skipped: parsed.skipped.length, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
+    // a sessions file from someone else can carry commands that run on opening (startup commands typed into the
+    // terminal, a local session's shell): the summary says how many, so they are looked at before use
+    const commands = parsed.sessions.filter((x) => String(x.startupCommand || '').trim() || String(x.shell || '').trim()).length;
+    return { imported, updated, skipped: parsed.skipped.length, commands, errors: parsed.skipped.map((x) => t('{entry}: {reason}', { entry: x.entry, reason: x.reason })), file };
   });
 
   ipcMain.handle('settings:get', () => store.getSettings());
@@ -1385,19 +1391,9 @@ function registerIpc() {
   ipcMain.handle('launch:rdp', (_e, cfg) => {
     const dir = path.join(os.tmpdir(), 'mobalt-rdp');
     fs.mkdirSync(dir, { recursive: true });
-    const file = path.join(dir, `${(cfg.name || cfg.host).replace(/[^\w.-]+/g, '_')}.rdp`);
-    const lines = [
-      `full address:s:${cfg.host}${cfg.port && cfg.port !== 3389 ? ':' + cfg.port : ''}`,
-      `username:s:${cfg.username || ''}`,
-      'screen mode id:i:2',
-      'use multimon:i:0',
-      'session bpp:i:32',
-      'audiomode:i:0',
-      'redirectclipboard:i:1',
-      'authentication level:i:2',
-      'prompt for credentials:i:1',
-    ];
-    fs.writeFileSync(file, lines.join('\r\n') + '\r\n');
+    const { name, text } = urlpolicy.rdpFile(cfg); // control characters removed: one line per setting
+    const file = path.join(dir, name);
+    fs.writeFileSync(file, text, { mode: 0o600 });
     return shell.openPath(file);
   });
   ipcMain.handle('launch:vnc', (_e, cfg) => {
