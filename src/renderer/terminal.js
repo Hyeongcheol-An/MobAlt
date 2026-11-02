@@ -138,6 +138,13 @@ export class TermPane {
       rightClickSelectsWord: false,
       allowTransparency: false,
       minimumContrastRatio: 1,
+      // OSC 8 hyperlinks (ls --hyperlink, compilers, …): xterm's default asks with confirm() and then opens the link in
+      // a new window of the app; here an http(s) link goes to the default browser through the same allowlisted IPC as
+      // a plain URL (main refuses any other scheme too) and nothing else opens
+      linkHandler: {
+        activate: (_e, uri) => { if (/^https?:\/\//i.test(uri)) window.api.shell.openExternal(uri); },
+        allowNonHttpProtocols: false,
+      },
     });
     this.fitAddon = new FitAddon();
     this.searchAddon = new SearchAddon();
