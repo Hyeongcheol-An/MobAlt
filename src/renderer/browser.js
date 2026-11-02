@@ -395,7 +395,8 @@ export class BrowserPane {
 
   /** The page the guest is on, '' before it exists. */
   _pageUrl() {
-    try { return this.ready ? String(this.webview.getURL() || '') : ''; } catch { return ''; }
+    // a page reached through a redirect to user@host keeps the name in its URL: the pane records it without
+    try { if (!this.ready) return ''; const u = String(this.webview.getURL() || ''); return browserUrlWithoutUser(u) || u; } catch { return ''; }
   }
 
   /**
@@ -479,7 +480,7 @@ export class BrowserPane {
       return;
     }
     const code = e.errorCode, description = String(e.errorDescription || '').replace(/^net::/, '');
-    this.failed = { code, description, url: e.validatedURL || this.url };
+    this.failed = { code, description, url: browserUrlWithoutUser(e.validatedURL) || e.validatedURL || this.url }; // a user@ redirect hop: shown and retried without the name
     this._showError(true);
     this.place(); // the webview steps aside for the error view
     this.setStatus('failed', description);
@@ -499,8 +500,9 @@ export class BrowserPane {
     this.setStatus('failed', reason);
   }
 
-  _onNavigate(url, newDocument) {
-    if (!url) return;
+  _onNavigate(to, newDocument) {
+    if (!to) return;
+    const url = browserUrlWithoutUser(to) || to; // a redirect to user@host is let through (the name never goes on the wire): recorded and shown without it
     this.url = url;
     if (document.activeElement !== this.urlEl) this.urlEl.value = url; // never over what the user is typing
     this.openBtn.disabled = !/^https?:/i.test(url);

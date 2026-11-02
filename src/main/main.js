@@ -1477,6 +1477,9 @@ function guestOf(sender, id) {
   const wc = webContents.fromId(id);
   return wc && !wc.isDestroyed() && wc.getType() === 'webview' && wc.hostWebContents && !wc.hostWebContents.isDestroyed() && wc.hostWebContents.id === sender.id ? wc : null;
 }
+/** How often a guest's links to user@host are loaded again without the name before they are only cancelled. */
+const STRIP_RELOADS_MAX = 10;
+const STRIP_RELOADS_WINDOW_MS = 5000;
 function hardenWebviews() {
   app.on('web-contents-created', (_e, contents) => {
     contents.on('will-attach-webview', (event, webPreferences, params) => {
@@ -1504,19 +1507,35 @@ function hardenWebviews() {
         // window.open('javascript:…') as about:blank and runs the script in it afterwards — nor anything else.
         // A user name in the address (http://user@host/) is dropped, as everywhere: the page asks for it when it needs it.
         const to = /^https?:\/\//i.test(url) ? browserUrlWithoutUser(url) : null;
-        if (to) guest.loadURL(to).catch(() => {});
+        if (to && stripReloadAllowed()) guest.loadURL(to).catch(() => {});
         return { action: 'deny' };
       });
-      // a link or a redirect the page makes: refused unless it is a browser URL; one that only carries a user name goes
-      // to the same address without it (a password in an address is still refused, never followed)
-      const guardNavigation = (ev, url) => {
+      // A link the page follows: refused unless it is a browser URL; one that only carries a user name is cancelled and
+      // loaded again without it (a password in an address is still refused, never followed). The reload is a GET, so a
+      // form POSTed to such an address loses its data — acceptable for an address no browser should be sent to.
+      // A page that keeps doing it (a script on the loaded page sending itself to user@ again) is stopped by a cap:
+      // past STRIP_RELOADS_MAX in STRIP_RELOADS_WINDOW_MS the link is only cancelled and the pane stays where it is.
+      const stripTimes = [];
+      const stripReloadAllowed = () => {
+        const now = Date.now();
+        while (stripTimes.length && now - stripTimes[0] > STRIP_RELOADS_WINDOW_MS) stripTimes.shift();
+        if (stripTimes.length >= STRIP_RELOADS_MAX) return false;
+        stripTimes.push(now);
+        return true;
+      };
+      guest.on('will-navigate', (ev, url) => {
         if (isBrowserUrl(url)) return;
         ev.preventDefault();
         const to = browserUrlWithoutUser(url);
-        if (to) guest.loadURL(to).catch(() => {});
-      };
-      guest.on('will-navigate', guardNavigation);
-      guest.on('will-redirect', guardNavigation);
+        if (to && stripReloadAllowed()) guest.loadURL(to).catch(() => {});
+      });
+      // A redirect: a user-name-only target goes through as it is — Chromium never sends the name on the wire, the pane
+      // records the URL without it, and Chromium's own redirect limit ends a loop (a cancel-and-reload would start
+      // every hop afresh and never reach that limit). A password or another scheme: cancelled, nothing reloaded.
+      guest.on('will-redirect', (ev, url) => {
+        if (isBrowserUrl(url) || browserUrlWithoutUser(url)) return;
+        ev.preventDefault();
+      });
       guest.on('will-prevent-unload', (ev) => ev.preventDefault()); // a page's beforeunload never holds the pane: Back, Reload and a typed address always go
       guest.on('select-bluetooth-device', (ev, _devices, callback) => { ev.preventDefault(); callback(''); }); // never the first device by default (and no system prompt)
       // HTTP authentication (Basic / Digest, a router's admin page): the app's own prompt in the pane's window; Cancel
@@ -1530,7 +1549,7 @@ function hardenWebviews() {
           .then((r) => { try { if (r && typeof r.username === 'string') callback(r.username, String(r.password || '')); else callback(); } catch {} });
       });
       guest.on('destroyed', () => cancelPrompts(guest));
-      // the shortcuts a browser keeps from its pages (⌘W, ⌘T, ⌘N, ⌘L, ⌘Q, ⌘1-9, ⌃Tab, the zoom keys, ⌘F…, see
+      // the shortcuts a browser keeps from its pages (⌘W, ⌘T, ⌘N, ⌘L, ⌘Q, ⌘1-4, ⌃Tab, the zoom keys, ⌘F…, see
       // RESERVED_FROM_PAGES) while the page has the keyboard: a page that swallows keydown would otherwise keep them, so
       // the menu item runs here instead. Every other accelerator (⌘K, ⌘B, ⌘D…) belongs to the page — a web console's
       // ⌘K palette, an editor's ⌘B —, and one the page leaves alone still reaches the menu the usual way.
@@ -1563,12 +1582,12 @@ hardenWebviews();
 /**
  * The accelerators (spelled as in the menu template) a browser pane keeps from the page it shows, like a browser's
  * reserved shortcuts: window and tab management, the address bar, Settings, the panes, and the keys that act on the
- * page itself (zoom, find). Only menu items are looked up, so a key listed here with no menu item does nothing.
+ * page itself (zoom, find). Each one is a menu item's (the guide's Browser sessions section lists the same keys).
  */
 const RESERVED_FROM_PAGES = new Set([
   'Cmd+W', 'Cmd+Shift+W', 'Cmd+T', 'Cmd+N', 'Cmd+Shift+N', 'Cmd+Shift+T', 'Cmd+Alt+N', 'Cmd+L', 'Cmd+Q', 'Cmd+,',
-  'Cmd+1', 'Cmd+2', 'Cmd+3', 'Cmd+4', 'Cmd+5', 'Cmd+6', 'Cmd+7', 'Cmd+8', 'Cmd+9',
-  'Ctrl+Tab', 'Ctrl+Shift+Tab', 'Cmd+]', 'Cmd+[', 'Cmd+Shift+Return',
+  'Cmd+1', 'Cmd+2', 'Cmd+3', 'Cmd+4',
+  'Ctrl+Tab', 'Ctrl+Shift+Tab', 'Cmd+]', 'Cmd+Shift+Return',
   'Cmd+=', 'Cmd+-', 'Cmd+0', 'Cmd+F',
 ]);
 
