@@ -1013,6 +1013,8 @@
   "Resolving {host}…": "{host} 해석 중…",
   "Restart now": "지금 재시작",
   "Restart now to install it, or keep working: it is installed when you quit.": "지금 재시작하여 설치하거나 계속 작업하세요. 종료할 때 설치됩니다.",
+  "Another MobAlt window is open": "다른 MobAlt 창이 열려 있음",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version}은(는) 모든 MobAlt 창이 종료되면 설치됩니다. 다른 창을 종료한 뒤 ‘지금 재시작’을 다시 선택하거나 계속 작업하세요. 종료할 때 설치됩니다.",
   "Restore defaults": "기본값 복원",
   "Restore Panes": "페인 복원",
   "Restore panes (⇧⌘⏎)": "페인 복원(⇧⌘⏎)",
@@ -1448,5 +1450,8 @@
   "URL copied": "URL 복사됨",
   "URL is required": "URL이 필요합니다",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, or an http:// / https:// address": "user@host[:port] 형식으로 쓰고, 필요하면 ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://를 붙이거나, http:// / https:// 주소를 쓰세요",
-  "User name": "사용자 이름"
+  "User name": "사용자 이름",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "이 호스트 키는 known_hosts에 폐기됨으로 표시되어 있습니다. MobAlt는 이 키로 연결하지 않습니다.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "이 Mac에서 비밀 정보를 암호화할 수 없습니다(키체인 사용 불가) — 암호가 보호되지 않은 채 저장됩니다",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": ", 그중 {n}개는 열 때 명령을 실행함(시작 명령 또는 사용자 지정 셸)"
 }

@@ -294,7 +294,7 @@ class TerminalRegistry extends EventEmitter {
   startLog(id, file, { plain = false } = {}) {
     this.stopLog(id);
     fs.mkdirSync(path.dirname(file), { recursive: true });
-    const ws = fs.createWriteStream(file, { flags: 'a' });
+    const ws = fs.createWriteStream(file, { flags: 'a', mode: 0o600 }); // a log holds everything the terminal showed: the user's alone
     ws.write(`--- session log started ${new Date().toISOString()} ---\n`);
     this.logs.set(id, { ws, filter: plain ? new PlainTextFilter() : null });
     return file;
@@ -430,7 +430,7 @@ function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, usern
   const args = [`--ssh=${sshCmd}`];
   if (moshServer) args.push(`--server=${moshServer}`);
   if (moshPredict && moshPredict !== 'adaptive') args.push(`--predict=${moshPredict}`);
-  args.push(`${username ? username + '@' : ''}${host}`);
+  args.push('--', `${username ? username + '@' : ''}${host}`); // `--`: a host starting with '-' is not one of mosh's options
   const env = buildEnv({ ...settings, localShellIntegration: false }, '/bin/sh');
   env.PATH = [require('path').dirname(bin), '/usr/bin', '/bin', '/usr/sbin', '/sbin', env.PATH || ''].filter(Boolean).join(':');
   env.MOSH_TITLE_NOPREFIX = '1';

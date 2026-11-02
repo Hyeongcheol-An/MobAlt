@@ -10,10 +10,10 @@ See also: [MobaXterm 26.6 feature parity](MOBAXTERM_PARITY.md) — what MobAlt h
 ![MobAlt with two remote shells side by side](images/hero.png)
 
 Contents: [Install](#install) · [Updating](#updating) · [Sessions](#sessions) · [Connecting](#connecting) ·
-[Terminal](#terminal) · [Files (SFTP / FTP)](#files-sftp--ftp) · [Tunnels](#tunnels-port-forwarding) ·
-[X11, Mosh, Serial, RDP/VNC](#x11-mosh-serial-rdpvnc) · [Tools and macros](#tools-and-macros) ·
-[Workspace and settings](#workspace-and-settings) · [Keyboard shortcuts](#keyboard-shortcuts) ·
-[Data and privacy](#data-and-privacy) · [Troubleshooting](#troubleshooting)
+[Terminal](#terminal) · [Files (SFTP / FTP)](#files-sftp--ftp) · [Browser sessions](#browser-sessions) ·
+[Tunnels](#tunnels-port-forwarding) · [X11, Mosh, Serial, RDP/VNC](#x11-mosh-serial-rdpvnc) ·
+[Tools and macros](#tools-and-macros) · [Workspace and settings](#workspace-and-settings) ·
+[Keyboard shortcuts](#keyboard-shortcuts) · [Data and privacy](#data-and-privacy) · [Troubleshooting](#troubleshooting)
 
 ## Install
 
@@ -39,7 +39,9 @@ Three paths lead to a new release; all of them end with the new bundle at `/Appl
   away with "Restart now". While it downloads, a progress line — *Downloading MobAlt 0.17.0 — 42 % (12.3 of
   29.4 MB, 2.1 MB/s)* — with a thin bar shows above the tabs and in Settings → Updates; once the file is
   complete both offer **Restart now** (or **Later**: it is installed when you quit), and a download that
-  failed says why for a few seconds.
+  failed says why for a few seconds. The update can only be installed once every MobAlt window has quit, so while
+  another MobAlt instance is open, Restart now does not quit: a dialog says so, and the update is installed when
+  the last one quits.
 - **Homebrew**: `brew upgrade --cask mobalt` replaces the app in Applications.
 - **DMG**: download the new DMG from [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) and
   drag MobAlt to Applications, replacing the old one.
@@ -93,7 +95,9 @@ whose `id` matches an existing one is replaced by the file's version (a password
 every other one is added — a hand-written entry without an `id` is always added, and a `password` written
 into the file is taken and stored encrypted — folders are added and nothing is deleted, so importing the same
 file twice changes nothing. Entries without a name, with an unknown type or a bad port are skipped and
-counted in the toast; a file that is not a MobAlt sessions file is refused with the reason. `~/.ssh/config`
+counted in the toast; a file that is not a MobAlt sessions file is refused with the reason. The toast also says
+how many of the imported sessions run commands when opened (startup commands, or a local session's shell) — look at
+those before you open them when the file came from someone else. `~/.ssh/config`
 skips hosts you already have (same folder and name). MobaXterm bookmarks go under a `MobaXterm` folder; one
 imported before (same folder, name and host) is refreshed in place — host, port, user, X11 and compression
 follow the `.ini`, while its saved password, icon, colour, tunnels and a key path you set stay — so importing
@@ -114,7 +118,11 @@ folder dialog and leaves the field as it was when you cancel.
   default keys in `~/.ssh` before prompting. Choose *Password*, *Private key* or *SSH agent* to
   restrict it. Keys with a passphrase prompt once; tick "Save in session" to keep it.
 - **Host keys**: the first connection shows the fingerprint (SHA256 and MD5). Accepting stores the
-  key; a changed key is flagged loudly and never accepted silently.
+  key; a changed key is flagged loudly and never accepted silently: in that dialog **Cancel** is the default button,
+  so Enter refuses — accepting the new key takes a click on *Accept new key* (or Tab to it). A host already known
+  with a key of another type counts as changed, like OpenSSH. A key marked `@revoked` in a `known_hosts` file is
+  refused outright: the dialog says why and has no Accept button. Host names in `known_hosts` match regardless of
+  case, and `*` / `?` / `!` patterns work as in OpenSSH.
 - **SSH keys**: Session → Generate SSH Key… (also the Tools panel, and *Generate…* next to the
   private-key field in the session editor) runs macOS's `ssh-keygen` for you: Ed25519 (default),
   RSA 4096 or ECDSA, a comment, an optional passphrase with a strength hint, and the file (default
@@ -230,7 +238,7 @@ folder dialog and leaves the field as it was when you cancel.
   Settings → Features → *Keyword highlighting* switches it off; *Rules…* opens the table — each rule is a
   plain text or a regular expression, ignore case, a colour, an optional background, bold and underline;
   *Restore defaults* brings the built-in set back. Where rules overlap, the earlier match wins, then the
-  longer one. A session's Terminal tab can force it on or off (*Keyword highlighting: Default / On / Off*).
+  longer one. A session's Terminal tab can force it on or off (*Keyword highlighting: Default (Settings) / On / Off*).
   Only newly written lines are scanned (full-screen apps such as vim are left alone); at most 2,000 matches
   stay decorated per terminal — in a long burst the oldest rows go plain first — and ⌘K drops them all.
 - **Zmodem (rz/sz)**: move files through the terminal itself, the classic way over a serial console or a jump host
@@ -293,14 +301,22 @@ The **SFTP** panel follows the active SSH or FTP pane. It opens automatically on
   first match, Esc clears it.
 - Toolbar and context menu: new folder, rename, permissions, delete, download, upload. Multi-select
   with ⌘ / ⇧. Drag files from Finder onto the list to upload; existing names ask before overwriting.
-- Double-click a text file to edit it in the built-in editor (⌘S saves back). "Edit in external
-  editor" opens it in your editor (Settings → General → External editor) and re-uploads on every save.
+- Double-click a text file to edit it in the built-in editor (⌘S saves back). "Edit in External
+  Editor" opens it in your editor (Settings → General → External editor) and re-uploads on every save.
+  The setting is a program and its arguments — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` — started
+  directly, not through a shell: quotes group words, `{file}` is replaced by the file's path (else the path goes
+  last), and nothing else is expanded (no `$VAR`, `~` only at the start of the program, no `;` or pipes). A bare
+  program name is found in `/opt/homebrew/bin`, `/usr/local/bin` or through your login shell's PATH, even when
+  MobAlt was started from the Finder; one that cannot be started shows an error toast. The local copy lives in
+  `$TMPDIR/mobalt-edit/` and is deleted when MobAlt quits (copies a crashed run left behind go after a day).
 - Transfers show progress, speed and a cancel button; "Show in Finder" after a download. A download is written to
   `<name>.part` and takes its name once complete; if it stops (a dropped connection, Disconnect), the next download
   of the same file offers *Resume* or *Start over*.
 - Column headers sort by name, size or date. When the sidebar is narrow the date column hides.
 
 ## Browser sessions
+
+![A router's admin page in a pane next to the shell that manages it](images/browser-session.png)
 
 A **Browser** session opens a web page in a pane of its own — a router's admin page, Grafana, a device's web UI, the
 `localhost` port of a tunnel — next to the terminals that manage it. Create one with ＋ Session → Browser (the URL; a
@@ -365,7 +381,9 @@ this Mac* (or *on the server* for a remote forward).
 ## X11, Mosh, Serial, RDP/VNC
 
 - **X11**: tick "X11 forwarding" in Advanced SSH. MobAlt starts XQuartz when needed, forwards the
-  display and swaps the auth cookie, so `xeyes` or `gedit` just work. The status bar shows X11
+  display and swaps the auth cookie, so `xeyes` or `gedit` just work. Only X clients that present the session's
+  own (fake) cookie get through — what sshd sets up for your login — so another user on the server cannot reach
+  your Mac's display. The status bar shows X11
   availability.
 - **Mosh**: needs `brew install mosh` locally and `mosh-server` on the host (UDP 60000-61000).
   The pane runs the mosh client; the SSH bootstrap uses your key, agent or an interactive prompt.
@@ -383,7 +401,7 @@ this Mac* (or *on the server* for a remote forward).
 
 ## Tools and macros
 
-- **Tools** panel: ping, traceroute, DNS lookup, port scan and local network info, with a Stop
+- **Tools** panel: ping, traceroute, DNS lookup, port scan and *Net info*, with a Stop
   button for long runs.
 - **Wake-on-LAN** (Tools panel): type the MAC address in any spelling (`aa:bb:cc:dd:ee:ff`,
   `aa-bb-…`, `aabb.ccdd.eeff` or bare hex) and press Wake: the magic packet goes out three times as a
@@ -477,7 +495,7 @@ in the environment (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `pt
 | Icon and colour picks in the session editor: move / choose | ← → ↑ ↓ / ⏎ or Space |
 | Side strip panel buttons / ⌘1-4 | ⏎ moves the keyboard into the panel; switching panels remembers where it was |
 
-Help → Keyboard Shortcuts shows the same list inside the app. Tab reaches the toolbar, the side
+Help → Keyboard Shortcuts shows the same shortcuts inside the app. Tab reaches the toolbar, the side
 strip, the session tree, the macros list, the SFTP list and the tab strip (each list is one Tab
 stop; the arrows move inside it); dialogs keep Tab inside them and hand focus back to the tab,
 row or button that opened them when they close; context menus take ↑ ↓ / ⏎ / Esc. Esc in the
@@ -488,9 +506,15 @@ session filter or the quick-connect box clears it and returns to the terminal.
 
 Everything stays in `~/Library/Application Support/MobAlt/`: `sessions.json` (passwords and
 passphrases encrypted through the macOS Keychain), `settings.json`, `known_hosts`,
-`workspace.json`, and the zsh integration files. Session logs go to `~/Documents/MobAlt Logs/`.
+`workspace.json`, and the zsh integration files (`zdotdir/`, which also holds the local shell's history,
+`zdotdir/.zsh_history`, unless your own zsh files set `HISTFILE`). These files, the app's `known_hosts` and session logs are readable by your account only
+(0600). Session logs go to `~/Documents/MobAlt Logs/`. Browser panes keep their cookies and cache under
+`Partitions/` in the same folder (cookies encrypted). A remote file opened with *Edit in external editor* is copied to
+`$TMPDIR/mobalt-edit/` and deleted when MobAlt quits. If the Keychain cannot be used, saved passwords still work but
+are stored unprotected (base64), and MobAlt shows a warning once per run.
 MobAlt connects only to the hosts you configure; the optional update check reads the release list
-on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
+on GitHub and nothing else. Links open in your default browser only when they are `http(s)` or `mailto` (a
+terminal link with any other scheme does nothing). Details: [SECURITY.md](../SECURITY.md).
 
 ## Troubleshooting
 
@@ -510,12 +534,14 @@ on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
   of those in Advanced SSH → Algorithms (or *Reset to defaults*); for an old appliance that only
   offers SHA-1 / CBC, tick "Legacy algorithms (old devices)".
 - **Host key changed**: the server was reinstalled, or something is intercepting the connection.
-  Only accept if you know why; the old key can be removed from `known_hosts` in the config folder.
+  Only accept if you know why (Enter cancels; click *Accept new key*); the old key can be removed from `known_hosts`
+  in the config folder.
 - **X11 app does not appear**: install XQuartz, and make sure the remote shell does not override
   `DISPLAY` in its startup files.
 - **Mosh**: "mosh client not found" means `brew install mosh` is missing locally;
-  "mosh-server not found" means it is missing on the host or not on its PATH (set the path in the
-  session).
+  "Mosh could not connect — see the output above; is mosh-server installed on the host and UDP
+  60000-61000 open?" means the SSH bootstrap worked but mosh-server did not start: install it on the host, or set
+  its path in the session when it is not on the remote PATH.
 - **Gatekeeper warning on a self-built app**: right-click → Open once, or
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
 - **`hdiutil: attach failed – Resource busy` from `brew upgrade --cask mobalt`**: another Homebrew process

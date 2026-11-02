@@ -1092,6 +1092,8 @@
   "Resolving {host}…": "Đang phân giải {host}…",
   "Restart now": "Khởi động lại ngay",
   "Restart now to install it, or keep working: it is installed when you quit.": "Khởi động lại ngay để cài, hoặc tiếp tục làm việc: nó sẽ được cài khi bạn thoát.",
+  "Another MobAlt window is open": "Một cửa sổ MobAlt khác đang mở",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version} sẽ được cài khi mọi cửa sổ MobAlt đã thoát. Hãy thoát cửa sổ kia rồi chọn lại “Khởi động lại ngay”, hoặc tiếp tục làm việc: nó sẽ được cài khi bạn thoát.",
   "Restore defaults": "Khôi phục mặc định",
   "Restore Panes": "Khôi phục ngăn",
   "Restore panes (⇧⌘⏎)": "Khôi phục ngăn (⇧⌘⏎)",
@@ -1527,5 +1529,8 @@
   "URL": "URL",
   "URL copied": "Đã sao chép URL",
   "URL is required": "Cần có URL",
-  "User name": "Tên người dùng"
+  "User name": "Tên người dùng",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "Khóa máy chủ này được đánh dấu là đã thu hồi trong known_hosts. MobAlt sẽ không kết nối bằng khóa này.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "Không thể mã hóa dữ liệu bí mật trên máy Mac này (Chuỗi khóa không khả dụng) — mật khẩu được lưu mà không được bảo vệ",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": ", trong đó {n} phiên chạy lệnh khi mở (lệnh khởi động hoặc shell tùy chỉnh)"
 }

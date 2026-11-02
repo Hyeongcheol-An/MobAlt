@@ -12,14 +12,15 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 
-<p align="center"><a href="README.md">English README</a> · <a href="docs/USER_GUIDE.ko.md">사용자 안내서</a></p>
+<p align="center"><a href="README.md">English README</a> · <a href="docs/USER_GUIDE.ko.md">사용자 안내서</a> · <a href="docs/MOBAXTERM_PARITY.ko.md">MobaXterm 기능 비교</a> · <a href="CHANGELOG.md">변경 기록</a></p>
 <p align="center">사용자 안내서 언어: <a href="docs/USER_GUIDE.md">English</a> · <a href="docs/USER_GUIDE.ko.md">한국어</a> · <a href="docs/USER_GUIDE.zh-CN.md">简体中文</a> · <a href="docs/USER_GUIDE.ja.md">日本語</a> · <a href="docs/USER_GUIDE.vi.md">Tiếng Việt</a> · <a href="docs/USER_GUIDE.hi.md">हिन्दी</a> · <a href="docs/USER_GUIDE.de.md">Deutsch</a> · <a href="docs/USER_GUIDE.fr.md">Français</a> · <a href="docs/USER_GUIDE.es.md">Español</a> · <a href="docs/USER_GUIDE.pt.md">Português</a> · <a href="docs/USER_GUIDE.ar.md">العربية</a></p>
 
 ![MobAlt: 세션 트리와 나란히 띄운 원격 셸 두 개](docs/images/hero.png)
 
 Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도록 만든 앱입니다. 세션 트리, 탭·분할
 터미널, SSH 접속과 함께 열리는 SFTP 브라우저, 포트 포워딩, MultiExec, X11 포워딩, 매크로, 네트워크
-도구, 시리얼 콘솔을 한 창에 담았습니다. xterm.js, ssh2, node-pty 기반의 Electron 앱입니다.
+도구, 시리얼 콘솔, 관리하는 장비의 웹 화면을 띄우는 브라우저 페인을 한 창에 담았습니다. xterm.js, ssh2,
+node-pty 기반의 Electron 앱이며 텔레메트리도 계정도 없습니다.
 
 ## 데모
 
@@ -66,6 +67,7 @@ Windows에서 MobaXterm을 쓰던 방식 그대로 Mac에서 일할 수 있도�
 | 키워드 강조 | ✅ | 오류·경고·OK·IP 주소·URL·용량을 모든 터미널에서 색으로 표시. 편집 가능한 규칙 표(일반 텍스트 또는 정규식, 색 / 배경 / 굵게 / 밑줄, Settings → Features), 색은 테마에서 가져옴. 세션별로 켜고 끌 수 있음 |
 | Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩, 동반 SSH 연결로 SFTP |
 | FTP / FTPS | ✅ | 명시적 TLS FTPS, 익명 FTP. SFTP 패널에서 탐색·전송·편집 |
+| 웹 브라우저 탭 | ✅ 브라우저 세션 | 터미널 옆 페인에 웹 페이지 — 공유기 관리 화면, Grafana, 터널로 연 `localhost:port`. http/https만, 샌드박스, 뒤로 / 앞으로 / 새로 고침, ⌘L 주소 입력란. 다른 페인처럼 분할·확대·창 분리·작업대 복원. 로그인은 공유 또는 세션별 |
 
 MobaXterm 26.6과의 기능별 전체 비교: [docs/MOBAXTERM_PARITY.ko.md](docs/MOBAXTERM_PARITY.ko.md).
 
@@ -86,7 +88,8 @@ GitHub Releases에서 새 버전을 확인하며(Settings → Updates, Help → 
 ## 설치
 
 **요구 사항**: macOS 13 Ventura 이상, Apple Silicon 또는 Intel. 선택: X11 포워딩용
-[XQuartz](https://www.xquartz.org/), RDP용 [Windows App](https://apps.apple.com/app/windows-app/id1295203466).
+[XQuartz](https://www.xquartz.org/), Mosh용 `brew install mosh`, RDP용
+[Windows App](https://apps.apple.com/app/windows-app/id1295203466).
 
 ### Homebrew
 
@@ -99,7 +102,8 @@ brew install --cask mobalt
 이후 업데이트는 `brew upgrade --cask mobalt`. cask 파일은 이 저장소에도 있습니다(`Casks/mobalt.rb`).
 
 **업데이트**: 앱 내 업데이트, `brew upgrade --cask mobalt`, 새 DMG 모두 MobAlt가 실행 중이어도 되며, 앱이
-재시작 배너를 띄웁니다. 사용자 안내서의 [업데이트](docs/USER_GUIDE.ko.md#업데이트)를 보세요.
+재시작 배너를 띄웁니다. 사용자 안내서의 [업데이트](docs/USER_GUIDE.ko.md#업데이트)를 보세요. 버전 번호가 세션과 설정에
+대해 무엇을 약속하는지는 [docs/VERSIONING.md](docs/VERSIONING.md)(영문)에 있습니다.
 
 ### DMG
 
@@ -122,7 +126,7 @@ brew install --cask mobalt
 - **브라우저 세션**: 웹 페이지를 그것을 관리하는 셸 옆 페인에 엽니다 — 공유기 관리 화면, Grafana, 터널로 연 `localhost:port`.
   `＋ Session → Browser` 또는 빠른 접속에 `http://` / `https://` 주소. 뒤로 / 앞으로 / 새로 고침, 주소 입력란(⌘L), 탭에는
   페이지 제목, 기본 브라우저로 열기, 다시 시도 버튼이 있는 오류 화면. 다른 페인처럼 분할·확대·창 분리·작업 공간 복원이
-  됩니다. `http(s)`만, 샌드박스, 팝업과 권한 없음. 로그인(쿠키)은 브라우저 세션끼리 공유하되 세션별로 따로 둘 수 있습니다.
+  됩니다. `http(s)`만, 샌드박스, 팝업은 같은 페인에 열리고 기기 권한은 없음. 로그인(쿠키)은 브라우저 세션끼리 공유하되 세션별로 따로 둘 수 있습니다.
 - **SFTP**: SSH 세션에서 자동으로 열립니다. 더블클릭으로 이동·편집, `>_` 버튼으로 터미널에 `cd` 전송,
   세션 옵션으로 터미널 폴더 추종.
 - **터널**: `Tunneling`(⇧⌘U)에서 열린 연결 또는 저장된 세션으로 터널을 시작합니다. 세션 편집기 Tunnels 탭에
@@ -145,12 +149,21 @@ brew install --cask mobalt
   Shift+Enter와 Option+Enter는 ESC+CR을 보내 Claude Code 같은 TUI에서 줄바꿈으로 동작하고, 클립보드에
   이미지가 있으면 ⌘V로 Claude Code에 붙여넣습니다(`[Image #1]`).
 
-## 데이터와 개인정보
+## 보안과 개인정보
+
+MobAlt는 터미널 작업대라서 이 앱을 장악하면 내 권한으로 명령을 실행할 수 있습니다. 그래서 세 종류의 입력이 앱을
+장악하지 못하도록 만들었습니다. **원격 서버와 네트워크**: 비밀번호나 키를 쓰기 전에 호스트 키를 `~/.ssh/known_hosts`와
+MobAlt 자체 파일로 확인합니다. X11·에이전트 포워딩은 세션에서 켜지 않는 한 꺼져 있고, 터널은 다른 주소를 고르지 않는
+한 127.0.0.1에서만 대기합니다. **내가 보는 내용**: 터미널 출력, 원격 파일 이름, 웹 페이지는 데이터로만 다룹니다.
+브라우저 페인은 MobAlt와 내 파일에 접근할 수 없는 샌드박스에서 돌며 http(s)만 엽니다. **가져오는 파일**: 세션 파일에는
+명령(시작 명령, 로컬 셸)이 들어 있을 수 있으니 믿을 수 있는 곳에서 받은 것만 가져오세요. 저장한 비밀번호와 패스프레이즈는
+macOS Keychain에 보관된 키로 암호화되며, 화면 쪽으로 넘어가지 않고 내보내기 파일에도 들어가지 않습니다. 범위 밖: 이미
+내 macOS 사용자 권한으로 코드를 실행할 수 있는 사람.
 
 모든 데이터는 `~/Library/Application Support/MobAlt/`에 있습니다: `sessions.json`(비밀번호·패스프레이즈는
 macOS Keychain 기반 암호화), `settings.json`, `known_hosts`, `workspace.json`. 세션 로그 기본 위치는
 `~/Documents/MobAlt Logs/`입니다. 앱은 사용자가 설정한 호스트에만 접속하며 텔레메트리가 없습니다. 선택적인 업데이트 확인은 GitHub의
-릴리스 목록만 읽습니다. 자세한 내용은 [SECURITY.md](SECURITY.md)에 있습니다.
+릴리스 목록만 읽습니다. 자세한 내용과 취약점을 비공개로 제보하는 방법은 [SECURITY.md](SECURITY.md)에 있습니다.
 
 ## 개발
 
@@ -164,6 +177,7 @@ npm install            # node-pty를 Electron용으로 리빌드
 npm start              # 소스에서 실행
 npm test               # 단위 테스트
 npm run pack           # dist/mac-arm64/MobAlt.app (서명 없음)
+npm run pack:qa        # dist-qa/mac-arm64/MobAlt.app, QA 테스트 훅 포함 (배포용 아님)
 npm run dist           # arm64·x64 DMG + zip
 npm run install:local  # arm64 빌드, Developer ID 인증서가 있으면 서명, /Applications에 설치
 npm run perf           # 시작 시간·유휴 CPU·메모리·번들 크기 측정 (docs/PERFORMANCE.md)
@@ -188,13 +202,23 @@ npm run perf           # 시작 시간·유휴 CPU·메모리·번들 크기 측
 - 원격 쪽 `~/.zprofile` 등에서 `DISPLAY`를 고정하면 포워딩된 X11 DISPLAY가 덮어써집니다.
 - MobaXterm.ini는 비공개 형식이라 호스트/포트/사용자/폴더/X11 플래그만 가져오고 비밀번호는 가져오지 않습니다.
   `.ppk` 키는 `puttygen`으로 OpenSSH 형식으로 변환하세요.
-- Mosh는 이 Mac에 `mosh` 클라이언트, 원격 호스트에 `mosh-server`(UDP 60000-61000)가 필요합니다.
+- Mosh는 이 Mac에 `mosh` 클라이언트, 원격 호스트에 `mosh-server`(UDP 60000-61000)가 필요합니다. 페인에서
+  mosh 클라이언트가 돌기 때문에 Zmodem은 쓸 수 없고, SFTP 패널은 별도의 SSH 연결로 호스트에 접속합니다.
 - *Timed out while waiting for handshake* / `ETIMEDOUT`이면 먼저 `nc -vz <host> <port>`로 도달 여부를 확인하세요.
   인증 실패가 반복되면 서버의 fail2ban이나 sshd `PerSourcePenalties`가 IP를 잠시 차단했을 수 있습니다.
 - macOS 15 이상에서는 로컬 네트워크의 호스트에 연결하려면 *로컬 네트워크* 권한이 필요합니다(시스템 설정 →
   개인정보 보호 및 보안 → 로컬 네트워크 → MobAlt). 허용하기 전까지는 이 Mac에서 연결이 `EHOSTUNREACH`로 실패하며
   MobAlt가 해당 설정을 안내합니다.
+- X11 포워딩에는 이 Mac에 [XQuartz](https://www.xquartz.org/)가 설치돼 있어야 합니다. MobAlt가 필요할 때 띄우지만
+  설치해 주지는 않습니다.
+- RDP와 VNC는 넘겨주기입니다. `.rdp` 파일은 Windows App이, `vnc://` 주소는 화면 공유가 엽니다. 그 창은 MobAlt 탭이
+  아닙니다.
+- 시리얼: macOS가 시리얼 포트(`/dev/cu.*`)로 드러내는 장치만 나열됩니다. 제조사 드라이버가 필요한 어댑터(일부
+  CH34x / PL2303)는 드라이버를 설치해야 보입니다. 장치를 뽑으면 세션이 끝나고 페인에 연결이 끊겼다고 표시됩니다.
 
 ## 라이선스
 
 [MIT](LICENSE) © Hyeongcheol An
+
+MobaXterm은 Mobatek의 상표입니다. MobAlt는 독립 프로젝트이며 Mobatek과 제휴하거나 Mobatek의 보증을 받지 않았습니다.
+이름은 무엇을 대신하는 앱인지를 나타낼 뿐입니다.

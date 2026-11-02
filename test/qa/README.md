@@ -1,7 +1,13 @@
 # QA harness: drive the real app, take screenshots
 
 MobAlt can run with a renderer-side script injected and save screenshots of the real window.
-Nothing here is compiled into releases; the hooks only exist while `MOBALT_TEST_SCRIPT` is set.
+Nothing here works in a release: the hooks only exist while `MOBALT_TEST_SCRIPT` is set **and** the app runs from
+source (`electron .`, which is what `run.sh` does) or is a packaged build made with `npm run pack:qa` (output in
+`dist-qa/`, its `package.json` carries `"testHooks": true`). A plain `npm run pack` / `npm run dist` build — and every
+signed release — removes `MOBALT_TEST_SCRIPT`, `MOBALT_SCREENSHOT(_DELAY)`, `MOBALT_SHOT_DIR`, `MOBALT_QUIT_AFTER` and
+`MOBALT_ZMODEM_DEBUG` from its environment at start-up (`src/main/testgate.js`), and its asar-integrity and
+only-load-from-asar fuses keep anyone from adding the flag afterwards. `MOBALT_USER_DATA` and `MOBALT_LANG` work in
+every build.
 
 ```bash
 test/qa/run.sh <script.js> <out-dir> [auto-quit-ms]     # screenshots → <out-dir>/shots/*.png
@@ -31,7 +37,7 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `shots/final.png`.
 - `console.log` output is echoed to the terminal prefixed with `[renderer:info]`.
 - `test/qa/docs-shots.js` makes the screenshots of the README and the user guides — `npm run docs:shots` runs it once
-  per interface language into `docs/images/<code>/` (English in `docs/images/`) and starts the FTP server it needs —
+  per interface language into `docs/images/<code>/` (English in `docs/images/`) and starts the FTP server and the web page (`test/httpsrv.js` on 48731) it needs —
   and `test/qa/demo-frames.js` the frames of the README demo GIF (`npm run demo` runs it and `scripts/make-demo-gif.sh`;
   start the FTP server from its header first). Nothing personal appears in the images.
 - `testKey(k)` sends keyDown/keyUp only (no char event), so the native Enter activation of a focused button cannot
@@ -67,7 +73,21 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   connects to a LAN host by SSH and Telnet and pings it from the Tools panel. One RESULTS line says whether this Mac
   refused the connections (EHOSTUNREACH), whether the pane carried the hint and whether the dialog came once and only
   once; with the permission granted it reports `permissionGranted` instead, since nothing can be provoked then.
-  `MOBALT_APP=/Applications/MobAlt.app` runs the packaged app, `LOCALNET_HOST=` picks the host (default: the gateway).
+  `MOBALT_APP=dist-qa/mac-arm64/MobAlt.app` runs a packaged app — it has to be a `npm run pack:qa` build (a release
+  such as `/Applications/MobAlt.app` ignores the test script and the run ends without a RESULTS line), `LOCALNET_HOST=` picks the host (default: the gateway).
+
+- Where a run leaves things (all under `<out-dir>/userdata` unless noted, and deleted with it): settings, sessions,
+  `known_hosts`, workspace; the local shell's history (`userdata/zdotdir/.zsh_history`, unless your zsh files set
+  `HISTFILE`); browser panes' cookies and cache (`userdata/Partitions/browser*`); session logs
+  (`userdata/MobAlt Logs/`). Remote files opened with *Edit in external editor* are copied to `$TMPDIR/mobalt-edit/`
+  and removed when the app quits (a run that is killed leaves them; the next start removes connection folders there
+  older than 24 h). In test mode `window.api.shell.openPath` answers `''` for an allowed folder without opening
+  Finder, `'refused'` otherwise. `**/userdata/` and `**/MobAlt Logs/` are
+  git-ignored.
+- Security checks: `test/e2e-hostkey.js` (the host-key dialog from the keyboard: a changed key is not accepted by
+  Enter, a key of another type is "changed", an `@revoked` key is refused; needs the test sshd) and
+  `test/e2e-security.js` (what the window may open: external URLs, folders, `vnc://`, navigation, `window.open`,
+  OSC 8 links; no server).
 
 ## Renderer API available to scripts
 
@@ -85,6 +105,7 @@ await window.api.clipboard.kinds();                      // { text, image, forma
 await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
 (await window.api.app.testQuitCheck()).relaunchRequested; // true once the banner's Relaunch ran (test mode records, never restarts)
 await window.api.app.testUpdateProgress({ phase: 'downloading', version: '0.17.0', percent: 42, transferred, total, bytesPerSecond }); // the updater's download event (app:update-progress) → the banner and the Settings → Updates line; phase 'done' or 'error' (with message) too (test mode only)
+await window.api.app.testOtherInstances([4242]); // "Restart now" (app:install-update) finds another instance of the bundle: the sheet, not the recorded install; [] for none (test mode only)
 (await window.api.app.testQuitCheck()).installRequested;  // true once "Restart now" asked to install a downloaded update (recorded, never performed)
 await window.api.app.testNotice('Internal error: x'); // a main-process notice (app:notice) → error toast (test mode only)
 await window.api.app.testSilentListen(2213);            // → { port }: a TCP listener on 127.0.0.1 that accepts and never speaks — an SSH connection to it waits for the banner (test mode only)

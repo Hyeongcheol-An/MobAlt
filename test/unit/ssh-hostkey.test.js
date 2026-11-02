@@ -138,3 +138,21 @@ test('_explainError: "Unknown DH group" says which group this build lacks and wh
   assert.match(msg, /^Unknown DH group — this build cannot do diffie-hellman-group1-sha1 \(1024-bit Diffie-Hellman was removed from its crypto\); Advanced SSH → Algorithms: take it out of the key exchange list or Reset to defaults$/);
   assert.equal(ssh._explainError(new Error('something else'), {}, { host: 'h' }), 'something else');
 });
+
+test('a revoked key is refused after the dialog, whatever it answers, and never remembered', async () => {
+  const prompts = [];
+  const ssh = new SshManager(null, store, { hostKey: (info) => { prompts.push(info); return Promise.resolve(true); }, status() {} });
+  const key = fakeKey();
+  const file = knownhosts.file();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.appendFileSync(file, `@revoked [revoked.test]:2222 ssh-ed25519 ${key.toString('base64')}\n`);
+  const before = fs.readFileSync(file, 'utf8');
+  const ctx = timerCtx();
+  const result = await new Promise((r) => ssh._hostVerifier({ host: 'revoked.test', port: 2222 }, ctx)(key, r));
+  assert.equal(result, false);
+  assert.equal(prompts.length, 1);
+  assert.equal(prompts[0].status, 'revoked');
+  assert.equal(fs.readFileSync(file, 'utf8'), before);
+  assert.equal(ctx.paused, 1);
+  assert.equal(ctx.resumed, 1);
+});

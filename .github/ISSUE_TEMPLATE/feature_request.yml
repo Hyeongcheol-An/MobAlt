@@ -1,0 +1,50 @@
+name: Feature request
+description: Something MobaXterm does that MobAlt should, or an idea of your own
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check [docs/MOBAXTERM_PARITY.md](https://github.com/Hyeongcheol-An/MobAlt/blob/main/docs/MOBAXTERM_PARITY.md) first: every MobaXterm 26.6 feature is listed there
+        with what MobAlt has, lacks (❌) or does differently (🟡), and the roadmap. A ❌ row is a welcome request; a ➖ row is
+        Windows-only and will not be built.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task, not the button — "drive six switches through one bastion", "edit a config file on a host that has no SFTP".
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What MobAlt should do
+      description: Where it would live (session editor tab, pane menu, Settings page, a shortcut) and how MobaXterm does it, if it does.
+    validations:
+      required: true
+  - type: input
+    id: parity
+    attributes:
+      label: Parity table row (if any)
+      placeholder: "Section 6 — Save terminal text to file"
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do today instead
+  - type: dropdown
+    id: session
+    attributes:
+      label: Session types it concerns
+      multiple: true
+      options:
+        - SSH
+        - Mosh
+        - Local terminal
+        - Telnet
+        - Serial
+        - FTP / FTPS
+        - SFTP panel
+        - Browser session
+        - Tunnels
+        - Tools
+        - All / not session-specific

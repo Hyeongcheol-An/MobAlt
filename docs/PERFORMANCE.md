@@ -7,7 +7,8 @@ changed on the strength of them, and what was measured and left alone.
 ## Running the measurements
 
 ```bash
-npm run pack                 # the packaged columns need dist/mac-arm64/MobAlt.app
+npm run pack:qa              # the packaged columns need dist-qa/mac-arm64/MobAlt.app (a build that keeps the test hooks)
+npm run pack                 # the bundle size is measured on dist/mac-arm64/MobAlt.app
 test/start-sshd.sh start     # the monitoring-bar scene needs the local sshd (skipped otherwise)
 npm run perf                 # everything: ~25 min; tables on stdout, perf.json and every run's log under test/shots/perf/<stamp>/
 npm run perf -- --quick      # 2 start-up runs and 15 s idle windows instead of 5 and 60 s

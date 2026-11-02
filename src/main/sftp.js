@@ -2,11 +2,10 @@
 // SFTP operations on top of an SSH connection: listing, file ops, transfers with
 // progress + cancel (own concurrent read/write loop), and "edit remote file locally".
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const EventEmitter = require('events');
-const { spawn } = require('child_process');
+const editor = require('./editor'); // the Edit command's temp copy and the external editor (no shell)
 const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
 const t_ = t; // where a transfer is called t
 
@@ -490,9 +489,7 @@ class SftpManager extends EventEmitter {
   /** Download to a temp file, open it in the local editor, re-upload on every save. */
   async editRemote(connId, remote) {
     const settings = this.store.getSettings();
-    const dir = path.join(os.tmpdir(), 'mobalt-edit', connId, crypto.randomBytes(3).toString('hex'));
-    fs.mkdirSync(dir, { recursive: true });
-    const local = path.join(dir, path.posix.basename(remote));
+    const { dir, local } = editor.editTarget(connId, remote); // the remote name is only ever a file name (editor.js)
     const sftp = await this._sftp(connId);
     const t = this._newTransfer(connId, 'download', path.posix.basename(remote), remote, local);
     try {
@@ -508,13 +505,8 @@ class SftpManager extends EventEmitter {
     }
     this._emitTransfer(t);
 
-    const cmd = (settings.editorCommand || '').trim();
-    if (cmd) {
-      const parts = cmd.includes('{file}') ? cmd.replace('{file}', JSON.stringify(local)) : `${cmd} ${JSON.stringify(local)}`;
-      spawn('/bin/sh', ['-c', parts], { detached: true, stdio: 'ignore' }).unref();
-    } else {
-      spawn('open', ['-t', local], { detached: true, stdio: 'ignore' }).unref();
-    }
+    // program + arguments, the path one argument: no shell; a program that cannot start is told (main: app:notice)
+    editor.openInEditor(settings.editorCommand, local, (e, program) => this.emit('editor-error', { connId, program, error: e.message }));
 
     let lastMtime = fs.statSync(local).mtimeMs;
     let timer = null;
@@ -556,6 +548,7 @@ class SftpManager extends EventEmitter {
         this.edits.delete(k);
       }
     }
+    if (!connId) editor.removeEditDirs(); // quitting: the local copies go too
   }
 }
 

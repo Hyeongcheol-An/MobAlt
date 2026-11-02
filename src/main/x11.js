@@ -134,17 +134,46 @@ async function prepare(onStatus) {
   };
 }
 
-/** Pipe an accepted ssh2 x11 channel to the local X server. */
+/**
+ * Is `presented` (the cookie bytes an X client sent in its setup request) the fake cookie handed to sshd for this
+ * session? sshd does not check X11 cookies itself, so this check is the only thing that keeps other users of the
+ * remote host away from the Mac's X server: without it any local process there could connect to the forwarded display
+ * and be given the real cookie.
+ */
+function cookieMatches(presented, fakeHex) {
+  if (!fakeHex) return false;
+  const fake = Buffer.from(fakeHex, 'hex');
+  return Buffer.isBuffer(presented) && presented.length === fake.length && crypto.timingSafeEqual(presented, fake);
+}
+
+/**
+ * Pipe an accepted ssh2 x11 channel to the local X server. With a fake cookie in place the client's setup request must
+ * carry exactly that cookie (MIT-MAGIC-COOKIE-1); anything else — another cookie, another protocol, no authorisation —
+ * closes the channel before a byte reaches the X server, like OpenSSH's x11_open_helper. A matching cookie is replaced
+ * by the real local one when there is one.
+ */
 function proxy(channel, x11, onError) {
   const sock = x11.socketPath ? net.connect(x11.socketPath) : net.connect(tcpTarget(x11.display) || { port: 6000 });
   sock.once('error', (e) => onError && onError(tt('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
   let header = Buffer.alloc(0);
-  let done = !x11.realCookie; // nothing to swap if we have no local cookie
+  // nothing to check or swap when the session has neither a fake nor a local cookie
+  let done = !x11.fakeCookie && !x11.realCookie;
+  let refused = false;
+
+  const refuse = () => {
+    refused = true;
+    header = Buffer.alloc(0);
+    onError && onError(t('permission denied'));
+    sock.destroy();
+    try { channel.close(); } catch {}
+  };
 
   const onData = (chunk) => {
+    if (refused) return;
     if (done) return sock.write(chunk);
     header = Buffer.concat([header, chunk]);
     if (header.length < 12) return;
+    if (header[0] !== 0x6c && header[0] !== 0x42) return refuse(); // neither 'l' nor 'B': not an X11 setup request
     const le = header[0] === 0x6c; // 'l'
     const rd16 = (o) => (le ? header.readUInt16LE(o) : header.readUInt16BE(o));
     const n = rd16(6);
@@ -156,13 +185,16 @@ function proxy(channel, x11, onError) {
     const dataStart = 12 + n + pad(n);
     const rest = header.slice(total);
     let out;
-    if (name === 'MIT-MAGIC-COOKIE-1' && d === 16) {
-      const real = Buffer.from(x11.realCookie, 'hex');
-      out = Buffer.concat([header.slice(0, dataStart), real, header.slice(dataStart + 16, total)]);
+    if (x11.fakeCookie) {
+      if (name !== 'MIT-MAGIC-COOKIE-1' || !cookieMatches(header.slice(dataStart, dataStart + d), x11.fakeCookie)) return refuse();
+      out = x11.realCookie
+        ? Buffer.concat([header.slice(0, dataStart), Buffer.from(x11.realCookie, 'hex'), header.slice(dataStart + d, total)])
+        : header.slice(0, total);
     } else {
       out = header.slice(0, total);
     }
     done = true;
+    header = Buffer.alloc(0);
     sock.write(out);
     if (rest.length) sock.write(rest);
   };
@@ -180,4 +212,4 @@ function proxy(channel, x11, onError) {
   channel.on('error', () => sock.destroy());
 }
 
-module.exports = { prepare, proxy, isAvailable, ensureServer, findDisplay, displayNumber, socketPathFor };
+module.exports = { prepare, proxy, cookieMatches, isAvailable, ensureServer, findDisplay, displayNumber, socketPathFor };

@@ -204,18 +204,18 @@ test('install(): nothing before a download completed; afterwards the beforeInsta
   const u = fresh({ beforeInstall: () => calls.push('beforeInstall') });
   autoUpdater.downloadUpdate = async () => {};
   autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
-  assert.equal(u.install(), false, 'nothing downloaded yet');
+  assert.equal(await u.install(), false, 'nothing downloaded yet');
   answerDownload();
   try {
     const p = u.check(true, { quiet: true });
     autoUpdater.emit('update-available', { version: '0.17.0' });
     await p;
     await settled();
-    assert.equal(u.install(), false, 'still downloading');
+    assert.equal(await u.install(), false, 'still downloading');
     autoUpdater.emit('update-downloaded', { version: '0.17.0' });
     await settled();
     assert.deepEqual(calls, [], 'the sheet was answered Later: nothing installed by itself');
-    assert.equal(u.install(), true);
+    assert.equal(await u.install(), true);
     await settled();
     assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
   } finally {
@@ -226,7 +226,7 @@ test('install(): nothing before a download completed; afterwards the beforeInsta
 test('running from source: install() is a no-op', async () => {
   electron.app.isPackaged = false;
   try {
-    assert.equal(fresh().install(), false);
+    assert.equal(await fresh().install(), false);
   } finally {
     electron.app.isPackaged = true;
   }
@@ -359,8 +359,9 @@ test('install() twice (two clicks): beforeInstall and quitAndInstall run once', 
     await settled();
     autoUpdater.emit('update-downloaded', { version: '0.17.0' });
     await settled();
-    assert.equal(u.install(), true);
-    assert.equal(u.install(), true, 'the second click is answered the same way…');
+    const [first, second] = await Promise.all([u.install(), u.install()]);
+    assert.equal(first, true);
+    assert.equal(second, true, 'the second click is answered the same way…');
     await settled();
     assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall'], '…but nothing runs twice');
   } finally {
@@ -384,13 +385,13 @@ test('install(): when quitAndInstall throws, nothing is quitting — the hook he
     autoUpdater.emit('update-downloaded', { version: '0.17.0' });
     await settled();
     const n = progress.length;
-    assert.equal(u.install(), true);
+    assert.equal(await u.install(), true);
     await settled();
     assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
     assert.deepEqual(failed, ['ShipIt is busy']);
     assert.equal(progress.length, n + 1);
     assert.equal(progress[n].phase, 'done', 'the Restart now buttons come back');
-    assert.equal(u.install(), true, 'a later click tries again…');
+    assert.equal(await u.install(), true, 'a later click tries again…');
     await settled();
     assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall', 'beforeInstall', 'quitAndInstall'], '…and runs the whole path again');
     assert.equal(failed.length, 1);
@@ -419,7 +420,7 @@ test('a native error after update-downloaded (no check running, nothing download
     assert.equal(last.version, '0.17.0');
     assert.equal(last.message, 'Code signature did not pass validation');
     assert.equal(dialogs.length, 2, 'no sheet: nobody asked for a check');
-    assert.equal(u.install(), false, 'nothing to install any more');
+    assert.equal(await u.install(), false, 'nothing to install any more');
     assert.deepEqual(calls, []);
     // the next check offers the download again instead of re-sending "done"
     const n = progress.length;
@@ -430,6 +431,90 @@ test('a native error after update-downloaded (no check running, nothing download
     assert.equal(dialogs[dialogs.length - 1].message, 'MobAlt 0.17.0 is available');
     assert.equal(progress[n].phase, 'downloading', 'a fresh download (answered Download), not the old done event');
     assert.equal(progress[n].percent, 0);
+  } finally {
+    answerLater();
+  }
+});
+
+// ---------- another instance of the bundle running: Squirrel would install only when it quits ----------
+const { parseOtherInstances } = require('../../src/main/instances');
+const EXE = '/Applications/MobAlt.app/Contents/MacOS/MobAlt';
+// `ps -axo pid,ppid,comm` as captured on a Mac with two MobAlt instances, ShipIt waiting and another Electron app
+const PS = `  PID  PPID COMM
+    1     0 /sbin/launchd
+  994     1 /Applications/Visual Studio Code.app/Contents/Frameworks/Electron Framework.framework/Helpers/chrome_crashpad_handler
+60399     1 /Applications/MobAlt.app/Contents/Frameworks/Squirrel.framework/Resources/ShipIt
+87860     1 /Applications/MobAlt.app/Contents/MacOS/MobAlt
+87861 87860 /Applications/MobAlt.app/Contents/Frameworks/MobAlt Helper.app/Contents/MacOS/MobAlt Helper
+87862 87860 /Applications/MobAlt.app/Contents/Frameworks/MobAlt Helper (GPU).app/Contents/MacOS/MobAlt Helper (GPU)
+87865 87860 /Applications/MobAlt.app/Contents/Frameworks/MobAlt Helper (Renderer).app/Contents/MacOS/MobAlt Helper (Renderer)
+87870 87860 /Applications/MobAlt.app/Contents/Frameworks/Electron Framework.framework/Helpers/chrome_crashpad_handler
+91000     1 /Applications/MobAlt.app/Contents/MacOS/MobAlt
+91001 91000 /Applications/MobAlt.app/Contents/Frameworks/MobAlt Helper (Renderer).app/Contents/MacOS/MobAlt Helper (Renderer)
+91002 91000 /bin/zsh
+92000     1 /Users/me/Downloads/MobAlt.app/Contents/MacOS/MobAlt
+`;
+
+test('instances: only other main processes of this bundle count — not our own pid, not the helpers, crashpad or ShipIt, not a copy elsewhere', () => {
+  assert.deepEqual(parseOtherInstances(PS, EXE, 87860), [91000]);
+  assert.deepEqual(parseOtherInstances(PS, EXE, 91000), [87860], 'seen from the other one');
+  assert.deepEqual(parseOtherInstances(PS.replace(/^91000.*$/m, '').replace(/^91001.*$/m, ''), EXE, 87860), [], 'alone');
+  // something we started that runs the main executable (a child of ours, or deeper) is ours, not another instance
+  const child = PS + `93000 91002 ${EXE}\n`;
+  assert.deepEqual(parseOtherInstances(child, EXE, 91000), [87860]);
+  assert.deepEqual(parseOtherInstances('', EXE, 1), []);
+  assert.deepEqual(parseOtherInstances('garbage\n\n', EXE, 1), []);
+});
+
+test('install() with another instance running: no quit, the sheet says why, false back to the button; once it is gone, the install runs', async () => {
+  const calls = [];
+  let pids = [91000];
+  const u = fresh({ beforeInstall: () => calls.push('beforeInstall'), otherInstances: async () => pids });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    const n = dialogs.length;
+    assert.equal(await u.install(), false, 'the renderer gives Restart now back');
+    await settled();
+    assert.deepEqual(calls, [], 'nothing quits');
+    assert.equal(dialogs.length, n + 1);
+    assert.equal(dialogs[n].message, 'Another MobAlt window is open');
+    assert.equal(dialogs[n].detail, 'MobAlt 0.17.0 is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.');
+    assert.deepEqual(dialogs[n].buttons, ['OK']);
+    assert.equal(autoUpdater.autoInstallOnAppQuit, true, 'install on quit stays on');
+    pids = [];
+    assert.equal(await u.install(), true, 'the other one quit: Restart now installs');
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
+    assert.equal(dialogs.length, n + 1);
+  } finally {
+    answerLater();
+  }
+});
+
+test('install(): a detector that fails does not take Restart now away', async () => {
+  const calls = [];
+  const u = fresh({ beforeInstall: () => calls.push('beforeInstall'), otherInstances: async () => { throw new Error('ps: not found'); } });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.equal(await u.install(), true);
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
   } finally {
     answerLater();
   }

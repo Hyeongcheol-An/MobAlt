@@ -11,7 +11,9 @@
 # and the line says so (permissionGranted).
 #
 #   test/qa/localnet-check.sh [out-dir]                               the dev checkout (node_modules/electron)
-#   MOBALT_APP=/Applications/MobAlt.app test/qa/localnet-check.sh     the packaged app
+#   MOBALT_APP=dist-qa/mac-arm64/MobAlt.app test/qa/localnet-check.sh the packaged app — a `npm run pack:qa` build:
+#                                                                     release builds ignore MOBALT_TEST_SCRIPT
+#                                                                     (src/main/testgate.js), so no RESULTS line
 #   MOBALT_LANG=ko test/qa/localnet-check.sh                          the hint and the dialog in another language
 set -u
 unset ELECTRON_RUN_AS_NODE # an IDE's terminal sets it, `open` passes it on, and Electron would then run main.js as plain Node

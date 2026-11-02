@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld('api', {
     testQuitCheck: (verb) => invoke('test:quit-check', verb),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
     testUpdateProgress: (info) => invoke('test:update-progress', info), // the updater's download event (app:update-progress) as the windows hear it: { phase, version, percent, transferred, total, bytesPerSecond, message? } (test mode only)
+    testOtherInstances: (pids) => invoke('test:other-instances', pids), // pretend these pids are other running instances of the bundle: Restart now shows the sheet instead of installing ([] for none; test mode only)
     testNotice: (text) => invoke('test:notice', text),
     testNextDialog: (result) => invoke('test:next-dialog', result),
     testWolListen: (port) => invoke('test:wol-listen', port), // UDP listener on 127.0.0.1:<port> for magic packets (test mode only)

@@ -1155,6 +1155,8 @@
   "Resolving {host}…": "Resolviendo {host}…",
   "Restart now": "Reiniciar ahora",
   "Restart now to install it, or keep working: it is installed when you quit.": "Reinicia ahora para instalarla, o sigue trabajando: se instalará al salir.",
+  "Another MobAlt window is open": "Hay otra ventana de MobAlt abierta",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version} se instala cuando todas las ventanas de MobAlt se han cerrado. Sal de la otra ventana y vuelve a elegir «Reiniciar ahora», o sigue trabajando: se instalará al salir.",
   "Restore defaults": "Restaurar por omisión",
   "Restore Panes": "Restaurar paneles",
   "Restore panes (⇧⌘⏎)": "Restaurar paneles (⇧⌘⏎)",
@@ -1610,5 +1612,11 @@
   "URL copied": "URL copiada",
   "URL is required": "La URL es obligatoria",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, or an http:// / https:// address": "Usa usuario@host[:puerto], opcionalmente con ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, o una dirección http:// / https://",
-  "User name": "Nombre de usuario"
+  "User name": "Nombre de usuario",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "Esta clave del host está marcada como revocada en known_hosts. MobAlt no se conectará con ella.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "No se pueden cifrar los secretos en este Mac (llavero no disponible) — las contraseñas se guardan sin protección",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": [
+    ", {n} de ellas ejecuta comandos al abrirse (comandos de inicio o un shell personalizado)",
+    ", {n} de ellas ejecutan comandos al abrirse (comandos de inicio o un shell personalizado)"
+  ]
 }

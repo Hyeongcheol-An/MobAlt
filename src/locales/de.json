@@ -1200,6 +1200,8 @@
   "Resolving {host}…": "{host} wird aufgelöst…",
   "Restart now": "Jetzt neu starten",
   "Restart now to install it, or keep working: it is installed when you quit.": "Starten Sie jetzt neu, um zu installieren, oder arbeiten Sie weiter: Die Installation erfolgt beim Beenden.",
+  "Another MobAlt window is open": "Ein anderes MobAlt-Fenster ist geöffnet",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "MobAlt {version} wird installiert, sobald alle MobAlt-Fenster beendet sind. Beenden Sie das andere Fenster und wählen Sie erneut „Jetzt neu starten“, oder arbeiten Sie weiter: Die Installation erfolgt beim Beenden.",
   "Restore defaults": "Standard wiederherstellen",
   "Restore Panes": "Bereiche wiederherstellen",
   "Restore panes (⇧⌘⏎)": "Bereiche wiederherstellen (⇧⌘⏎)",
@@ -1620,5 +1622,11 @@
   "MobAlt {version} downloaded — it is installed when you quit, or restart now": "MobAlt {version} heruntergeladen — wird beim Beenden installiert",
   "Download of MobAlt {version} failed: {error}": "Download von MobAlt {version} fehlgeschlagen: {error}",
   "Download progress": "Downloadfortschritt",
-  "Quit and install the downloaded update": "Beenden und das heruntergeladene Update installieren"
+  "Quit and install the downloaded update": "Beenden und das heruntergeladene Update installieren",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "Dieser Hostschlüssel ist in known_hosts als widerrufen markiert. MobAlt baut damit keine Verbindung auf.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "Geheimnisse können auf diesem Mac nicht verschlüsselt werden (Schlüsselbund nicht verfügbar) — Passwörter werden ungeschützt gespeichert",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": [
+    ", davon führt {n} beim Öffnen Befehle aus (Startbefehle oder eigene Shell)",
+    ", davon führen {n} beim Öffnen Befehle aus (Startbefehle oder eigene Shell)"
+  ]
 }

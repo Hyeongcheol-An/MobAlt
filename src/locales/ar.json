@@ -1144,6 +1144,8 @@
   "Resolving {host}…": "جارٍ تحليل {host}…",
   "Restart now": "إعادة التشغيل الآن",
   "Restart now to install it, or keep working: it is installed when you quit.": "أعِد التشغيل الآن لتثبيته، أو تابع العمل: سيتم تثبيته عند الإنهاء.",
+  "Another MobAlt window is open": "توجد نافذة MobAlt أخرى مفتوحة",
+  "MobAlt {version} is installed when every MobAlt window has quit. Quit the other window and choose Restart now again, or keep working: it is installed when you quit.": "يُثبَّت MobAlt {version} عند إنهاء كل نوافذ MobAlt. أنهِ النافذة الأخرى واختر «إعادة التشغيل الآن» مرة أخرى، أو تابع العمل: سيتم تثبيته عند الإنهاء.",
   "Restore defaults": "استعادة الافتراضي",
   "Restore Panes": "استعادة الأجزاء",
   "Restore panes (⇧⌘⏎)": "استعادة الأجزاء (⇧⌘⏎)",
@@ -1603,5 +1605,11 @@
   "URL": "عنوان URL",
   "URL copied": "تم نسخ عنوان URL",
   "URL is required": "عنوان URL مطلوب",
-  "User name": "اسم المستخدم"
+  "User name": "اسم المستخدم",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "مفتاح المضيف هذا مُعلَّم كمفتاح مُبطَل في known_hosts. لن يتصل MobAlt باستخدامه.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "لا يمكن تشفير البيانات السرية على هذا الـ Mac (سلسلة المفاتيح غير متاحة) — تُخزَّن كلمات السر دون حماية",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": [
+    "، منها {n} تشغّل أوامر عند فتحها (أوامر البدء أو صدفة مخصّصة)",
+    "، منها {n} تشغّل أوامر عند فتحها (أوامر البدء أو صدفة مخصّصة)"
+  ]
 }

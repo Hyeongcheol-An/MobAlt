@@ -10,7 +10,7 @@ Xem thêm: [Mức tương đương tính năng với MobaXterm 26.6](MOBAXTERM_P
 ![MobAlt với hai shell từ xa đặt cạnh nhau](images/vi/hero.png)
 
 Mục lục: [Tải về và cài đặt](#tải-về-và-cài-đặt) · [Cập nhật](#cập-nhật) · [Phiên](#phiên) · [Kết nối](#kết-nối) ·
-[Terminal](#terminal) · [Tệp (SFTP / FTP)](#tệp-sftp--ftp) · [Đường hầm](#đường-hầm-chuyển-tiếp-cổng) ·
+[Terminal](#terminal) · [Tệp (SFTP / FTP)](#tệp-sftp--ftp) · [Phiên trình duyệt](#phiên-trình-duyệt) · [Đường hầm](#đường-hầm-chuyển-tiếp-cổng) ·
 [X11, Mosh, Serial, RDP/VNC](#x11-mosh-serial-rdpvnc) · [Công cụ và macro](#công-cụ-và-macro) ·
 [Không gian làm việc và cài đặt](#không-gian-làm-việc-và-cài-đặt) · [Phím tắt](#phím-tắt) ·
 [Dữ liệu và quyền riêng tư](#dữ-liệu-và-quyền-riêng-tư) · [Khắc phục sự cố](#khắc-phục-sự-cố)
@@ -39,7 +39,9 @@ Có ba cách để lên bản phát hành mới; cách nào cũng kết thúc b�
   hoặc ngay lập tức với "Khởi động lại ngay". Trong lúc tải, một dòng tiến trình —
   *Đang tải về MobAlt 0.17.0 — 42% (12.3/29.4 MB, 2.1 MB/s)* — cùng một thanh mỏng hiện phía trên các tab và trong
   Cài đặt → Cập nhật; khi tệp đã tải xong, cả hai nơi đều đưa ra **Khởi động lại ngay** (hoặc **Để sau**: sẽ được
-  cài khi bạn thoát), còn một lần tải về thất bại sẽ cho biết lý do trong vài giây.
+  cài khi bạn thoát), còn một lần tải về thất bại sẽ cho biết lý do trong vài giây. Bản cập nhật chỉ có thể được cài khi mọi cửa sổ
+  MobAlt đã thoát, nên khi một bản MobAlt khác đang mở, "Khởi động lại ngay" sẽ không thoát: một hộp thoại cho
+  biết điều đó, và bản cập nhật được cài khi bản cuối cùng thoát.
 - **Homebrew**: `brew upgrade --cask mobalt` thay thế ứng dụng trong Applications.
 - **DMG**: tải DMG mới từ [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) rồi
   kéo MobAlt vào Applications, thay thế bản cũ.
@@ -91,7 +93,7 @@ phiên có `id` trùng với một phiên hiện có sẽ được thay bằng p
 mọi phiên khác được thêm vào — mục viết tay không có `id` luôn được thêm, và `password` ghi trong tệp sẽ được lấy và lưu
 ở dạng mã hóa — thư mục được thêm và không có gì bị xóa, nên nhập cùng một tệp hai lần không thay đổi gì. Các mục
 không có tên, có loại không rõ hoặc cổng không hợp lệ sẽ bị bỏ qua và được đếm trong thông báo; tệp không phải là tệp phiên
-của MobAlt sẽ bị từ chối kèm lý do. `~/.ssh/config` bỏ qua các máy chủ bạn đã có (cùng thư mục và tên). Dấu trang MobaXterm
+của MobAlt sẽ bị từ chối kèm lý do. Thông báo cũng cho biết có bao nhiêu phiên đã nhập chạy lệnh khi mở (lệnh khởi động, hoặc shell của phiên cục bộ) — hãy xem các phiên đó trước khi mở nếu tệp đến từ người khác. `~/.ssh/config` bỏ qua các máy chủ bạn đã có (cùng thư mục và tên). Dấu trang MobaXterm
 được đưa vào thư mục `MobaXterm`; dấu trang đã được nhập trước đó (cùng thư mục, tên và máy chủ) được làm mới tại chỗ —
 máy chủ, cổng, người dùng, X11 và nén theo tệp `.ini`, còn mật khẩu đã lưu, biểu tượng, màu, đường hầm và đường dẫn khóa
 do bạn đặt thì giữ nguyên — nên nhập cùng một tệp `.ini` hai lần cũng không thay đổi gì.
@@ -111,7 +113,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   khóa mặc định trong `~/.ssh` trước khi hỏi. Chọn *Mật khẩu*, *Khóa riêng* hoặc *Agent SSH* để
   giới hạn. Khóa có cụm mật khẩu sẽ hỏi một lần; đánh dấu "Lưu trong phiên" để giữ lại.
 - **Khóa máy chủ**: lần kết nối đầu tiên hiện dấu vân tay (SHA256 và MD5). Chấp nhận sẽ lưu
-  khóa; khóa đã thay đổi được cảnh báo rõ ràng và không bao giờ được chấp nhận ngầm.
+  khóa; khóa đã thay đổi được cảnh báo rõ ràng và không bao giờ được chấp nhận ngầm: trong hộp thoại đó **Hủy** là nút mặc định, nên nhấn Enter là từ chối — muốn chấp nhận khóa mới phải nhấp *Chấp nhận khóa mới* (hoặc Tab tới nút đó). Giống OpenSSH, một máy chủ đã biết đưa ra khóa thuộc loại khác cũng được coi là khóa đã thay đổi. Khóa được đánh dấu `@revoked` trong tệp `known_hosts` bị từ chối ngay: hộp thoại nêu lý do và không có nút Chấp nhận. Tên máy chủ trong `known_hosts` được so khớp không phân biệt chữ hoa chữ thường, và các mẫu `*` / `?` / `!` hoạt động như trong OpenSSH.
 - **Khóa SSH**: Phiên → Tạo khóa SSH… (cũng có trong bảng Công cụ, và nút *Tạo…* cạnh
   trường khóa riêng trong trình sửa phiên) chạy `ssh-keygen` của macOS cho bạn: Ed25519 (mặc định),
   RSA 4096 hoặc ECDSA, một chú thích, cụm mật khẩu tùy chọn kèm gợi ý độ mạnh, và tệp (mặc định
@@ -289,7 +291,7 @@ Bảng **SFTP** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự 
 - Thanh công cụ và menu ngữ cảnh: thư mục mới, đổi tên, quyền, xóa, tải về, tải lên. Chọn nhiều mục
   bằng ⌘ / ⇧. Kéo tệp từ Finder vào danh sách để tải lên; tên đã tồn tại sẽ được hỏi trước khi ghi đè.
 - Nhấp đúp vào tệp văn bản để sửa trong trình sửa tích hợp (⌘S lưu ngược lên máy chủ). "Sửa bằng trình
-  sửa ngoài" mở tệp trong trình sửa của bạn (Cài đặt → Chung → Trình sửa ngoài) và tải lại lên mỗi khi lưu.
+  sửa ngoài" mở tệp trong trình sửa của bạn (Cài đặt → Chung → Trình sửa ngoài) và tải lại lên mỗi khi lưu. Cài đặt này là một chương trình cùng các đối số — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` — được chạy trực tiếp, không qua shell: dấu ngoặc kép gộp các từ, `{file}` được thay bằng đường dẫn của tệp (nếu không có thì đường dẫn được thêm vào cuối), ngoài ra không có gì được mở rộng (không có `$VAR`, `~` chỉ ở đầu chương trình, không có `;` hay pipe). Bản sao cục bộ nằm trong `$TMPDIR/mobalt-edit/` và bị xóa khi MobAlt thoát.
 - Quá trình truyền tệp hiện tiến độ, tốc độ và nút hủy; "Hiện trong Finder" sau khi tải về. Tệp tải về được ghi vào
   `<tên>.part` và chỉ mang tên thật khi hoàn tất; nếu bị dừng (mất kết nối, Ngắt kết nối), lần tải về tiếp theo của cùng tệp
   sẽ hỏi *Tiếp tục* hay *Bắt đầu lại*.
@@ -357,7 +359,7 @@ kết nối, và bạn được báo nếu có đường hầm không lắng ngh
 ## X11, Mosh, Serial, RDP/VNC
 
 - **X11**: đánh dấu "Chuyển tiếp X11" trong SSH nâng cao. MobAlt khởi động XQuartz khi cần, chuyển tiếp
-  display và hoán đổi cookie xác thực, nên `xeyes` hay `gedit` chạy ngay. Thanh trạng thái cho biết X11
+  display và hoán đổi cookie xác thực, nên `xeyes` hay `gedit` chạy ngay. Chỉ những X client đưa ra đúng cookie (giả) của chính phiên — thứ sshd thiết lập cho lần đăng nhập của bạn — mới đi qua được, nên người dùng khác trên máy chủ không thể truy cập màn hình máy Mac của bạn. Thanh trạng thái cho biết X11
   có sẵn hay không.
 - **Mosh**: cần `brew install mosh` trên máy cục bộ và `mosh-server` trên máy chủ (UDP 60000-61000).
   Ngăn chạy client mosh; bước khởi động SSH dùng khóa, agent hoặc dấu nhắc tương tác của bạn.
@@ -477,9 +479,9 @@ lọc phiên hoặc ô kết nối nhanh sẽ xóa nội dung và quay về term
 
 Mọi thứ nằm trong `~/Library/Application Support/MobAlt/`: `sessions.json` (mật khẩu và
 cụm mật khẩu được mã hóa thông qua Chuỗi khóa của macOS), `settings.json`, `known_hosts`,
-`workspace.json`, và các tệp tích hợp zsh. Nhật ký phiên được lưu vào `~/Documents/MobAlt Logs/`.
+`workspace.json`, và các tệp tích hợp zsh (`zdotdir/`, nơi cũng chứa lịch sử của shell cục bộ, `zdotdir/.zsh_history`, trừ khi các tệp zsh của riêng bạn đặt `HISTFILE`). Các tệp này, `known_hosts` của ứng dụng và nhật ký phiên chỉ tài khoản của bạn đọc được (0600). Nhật ký phiên được lưu vào `~/Documents/MobAlt Logs/`. Các ngăn trình duyệt giữ cookie và bộ nhớ đệm trong `Partitions/` ở cùng thư mục (cookie được mã hóa). Tệp từ xa mở bằng *Sửa bằng trình sửa ngoài* được sao chép vào `$TMPDIR/mobalt-edit/` và bị xóa khi MobAlt thoát. Nếu không dùng được Chuỗi khóa, mật khẩu đã lưu vẫn hoạt động nhưng được lưu mà không được bảo vệ (base64), và MobAlt hiện cảnh báo một lần mỗi lần chạy.
 MobAlt chỉ kết nối tới các máy chủ bạn cấu hình; bước kiểm tra cập nhật tùy chọn chỉ đọc danh sách bản phát hành
-trên GitHub, ngoài ra không gì khác. Chi tiết: [SECURITY.md](../SECURITY.md).
+trên GitHub, ngoài ra không gì khác. Liên kết chỉ mở trong trình duyệt mặc định khi là `http(s)` hoặc `mailto` (liên kết trong terminal có scheme khác không làm gì cả). Chi tiết: [SECURITY.md](../SECURITY.md).
 
 ## Khắc phục sự cố
 
@@ -499,7 +501,7 @@ trên GitHub, ngoài ra không gì khác. Chi tiết: [SECURITY.md](../SECURITY.
   trong số đó vào SSH nâng cao → Thuật toán (hoặc *Đặt lại mặc định*); với thiết bị cũ chỉ
   cung cấp SHA-1 / CBC, hãy đánh dấu "Thuật toán cũ (thiết bị cũ)".
 - **Khóa máy chủ đã thay đổi**: máy chủ đã được cài lại, hoặc có thứ gì đó đang chặn bắt kết nối.
-  Chỉ chấp nhận khi bạn biết lý do; khóa cũ có thể được xóa khỏi `known_hosts` trong thư mục cấu hình.
+  Chỉ chấp nhận khi bạn biết lý do (Enter là hủy; hãy nhấp *Chấp nhận khóa mới*); khóa cũ có thể được xóa khỏi `known_hosts` trong thư mục cấu hình.
 - **Ứng dụng X11 không hiện ra**: cài XQuartz, và đảm bảo shell từ xa không ghi đè
   `DISPLAY` trong các tệp khởi động của nó.
 - **Mosh**: "không tìm thấy mosh client" nghĩa là máy cục bộ chưa chạy `brew install mosh`;

@@ -1062,25 +1062,38 @@ function fill(str, nodes) {
   return String(str).split(/\{(\w+)\}/).map((part, i) => (i % 2 ? (part in nodes ? nodes[part] : `{${part}}`) : part)).filter((p) => p !== '');
 }
 
+/**
+ * The host-key question. Unknown host: Accept is the default button (trust on first use, as before). Changed key: the
+ * default is Cancel — Enter, or a key pressed while the dialog comes up, refuses; accepting takes a click or moving to
+ * Accept new key first. Revoked key (an @revoked line in known_hosts): the changed-key warning with the reason and only
+ * Cancel — the connection is refused whatever is pressed.
+ */
 export function hostKeyDialog(p) {
-  const changed = p.status === 'mismatch';
+  const revoked = p.status === 'revoked';
+  const changed = p.status === 'mismatch' || revoked;
   const m = showModal({
     title: changed
       ? t(p.name ? '⚠️ Host key changed! — {name}' : '⚠️ Host key changed!', { name: p.name })
       : t(p.name ? 'Unknown host key — {name}' : 'Unknown host key', { name: p.name }),
     closeOnBackdrop: false,
     body: h('div', {},
-      changed ? h('div', { class: 'warn' }, t('The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.')) : h('p', {}, t('The authenticity of host {host}:{port} can\'t be established.', { host: p.host, port: p.port })),
+      revoked ? h('div', { class: 'warn' }, t('This host key is marked as revoked in known_hosts. MobAlt will not connect with it.'))
+        : changed ? h('div', { class: 'warn' }, t('The host key for this server does not match the saved one. This could be a man-in-the-middle attack, or the server was reinstalled.'))
+          : h('p', {}, t('The authenticity of host {host}:{port} can\'t be established.', { host: p.host, port: p.port })),
       h('div', {}, h('b', {}, `${p.host}:${p.port}`), ` (${p.keyType})`),
       h('div', { class: 'hostkey-fp' }, p.fingerprint.sha256, h('br'), p.fingerprint.md5),
-      h('p', { style: { color: 'var(--fg-dim)' } }, t('Accept to continue and remember this key.'))
+      revoked ? null : h('p', { style: { color: 'var(--fg-dim)' } }, t('Accept to continue and remember this key.'))
     ),
-    buttons: [
-      { label: t('Cancel'), value: false },
-      { label: changed ? t('Accept new key') : t('Accept'), primary: true, danger: changed, value: true },
-    ],
+    buttons: revoked ? [{ label: t('Cancel'), primary: true, value: false }]
+      : changed ? [
+        { label: t('Cancel'), primary: true, value: false },
+        { label: t('Accept new key'), danger: true, value: true },
+      ] : [
+        { label: t('Cancel'), value: false },
+        { label: t('Accept'), primary: true, value: true },
+      ],
   });
-  return m.promise.then((r) => !!r);
+  return m.promise.then((r) => !revoked && r === true);
 }
 
 export function passwordDialog(p) {
