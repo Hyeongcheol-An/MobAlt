@@ -6463,6 +6463,11 @@
         "src/renderer/browser.js"
       ]
     },
+    "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": {
+      "refs": [
+        "src/renderer/dialogs.js"
+      ]
+    },
     "This is MobAlt {version} running from source.": {
       "refs": [
         "src/main/updater.js"
