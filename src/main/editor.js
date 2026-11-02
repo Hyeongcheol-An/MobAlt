@@ -142,4 +142,26 @@ function removeEditDirs() {
   }
 }
 
-module.exports = { splitCommand, editorArgv, resolveProgram, openInEditor, editTarget, removeEditDirs };
+// A run that was killed (or crashed) never reached stopEdits(): at start-up the connection folders under
+// $TMPDIR/mobalt-edit older than a day are removed. Only directories named like a connection id (t_… for SSH, ftp_…
+// for FTP) directly inside that app-owned folder; anything else there is left alone, and so are recent folders,
+// which may belong to another MobAlt running now.
+const STALE_MS = 24 * 3600 * 1000;
+const CONN_DIR = /^(t|ftp)_[0-9a-f]+$/;
+
+function sweepStaleEdits({ root = path.join(os.tmpdir(), 'mobalt-edit'), now = Date.now(), maxAge = STALE_MS } = {}) {
+  const removed = [];
+  let names;
+  try { names = fs.readdirSync(root); } catch { return removed; }
+  for (const name of names) {
+    if (!CONN_DIR.test(name)) continue;
+    const p = path.join(root, name);
+    let st;
+    try { st = fs.lstatSync(p); } catch { continue; }
+    if (!st.isDirectory() || now - st.mtimeMs < maxAge) continue; // never follows a symlink, never a file
+    try { fs.rmSync(p, { recursive: true, force: true }); removed.push(name); } catch {}
+  }
+  return removed;
+}
+
+module.exports = { splitCommand, editorArgv, resolveProgram, openInEditor, editTarget, removeEditDirs, sweepStaleEdits };

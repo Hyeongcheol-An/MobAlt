@@ -80,7 +80,9 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `known_hosts`, workspace; the local shell's history (`userdata/zdotdir/.zsh_history`, unless your zsh files set
   `HISTFILE`); browser panes' cookies and cache (`userdata/Partitions/browser*`); session logs
   (`userdata/MobAlt Logs/`). Remote files opened with *Edit in external editor* are copied to `$TMPDIR/mobalt-edit/`
-  and removed when the app quits (a run that is killed leaves them). `**/userdata/` and `**/MobAlt Logs/` are
+  and removed when the app quits (a run that is killed leaves them; the next start removes connection folders there
+  older than 24 h). In test mode `window.api.shell.openPath` answers `''` for an allowed folder without opening
+  Finder, `'refused'` otherwise. `**/userdata/` and `**/MobAlt Logs/` are
   git-ignored.
 - Security checks: `test/e2e-hostkey.js` (the host-key dialog from the keyboard: a changed key is not accepted by
   Enter, a key of another type is "changed", an `@revoked` key is refused; needs the test sshd) and

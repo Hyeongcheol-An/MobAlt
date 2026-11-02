@@ -86,3 +86,33 @@ test('openInEditor: a program that cannot start is reported with its error', asy
   assert.deepEqual(errors, [['ENOENT', path.join(dir, 'no-such-editor')]]);
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('sweepStaleEdits removes only connection folders older than a day, inside its own root', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mobalt-sweep-'));
+  const now = Date.now();
+  const mk = (name, ageH, { file = false } = {}) => {
+    const p = path.join(root, name);
+    if (file) fs.writeFileSync(p, 'x'); else fs.mkdirSync(path.join(p, 'abc123'), { recursive: true });
+    const t = (now - ageH * 3600 * 1000) / 1000;
+    fs.utimesSync(p, t, t);
+    return p;
+  };
+  const oldSsh = mk('t_0a1b2c3d4e5f', 30);
+  const oldFtp = mk('ftp_00ff00ff00ff', 48);
+  const recent = mk('t_aaaaaaaaaaaa', 2);
+  const other = mk('notes', 72);
+  const odd = mk('t_xyz', 72);
+  const file = mk('t_bbbbbbbbbbbb', 72, { file: true });
+  const outside = fs.mkdtempSync(path.join(os.tmpdir(), 'mobalt-sweep-outside-'));
+  fs.symlinkSync(outside, path.join(root, 't_cccccccccccc'));
+  const t = (now - 72 * 3600 * 1000) / 1000;
+  fs.lutimesSync(path.join(root, 't_cccccccccccc'), t, t);
+  const removed = editor.sweepStaleEdits({ root, now });
+  assert.deepEqual(removed.sort(), ['ftp_00ff00ff00ff', 't_0a1b2c3d4e5f']);
+  assert.equal(fs.existsSync(oldSsh), false);
+  assert.equal(fs.existsSync(oldFtp), false);
+  for (const kept of [recent, other, odd, file, outside]) assert.equal(fs.existsSync(kept), true, kept);
+  assert.deepEqual(editor.sweepStaleEdits({ root: path.join(root, 'missing'), now }), []);
+  fs.rmSync(root, { recursive: true, force: true });
+  fs.rmSync(outside, { recursive: true, force: true });
+});

@@ -303,8 +303,10 @@ The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on
   editor" opens it in your editor (Settings → General → External editor) and re-uploads on every save.
   The setting is a program and its arguments — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` — started
   directly, not through a shell: quotes group words, `{file}` is replaced by the file's path (else the path goes
-  last), and nothing else is expanded (no `$VAR`, `~` only at the start of the program, no `;` or pipes). The local
-  copy lives in `$TMPDIR/mobalt-edit/` and is deleted when MobAlt quits.
+  last), and nothing else is expanded (no `$VAR`, `~` only at the start of the program, no `;` or pipes). A bare
+  program name is found in `/opt/homebrew/bin`, `/usr/local/bin` or through your login shell's PATH, even when
+  MobAlt was started from the Finder; one that cannot be started shows an error toast. The local copy lives in
+  `$TMPDIR/mobalt-edit/` and is deleted when MobAlt quits (copies a crashed run left behind go after a day).
 - Transfers show progress, speed and a cancel button; "Show in Finder" after a download. A download is written to
   `<name>.part` and takes its name once complete; if it stops (a dropped connection, Disconnect), the next download
   of the same file offers *Resume* or *Start over*.

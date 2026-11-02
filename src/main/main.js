@@ -31,6 +31,7 @@ const i18n = require('./i18n'); // interface language: t() for every label built
 const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 const { ZmodemManager, fmtBytes } = require('./zmodem');
+const editor = require('./editor'); // external editor: the stale edit-folder sweep at start-up
 const urlpolicy = require('./urlpolicy'); // what a window may open outside the app (external URLs, folders, vnc://)
 const { isBrowserUrl, browserUrlWithoutUser } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
 
@@ -1731,6 +1732,7 @@ async function fetchFavicon(sender, id, url) {
 
 app.whenReady().then(() => {
   bootTimes.ready = Date.now();
+  setTimeout(() => { try { editor.sweepStaleEdits(); } catch {} }, 5000); // edited copies a killed run left behind (> 24 h)
   nativeTheme.themeSource = chromeOf(store.getSettings()).scheme; // the applied theme's chrome (app:chrome keeps it current)
   // `npm start` runs the bare Electron binary, which shows Electron's own icon in the Dock; the packaged
   // app gets build/icon.icns from electron-builder. Point the dev Dock tile at the rendered PNG.
