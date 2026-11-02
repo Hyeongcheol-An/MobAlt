@@ -61,7 +61,12 @@ if [ -n "${HOMEBREW_TAP_DEPLOY_KEY:-}" ]; then
   trap 'rm -f "$KEY"' EXIT
   printf '%s\n' "$HOMEBREW_TAP_DEPLOY_KEY" > "$KEY"
   chmod 600 "$KEY"
-  export GIT_SSH_COMMAND="ssh -i $KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+  # GitHub's published host key (docs.github.com → "GitHub's SSH key fingerprints", also `gh api meta`), pinned:
+  # accept-new would trust whatever answered first on a fresh runner.
+  KNOWN=$(mktemp)
+  trap 'rm -f "$KEY" "$KNOWN"' EXIT
+  echo 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' > "$KNOWN"
+  export GIT_SSH_COMMAND="ssh -i $KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$KNOWN -o HostKeyAlgorithms=ssh-ed25519"
   TAP=$(mktemp -d)
   git clone -q --depth 1 "$TAP_REPO" "$TAP"
   mkdir -p "$TAP/Casks"
