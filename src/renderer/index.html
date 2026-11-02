@@ -189,10 +189,13 @@
       <!-- Right: tabs + terminals -->
       <div id="workspace">
         <div id="multiexec-banner" role="status" aria-live="polite" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> visible terminal(s) in this tab</div>
-        <!-- a different MobAlt.app is on disk (brew upgrade / dragged DMG while running): app.js fills the text -->
-        <div id="update-banner" role="status" hidden>
+        <!-- a different MobAlt.app is on disk (brew upgrade / dragged DMG while running), or the updater is downloading a
+             release (the line, a thin bar, then Restart now): app.js fills the text and shows the controls of the state -->
+        <div id="update-banner" role="status" aria-live="polite" hidden>
           <span id="update-banner-text"></span>
+          <progress id="update-progress" value="0" max="1" aria-label="Download progress" data-i18n-aria-label hidden></progress>
           <button id="update-relaunch" class="btn small primary" type="button" title="Quit and start the version on disk" data-i18n data-i18n-title>Relaunch</button>
+          <button id="update-install" class="btn small primary" type="button" title="Quit and install the downloaded update" data-i18n data-i18n-title hidden>Restart now</button>
           <button id="update-later" class="btn small" type="button" title="Hide until another version appears" data-i18n data-i18n-title>Later</button>
         </div>
         <div id="tabbar">

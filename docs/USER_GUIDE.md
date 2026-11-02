@@ -36,7 +36,10 @@ Three paths lead to a new release; all of them end with the new bundle at `/Appl
 - **In-app updater**: MobAlt checks GitHub Releases at startup (turn this off in Settings → Updates) and
   Help → Check for Updates… or "Check now" in Settings → Updates runs the check by hand. A newer
   version is offered in a dialog, downloaded only when you say so and installed when you quit, or right
-  away with "Restart now".
+  away with "Restart now". While it downloads, a progress line — *Downloading MobAlt 0.17.0 — 42 % (12.3 of
+  29.4 MB, 2.1 MB/s)* — with a thin bar shows above the tabs and in Settings → Updates; once the file is
+  complete both offer **Restart now** (or **Later**: it is installed when you quit), and a download that
+  failed says why for a few seconds.
 - **Homebrew**: `brew upgrade --cask mobalt` replaces the app in Applications.
 - **DMG**: download the new DMG from [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) and
   drag MobAlt to Applications, replacing the old one.

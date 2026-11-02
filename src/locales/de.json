@@ -1535,5 +1535,11 @@
   "Uploading {n} item to {dir}": [
     "{n} Objekt wird nach {dir} hochgeladen",
     "{n} Objekte werden nach {dir} hochgeladen"
-  ]
+  ],
+  "Downloading MobAlt {version}…": "Download von MobAlt {version}…",
+  "Downloading MobAlt {version} — {percent} % ({transferred} of {total} MB, {speed} MB/s)": "Download von MobAlt {version} — {percent} % ({transferred} von {total} MB, {speed} MB/s)",
+  "MobAlt {version} downloaded — it is installed when you quit, or restart now": "MobAlt {version} heruntergeladen — wird beim Beenden installiert",
+  "Download of MobAlt {version} failed: {error}": "Download von MobAlt {version} fehlgeschlagen: {error}",
+  "Download progress": "Downloadfortschritt",
+  "Quit and install the downloaded update": "Beenden und das heruntergeladene Update installieren"
 }

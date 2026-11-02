@@ -126,3 +126,311 @@ test('electron-updater is wired on the first check, not at setup (its require is
   autoUpdater.emit('update-not-available');
   await p;
 });
+
+// ---------- the download's progress (hooks.progress → app:update-progress) and install() ----------
+const settled = async () => { for (let i = 0; i < 4; i++) await settle(); };
+// the "Download?" sheet answered with its first button, every other sheet with its last (Later / Cancel)
+const answerDownload = () => { electron.dialog.showMessageBox = async (_w, opts) => { dialogs.push(opts); return { response: opts.buttons && opts.buttons[0] === 'Download' ? 0 : 1 }; }; };
+const answerLater = () => { electron.dialog.showMessageBox = async (_w, opts) => { dialogs.push(opts); return { response: 1 }; }; };
+
+test('Download: the progress hook hears the start (0 %, no size), every download-progress event, the end with the size, and nothing outside a download', async () => {
+  const progress = [];
+  const u = fresh({ progress: (p) => progress.push(p) });
+  autoUpdater.downloadUpdate = async () => {};
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.deepEqual(dialogs.map((d) => d.message), ['MobAlt 0.17.0 is available']);
+    assert.deepEqual(progress, [{ phase: 'downloading', version: '0.17.0', percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 }], 'the line appears before the first byte');
+    autoUpdater.emit('download-progress', { percent: 41.8, transferred: 12900000, total: 30800000, bytesPerSecond: 2200000, delta: 12900000 });
+    assert.deepEqual(progress[1], { phase: 'downloading', version: '0.17.0', percent: 41.8, transferred: 12900000, total: 30800000, bytesPerSecond: 2200000 }, 'the figures as electron-updater sends them, with the version (delta dropped)');
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.deepEqual(progress[2], { phase: 'done', version: '0.17.0', percent: 100, transferred: 30800000, total: 30800000, bytesPerSecond: 2200000 }, 'done repeats the size');
+    assert.equal(dialogs[dialogs.length - 1].message, 'MobAlt 0.17.0 is ready to install', 'the sheet still comes (answered Later here)');
+    autoUpdater.emit('download-progress', { percent: 50, transferred: 1, total: 2, bytesPerSecond: 1 });
+    assert.equal(progress.length, 3, 'nothing is downloading any more');
+    // a second check that finds the same release: no second "Download?" offer, the Settings line gets its answer
+    const again = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    assert.deepEqual(await again, { status: 'available', version: '0.17.0', message: 'MobAlt 0.17.0 is available' });
+    await settled();
+    assert.equal(dialogs.filter((d) => d.message === 'MobAlt 0.17.0 is available').length, 1);
+  } finally {
+    answerLater();
+  }
+});
+
+test('a download that breaks off: one error report with the message (the error event and the rejection are the same failure), then the "Download failed" sheet', async () => {
+  const progress = [];
+  const u = fresh({ progress: (p) => progress.push(p) });
+  let reject;
+  autoUpdater.downloadUpdate = () => new Promise((_r, rj) => { reject = rj; });
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(progress.length, 1);
+    const e = new Error('net::ERR_INTERNET_DISCONNECTED');
+    autoUpdater.emit('error', e); // electron-updater dispatches the event…
+    reject(e); // …and rejects the download promise
+    await settled();
+    assert.deepEqual(progress[1], { phase: 'error', version: '0.17.0', percent: 0, transferred: 0, total: 0, bytesPerSecond: 0, message: 'net::ERR_INTERNET_DISCONNECTED' });
+    assert.equal(progress.length, 2, 'reported once');
+    assert.equal(dialogs[dialogs.length - 1].message, 'Download failed');
+    assert.equal(dialogs.filter((d) => d.message === 'Update check failed').length, 0, 'a quiet check never shows the check-failed sheet');
+    // a cancellation rejects without an event: still reported once
+    const p2 = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p2;
+    await settled();
+    assert.equal(progress.length, 3);
+    reject(new Error('cancelled'));
+    await settled();
+    assert.equal(progress[3].phase, 'error');
+    assert.equal(progress[3].message, 'cancelled');
+  } finally {
+    answerLater();
+  }
+});
+
+test('install(): nothing before a download completed; afterwards the beforeInstall hook, then quitAndInstall', async () => {
+  const calls = [];
+  const u = fresh({ beforeInstall: () => calls.push('beforeInstall') });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  assert.equal(u.install(), false, 'nothing downloaded yet');
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(u.install(), false, 'still downloading');
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.deepEqual(calls, [], 'the sheet was answered Later: nothing installed by itself');
+    assert.equal(u.install(), true);
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
+  } finally {
+    answerLater();
+  }
+});
+
+test('running from source: install() is a no-op', async () => {
+  electron.app.isPackaged = false;
+  try {
+    assert.equal(fresh().install(), false);
+  } finally {
+    electron.app.isPackaged = true;
+  }
+});
+
+// ---------- review round: a failed check mid-download, the way back to Restart now, one download and one install at a time ----------
+test('a check that fails while a download runs (the error event) leaves the download alone: the figures keep coming and the end is reported', async () => {
+  const progress = [];
+  const u = fresh({ progress: (p) => progress.push(p) });
+  autoUpdater.downloadUpdate = () => new Promise(() => {}); // the CDN download keeps going throughout
+  answerDownload();
+  try {
+    let p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('download-progress', { percent: 30, transferred: 9000000, total: 30000000, bytesPerSecond: 1000000 });
+    // Settings → Check now hits a DNS error while the file keeps coming
+    p = u.check(true, { quiet: true });
+    autoUpdater.emit('error', new Error('getaddrinfo ENOTFOUND api.github.com'));
+    assert.deepEqual(await p, { status: 'error', message: 'Update check failed: getaddrinfo ENOTFOUND api.github.com' });
+    assert.ok(!progress.some((x) => x.phase === 'error'), 'no failure reported for the download');
+    autoUpdater.emit('download-progress', { percent: 60, transferred: 18000000, total: 30000000, bytesPerSecond: 1000000 });
+    assert.equal(progress[progress.length - 1].percent, 60, 'the figures still come');
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.deepEqual(progress[progress.length - 1], { phase: 'done', version: '0.17.0', percent: 100, transferred: 30000000, total: 30000000, bytesPerSecond: 1000000 });
+    assert.equal(dialogs[dialogs.length - 1].message, 'MobAlt 0.17.0 is ready to install');
+  } finally {
+    answerLater();
+  }
+});
+
+test('a rejection without a message still gives the line its reason ("Download failed"), and the sheet its detail', async () => {
+  const progress = [];
+  const u = fresh({ progress: (p) => progress.push(p) });
+  autoUpdater.downloadUpdate = () => Promise.reject({}); // nothing to say
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(progress.length, 2);
+    assert.equal(progress[1].phase, 'error');
+    assert.equal(progress[1].message, 'Download failed');
+    assert.equal(dialogs[dialogs.length - 1].message, 'Download failed');
+    assert.equal(typeof dialogs[dialogs.length - 1].detail, 'string');
+  } finally {
+    answerLater();
+  }
+});
+
+test('a check that finds the downloaded release again re-sends "done" (the way back to Restart now after Later on the sheet and on the banner); a loud one shows the ready-to-install sheet again', async () => {
+  const progress = [], calls = [];
+  const u = fresh({ progress: (p) => progress.push(p), beforeInstall: () => calls.push('beforeInstall') });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  answerDownload();
+  try {
+    let p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('download-progress', { percent: 50, transferred: 15000000, total: 30000000, bytesPerSecond: 1000000 });
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled(); // the sheet, answered Later
+    const n = progress.length;
+    // quiet (Settings → Check now): the line's answer and the done event once more, no sheet
+    p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    assert.deepEqual(await p, { status: 'available', version: '0.17.0', message: 'MobAlt 0.17.0 is available' });
+    await settled();
+    assert.equal(progress.length, n + 1);
+    assert.deepEqual(progress[n], { phase: 'done', version: '0.17.0', percent: 100, transferred: 30000000, total: 30000000, bytesPerSecond: 1000000 }, 'the same done event, with the size');
+    assert.equal(dialogs.filter((d) => d.message === 'MobAlt 0.17.0 is ready to install').length, 1, 'no sheet for a quiet check');
+    assert.equal(dialogs.filter((d) => d.message === 'MobAlt 0.17.0 is available').length, 1, 'never offered to download again');
+    // loud (Help → Check for Updates…): the sheet again; Restart now installs
+    electron.dialog.showMessageBox = async (_w, opts) => { dialogs.push(opts); return { response: opts.buttons && opts.buttons[0] === 'Restart now' ? 0 : 1 }; };
+    p = u.check(true);
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(progress.length, n + 2);
+    assert.equal(progress[n + 1].phase, 'done');
+    assert.equal(dialogs.filter((d) => d.message === 'MobAlt 0.17.0 is ready to install').length, 2);
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
+  } finally {
+    answerLater();
+  }
+});
+
+test('a newer release found while a download runs is not offered and never relabels the running download', async () => {
+  const progress = [];
+  const u = fresh({ progress: (p) => progress.push(p) });
+  autoUpdater.downloadUpdate = () => new Promise(() => {});
+  answerDownload();
+  try {
+    let p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.1' });
+    assert.deepEqual(await p, { status: 'available', version: '0.17.1', message: 'MobAlt 0.17.1 is available' });
+    await settled();
+    assert.deepEqual(dialogs.map((d) => d.message), ['MobAlt 0.17.0 is available'], 'no second offer');
+    autoUpdater.emit('download-progress', { percent: 30, transferred: 9000000, total: 30000000, bytesPerSecond: 1000000 });
+    assert.equal(progress[progress.length - 1].version, '0.17.0', 'still the download that was started');
+    p = u.check(true); // a loud check: the same, no "Download?" sheet either
+    autoUpdater.emit('update-available', { version: '0.17.1' });
+    await p;
+    await settled();
+    assert.equal(dialogs.length, 1);
+  } finally {
+    answerLater();
+  }
+});
+
+test('install() twice (two clicks): beforeInstall and quitAndInstall run once', async () => {
+  const calls = [];
+  const u = fresh({ beforeInstall: () => calls.push('beforeInstall') });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.equal(u.install(), true);
+    assert.equal(u.install(), true, 'the second click is answered the same way…');
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall'], '…but nothing runs twice');
+  } finally {
+    answerLater();
+  }
+});
+
+// ---------- last pass: quitAndInstall that throws, a native error after the download ----------
+test('install(): when quitAndInstall throws, nothing is quitting — the hook hears the reason, the done event puts the buttons back, and the next install() tries again', async () => {
+  const progress = [], calls = [], failed = [];
+  const u = fresh({ progress: (p) => progress.push(p), beforeInstall: () => calls.push('beforeInstall'), installFailed: (e) => failed.push(e.message) });
+  autoUpdater.downloadUpdate = async () => {};
+  let attempts = 0;
+  autoUpdater.quitAndInstall = () => { calls.push('quitAndInstall'); if (++attempts === 1) throw new Error('ShipIt is busy'); };
+  answerDownload();
+  try {
+    const p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    const n = progress.length;
+    assert.equal(u.install(), true);
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall']);
+    assert.deepEqual(failed, ['ShipIt is busy']);
+    assert.equal(progress.length, n + 1);
+    assert.equal(progress[n].phase, 'done', 'the Restart now buttons come back');
+    assert.equal(u.install(), true, 'a later click tries again…');
+    await settled();
+    assert.deepEqual(calls, ['beforeInstall', 'quitAndInstall', 'beforeInstall', 'quitAndInstall'], '…and runs the whole path again');
+    assert.equal(failed.length, 1);
+  } finally {
+    answerLater();
+  }
+});
+
+test('a native error after update-downloaded (no check running, nothing downloading) forgets the file: the windows hear why, install() is off, the next check offers the download again', async () => {
+  const progress = [], calls = [];
+  const u = fresh({ progress: (p) => progress.push(p), beforeInstall: () => calls.push('beforeInstall') });
+  autoUpdater.downloadUpdate = async () => {};
+  autoUpdater.quitAndInstall = () => calls.push('quitAndInstall');
+  answerDownload();
+  try {
+    let p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    autoUpdater.emit('update-downloaded', { version: '0.17.0' });
+    await settled();
+    assert.equal(dialogs.length, 2);
+    autoUpdater.emit('error', new Error('Code signature did not pass validation')); // Squirrel, after the download
+    const last = progress[progress.length - 1];
+    assert.equal(last.phase, 'error');
+    assert.equal(last.version, '0.17.0');
+    assert.equal(last.message, 'Code signature did not pass validation');
+    assert.equal(dialogs.length, 2, 'no sheet: nobody asked for a check');
+    assert.equal(u.install(), false, 'nothing to install any more');
+    assert.deepEqual(calls, []);
+    // the next check offers the download again instead of re-sending "done"
+    const n = progress.length;
+    p = u.check(true, { quiet: true });
+    autoUpdater.emit('update-available', { version: '0.17.0' });
+    await p;
+    await settled();
+    assert.equal(dialogs[dialogs.length - 1].message, 'MobAlt 0.17.0 is available');
+    assert.equal(progress[n].phase, 'downloading', 'a fresh download (answered Download), not the old done event');
+    assert.equal(progress[n].percent, 0);
+  } finally {
+    answerLater();
+  }
+});
