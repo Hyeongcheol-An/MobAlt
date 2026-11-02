@@ -53,6 +53,8 @@ test/start-sshd.sh stop
 2. **[Conventional Commits](https://www.conventionalcommits.org/)** — `feat(sftp): …`, `fix(ssh): …`, `docs: …`,
    `test: …`. `semantic-release` computes the version and writes `CHANGELOG.md` from them (`feat` → minor, `fix` →
    patch, `feat!` or a `BREAKING CHANGE:` footer → major), so the subject is a changelog line and the body says why.
+   Put a `#name` (a CSS id, an element) in backticks in the subject: the release notes turn a bare `#…` into an
+   issue link.
 3. **Strings**: every user-visible text is English in the code and goes through `t()` / `tn()`, one sentence per
    string. After adding or rewording one, run `npm run i18n` and commit `src/locales/catalog.json`, then translate the
    delta in every `src/locales/<code>.json` — or run `I18N_STRICT=0 npm test` and say in the PR that translations

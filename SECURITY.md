@@ -64,15 +64,15 @@ endpoints, the targets of the Tools panel, and the pages you open in a browser p
 or crash reporting.
 
 - **Updates**: the check (on by default, Settings → Updates) reads `latest-mac.yml` from the latest GitHub release
-  over HTTPS. An update is downloaded only after you agree and installed when you restart or quit; macOS refuses an
-  update that is not signed by the same developer as the running app.
+  over HTTPS. An update is downloaded only after you agree and installed when you restart or quit; the update is a
+  signed, notarized bundle, and macOS verifies its signature before it runs.
 - **Host keys**: a new key is shown with its fingerprint before any password or key is sent; a changed key is
   reported and never accepted silently.
 - **Forwarding**: X11 and agent forwarding are off unless a session turns them on. X11 forwarding hands the server a
   random cookie and puts the real one in only on the way to the local X server. Tunnels listen on 127.0.0.1 unless
   you choose another address.
-- **Browser panes** load `http://` and `https://` only, in a sandboxed `<webview>` without Node or a preload; popups,
-  device permissions and `file:` / `javascript:` / `data:` addresses are refused; a password in an address
+- **Browser panes** load `http://` and `https://` only, in a sandboxed `<webview>` without Node or a preload; a popup opens in the
+  same pane (never a new window), device permissions and `file:` / `javascript:` / `data:` addresses are refused; a password in an address
   (`user:secret@host`) is refused; HTTP sign-ins go through MobAlt's own prompt and are not stored.
 - **Local Network**: on macOS 15 and later the system asks once before MobAlt may reach hosts on your local network.
 
@@ -93,5 +93,5 @@ To check a download yourself:
 ```bash
 shasum -a 256 MobAlt-<version>-arm64.dmg          # compare with sha256 in Casks/mobalt.rb
 hdiutil attach -readonly MobAlt-<version>-arm64.dmg
-spctl -a -vv -t exec "/Volumes/MobAlt <version>/MobAlt.app"   # accepted, source=Notarized Developer ID
+spctl -a -vv -t exec "/Volumes/MobAlt <version>-arm64/MobAlt.app"   # (or -x64) accepted, source=Notarized Developer ID
 ```

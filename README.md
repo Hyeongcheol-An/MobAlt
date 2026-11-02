@@ -128,7 +128,7 @@ The [user guide](docs/USER_GUIDE.md) walks through everything; the short version
 - **Browser sessions**: a web page in a pane next to the shells that manage it — a router, Grafana, a tunnelled
   `localhost:port`. `＋ Session → Browser` or an `http://` / `https://` address in Quick connect; Back / Forward /
   Reload, an address field (⌘L), the page title on the tab, Open in default browser, an error view with Retry; it
-  splits, zooms, detaches and is restored with the workspace like any pane. `http(s)` only, sandboxed, no popups or
+  splits, zooms, detaches and is restored with the workspace like any pane. `http(s)` only, sandboxed, popups stay in the pane, no device
   permissions; sign-ins shared across browser sessions unless a session asks for its own.
 - **SFTP**: opens automatically for SSH sessions. Double-click to navigate or edit, `>_` sends `cd` to
   the terminal, the terminal can follow your shell's folder (session option).
