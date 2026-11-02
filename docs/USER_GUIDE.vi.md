@@ -72,7 +72,7 @@ rồi điền thẻ Cơ bản. Nhấp đúp vào phiên để kết nối; nhấ
 | Cục bộ (Local) | Shell đăng nhập macOS của bạn (zsh/bash), có theo dõi thư mục |
 | Telnet | Telnet cổ điển với thương lượng NAWS/TTYPE; tên người dùng của phiên được gửi tại dấu nhắc `login:` |
 | Serial | Console USB-serial (baud, khung, điều khiển luồng, echo cục bộ) |
-| FTP | Trình duyệt tệp FTP / FTPS (TLS tường minh) trong bảng Sftp |
+| FTP | Trình duyệt tệp FTP / FTPS (TLS tường minh) trong bảng SFTP |
 | RDP / VNC | Chuyển sang Windows App hoặc Chia sẻ màn hình của macOS |
 | Trình duyệt (Browser) | Một trang web trong ngăn cạnh các terminal của bạn — router, Grafana, giao diện web của thiết bị, một `localhost` qua đường hầm (chỉ http/https; xem [Phiên trình duyệt](#phiên-trình-duyệt)) |
 
@@ -231,7 +231,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   được tô trên mỗi terminal — khi có một loạt đầu ra dài, các hàng cũ nhất trở về bình thường trước — và ⌘K xóa tất cả.
 - **Zmodem (rz/sz)**: truyền tệp ngay qua terminal, cách làm cổ điển qua console serial hoặc máy chủ trung gian
   nơi không dùng được SFTP. Chạy `sz file …` ở máy từ xa để tải về máy Mac, hoặc `rz` để tải lên từ máy Mac; MobAlt
-  nhận ra quá trình truyền trong luồng dữ liệu, tạm dừng terminal và hiện nó trong danh sách truyền tệp của bảng Sftp (có nút Hủy)
+  nhận ra quá trình truyền trong luồng dữ liệu, tạm dừng terminal và hiện nó trong danh sách truyền tệp của bảng SFTP (có nút Hủy)
   và bộ đếm trên thanh trạng thái. Tệp tải về được lưu vào Thư mục tải về (Cài đặt → Chung), hoặc vào thư mục bạn chọn nếu
   chưa đặt; tải lên sẽ mở hộp thoại chọn tệp. Hoạt động trong ngăn SSH, cục bộ, telnet và serial — không có với Mosh (luồng của nó
   thuộc về client mosh, không phải luồng byte thô). Tắt bằng Cài đặt → Tính năng → Truyền tệp → *Truyền tệp Zmodem (rz/sz)* (bật theo mặc định);
@@ -241,7 +241,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
   cùng tên được lưu thành `name (1).ext` và được liệt kê dưới tên đó.
 - **Bảng nhớ tạm**: chọn văn bản là sao chép (Cài đặt → Terminal → Sao chép khi chọn); nhấp chuột phải để dán
   (⇧-chuột phải mở menu). Thả tệp từ Finder vào terminal SSH sẽ tải chúng lên;
-  vào terminal cục bộ thì dán đường dẫn. Khi không rõ thư mục của shell (phiên không theo terminal), tệp được tải lên thư mục mà bảng Sftp
+  vào terminal cục bộ thì dán đường dẫn. Khi không rõ thư mục của shell (phiên không theo terminal), tệp được tải lên thư mục mà bảng SFTP
   đang hiển thị cho kết nối đó; nếu bảng chưa mở, bạn được hỏi trước.
 - **Bảo vệ dán**: nội dung dán có nhiều hơn một dòng (hoặc trên 1000 ký tự) sẽ hỏi trước — *Dán N
   dòng vào …?* hiện văn bản trong ô xem trước có thể sửa; ⌘⏎ để dán, Esc để hủy. Mọi lần dán cũng
@@ -279,7 +279,7 @@ chọn thư mục và giữ nguyên trường khi bạn hủy.
 
 ![Bảng SFTP](images/vi/sftp-panel.png)
 
-Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự mở khi kết nối
+Bảng **SFTP** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự mở khi kết nối
 (Cài đặt → Chung → "Chuyển sang bảng SFTP khi SSH kết nối").
 
 - Điều hướng bằng cách nhấp đúp vào thư mục, gõ đường dẫn (dùng được `~`) hoặc dùng ⬆ / 🏠 / ⟳.
@@ -362,7 +362,7 @@ kết nối, và bạn được báo nếu có đường hầm không lắng ngh
 - **Mosh**: cần `brew install mosh` trên máy cục bộ và `mosh-server` trên máy chủ (UDP 60000-61000).
   Ngăn chạy client mosh; bước khởi động SSH dùng khóa, agent hoặc dấu nhắc tương tác của bạn.
   Đặt đường dẫn `mosh-server` nếu nó không nằm trong PATH của máy từ xa.
-- **Mosh + SFTP**: mosh không mang kênh SFTP, nên bảng Sftp duyệt máy chủ Mosh qua một
+- **Mosh + SFTP**: mosh không mang kênh SFTP, nên bảng SFTP duyệt máy chủ Mosh qua một
   kết nối SSH riêng không có shell tới cùng máy chủ đó (cùng khóa, agent và dấu nhắc). Kết nối này tự mở
   khi "Tự động mở trình duyệt SFTP" được bật cho phiên (và "Chuyển sang bảng SFTP
   khi SSH kết nối" trong Cài đặt → Chung), nếu không thì mở từ nút "Mở SFTP cho máy chủ này (qua SSH)" của bảng hoặc
@@ -416,7 +416,7 @@ văn bản căn phải; terminal vẫn chạy từ trái sang phải). Theo mặ
 danh sách ngôn ngữ của macOS (Cài đặt hệ thống → Cài đặt chung → Ngôn ngữ & Vùng): ngôn ngữ đầu tiên trong danh sách đó mà
 MobAlt có sẽ được dùng, và tiếng Anh nếu không có ngôn ngữ nào khớp. Cài đặt → Chung → **Ngôn ngữ** chọn một ngôn ngữ cụ thể; thay đổi
 có hiệu lực ngay trong mọi cửa sổ — không có gì khởi động lại, các kết nối vẫn giữ — và được ghi nhớ. Đầu ra terminal không bao giờ
-được dịch: những gì máy chủ từ xa in ra được hiển thị nguyên vẹn. Hướng dẫn sử dụng cũng có đủ mười một ngôn ngữ đó
+được dịch: những gì máy chủ từ xa in ra được hiển thị nguyên vẹn. Các dòng do chính MobAlt in vào terminal ("Đang kết nối tới …", "Trao đổi khóa …", "Kết nối thất bại: …", "── Phiên đã kết thúc. … ──") theo ngôn ngữ giao diện, trừ tiếng Ả Rập và tiếng Hindi, khi đó chúng giữ nguyên tiếng Anh: terminal vẽ mỗi ô một ký tự, từ trái sang phải, nên không thể nối chữ Ả Rập hay ghép chữ Devanagari. Hướng dẫn sử dụng cũng có đủ mười một ngôn ngữ đó
 (`docs/USER_GUIDE.<language>.md`); Trợ giúp → **Hướng dẫn sử dụng** mở bản cho ngôn ngữ hiện tại.
 
 Với tiếng Ả Rập, toàn bộ cửa sổ đọc từ phải sang trái: dải bên và thanh bên chuyển sang mép phải, còn các terminal

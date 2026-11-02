@@ -77,7 +77,7 @@ diesem Ordner).
 | Lokal | Ihre macOS-Login-Shell (zsh/bash) mit Ordnerverfolgung |
 | Telnet | Klassisches Telnet mit NAWS/TTYPE-Aushandlung; der Benutzername der Sitzung wird am `login:`-Prompt gesendet |
 | Seriell | USB-Seriell-Konsole (Baudrate, Datenformat, Flusskontrolle, lokales Echo) |
-| FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „Sftp“ |
+| FTP | FTP-/FTPS-Dateibrowser (explizites TLS) im Panel „SFTP“ |
 | RDP / VNC | Übergibt an Windows App oder die macOS-Bildschirmfreigabe |
 | Browser | Eine Webseite in einem Bereich neben Ihren Terminals — ein Router, Grafana, die Weboberfläche eines Geräts, ein getunnelter `localhost` (nur http/https; siehe [Browser-Sitzungen](#browser-sitzungen)) |
 
@@ -253,7 +253,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 - **Zmodem (rz/sz)**: Dateien durch das Terminal selbst bewegen, auf die klassische Art über eine serielle Konsole oder
   einen Jump-Host, wo SFTP nicht verfügbar ist. Führen Sie auf der Gegenseite `sz file …` aus, um auf den Mac
   herunterzuladen, oder `rz`, um von ihm hochzuladen; MobAlt erkennt die Übertragung im Datenstrom, hält das Terminal an
-  und zeigt sie in der Übertragungsliste des Panels „Sftp“ (mit „Abbrechen“) und im Zähler der Statusleiste. Downloads
+  und zeigt sie in der Übertragungsliste des Panels „SFTP“ (mit „Abbrechen“) und im Zähler der Statusleiste. Downloads
   landen im Download-Ordner („Einstellungen“ → „Allgemein“) oder, wenn keiner festgelegt ist, in einem Ordner Ihrer
   Wahl; Uploads öffnen eine Dateiauswahl. Funktioniert in SSH-, lokalen, Telnet- und seriellen Bereichen — nicht in
   Mosh (dessen Datenstrom gehört dem mosh-Client und ist kein roher Bytestrom). Abschalten können Sie es unter
@@ -266,7 +266,7 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 - **Zwischenablage**: Auswählen kopiert („Einstellungen“ → „Terminal“ → „Bei Auswahl kopieren“); ein Rechtsklick setzt
   ein (⇧-Rechtsklick öffnet das Menü). Dateien aus dem Finder, die Sie auf einem SSH-Terminal ablegen, werden
   hochgeladen; auf einem lokalen Terminal werden die Pfade eingesetzt. Ist der Ordner der Shell unbekannt (die Sitzung folgt dem
-  Terminal nicht), landen sie in dem Ordner, den das Panel „Sftp“ für diese Verbindung zeigt; ist das Panel noch nicht
+  Terminal nicht), landen sie in dem Ordner, den das Panel „SFTP“ für diese Verbindung zeigt; ist das Panel noch nicht
   offen, werden Sie zuerst gefragt.
 - **Einsetzschutz**: Einsetzen von mehr als einer Zeile (oder über 1000 Zeichen) fragt zuerst nach — *N Zeilen in …
   einsetzen?* zeigt den Text in einer bearbeitbaren Vorschau; ⌘⏎ setzt ein, Esc bricht ab. Jedes Einsetzen wird zudem
@@ -304,10 +304,10 @@ Ordnerdialog und lässt das Feld unverändert, wenn Sie abbrechen.
 
 ## Dateien (SFTP / FTP)
 
-![Panel „Sftp“](images/de/sftp-panel.png)
+![Panel „SFTP“](images/de/sftp-panel.png)
 
-Das Panel **Sftp** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim Verbinden automatisch
-(„Einstellungen“ → „Allgemein“ → „Bei SSH-Verbindung zu ‚Sftp‘ wechseln“).
+Das Panel **SFTP** folgt dem aktiven SSH- oder FTP-Bereich. Es öffnet sich beim Verbinden automatisch
+(„Einstellungen“ → „Allgemein“ → „Bei SSH-Verbindung zu ‚SFTP‘ wechseln“).
 
 - Navigieren Sie per Doppelklick auf Ordner, durch Eintippen eines Pfads (`~` funktioniert) oder mit ⬆ / 🏠 / ⟳.
   „Terminal folgen“ hält das Panel im aktuellen Ordner der Shell (erfordert die Sitzungsoption, die einen kleinen
@@ -400,9 +400,9 @@ diesem Mac bereits verwendet* (bei einer Remote-Weiterleitung *auf dem Server*).
 - **Mosh**: braucht lokal `brew install mosh` und auf dem Host `mosh-server` (UDP 60000-61000). Der Bereich führt den
   mosh-Client aus; der SSH-Start verwendet Ihren Schlüssel, den Agent oder eine interaktive Abfrage. Legen Sie den Pfad
   zu `mosh-server` fest, wenn er nicht im entfernten PATH liegt.
-- **Mosh + SFTP**: mosh transportiert keinen SFTP-Kanal, deshalb durchsucht das Panel „Sftp“ einen Mosh-Host über eine
+- **Mosh + SFTP**: mosh transportiert keinen SFTP-Kanal, deshalb durchsucht das Panel „SFTP“ einen Mosh-Host über eine
   separate SSH-Verbindung ohne Shell zum selben Host (gleicher Schlüssel, Agent und Abfragen). Sie öffnet sich
-  automatisch, wenn „SFTP-Browser automatisch öffnen“ für die Sitzung aktiv ist (und „Bei SSH-Verbindung zu ‚Sftp‘
+  automatisch, wenn „SFTP-Browser automatisch öffnen“ für die Sitzung aktiv ist (und „Bei SSH-Verbindung zu ‚SFTP‘
   wechseln“ unter „Einstellungen“ → „Allgemein“), sonst über die Taste „SFTP für diesen Host öffnen (über SSH)“ im Panel
   oder „SFTP-Browser öffnen“ im Menü des Bereichs; sie wird zusammen mit dem Bereich getrennt.
 - **Seriell**: Der Editor listet USB-Seriell-Geräte; stellen Sie Baudrate, Daten-/Stoppbits, Parität, Flusskontrolle,
@@ -439,7 +439,7 @@ Abschalten lässt sich das unter „Einstellungen“ → „Allgemein“ → „
 ![Einstellungen](images/de/settings.png)
 
 Die Einstellungen haben fünf Tabs, von denen jeder ohne Scrollen ins kleinste Fenster passt: **Allgemein** (die
-Sprache der Oberfläche, die Bestätigung beim Beenden, der Wechsel zum Panel „Sftp“, die Wiederherstellung des
+Sprache der Oberfläche, die Bestätigung beim Beenden, der Wechsel zum Panel „SFTP“, die Wiederherstellung des
 Arbeitsbereichs, die lokale Shell und ihre Ordnerintegration, der externe Editor, der Download-Ordner, SSH-Keep-Alive
 und „Konfigurationsordner öffnen“, das zeigt, wo alles gespeichert ist), **Terminal** (Schrift, Zeilenhöhe, Cursor,
 Pufferzeilen, Thema — das Aussehen des ganzen Fensters, siehe *Themen und Erscheinungsbild* —, Maus/Tasten und was
@@ -457,7 +457,7 @@ Oberfläche der Sprachliste von macOS (Systemeinstellungen → Allgemein → Spr
 Liste, die MobAlt mitbringt, gewinnt, Englisch, wenn keine passt. „Einstellungen“ → „Allgemein“ → **Sprache** wählt
 eine Sprache ausdrücklich; die Änderung gilt sofort in jedem Fenster — nichts startet neu, Verbindungen bleiben
 bestehen — und wird gemerkt. Terminalausgaben werden nie übersetzt: Was ein entfernter Host ausgibt, erscheint
-unverändert. Das Benutzerhandbuch gibt es in denselben elf Sprachen (`docs/USER_GUIDE.<language>.md`); „Hilfe“ →
+unverändert. Die Zeilen, die MobAlt selbst ins Terminal schreibt („Verbindung zu … wird hergestellt...“, „Schlüsselaustausch …“, „Verbindung fehlgeschlagen: …“, „── Sitzung beendet. … ──“), folgen der Sprache der Oberfläche, außer auf Arabisch und Hindi, wo sie englisch bleiben: Ein Terminal zeichnet ein Zeichen pro Zelle, von links nach rechts, und kann weder arabische Buchstaben verbinden noch Devanagari formen. Das Benutzerhandbuch gibt es in denselben elf Sprachen (`docs/USER_GUIDE.<language>.md`); „Hilfe“ →
 **Benutzerhandbuch** öffnet das für die aktuelle Sprache.
 
 Auf Arabisch liest sich das ganze Fenster von rechts nach links: Seitenstreifen und Seitenleiste wandern an den rechten

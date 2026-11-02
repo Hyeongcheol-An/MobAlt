@@ -74,7 +74,7 @@ et remplissez l'onglet Base. Double-cliquez sur une session pour vous connecter�
 | Local | Votre shell de connexion macOS (zsh/bash) avec suivi du dossier |
 | Telnet | Telnet classique avec négociation NAWS/TTYPE ; le nom d'utilisateur de la session est envoyé à l'invite `login:` |
 | Série | Console série USB (débit, trame, contrôle de flux, écho local) |
-| FTP | Navigateur de fichiers FTP / FTPS (TLS explicite) dans le panneau Sftp |
+| FTP | Navigateur de fichiers FTP / FTPS (TLS explicite) dans le panneau SFTP |
 | RDP / VNC | Délègue à Windows App ou au Partage d'écran de macOS |
 | Navigateur | Une page web dans un volet à côté de vos terminaux — un routeur, Grafana, l'interface web d'un appareil, un `localhost` tunnelisé (http/https uniquement ; voir [Sessions navigateur](#sessions-navigateur)) |
 
@@ -237,7 +237,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
   restent décorées par terminal — lors d'une longue rafale, les lignes les plus anciennes redeviennent brutes en premier — et ⌘K les efface toutes.
 - **Zmodem (rz/sz)** : transférez des fichiers par le terminal lui-même, à l'ancienne, via une console série ou un hôte de rebond
   où SFTP n'est pas disponible. Lancez `sz file …` sur l'hôte distant pour télécharger vers le Mac, ou `rz` pour y envoyer depuis le Mac ; MobAlt
-  repère le transfert dans le flux, met le terminal en pause et l'affiche dans la liste des transferts du panneau Sftp (avec Annuler)
+  repère le transfert dans le flux, met le terminal en pause et l'affiche dans la liste des transferts du panneau SFTP (avec Annuler)
   et dans le compteur de la barre d'état. Les téléchargements vont dans le dossier de téléchargement (Réglages → Général → Dossier de téléchargement), ou dans un dossier que vous choisissez s'il
   n'est pas défini ; les envois ouvrent un sélecteur de fichiers. Fonctionne dans les volets SSH, locaux, telnet et série — pas Mosh (son flux est celui du
   client mosh, pas un flux d'octets brut). Désactivez-le avec Réglages → Fonctions → Transferts → *Transferts Zmodem (rz/sz)* (activé par défaut) ;
@@ -248,7 +248,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
 - **Presse-papiers** : sélectionner copie (Réglages → Terminal → Copier à la sélection) ; le clic droit colle
   (⇧ clic droit ouvre le menu). Déposer des fichiers du Finder sur un terminal SSH les envoie ;
   sur un terminal local, cela colle leurs chemins. Si le dossier du shell est inconnu (la session ne suit pas le terminal), ils vont dans le dossier
-  que le panneau Sftp affiche pour cette connexion ; si le panneau n'a pas encore affiché cette connexion, une question vous est posée d'abord.
+  que le panneau SFTP affiche pour cette connexion ; si le panneau n'a pas encore affiché cette connexion, une question vous est posée d'abord.
 - **Garde-collage** : un collage de plus d'une ligne (ou de plus de 1000 caractères) demande d'abord confirmation — *Coller N
   lignes dans … ?* montre le texte dans un aperçu modifiable ; ⌘⏎ colle, Échap annule. Chaque collage est aussi
   inspecté pour ce que le presse-papiers ne montre pas : caractères sans chasse et bidi, espaces insécables (une espace
@@ -286,7 +286,7 @@ dialogue de dossier et laisse le champ tel quel si vous annulez.
 
 ![Panneau SFTP](images/fr/sftp-panel.png)
 
-Le panneau **Sftp** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement à la connexion
+Le panneau **SFTP** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement à la connexion
 (Réglages → Général → « Afficher SFTP à la connexion SSH »).
 
 - Naviguez en double-cliquant sur les dossiers, en saisissant un chemin (`~` fonctionne) ou avec ⬆ / 🏠 / ⟳.
@@ -382,7 +382,7 @@ sur ce Mac* (ou *sur le serveur* pour une redirection distante).
 - **Mosh** : nécessite `brew install mosh` en local et `mosh-server` sur l'hôte (UDP 60000-61000).
   Le volet exécute le client mosh ; l'amorçage SSH utilise votre clé, l'agent ou une invite interactive.
   Indiquez le chemin de `mosh-server` s'il n'est pas dans le PATH distant.
-- **Mosh + SFTP** : mosh ne transporte pas de canal SFTP ; le panneau Sftp parcourt donc un hôte Mosh via une
+- **Mosh + SFTP** : mosh ne transporte pas de canal SFTP ; le panneau SFTP parcourt donc un hôte Mosh via une
   connexion SSH distincte, sans shell, vers le même hôte (même clé, même agent, mêmes invites). Elle s'ouvre
   automatiquement quand « Ouvrir automatiquement le navigateur SFTP » est activé pour la session (et « Afficher SFTP à la connexion SSH »
   dans Réglages → Général), sinon depuis le bouton « Ouvrir SFTP pour cet hôte (via SSH) » du panneau ou depuis
@@ -436,7 +436,7 @@ texte aligné à droite ; les terminaux restent de gauche à droite). Par défa
 la liste des langues de macOS (Réglages Système → Général → Langue et région) : la première langue de cette liste que
 MobAlt propose l'emporte, l'anglais si aucune ne convient. Réglages → Général → **Langue** en impose une ; le changement
 s'applique immédiatement dans toutes les fenêtres — rien ne redémarre, les connexions restent ouvertes — et il est mémorisé. La sortie des terminaux n'est jamais
-traduite : ce qu'affiche un hôte distant est montré tel quel. Le guide de l'utilisateur existe dans les mêmes onze langues
+traduite : ce qu'affiche un hôte distant est montré tel quel. Les lignes que MobAlt écrit lui-même dans un terminal (« Connexion à … », « Échange de clés … », « Échec de la connexion : … », « ── Session terminée. … ── ») suivent la langue de l'interface, sauf en arabe et en hindi, où elles restent en anglais : un terminal dessine un caractère par cellule, de gauche à droite, et ne sait ni lier les lettres arabes ni composer le devanagari. Le guide de l'utilisateur existe dans les mêmes onze langues
 (`docs/USER_GUIDE.<language>.md`) ; Aide → **Guide de l'utilisateur** ouvre celui de la langue actuelle.
 
 En arabe, toute la fenêtre se lit de droite à gauche : la bande latérale et la barre latérale passent sur le bord droit
