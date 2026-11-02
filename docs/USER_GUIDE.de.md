@@ -37,7 +37,7 @@ Drei Wege führen zu einem neuen Release; alle enden mit dem neuen Bundle unter 
   „Updates“); „Hilfe“ → „Nach Updates suchen…“ oder „Jetzt suchen“ unter „Einstellungen“ → „Updates“ startet die Prüfung
   von Hand. Eine neuere Version wird in einem Dialog angeboten, nur auf Ihren Wunsch heruntergeladen und beim Beenden
   installiert — oder sofort mit „Jetzt neu starten“. Während des Downloads erscheint über den Tabs und unter
-  „Einstellungen“ → „Updates“ eine Fortschrittszeile — *MobAlt 0.17.0 wird heruntergeladen — 42 % (12.3 von 29.4 MB,
+  „Einstellungen“ → „Updates“ eine Fortschrittszeile — *Download von MobAlt 0.17.0 — 42 % (12.3 von 29.4 MB,
   2.1 MB/s)* — mit einem schmalen Balken; sobald die Datei vollständig ist, bieten beide **Jetzt neu starten** an
   (oder **Später**: die Installation erfolgt beim Beenden), und ein fehlgeschlagener Download nennt einige Sekunden
   lang den Grund.
