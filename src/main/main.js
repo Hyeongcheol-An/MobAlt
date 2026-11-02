@@ -31,6 +31,7 @@ const i18n = require('./i18n'); // interface language: t() for every label built
 const { t, tn } = i18n;
 const { RemoteMonitor } = require('./monitor'); // the remote monitoring bar: one exec per poll on the pane's own connection
 const { ZmodemManager, fmtBytes } = require('./zmodem');
+const urlpolicy = require('./urlpolicy'); // what a window may open outside the app (external URLs, folders, vnc://)
 const { isBrowserUrl, browserUrlWithoutUser } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
 
 const pkg = require('../../package.json');
@@ -350,9 +351,16 @@ function createWindow({ detached = null, bounds = null, from = null } = {}) {
       try { writeWorkspace(); } catch {}
     }
   });
+  // The window never opens another window or leaves its own page: a link (window.open, target=_blank) goes to the
+  // default browser when it is http(s) / mailto, and a navigation away from index.html — a file dropped outside a
+  // drop zone, a link in rendered text — is cancelled (urlpolicy.js).
   w.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    if (urlpolicy.externalUrlAllowed(url)) shell.openExternal(url);
     return { action: 'deny' };
+  });
+  const indexFile = path.join(__dirname, '..', 'renderer', 'index.html');
+  w.webContents.on('will-navigate', (ev, url) => {
+    if (!urlpolicy.windowNavigationAllowed(url, indexFile)) ev.preventDefault();
   });
   if (isMain) w.webContents.on('did-finish-load', () => { bootTimes.windowLoaded = Date.now(); runTestHooks(); });
   if (process.env.MOBALT_SCREENSHOT || process.env.MOBALT_TEST_SCRIPT) {
@@ -1351,7 +1359,9 @@ function registerIpc() {
   ipcMain.handle('dialog:open', (e, opts) => dialogs.showOpenDialog(wof(e), opts));
   ipcMain.handle('dialog:save', (e, opts) => dialogs.showSaveDialog(wof(e), opts));
   ipcMain.handle('dialog:message', (e, opts) => dialogs.showMessageBox(wof(e), opts));
-  ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url));
+  // http(s) and mailto only: the URL may come from a server (a terminal link, a web page); an app's own URL scheme
+  // must not be reachable from there (urlpolicy.js)
+  ipcMain.handle('shell:open-external', (_e, url) => (urlpolicy.externalUrlAllowed(url) ? shell.openExternal(url) : false));
   ipcMain.handle('browser:favicon', (e, id, url) => fetchFavicon(e.sender, id, url)); // a browser pane's page icon as a data: URL (null when there is none)
   // a browser pane's history (the <webview> tag's own canGoBack / goBack went with the webContents methods they wrapped):
   // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward'
@@ -1364,7 +1374,9 @@ function registerIpc() {
     return { canGoBack: nav.canGoBack(), canGoForward: nav.canGoForward() };
   });
   ipcMain.handle('shell:show-item', (_e, p) => shell.showItemInFolder(p));
-  ipcMain.handle('shell:open-path', (_e, p) => shell.openPath(p));
+  // folders under home / the temporary folder / the download folder only: opening a file could start an app or run a
+  // .command script that came from a server
+  ipcMain.handle('shell:open-path', (_e, p) => (urlpolicy.openPathAllowed(p, { downloadDir: store.getSettings().downloadDir }) ? shell.openPath(p) : 'refused'));
 
   ipcMain.handle('launch:rdp', (_e, cfg) => {
     const dir = path.join(os.tmpdir(), 'mobalt-rdp');
@@ -1385,8 +1397,8 @@ function registerIpc() {
     return shell.openPath(file);
   });
   ipcMain.handle('launch:vnc', (_e, cfg) => {
-    const user = cfg.username ? encodeURIComponent(cfg.username) + '@' : '';
-    return shell.openExternal(`vnc://${user}${cfg.host}:${cfg.port || 5900}`);
+    const url = urlpolicy.vncUrl(cfg); // null when the host would change what the URL means (a '/', '@', '?', spaces…)
+    return url ? shell.openExternal(url) : false;
   });
 
   ipcMain.handle('tools:ping', (e, host, count) => tools.ping(wof(e), host, count));
