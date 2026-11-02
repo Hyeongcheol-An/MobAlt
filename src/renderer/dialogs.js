@@ -175,6 +175,14 @@ function holdTallest(container, { pages, show }, current) {
   container.style.minHeight = `${max}px`;
 }
 
+/** Why an address was refused (browserurl.js normalizeBrowserUrl), as the editor and a browser pane's address field say it. */
+export function urlProblem(error) {
+  return error === 'empty' ? t('URL is required')
+    : error === 'scheme' ? t('Only http:// and https:// addresses can be opened in a browser pane')
+    : error === 'credentials' ? t('Passwords do not belong in the address — the page asks for them when it needs them.')
+    : t('That is not a valid URL');
+}
+
 /** Session editor. Resolves with the session object to save, or null. */
 export function sessionEditor(app, initial = {}) {
   const s = { type: 'ssh', port: 22, authMethod: 'auto', sftpAuto: true, followCwd: false, tunnels: [], ...initial };
@@ -267,6 +275,7 @@ export function sessionEditor(app, initial = {}) {
   const monitor = check(t('Show remote monitoring bar'), s.monitor ?? app.settings.monitorBar !== false);
   // --- browser: the page the pane opens; "isolated" gives the session a cookie jar of its own (two accounts on one site)
   const url = text(s.url || '', { placeholder: t('https://host/path, or host:port (http for the local network)'), dir: 'ltr', autocomplete: 'off' });
+  url.addEventListener('input', () => { url.classList.remove('invalid'); url.removeAttribute('aria-invalid'); }); // a refused address is marked until it is edited
   const isolated = check(t('Own cookies and sign-ins (isolated from other browser sessions)'), !!s.isolated);
   // --- mosh / ftp
   const moshServer = text(s.moshServer, { placeholder: t('mosh-server (path on the remote host, optional)') });
@@ -548,8 +557,10 @@ export function sessionEditor(app, initial = {}) {
       const r = normalizeBrowserUrl(url.value);
       if (!r.url) {
         showPage('basic');
+        url.classList.add('invalid'); // cleared on the next edit (below)
+        url.setAttribute('aria-invalid', 'true');
         url.focus();
-        toast(r.error === 'empty' ? t('URL is required') : r.error === 'scheme' ? t('Only http:// and https:// addresses can be opened in a browser pane') : t('That is not a valid URL'), 'warn');
+        toast(urlProblem(r.error), 'warn');
         return null;
       }
       browserUrl = r.url;
@@ -1086,6 +1097,34 @@ export function passwordDialog(p) {
   });
   setTimeout(() => input.focus(), 20);
   return m.promise;
+}
+
+/**
+ * A page's HTTP authentication (Basic / Digest: a router's admin page): main asks through prompt:request, the answer
+ * goes back as { username, password } or null for Cancel (the 401 page shows then). Nothing is stored; Chromium keeps
+ * the credentials for the page's session during the run. Returns { promise, close }: main withdraws the prompt when the
+ * pane that asked is gone (prompt:cancel).
+ */
+export function httpAuthDialog(p) {
+  const field = (type, label, autocomplete) => h('input', { type, autocomplete, 'aria-label': label, spellcheck: false, style: { width: '100%', height: '28px', padding: '0 8px', borderRadius: 'var(--radius)', border: '1px solid var(--border)', background: 'var(--bg-input)', marginBottom: '8px' } });
+  const user = field('text', t('User name'), 'username');
+  const password = field('password', t('Password'), 'current-password');
+  const where = p.port && p.port !== 80 && p.port !== 443 ? `${p.host}:${p.port}` : p.host;
+  const m = showModal({
+    title: t('Sign in to {host}', { host: where }),
+    width: 'narrow',
+    closeOnBackdrop: false,
+    body: h('div', {},
+      p.realm ? h('div', { style: { marginBottom: '8px', color: 'var(--fg-dim)' } }, t('The site says: {realm}', { realm: p.realm })) : null,
+      user, password),
+    buttons: [
+      { label: t('Cancel'), value: null },
+      { label: t('Sign in'), primary: true, action: (api) => api.close({ username: user.value, password: password.value }) },
+    ],
+  });
+  for (const el of [user, password]) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); m.close({ username: user.value, password: password.value }); } });
+  setTimeout(() => user.focus(), 20);
+  return { promise: m.promise, close: (v) => m.close(v) };
 }
 
 export function kbdIntDialog(p) {

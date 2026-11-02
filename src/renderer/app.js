@@ -8,7 +8,7 @@ import { Workspace } from './layout.js';
 import { SessionTree } from './sidebar.js';
 import { SftpPanel } from './sftp.js';
 import { ToolsPanel, MacrosPanel } from './panels.js';
-import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, shortcutsDialog, pasteGuardDialog, keygenDialog, paneSettingsDialog } from './dialogs.js';
+import { sessionEditor, settingsDialog, tunnelsDialog, hostKeyDialog, passwordDialog, kbdIntDialog, httpAuthDialog, shortcutsDialog, pasteGuardDialog, keygenDialog, paneSettingsDialog } from './dialogs.js';
 import { analysePaste, pasteGuardMode } from './pasteguard.js';
 import { t, tn, translateDom, setLocale, locale as currentLocale, resolveSetting } from './i18n.js';
 import { progressLine, progressParts } from './updateprogress.js'; // the updater's download on the banner, worded as in Settings → Updates
@@ -19,7 +19,7 @@ translateDom(document); // the static labels of index.html, before anything else
 const shortPath = (p) => (!p ? '' : p.length > 56 ? '…' + p.slice(-55) : p);
 
 /** Pane kind for a session type (rdp/vnc never get a pane). */
-const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp', browser: 'browser' }[type] || 'ssh');
+const kindOf = (type) => ({ local: 'local', telnet: 'telnet', serial: 'serial', mosh: 'mosh', ftp: 'ftp' }[type] || 'ssh'); // a browser session never gets here (makePane)
 
 /** The pane for a session: a browser pane for a web page (browser.js), a terminal pane for everything else. opts: cwd, url (a browser pane's start page, else the session's). */
 const makePane = (app, session, opts = {}) => session && session.type === 'browser'
@@ -254,6 +254,7 @@ class App {
     tab = tab || this.workspace.active;
     if (!tab || !tab.root) return false;
     const payload = { tabs: [this.serializeTab(tab, true)], activeTab: 0 };
+    if (tab.panes().some((p) => p.kind === 'browser')) toast(t('The page is loaded again in the new window — what was typed into it is not kept.'), 'info', 4000); // no live guest moves between windows (browser.js transferState)
     this._detaching = true; // a detached window emptied by this must not close before the new window is known to exist
     for (const p of tab.panes()) p.release();
     this.workspace.removeTab(tab);
@@ -373,11 +374,17 @@ class App {
         if (kind === 'hostkey') result = await hostKeyDialog(payload);
         else if (kind === 'password') result = await passwordDialog(payload);
         else if (kind === 'kbdint') result = await kbdIntDialog(payload);
+        else if (kind === 'httpauth') { // a page's HTTP authentication (browser.js): main may withdraw it when the page goes
+          const d = httpAuthDialog(payload);
+          (this._prompts ||= new Map()).set(reqId, d);
+          try { result = await d.promise; } finally { this._prompts.delete(reqId); }
+        }
       } catch (e) {
         console.error(e);
       }
       window.api.promptReply(reqId, result);
     });
+    window.api.on('prompt:cancel', ({ reqId }) => { const d = this._prompts && this._prompts.get(reqId); if (d) d.close(null); }); // the pane that asked is gone
     window.api.on('tunnels:changed', (list) => {
       const active = list.filter((t) => t.status === 'active').length;
       $('#st-transfers').dataset.tunnels = active;
@@ -916,17 +923,17 @@ class App {
   /** Fill an empty pane with a copy of another pane's session (or a local shell). */
   async duplicateInto(pane, from) {
     if (!from || from.kind === 'empty' || from.kind === 'local') return pane.becomeLocal(from && from.cwd);
-    return this.replacePane(pane, from.session, true);
+    return this.replacePane(pane, from.session, true, from.kind === 'browser' ? { url: from.url } : {}); // a page: where it is now, not the session's start page
   }
 
   /** Replace a pane's terminal with a new one for `session` (confirming if a live connection would drop). */
-  async replacePane(pane, session, silent = false) {
+  async replacePane(pane, session, silent = false, opts = {}) {
     if (!pane.tab || !session) return;
     if (session.type === 'rdp' || session.type === 'vnc') return this.openSession(session);
     if (!silent && dropsConnection(pane) && this.settings.confirmClose) {
       if (!(await confirmDialog(t('Replace "{title}" with "{name}"? The current connection will be dropped.', { title: pane.title, name: session.name }), { okLabel: t('Replace'), danger: true }))) return;
     }
-    const next = makePane(this, session);
+    const next = makePane(this, session, opts.url ? { url: opts.url } : {});
     const tab = pane.tab;
     this.workspace.replace(tab, pane, next);
     const connId = pane.termId;
@@ -1359,10 +1366,10 @@ class App {
     await this.reloadSessions();
     // an open pane of this session takes its new keyword-highlighting override and background label at once (the rest applies on the next connect)
     for (const p of this.workspace.allPanes()) {
-      if (!p.session || p.session.id !== saved.id) continue;
+      if (!p.session || p.session.id !== saved.id || p.kind === 'browser') continue; // a page has no highlighting or label; a session re-saved as another type leaves the open pane as it is
       if ((p.session.highlight || '') !== (saved.highlight || '')) {
         p.session.highlight = saved.highlight;
-        p._syncHighlight(this.settings);
+        p._syncHighlight?.(this.settings);
       }
       p.session.backgroundName = saved.backgroundName;
       p.session.backgroundShown = saved.backgroundShown;

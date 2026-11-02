@@ -139,24 +139,37 @@ localnet.onBlocked(async (host) => {
   if (r.response === 0) shell.openExternal(localnet.SETTINGS_URL);
 });
 
-// ---------- renderer prompts (host key / password / keyboard-interactive) ----------
-const pendingPrompts = new Map();
-function prompt(kind, payload) {
+// ---------- renderer prompts (host key / password / keyboard-interactive / a page's HTTP authentication) ----------
+const pendingPrompts = new Map(); // reqId → { resolve, target, owner }
+/**
+ * Ask the user through the renderer's own dialog: in `target` (default: the window the user is working in — the
+ * prompt names the host either way), on behalf of `owner` (a browser pane's guest: when it is destroyed while the
+ * question is up, the dialog is withdrawn and the answer is null, see cancelPrompts).
+ */
+function prompt(kind, payload, target = focusedWindow(), owner = null) {
   return new Promise((resolve) => {
-    const target = focusedWindow(); // the window the user is working in; the prompt names the host either way
-    if (!target) return resolve(null);
+    if (!target || target.isDestroyed()) return resolve(null);
     const reqId = crypto.randomBytes(6).toString('hex');
-    pendingPrompts.set(reqId, resolve);
+    pendingPrompts.set(reqId, { resolve, target, owner });
     target.webContents.send('prompt:request', { reqId, kind, payload });
   });
 }
 ipcMain.on('prompt:reply', (_e, { reqId, result }) => {
-  const r = pendingPrompts.get(reqId);
-  if (r) {
+  const p = pendingPrompts.get(reqId);
+  if (p) {
     pendingPrompts.delete(reqId);
-    r(result);
+    p.resolve(result);
   }
 });
+/** The prompts `owner` asked for are taken down (the pane closed, the page went): the renderer closes the dialog, the caller gets null. */
+function cancelPrompts(owner) {
+  for (const [reqId, p] of pendingPrompts) {
+    if (p.owner !== owner) continue;
+    pendingPrompts.delete(reqId);
+    if (!p.target.isDestroyed()) p.target.webContents.send('prompt:cancel', { reqId });
+    p.resolve(null);
+  }
+}
 const publicSession = (s) => {
   if (!s) return s;
   const { password, passphrase, jumpPassword, ...rest } = s;
@@ -736,9 +749,13 @@ function registerIpc() {
     if (!w || w.isDestroyed()) throw new Error(`no window ${o.windowId}`);
     await emulateFocus(w);
     const modifiers = Array.isArray(o.modifiers) ? o.modifiers : [];
-    w.webContents.sendInputEvent({ type: 'keyDown', keyCode: o.keyCode, modifiers });
-    if (o.char) w.webContents.sendInputEvent({ type: 'char', keyCode: o.char, modifiers });
-    w.webContents.sendInputEvent({ type: 'keyUp', keyCode: o.keyCode, modifiers });
+    // `guest`: the key goes to a browser pane's page (its webview's webContents id) instead of the window — what a
+    // key pressed while the page has the keyboard gives the guest (test/e2e-browser-security.js: the app's shortcuts)
+    const target = o.guest ? guestOf(w.webContents, o.guest) : w.webContents;
+    if (!target) throw new Error(`no guest ${o.guest} in window ${w.id}`);
+    target.sendInputEvent({ type: 'keyDown', keyCode: o.keyCode, modifiers });
+    if (o.char) target.sendInputEvent({ type: 'char', keyCode: o.char, modifiers });
+    target.sendInputEvent({ type: 'keyUp', keyCode: o.keyCode, modifiers });
     return true;
   });
   // Test-only: a paste as Edit → Paste does it (webContents.paste(): the focused element gets a `paste` event with the
@@ -1333,12 +1350,12 @@ function registerIpc() {
   ipcMain.handle('dialog:save', (e, opts) => dialogs.showSaveDialog(wof(e), opts));
   ipcMain.handle('dialog:message', (e, opts) => dialogs.showMessageBox(wof(e), opts));
   ipcMain.handle('shell:open-external', (_e, url) => shell.openExternal(url));
-  ipcMain.handle('browser:favicon', (_e, partition, url) => fetchFavicon(partition, url)); // a browser pane's page icon as a data: URL (null when there is none)
+  ipcMain.handle('browser:favicon', (e, id, url) => fetchFavicon(e.sender, id, url)); // a browser pane's page icon as a data: URL (null when there is none)
   // a browser pane's history (the <webview> tag's own canGoBack / goBack went with the webContents methods they wrapped):
   // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward'
   ipcMain.handle('browser:nav', (e, id, op) => {
-    const wc = webContents.fromId(Number(id));
-    if (!wc || wc.isDestroyed() || wc.getType() !== 'webview' || !wc.hostWebContents || wc.hostWebContents.id !== e.sender.id) return null;
+    const wc = guestOf(e.sender, id);
+    if (!wc) return null;
     const nav = wc.navigationHistory;
     if (op === 'back' && nav.canGoBack()) nav.goBack();
     else if (op === 'forward' && nav.canGoForward()) nav.goForward();
@@ -1440,13 +1457,25 @@ process.on('uncaughtException', (e) => {
 
 // ---------- browser sessions: the <webview> guests ----------
 // A browser pane (src/renderer/browser.js) is a <webview> in the window. The renderer is not trusted with what it
-// loads or how: every guest is sandboxed and isolated whatever attributes the tag carries (no preload, no node), may
-// only ever show http(s) pages (or about:blank) — file:, javascript:, data: and the rest are refused when the tag
-// attaches and again when the page tries to navigate there —, keeps its partition to the ones browser panes use,
-// opens a popup / target=_blank in the same pane instead of a window, and gets no camera, microphone, location,
-// notifications or any other permission a page could ask for.
+// loads or how. What is enforced here, whatever the tag says:
+// - will-attach-webview: no preload, no node integration (worker, sub-frames), context isolation and the sandbox on,
+//   web security on, no insecure content, no Blink features, no navigation by a dropped file, safe dialogs (a page's
+//   second alert / confirm offers to stop further ones); the partition is one of ours (persist:browser, or
+//   persist:browser-<id> for an isolated session) — set on webPreferences, which is what the guest is made from; a src
+//   that is not http(s) / about:blank refuses the attach altogether.
+// - on the guest: a popup / target=_blank to an http(s) page goes into the same pane, anything else is dropped (never
+//   a window); a navigation or redirect to another scheme is stopped; a page's beforeunload never holds the pane;
+//   Web Bluetooth never picks a device; a page's HTTP authentication is asked through the app's own prompt (never a
+//   native sheet, nothing stored); the app's own ⌘ shortcuts reach the app even while the page has the keyboard.
+// - on the guest's session, once: every permission request, check and device denied; a download is saved to the
+//   Downloads folder (Settings → Download folder when set) without a save sheet, the window told by toast.
 const BROWSER_PARTITION = /^persist:browser(-[A-Za-z0-9_-]{1,64})?$/;
-const guardedSessions = new WeakSet(); // the permission handlers are per session, set once
+const guardedSessions = new WeakSet(); // the session-level handlers are per session, set once
+/** The guest webContents `id` names, when it is a webview the calling window embeds; null for anything else. */
+function guestOf(sender, id) {
+  const wc = webContents.fromId(Number(id));
+  return wc && !wc.isDestroyed() && wc.getType() === 'webview' && wc.hostWebContents && !wc.hostWebContents.isDestroyed() && wc.hostWebContents.id === sender.id ? wc : null;
+}
 function hardenWebviews() {
   app.on('web-contents-created', (_e, contents) => {
     contents.on('will-attach-webview', (event, webPreferences, params) => {
@@ -1461,8 +1490,12 @@ function hardenWebviews() {
       webPreferences.allowRunningInsecureContent = false;
       webPreferences.enableBlinkFeatures = '';
       webPreferences.javascript = true;
-      if (!isBrowserUrl(params.src)) { event.preventDefault(); return; }
-      if (!BROWSER_PARTITION.test(String(params.partition || ''))) params.partition = 'persist:browser';
+      webPreferences.navigateOnDragDrop = false;
+      webPreferences.safeDialogs = true;
+      webPreferences.safeDialogsMessage = t('Stop this page from opening more dialogs');
+      // the partition is decided here, on what the guest is actually made from (the params are only the tag's attributes)
+      webPreferences.partition = BROWSER_PARTITION.test(String(params.partition || '')) ? params.partition : 'persist:browser';
+      if (!isBrowserUrl(params.src)) event.preventDefault();
     });
     contents.on('did-attach-webview', (_e, guest) => {
       guest.setWindowOpenHandler(({ url }) => {
@@ -1473,12 +1506,36 @@ function hardenWebviews() {
       });
       guest.on('will-navigate', (ev, url) => { if (!isBrowserUrl(url)) ev.preventDefault(); });
       guest.on('will-redirect', (ev, url) => { if (!isBrowserUrl(url)) ev.preventDefault(); });
+      guest.on('will-prevent-unload', (ev) => ev.preventDefault()); // a page's beforeunload never holds the pane: Back, Reload and a typed address always go
+      guest.on('select-bluetooth-device', (ev, _devices, callback) => { ev.preventDefault(); callback(''); }); // never the first device by default (and no system prompt)
+      // HTTP authentication (Basic / Digest, a router's admin page): the app's own prompt in the pane's window; Cancel
+      // lets the 401 page show; a proxy's challenge is never answered from a page. Chromium keeps a good answer for the
+      // guest's session during the run; nothing is stored.
+      guest.on('login', (ev, details, authInfo, callback) => {
+        ev.preventDefault();
+        if (authInfo.isProxy) return callback();
+        const host = guest.hostWebContents && !guest.hostWebContents.isDestroyed() ? BrowserWindow.fromWebContents(guest.hostWebContents) : null;
+        prompt('httpauth', { host: authInfo.host, port: authInfo.port, realm: authInfo.realm || '', scheme: authInfo.scheme || '', url: details.url }, host, guest)
+          .then((r) => { try { if (r && typeof r.username === 'string') callback(r.username, String(r.password || '')); else callback(); } catch {} });
+      });
+      guest.on('destroyed', () => cancelPrompts(guest));
+      // the app's shortcuts (⌘W, ⌘T, ⌘L, ⌘1-4, ⌘Q…) while the page has the keyboard: a page that swallows keydown
+      // would otherwise keep them — the menu item runs here instead, like a browser's reserved shortcuts
+      guest.on('before-input-event', (ev, input) => {
+        if (input.type !== 'keyDown' || !(input.meta || input.control)) return;
+        const item = menuItemFor(input);
+        if (!item) return;
+        ev.preventDefault();
+        if (item.role === 'quit') app.quit();
+        else item.click();
+      });
       const ses = guest.session;
       if (ses && !guardedSessions.has(ses)) {
         guardedSessions.add(ses);
         ses.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
         ses.setPermissionCheckHandler(() => false);
         ses.setDevicePermissionHandler(() => false);
+        ses.on('will-download', (_ev, item, wc) => saveDownload(item, wc));
       }
     });
   });
@@ -1486,29 +1543,113 @@ function hardenWebviews() {
 hardenWebviews();
 
 /**
+ * The application menu item an accelerator of the app matches `input` (a guest's before-input-event): only items
+ * with a click handler of their own (the app's actions) and Quit — the editing roles (copy, paste, select all…) stay
+ * with the page.
+ */
+function menuItemFor(input) {
+  const menu = Menu.getApplicationMenu();
+  if (!menu) return null;
+  const want = { meta: !!input.meta, control: !!input.control, shift: !!input.shift, alt: !!input.alt, key: String(input.key || '').toLowerCase() };
+  let found = null;
+  const walk = (items) => {
+    for (const item of items || []) {
+      if (found) return;
+      if (item.submenu) { walk(item.submenu.items); continue; }
+      if (!item.accelerator || !item.enabled || !(item.role === 'quit' || (!item.role && typeof item.click === 'function'))) continue;
+      const a = parseAccelerator(item.accelerator);
+      if (a && a.meta === want.meta && a.control === want.control && a.shift === want.shift && a.alt === want.alt && a.key === want.key) found = item;
+    }
+  };
+  walk(menu.items);
+  return found;
+}
+/** An Electron accelerator ("Cmd+Shift+W", "Ctrl+Tab", "Cmd+=") as the modifiers and the key a before-input-event carries. */
+function parseAccelerator(acc) {
+  const out = { meta: false, control: false, shift: false, alt: false, key: '' };
+  const names = { return: 'enter', enter: 'enter', tab: 'tab', space: ' ', plus: '+', esc: 'escape', escape: 'escape', backspace: 'backspace', delete: 'delete', up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright' };
+  for (const raw of String(acc).split('+')) {
+    const tok = raw.trim(); if (!tok) continue;
+    const k = tok.toLowerCase();
+    if (k === 'cmd' || k === 'command' || k === 'cmdorctrl' || k === 'commandorcontrol' || k === 'super' || k === 'meta') out.meta = true;
+    else if (k === 'ctrl' || k === 'control') out.control = true;
+    else if (k === 'shift') out.shift = true;
+    else if (k === 'alt' || k === 'option') out.alt = true;
+    else out.key = names[k] || k;
+  }
+  return out.key ? out : null;
+}
+
+/**
+ * A download from a page (a link with `download`, a Content-Disposition: attachment): saved straight into the
+ * Downloads folder — Settings → Download folder when set, the run's own folder in test mode — under a name that is
+ * not taken, with no save sheet (that would be a window-modal panel over every pane); the window is told by toast
+ * when it starts, when it is done and when it failed.
+ */
+function saveDownload(item, wc) {
+  const host = wc && wc.hostWebContents && !wc.hostWebContents.isDestroyed() ? wc.hostWebContents : null;
+  const notify = (level, text) => { if (host && !host.isDestroyed()) host.send('app:notice', { level, text }); };
+  const settings = store.getSettings();
+  const dir = process.env.MOBALT_TEST_SCRIPT ? path.join(app.getPath('userData'), 'Downloads') : (settings.downloadDir || app.getPath('downloads'));
+  const base = path.basename(item.getFilename() || '') || 'download';
+  let target = path.join(dir, base);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const ext = path.extname(base), stem = base.slice(0, base.length - ext.length);
+    for (let n = 2; fs.existsSync(target); n++) target = path.join(dir, `${stem} (${n})${ext}`);
+  } catch {}
+  item.setSavePath(target);
+  const name = path.basename(target), folder = path.basename(dir) || dir;
+  notify('info', t('Downloading {name} to {folder}…', { name, folder }));
+  item.once('done', (_e, state) => {
+    if (state === 'completed') notify('success', t('{name} saved to {folder}', { name, folder }));
+    else notify('error', t('The download of {name} did not finish ({state})', { name, state }));
+  });
+}
+
+/**
  * The favicon of a page shown in a browser pane, as a data: URL the pane can put in an <img> (the window's CSP
- * allows images from itself and data: only). Fetched through the guest's own partition — the site's cookies — with
- * a short timeout and a size cap; anything that is not a small image comes back as null, never as an error.
+ * allows images from itself and data: only). The renderer only asks for an icon on the page's own origin; here the
+ * guest is checked to be the calling window's, and the request is made through the guest's own session with no
+ * cookies, the pane's user agent and no redirect (a redirect elsewhere is not followed): never a request the page
+ * could not make itself. The body is read in chunks and dropped the moment it passes the cap — a declared size
+ * over it is not even started —, one request per guest at a time (a new one aborts the last).
  */
 const FAVICON_MAX = 64 * 1024;
-async function fetchFavicon(partition, url) {
-  if (!isBrowserUrl(url) || !/^https?:/i.test(url) || !BROWSER_PARTITION.test(String(partition || ''))) return null;
-  const { session } = require('electron');
-  const ses = session.fromPartition(partition);
+const faviconInflight = new Map(); // guest webContents id → AbortController
+async function fetchFavicon(sender, id, url) {
+  const guest = guestOf(sender, id);
+  if (!guest || !/^https?:\/\//i.test(String(url)) || !isBrowserUrl(url)) return null;
+  const prev = faviconInflight.get(guest.id);
+  if (prev) prev.abort();
   const ac = new AbortController();
+  faviconInflight.set(guest.id, ac);
   const timer = setTimeout(() => ac.abort(), 4000);
   try {
-    const r = await ses.fetch(url, { signal: ac.signal, cache: 'force-cache' });
-    if (!r.ok) return null;
+    const r = await guest.session.fetch(url, { signal: ac.signal, cache: 'force-cache', credentials: 'omit', redirect: 'manual', headers: { 'user-agent': guest.getUserAgent() } });
+    if (!r.ok || !r.body) return null;
     const type = String(r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase();
-    if (!/^image\//.test(type)) return null;
-    const buf = Buffer.from(await r.arrayBuffer());
-    if (!buf.length || buf.length > FAVICON_MAX) return null;
+    if (!/^image\//.test(type)) { ac.abort(); return null; }
+    const declared = Number(r.headers.get('content-length') || 0);
+    if (declared > FAVICON_MAX) { ac.abort(); return null; }
+    const reader = r.body.getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > FAVICON_MAX) { reader.cancel().catch(() => {}); ac.abort(); return null; }
+      chunks.push(Buffer.from(value));
+    }
+    const buf = Buffer.concat(chunks);
+    if (!buf.length) return null;
     return `data:${type};base64,${buf.toString('base64')}`;
   } catch {
     return null;
   } finally {
     clearTimeout(timer);
+    if (faviconInflight.get(guest.id) === ac) faviconInflight.delete(guest.id);
   }
 }
 
