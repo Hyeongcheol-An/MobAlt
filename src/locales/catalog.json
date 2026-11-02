@@ -4673,7 +4673,8 @@
     },
     "permission denied": {
       "refs": [
-        "src/main/monitor.js"
+        "src/main/monitor.js",
+        "src/main/x11.js"
       ]
     },
     "Permission denied": {
