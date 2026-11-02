@@ -216,6 +216,14 @@ function trailingText(bytes, max = DRAIN_TAIL) {
   return b.subarray(start);
 }
 
+/**
+ * A session's failure reason (g.lastError) is kept unformatted — a function that builds it with i18n.t(), or a plain
+ * string (a dialog's error, already final) — because it is shown twice: in the transfer list in the interface
+ * language, and in the pane's status line in the terminal language (English for Arabic and Hindi, see tt()).
+ */
+const reasonText = (r) => (typeof r === 'function' ? r() : r || '');
+const reasonForTerminal = (r) => i18n.inTerminal(() => reasonText(r));
+
 /** The reason shown for a session that failed: zmodem.js throws strings as well as its own Error class. */
 function explainError(e) {
   const type = e && e.type;
@@ -274,7 +282,7 @@ class ZmodemManager extends EventEmitter {
     g.handle.inputGate = null;
     g.handle.writeRaw = () => Promise.resolve();
     if (g.session) {
-      g.lastError = i18n.t('the connection closed');
+      g.lastError = () => i18n.t('the connection closed');
       this._abort(g);
     }
     g.detection = null;
@@ -354,7 +362,7 @@ class ZmodemManager extends EventEmitter {
       g.silence = null;
       if (g.session !== s || s.has_ended()) return;
       dbg('silence with', s._input_buffer.length, 'unparsed bytes: the peer stopped');
-      g.lastError = i18n.t('the remote side stopped');
+      g.lastError = () => i18n.t('the remote side stopped');
       this._abort(g);
     }, g.handle && g.handle.kind === 'serial' ? this.silenceSerialMs : this.silenceMs);
     if (g.silence.unref) g.silence.unref();
@@ -488,7 +496,7 @@ class ZmodemManager extends EventEmitter {
     const kind = g.role === 'receive' ? i18n.tt('download') : i18n.tt('upload'); // in the terminal line only
     if (!answer || !det.is_valid()) {
       try { det.deny(); } catch {}
-      this._line(g, GREY, g.lastError ? i18n.tt('Zmodem {kind} declined: {reason}', { kind, reason: g.lastError }) : i18n.tt('Zmodem {kind} declined', { kind }));
+      this._line(g, GREY, g.lastError ? i18n.tt('Zmodem {kind} declined: {reason}', { kind, reason: reasonForTerminal(g.lastError) }) : i18n.tt('Zmodem {kind} declined', { kind }));
       g.lastError = null;
       return;
     }
@@ -558,8 +566,8 @@ class ZmodemManager extends EventEmitter {
       local = uniquePath(dir, name);
       ws = fs.createWriteStream(local);
     } catch (e) {
-      g.lastError = i18n.t('cannot write to {dir}: {error}', { dir, error: e.message });
-      this._line(g, RED, i18n.tt('Zmodem: {error}', { error: g.lastError }));
+      g.lastError = () => i18n.t('cannot write to {dir}: {error}', { dir, error: e.message });
+      this._line(g, RED, i18n.tt('Zmodem: {error}', { error: reasonForTerminal(g.lastError) }));
       try { offer.skip(); } catch {}
       return;
     }
@@ -567,7 +575,7 @@ class ZmodemManager extends EventEmitter {
     t._ws = ws;
     t._partial = local;
     ws.on('error', (e) => {
-      g.lastError = i18n.t('cannot write {file}: {error}', { file: local, error: e.message });
+      g.lastError = () => i18n.t('cannot write {file}: {error}', { file: local, error: e.message });
       this._abort(g);
     });
     this._line(g, GREY, d.size ? i18n.tt('Zmodem: receiving {name} ({size}) → {path}', { name, size: fmtBytes(d.size), path: local }) : i18n.tt('Zmodem: receiving {name} → {path}', { name, path: local }));
@@ -663,7 +671,7 @@ class ZmodemManager extends EventEmitter {
     g.role = null;
     const aborted = g.aborting || (typeof session.aborted === 'function' && session.aborted() === true); // ours, or the peer's CAN string
     if (g.abortReject) {
-      if (g.aborting) g.abortReject(new Error(g.lastError || i18n.t('cancelled'))); // interrupt the send loop's awaits
+      if (g.aborting) g.abortReject(new Error(reasonText(g.lastError) || i18n.t('cancelled'))); // interrupt the send loop's awaits
       else g.abortResolve(); // normal end: let the protocol promise the loop is awaiting win, then _finish runs
       g.abortReject = null;
       g.abortResolve = null;
@@ -688,11 +696,11 @@ class ZmodemManager extends EventEmitter {
   _settle(g, t, aborted, session) {
     if (t && t.status === 'running' && !t._complete) {
       // a peer abort throws its reason only after this event: it is known from the session itself
-      const why = t.cancelled ? null : g.lastError || (aborted && !g.aborting ? i18n.t('cancelled by the remote side') : i18n.t('the remote side ended the session'));
-      this._finish(t, t.cancelled ? 'cancelled' : 'error', why);
+      const why = t.cancelled ? null : g.lastError || (aborted && !g.aborting ? () => i18n.t('cancelled by the remote side') : () => i18n.t('the remote side ended the session'));
+      this._finish(t, t.cancelled ? 'cancelled' : 'error', why && reasonText(why));
       if (this.guards.has(g.id)) this.registry.data(g.id, ST); // whatever a stray byte opened is closed before the status line
       const kind = t.kind === 'upload' ? i18n.tt('upload') : i18n.tt('download'); // in the terminal line only
-      this._line(g, t.cancelled ? GREY : RED, t.cancelled ? i18n.tt('Zmodem {kind} of {name} cancelled', { kind, name: t.name }) : i18n.tt('Zmodem {kind} of {name} failed: {reason}', { kind, name: t.name, reason: why }));
+      this._line(g, t.cancelled ? GREY : RED, t.cancelled ? i18n.tt('Zmodem {kind} of {name} cancelled', { kind, name: t.name }) : i18n.tt('Zmodem {kind} of {name} failed: {reason}', { kind, name: t.name, reason: reasonForTerminal(why) }));
     }
     g.lastError = null;
     if (aborted) this._startDrain(g, session && Array.isArray(session._input_buffer) ? session._input_buffer : []);
@@ -700,7 +708,7 @@ class ZmodemManager extends EventEmitter {
 
   /** zmodem.js threw (from consume() or a protocol promise): the session, if still there, is aborted with that reason. */
   _fail(g, e) {
-    if (!g.lastError) g.lastError = explainError(e);
+    if (!g.lastError) g.lastError = () => explainError(e);
     if (g.session) this._abort(g);
     else if (!g.detection && !g.drain) g.sentry = this._newSentry(g); // a sentry that threw outside a session starts over clean
   }
@@ -740,7 +748,7 @@ class ZmodemManager extends EventEmitter {
     }
     return p.catch((e) => {
       if (!g.session) return;
-      g.lastError = i18n.t('cannot write to the terminal: {error}', { error: e.message });
+      g.lastError = () => i18n.t('cannot write to the terminal: {error}', { error: e.message });
       this._abort(g);
     });
   }
@@ -750,7 +758,7 @@ class ZmodemManager extends EventEmitter {
     g.timer = setTimeout(() => {
       g.timer = null;
       if (!g.session) return;
-      g.lastError = i18n.t('no progress for {s} s', { s: Math.round(STALL_MS / 1000) });
+      g.lastError = () => i18n.t('no progress for {s} s', { s: Math.round(STALL_MS / 1000) });
       this._abort(g);
     }, STALL_MS);
     if (g.timer.unref) g.timer.unref();
