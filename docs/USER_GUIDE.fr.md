@@ -76,6 +76,7 @@ et remplissez l'onglet Base. Double-cliquez sur une session pour vous connecter�
 | Série | Console série USB (débit, trame, contrôle de flux, écho local) |
 | FTP | Navigateur de fichiers FTP / FTPS (TLS explicite) dans le panneau Sftp |
 | RDP / VNC | Délègue à Windows App ou au Partage d'écran de macOS |
+| Navigateur | Une page web dans un volet à côté de vos terminaux — un routeur, Grafana, l'interface web d'un appareil, un `localhost` tunnelisé (http/https uniquement ; voir [Sessions navigateur](#sessions-navigateur)) |
 
 **Dossiers** : le bouton dossier de l'en-tête du panneau (Nouveau dossier) crée un dossier ; faites glisser sessions et dossiers pour les déplacer (déposez-les dans la zone vide
 pour la racine). Le menu contextuel d'un dossier peut ouvrir toutes ses sessions en grille ou en onglets.
@@ -302,6 +303,62 @@ Le panneau **Sftp** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement �
   *Reprendre* ou *Recommencer*.
 - Les en-têtes de colonne trient par nom, taille ou date. Quand la barre latérale est étroite, la colonne de date se masque.
 
+## Sessions navigateur
+
+Une session **Navigateur** ouvre une page web dans un volet qui lui est propre — la page d'administration d'un routeur,
+Grafana, l'interface web d'un appareil, le port `localhost` d'un tunnel — à côté des terminaux qui la gèrent. Créez-en
+une avec ＋ Session → Navigateur (l'URL ; un nom qui vaut par défaut l'hôte ; une icône et une couleur comme pour
+toute session) ou saisissez une adresse `http://` / `https://` dans la Connexion rapide (un simple `localhost:3000` y
+est une adresse SSH, comme toujours : tapez le schéma pour une page). Seules les adresses `http://` et `https://`
+s'ouvrent (ainsi qu'`about:blank`) : `file:`, `javascript:`, `data:` et tout autre schéma sont refusés par l'éditeur,
+par la Connexion rapide, par l'importateur JSON et une fois encore par l'app elle-même au moment où la page est
+attachée. Un hôte seul reçoit `https://` — sauf sur le réseau local (`localhost`, `127.0.0.1`, `192.168.…`, `10.…`,
+`nas.local`, un nom simple comme `router`), où il reçoit `http://` ; un `:80` explicite signifie `http://`, `:443` ou
+`:8443` `https://`. Un mot de passe saisi dans une adresse (`admin:secret@router`) est refusé : la page le demande
+quand elle en a besoin, par l'invite de connexion de MobAlt (authentification HTTP Basic / Digest, celle des routeurs
+et des petits appareils), et rien n'est enregistré — le site conserve la connexion le temps de la session.
+
+Le volet est un volet ordinaire : il vit dans un onglet, se divise avec des terminaux (⌘D / ⇧⌘D, ou déposez une
+session sur ses bords), s'agrandit (⇧⌘⏎), se détache dans sa propre fenêtre (⌥⌘N — la page y est rechargée, donc ce
+que vous aviez saisi dans un formulaire n'est pas conservé ; de même quand la fenêtre se ferme et que l'onglet
+revient) et revient avec l'espace de travail à la page où il se trouvait en dernier. Sa barre d'outils comporte
+Précédent, Suivant, Recharger (Arrêter pendant que la page se charge), le champ d'adresse (⌘L y place le curseur ;
+Entrée ouvre ce que vous avez saisi, Échap remet l'adresse actuelle et rend le clavier à la page) et *Ouvrir dans le
+navigateur par défaut*. Au clavier, Tab depuis ce dernier bouton entre dans la page ; ⌘L le ramène à la barre
+d'outils. L'onglet prend le titre de la page, dont l'icône s'affiche devant l'adresse et dans l'en-tête du volet, sauf
+si vous renommez l'onglet ou le volet ; une page ouverte depuis la Connexion rapide porte son hôte après le titre,
+puisqu'une page peut s'appeler comme bon lui semble. La barre d'état indique `NAVIGATEUR · url · chargée`.
+⌘= / ⌘- / ⌘0 zooment la page, pas la police du terminal — le zoom appartient au site, comme dans Safari : il
+s'applique dans tous les volets qui partagent les connexions du site, et le site s'ouvre à ce niveau la fois
+suivante ; le menu du volet affiche le pourcentage actuel. ⌘F recherche dans la page avec la barre de recherche (le
+bouton de casse s'applique, le bouton Regex non), ⌘C / ⌘V et le menu Modifier agissent dans la page. Les
+raccourcis qu'un navigateur se réserve face à ses pages atteignent MobAlt même quand la page tente de les retenir :
+⌘W, ⇧⌘W, ⌘T, ⌘N, ⇧⌘N, ⇧⌘T, ⌥⌘N, ⌘L, ⌘Q, ⌘,, ⌘1–4, ⌃Tab, ⌃⇧Tab, ⌘], ⇧⌘↩, ⌘= / ⌘- / ⌘0 et ⌘F. Tout autre raccourci
+(⌘K, ⌘B, ⌘D…) va d'abord à la page — la palette ⌘K d'une console web, le ⌘B d'un éditeur — et n'exécute son action
+MobAlt que si la page ne l'utilise pas.
+Le menu du volet (⚙ dans l'en-tête du volet d'un onglet divisé, un clic droit dans la page ou sur la barre d'outils)
+propose Précédent, Suivant, Recharger, Copier l'URL, Ouvrir dans le navigateur, Rechercher…, Renommer le volet…,
+Zoom de la page, les divisions, Agrandir le volet et Fermer le volet ; un clic droit sur un lien ajoute *Ouvrir le
+lien dans le navigateur* et *Copier le lien*, sur du texte sélectionné *Copier*.
+
+Une page qui ne peut pas être chargée explique en termes simples ce qui n'a pas marché (rien ne répond à l'adresse,
+le nom est inconnu, le serveur n'a pas répondu à temps, le certificat n'est pas approuvé — ouvrez-la dans votre
+navigateur pour l'examiner), avec le code brut en dessous (`ERR_CONNECTION_REFUSED (-102)`) et un bouton Réessayer ;
+une page qui se ferme d'elle-même ou dont le processus a planté reçoit la même vue, et Réessayer la relance à neuf ;
+une page qui cesse de répondre affiche un bandeau avec Arrêter et Recharger. Une fenêtre surgissante ou un lien
+`target="_blank"` s'ouvre dans le même volet ; le `beforeunload` d'une page ne vous y retient jamais ; la page est
+isolée dans un bac à sable et n'obtient aucune autorisation pour la caméra, le micro, la position, les notifications,
+le Bluetooth ou d'autres périphériques. Un `alert()` / `confirm()` de la page est une feuille qui bloque la fenêtre
+jusqu'à ce qu'on la ferme (les consoles d'administration demandent « êtes-vous sûr ? » de cette façon) ; à partir de
+la deuxième, la feuille propose d'empêcher la page d'en ouvrir d'autres. Un téléchargement (un lien avec `download`,
+une sauvegarde de configuration) est enregistré directement dans votre dossier Téléchargements (Réglages → Général →
+Dossier de téléchargement s'il est défini) sous un nom libre, avec une notification au début et à la fin — sans
+dialogue d'enregistrement. Les connexions aux sites (cookies) sont partagées par toutes les sessions navigateur, vous
+ne vous connectez donc qu'une fois à une console ; cochez **Cookies et connexions propres à cette session** dans
+l'éditeur pour donner à une session son propre jeu de cookies (deux comptes sur un même site). MultiExec n'écrit
+jamais dans une page, et *Réglages du volet…*, la barre de surveillance et les journaux de session sont réservés aux
+volets de terminal.
+
 ## Tunnels (redirection de port)
 
 ![Tunnels](images/fr/tunnels.png)
@@ -414,6 +471,7 @@ dans l'environnement (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, `es`, `
 | Volet suivant, onglet suivant / précédent, onglet 1 à 9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
 | Agrandir le volet (remplir l'onglet) / rétablir la disposition | ⇧⌘⏎ |
 | Rechercher, effacer, zoom | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
+| Volet de navigateur : barre d'adresse | ⌘L (⌘F recherche dans la page, ⌘= / ⌘- / ⌘0 la zooment) |
 | Barre latérale, Sessions / SFTP / Outils / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, tunnels, réglages | ⇧⌘M, ⇧⌘U, ⌘, |
 | Saut de ligne dans les apps TUI | ⇧Entrée ou ⌥Entrée |

@@ -76,6 +76,7 @@ derecha/hacia abajo, editar, duplicar, eliminar, iniciar un túnel, nueva sesió
 | Serie | Consola USB-serie (baudios, trama, control de flujo, eco local) |
 | FTP | Explorador de archivos FTP / FTPS (TLS explícito) en el panel Sftp |
 | RDP / VNC | Delega en Windows App o en Compartir Pantalla de macOS |
+| Navegador | Una página web en un panel junto a tus terminales: un router, Grafana, la interfaz web de un dispositivo, un `localhost` a través de un túnel (solo http/https; consulta [Sesiones de navegador](#sesiones-de-navegador)) |
 
 **Carpetas**: el botón de carpeta en la cabecera del panel (Nueva carpeta) crea una carpeta; arrastra sesiones y
 carpetas para moverlas (suéltalas en la zona vacía para llevarlas a la raíz). El menú contextual de una carpeta puede
@@ -312,6 +313,55 @@ El panel **Sftp** sigue al panel SSH o FTP activo. Se abre automáticamente al c
 - Las cabeceras de columna ordenan por nombre, tamaño o fecha. Cuando la barra lateral es estrecha, la columna de fecha
   se oculta.
 
+## Sesiones de navegador
+
+Una sesión **Navegador** abre una página web en un panel propio —la página de administración de un router, Grafana,
+la interfaz web de un dispositivo, el puerto `localhost` de un túnel— junto a los terminales que la administran. Créala
+con ＋ Sesión → Navegador (la URL; un nombre que por omisión es el host; un icono y un color como cualquier sesión) o
+escribe una dirección `http://` / `https://` en Conexión rápida (un `localhost:3000` a secas es allí una dirección SSH,
+como siempre: para una página, escribe el esquema). Solo se abren direcciones `http://` y `https://` (y `about:blank`):
+`file:`, `javascript:`, `data:` y cualquier otro esquema los rechazan el editor, Conexión rápida, el importador de JSON
+y, una vez más, la propia app al cargar la página en el panel. Un host sin esquema recibe `https://`, salvo en la red
+local (`localhost`, `127.0.0.1`, `192.168.…`, `10.…`, `nas.local`, un nombre simple como `router`), donde recibe
+`http://`; un `:80` explícito significa `http://`, y `:443` o `:8443`, `https://`. Una contraseña escrita en la
+dirección (`admin:secret@router`) se rechaza: la página la pide cuando la necesita, mediante el propio diálogo de inicio
+de sesión de MobAlt (autenticación HTTP Basic / Digest, como preguntan los routers y los dispositivos pequeños), y no se
+guarda nada: el sitio conserva el inicio de sesión mientras dura la sesión.
+
+El panel es un panel como cualquier otro: vive en una pestaña, se divide con terminales (⌘D / ⇧⌘D, o suelta una sesión
+sobre sus bordes), se maximiza (⇧⌘⏎), se separa en su propia ventana (⌥⌘N: la página se carga de nuevo allí, así que lo
+que escribiste en un formulario no se conserva; lo mismo cuando esa ventana se cierra y la pestaña vuelve) y regresa con
+el espacio de trabajo en la página en la que estaba. Su barra de herramientas tiene Atrás, Adelante, Volver a cargar
+(Detener mientras la página carga), el campo de dirección (⌘L le da el foco; Intro abre lo que escribiste, Esc
+restablece la dirección actual y devuelve el teclado a la página) y *Abrir en el navegador por omisión*. Con el teclado,
+Tab desde ese último botón entra en la página; ⌘L vuelve a la barra de herramientas. La pestaña toma el título de la
+página, cuyo icono aparece delante de la dirección y en la cabecera del panel, salvo que renombres la pestaña o el panel;
+una página abierta desde Conexión rápida lleva su host tras el título, ya que una página puede llamarse como quiera. La
+barra de estado muestra `NAVEGADOR · url · cargada`. ⌘= / ⌘- / ⌘0 amplían o reducen la página, no la letra del
+terminal: el zoom pertenece al sitio, como en Safari; se aplica en todos los paneles que comparten los inicios de sesión
+del sitio, y el sitio se abre a ese nivel la próxima vez; el menú del panel muestra el porcentaje actual. ⌘F busca en
+la página con la barra de búsqueda (el conmutador de mayúsculas se aplica; el de Regex, no), ⌘C / ⌘V y el menú Edición
+funcionan en la página, y las funciones rápidas que un navegador no cede a sus páginas (⌘W, ⇧⌘W, ⌘T, ⌘N, ⇧⌘N, ⇧⌘T, ⌥⌘N, ⌘L, ⌘Q, ⌘,, ⌘1–4, ⌃Tab, ⌃⇧Tab, ⌘], ⇧⌘↩, ⌘= / ⌘- / ⌘0 y ⌘F) llegan a MobAlt aunque la página intente quedárselas. Cualquier otra (⌘K, ⌘B, ⌘D…) va primero a la página (la paleta ⌘K de una consola web, el ⌘B de un editor) y solo realiza su acción de MobAlt cuando la página no la usa. El menú del panel (⚙ en la cabecera del panel de una pestaña dividida, un clic derecho en
+la página o en la barra de herramientas) ofrece Atrás, Adelante, Volver a cargar, Copiar URL, Abrir en el navegador,
+Buscar…, Renombrar panel…, Zoom de la página, las divisiones, Maximizar panel y Cerrar panel; un clic derecho sobre un
+enlace añade *Abrir enlace en el navegador* y *Copiar enlace*, y sobre texto seleccionado, *Copiar*.
+
+Una página que no se puede cargar muestra qué falló en palabras llanas (nada responde en la dirección, el nombre es
+desconocido, el servidor no respondió a tiempo, el certificado no es confiable: ábrela en tu navegador para examinarlo)
+con el código en bruto debajo (`ERR_CONNECTION_REFUSED (-102)`) y un botón Reintentar; una página que se cierra sola o
+cuyo proceso falló recibe la misma vista, y Reintentar la arranca de cero; una página que deja de responder muestra una
+franja con Detener y Volver a cargar. Una ventana emergente o un enlace `target="_blank"` se abren en el mismo panel; el
+`beforeunload` de una página nunca te retiene en ella; la página corre aislada (sandbox) y no recibe permisos de cámara,
+micrófono, ubicación, notificaciones, Bluetooth ni de otros dispositivos. El `alert()` / `confirm()` de una página es una
+hoja que bloquea la ventana hasta que se cierra (las consolas de administración preguntan «¿estás seguro?» así); a
+partir del segundo, la hoja ofrece impedir que la página abra más. Una descarga (un enlace con `download`, una copia de
+seguridad de la configuración) se guarda directamente en tu carpeta Descargas (Ajustes → General → Carpeta de descargas,
+si está definida) con un nombre libre, con un aviso cuando empieza y otro cuando termina: sin diálogo de guardado. Los
+inicios de sesión (cookies) se comparten entre todas las sesiones de navegador, así que entras en una consola una sola
+vez; marca **Cookies e inicios de sesión propios** en el editor para dar a una sesión un almacén propio (dos cuentas en
+un mismo sitio). MultiExec nunca escribe en una página, y *Ajustes del panel…*, la barra de monitoreo y los registros de
+sesión son para paneles de terminal.
+
 ## Túneles (reenvío de puertos)
 
 ![Túneles](images/es/tunnels.png)
@@ -428,6 +478,7 @@ Para ejecutar MobAlt una sola vez en un idioma sin cambiar el ajuste (capturas d
 | Panel siguiente, pestaña siguiente / anterior, pestaña 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
 | Maximizar panel (ocupar la pestaña) / restaurar la disposición | ⇧⌘⏎ |
 | Buscar, borrar, zoom | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
+| Panel de navegador: barra de direcciones | ⌘L (⌘F busca en la página, ⌘= / ⌘- / ⌘0 la amplían o reducen) |
 | Barra lateral, Sesiones / SFTP / Utilidades / Macros | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, túneles, ajustes | ⇧⌘M, ⇧⌘U, ⌘, |
 | Salto de línea en apps TUI | ⇧Intro o ⌥Intro |

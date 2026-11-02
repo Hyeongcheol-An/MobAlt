@@ -74,6 +74,7 @@ rồi điền thẻ Cơ bản. Nhấp đúp vào phiên để kết nối; nhấ
 | Serial | Console USB-serial (baud, khung, điều khiển luồng, echo cục bộ) |
 | FTP | Trình duyệt tệp FTP / FTPS (TLS tường minh) trong bảng Sftp |
 | RDP / VNC | Chuyển sang Windows App hoặc Chia sẻ màn hình của macOS |
+| Trình duyệt (Browser) | Một trang web trong ngăn cạnh các terminal của bạn — router, Grafana, giao diện web của thiết bị, một `localhost` qua đường hầm (chỉ http/https; xem [Phiên trình duyệt](#phiên-trình-duyệt)) |
 
 **Thư mục**: nút thư mục ở đầu bảng (Thư mục mới) tạo một thư mục; kéo phiên và thư mục để di chuyển chúng (thả vào vùng trống
 để đưa về gốc). Menu ngữ cảnh của thư mục có thể mở mọi phiên bên trong thành lưới hoặc thành các thẻ.
@@ -294,6 +295,50 @@ Bảng **Sftp** đi theo ngăn SSH hoặc FTP đang hoạt động. Bảng tự 
   sẽ hỏi *Tiếp tục* hay *Bắt đầu lại*.
 - Tiêu đề cột sắp xếp theo tên, kích cỡ hoặc ngày. Khi thanh bên hẹp, cột ngày được ẩn.
 
+## Phiên trình duyệt
+
+Phiên **Trình duyệt** mở một trang web trong ngăn riêng — trang quản trị của router, Grafana, giao diện web của thiết bị,
+cổng `localhost` của một đường hầm — cạnh các terminal quản lý nó. Tạo phiên bằng ＋ Phiên → Trình duyệt (URL; tên
+mặc định là máy chủ; biểu tượng và màu như mọi phiên khác) hoặc gõ một địa chỉ `http://` / `https://` vào ô Kết nối
+nhanh (một `localhost:3000` trần ở đó vẫn là địa chỉ SSH như trước giờ: hãy gõ cả giao thức khi muốn mở trang). Chỉ địa
+chỉ `http://` và `https://` được mở (cùng `about:blank`): `file:`, `javascript:`, `data:` và mọi giao thức khác đều bị
+trình sửa phiên, Kết nối nhanh, trình nhập JSON từ chối, và ứng dụng từ chối thêm một lần nữa khi gắn trang vào ngăn.
+Máy chủ không có tiền tố được thêm `https://` — trừ trên mạng cục bộ (`localhost`, `127.0.0.1`, `192.168.…`, `10.…`,
+`nas.local`, một tên đơn như `router`), nơi nó nhận `http://`; `:80` tường minh nghĩa là `http://`, `:443` hoặc `:8443`
+nghĩa là `https://`. Mật khẩu gõ vào địa chỉ (`admin:secret@router`) bị từ chối: trang web sẽ hỏi khi cần, qua hộp
+đăng nhập của chính MobAlt (xác thực HTTP Basic / Digest, cách router và các thiết bị nhỏ thường hỏi), và không có gì
+được lưu — trang web giữ đăng nhập trong suốt phiên.
+
+Ngăn này là một ngăn bình thường: nằm trong thẻ, chia cùng các terminal (⌘D / ⇧⌘D, hoặc thả một phiên lên mép ngăn),
+phóng to (⇧⌘⏎), tách ra cửa sổ riêng (⌥⌘N — trang được tải lại ở đó, nên nội dung bạn đã gõ vào biểu mẫu không được
+giữ; tương tự khi cửa sổ đó đóng và thẻ quay về) và trở lại cùng không gian làm việc tại trang nó đang mở lần cuối.
+Thanh công cụ của ngăn có Quay lại, Tiến tới, Tải lại (Dừng trong lúc trang đang tải), ô địa chỉ (⌘L đưa con trỏ vào
+đó; Enter mở địa chỉ bạn gõ, Esc đặt lại địa chỉ hiện tại và trả bàn phím cho trang) và *Mở trong trình duyệt mặc
+định*. Với bàn phím, Tab từ nút cuối đó đi vào trang; ⌘L đưa về lại thanh công cụ. Thẻ lấy tiêu đề của trang, biểu
+tượng của trang hiện trước địa chỉ và ở đầu ngăn, trừ khi bạn đổi tên thẻ hoặc ngăn; trang mở từ Kết nối nhanh mang
+theo tên máy chủ sau tiêu đề, vì một trang có thể tự xưng bất cứ tên gì. Thanh trạng thái hiển thị
+`TRÌNH DUYỆT · url · đã tải`. ⌘= / ⌘- / ⌘0 thu phóng trang, không phải phông chữ terminal — mức thu phóng thuộc về
+trang web, như trong Safari: nó áp dụng cho mọi ngăn dùng chung đăng nhập của trang web đó và lần sau trang web mở ở
+đúng mức ấy; menu ngăn hiện tỷ lệ phần trăm hiện tại. ⌘F tìm trong trang bằng thanh tìm kiếm (nút phân biệt hoa
+thường có tác dụng, nút regex thì không), ⌘C / ⌘V và menu Sửa hoạt động trong trang, còn các phím tắt mà trình duyệt không giao cho trang (⌘W, ⇧⌘W, ⌘T, ⌘N, ⇧⌘N, ⇧⌘T, ⌥⌘N, ⌘L, ⌘Q, ⌘,, ⌘1–4, ⌃Tab, ⌃⇧Tab, ⌘], ⇧⌘↩, ⌘= / ⌘- / ⌘0 và ⌘F) vẫn tới MobAlt ngay cả khi trang cố giữ chúng. Mọi phím tắt khác (⌘K, ⌘B, ⌘D…) tới trang trước — bảng lệnh ⌘K của bảng điều khiển web, ⌘B của trình soạn thảo — và chỉ thực hiện tác vụ MobAlt khi trang không dùng đến. Menu ngăn (⚙ ở đầu ngăn của thẻ đã chia,
+chuột phải trong trang hoặc trên thanh công cụ) có Quay lại, Tiến tới, Tải lại, Sao chép URL, Mở trong trình duyệt,
+Tìm…, Đổi tên ngăn…, Thu phóng trang, các mục chia, Phóng to ngăn và Đóng ngăn; chuột phải lên liên kết thêm *Mở liên
+kết trong trình duyệt* và *Sao chép liên kết*, lên chữ đã chọn thêm *Sao chép*.
+
+Trang không tải được sẽ cho biết lỗi bằng lời dễ hiểu (không có dịch vụ nào phản hồi tại địa chỉ, không tìm thấy tên máy
+chủ, máy chủ không phản hồi kịp thời, chứng chỉ không được tin cậy — hãy mở trong trình duyệt của bạn để kiểm tra), kèm mã thô
+bên dưới (`ERR_CONNECTION_REFUSED (-102)`) và nút Thử lại; trang tự đóng hoặc có tiến trình bị sập cũng nhận cùng màn
+hình đó, và Thử lại khởi động trang lại từ đầu; trang ngừng phản hồi hiện một dải với Dừng và Tải lại. Cửa sổ bật lên
+hoặc liên kết `target="_blank"` mở trong cùng ngăn; `beforeunload` của trang không bao giờ giữ bạn lại; trang chạy
+trong sandbox và không được cấp quyền camera, micrô, vị trí, thông báo, Bluetooth hay thiết bị nào khác. `alert()` /
+`confirm()` của trang là một bảng (sheet) chặn cửa sổ cho tới khi được đóng (các bảng quản trị hỏi "bạn có chắc không?"
+theo cách này); từ lần thứ hai trở đi, bảng đó đề nghị không cho trang mở thêm hộp thoại. Tệp tải về (liên kết có
+`download`, một bản sao lưu cấu hình) được lưu thẳng vào thư mục Tải về của bạn (Cài đặt → Chung → Thư mục tải về nếu
+đã đặt) dưới một tên còn trống, kèm thông báo khi bắt đầu và khi xong — không có hộp thoại lưu. Đăng nhập (cookie)
+dùng chung cho mọi phiên trình duyệt, nên bạn chỉ đăng nhập vào một bảng điều khiển một lần; đánh dấu **Cookie và đăng
+nhập riêng** trong trình sửa phiên để cho phiên một kho cookie riêng (hai tài khoản trên cùng một trang web). MultiExec
+không bao giờ gõ vào trang, còn *Cài đặt ngăn…*, thanh giám sát và nhật ký phiên chỉ dành cho ngăn terminal.
+
 ## Đường hầm (chuyển tiếp cổng)
 
 ![Đường hầm](images/vi/tunnels.png)
@@ -405,6 +450,7 @@ trong biến môi trường (`en`, `ko`, `zh-CN`, `ja`, `vi`, `hi`, `de`, `fr`, 
 | Ngăn tiếp theo, thẻ sau / trước, thẻ 1-9 | ⌘] , ⌃Tab / ⌃⇧Tab, ⌃⌘1-9 |
 | Phóng to ngăn (đầy thẻ) / khôi phục bố cục | ⇧⌘⏎ |
 | Tìm, xóa màn hình, thu phóng | ⌘F, ⌘K, ⌘= / ⌘- / ⌘0 |
+| Ngăn trình duyệt: thanh địa chỉ | ⌘L (⌘F tìm trong trang, ⌘= / ⌘- / ⌘0 thu phóng trang) |
 | Thanh bên, Phiên / SFTP / Công cụ / Macro | ⌘B, ⌘1 / ⌘2 / ⌘3 / ⌘4 |
 | MultiExec, đường hầm, cài đặt | ⇧⌘M, ⇧⌘U, ⌘, |
 | Xuống dòng trong ứng dụng TUI | ⇧Enter hoặc ⌥Enter |
