@@ -1743,6 +1743,8 @@ app.on('before-quit', (e) => {
   tunnels.stopAll();
   ssh.disconnectAll();
   ftp.disconnectAll();
+  sftp.stopEdits(); // every edited file's watcher, and the local copies under $TMPDIR/mobalt-edit (editor.js)
+  ftp.stopEdits();
   registry.killAll();
 });
 app.on('window-all-closed', () => app.quit());
