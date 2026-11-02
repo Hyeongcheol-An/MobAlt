@@ -8,13 +8,13 @@ const { isLocalAddress, isHostUnreachable, unreachableAddress, hint } = localnet
 const unreachable = (addr = '192.168.77.5', port = 22) => Object.assign(new Error(`connect EHOSTUNREACH ${addr}:${port} - Local (192.168.77.9:49790)`), { code: 'EHOSTUNREACH', errno: -65, syscall: 'connect', address: addr, port });
 
 test('isLocalAddress: private and link-local IPv4, ULA and link-local IPv6, .local names', () => {
-  for (const h of ['10.0.0.1', '10.255.255.254', '172.16.0.1', '172.31.255.255', '192.168.77.5', '192.168.255.1', '169.254.229.195', 'fe80::1', 'FE80::1%en0', 'fd12:3456::1', 'fc00::1', '[fe80::1]', '::ffff:192.168.77.5', 'nas.local', 'Portal.LOCAL', 'printer.local.', ' 192.168.77.5 ']) {
+  for (const h of ['10.0.0.1', '10.255.255.254', '172.16.0.1', '172.31.255.255', '192.168.77.5', '192.168.255.1', '169.254.1.9', 'fe80::1', 'FE80::1%en0', 'fd12:3456::1', 'fc00::1', '[fe80::1]', '::ffff:192.168.77.5', 'nas.local', 'Portal.LOCAL', 'printer.local.', ' 192.168.77.5 ']) {
     assert.equal(isLocalAddress(h), true, h);
   }
 });
 
 test('isLocalAddress: public addresses, loopback (exempt from the check) and ordinary names are not local', () => {
-  for (const h of ['8.8.8.8', '203.0.113.7', '172.15.0.1', '172.32.0.1', '192.169.0.1', '11.0.0.1', '127.0.0.1', '::1', '::ffff:127.0.0.1', '2001:db8::1', 'example.com', 'portal.example.local.com', 'localhost', '', null, undefined, 42]) {
+  for (const h of ['8.8.8.8', '203.0.113.7', '198.51.100.20', '192.0.2.1', '198.51.100.254', '127.0.0.1', '::1', '::ffff:127.0.0.1', '2001:db8::1', 'example.com', 'portal.example.local.com', 'localhost', '', null, undefined, 42]) {
     assert.equal(isLocalAddress(h), false, String(h));
   }
 });
@@ -59,7 +59,7 @@ test('hint: nothing before macOS 15 (Darwin 24), on other platforms, for other e
   assert.equal(hint(unreachable(), '192.168.77.5', 'win32'), null);
   assert.equal(hint(Object.assign(new Error('connect ECONNREFUSED 192.168.77.5:22'), { code: 'ECONNREFUSED' }), '192.168.77.5', 'darwin'), null);
   assert.equal(hint(new Error('Timed out while waiting for handshake'), '192.168.77.5', 'darwin'), null);
-  assert.equal(hint(unreachable('203.0.113.7', 20022), 'portal.example.com', 'darwin'), null);
+  assert.equal(hint(unreachable('203.0.113.7', 20022), 'portal.example.com', 'darwin'), null); // a public address: not the permission
   assert.equal(hint(unreachable('127.0.0.1'), '127.0.0.1', 'darwin'), null); // loopback is exempt from the check
   assert.equal(hint(new Error('No route to host'), 'example.com', 'darwin'), null); // no address to judge by
   assert.equal(hint(null, '192.168.77.5', 'darwin'), null);

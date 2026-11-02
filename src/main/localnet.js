@@ -49,7 +49,7 @@ function isHostUnreachable(e) {
   return /\bEHOSTUNREACH\b|No route to host/.test(message(e));
 }
 
-/** The address the error names: Node's `address` on a connect error, else the one in its message ("connect EHOSTUNREACH 192.168.77.5:22 - Local (…)"), or null. */
+/** The address the error names: Node's `address` on a connect error, else the one in its message ("connect EHOSTUNREACH 192.168.1.20:22 - Local (…)"), or null. */
 function unreachableAddress(e) {
   if (e && typeof e.address === 'string' && e.address) return e.address.replace(/^\[|\]$/g, '');
   const m = /EHOSTUNREACH\s+(\S+?):\d+(?=\s|$)/.exec(message(e));

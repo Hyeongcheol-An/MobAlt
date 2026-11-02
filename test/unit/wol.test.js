@@ -91,7 +91,7 @@ test('describeSendError: a socket error names the address to check instead of "s
   else assert.equal(refused, 'No route to 192.168.9.255; check the broadcast address (EHOSTUNREACH)');
   assert.equal(describeSendError({ code: 'ENETUNREACH' }, '10.9.9.255', 7).message, 'No route to 10.9.9.255; check the broadcast address (ENETUNREACH)');
   assert.equal(describeSendError({ code: 'EACCES' }, '255.255.255.255', 9).message, 'Sending to 255.255.255.255:9 is not allowed on this Mac (EACCES)');
-  assert.equal(describeSendError({ code: 'EADDRNOTAVAIL' }, '1.2.3.255', 9).message, 'Cannot send to 1.2.3.255:9; check the broadcast address (EADDRNOTAVAIL)');
-  assert.equal(describeSendError({ code: 'EWHATEVER', message: 'x' }, '1.2.3.255', 9).message, 'Cannot send to 1.2.3.255:9: EWHATEVER');
-  assert.equal(describeSendError(new Error('boom'), '1.2.3.255', 9).message, 'Cannot send to 1.2.3.255:9: boom');
+  assert.equal(describeSendError({ code: 'EADDRNOTAVAIL' }, '203.0.113.255', 9).message, 'Cannot send to 203.0.113.255:9; check the broadcast address (EADDRNOTAVAIL)');
+  assert.equal(describeSendError({ code: 'EWHATEVER', message: 'x' }, '203.0.113.255', 9).message, 'Cannot send to 203.0.113.255:9: EWHATEVER');
+  assert.equal(describeSendError(new Error('boom'), '203.0.113.255', 9).message, 'Cannot send to 203.0.113.255:9: boom');
 });
