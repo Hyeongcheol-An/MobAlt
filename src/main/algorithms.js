@@ -162,6 +162,24 @@ function offered(cfg, cat) {
   return [...DEFAULTS[cat]];
 }
 
+/** The key type a host-key algorithm verifies with (the RSA SHA-2 signature algorithms use `ssh-rsa` keys). */
+const keyTypeOf = (alg) => (/^rsa-sha2-(256|512)$/.test(alg) ? 'ssh-rsa' : alg);
+
+/**
+ * connectOption() with the host-key algorithms reordered so that the types known_hosts already holds for this host
+ * come first (`knownTypes`, knownhosts.knownTypes), like OpenSSH's order_hostkeyalgs. A host known only by its RSA key
+ * otherwise negotiates ed25519 first and its known key is never shown — which would read as a changed key (a known
+ * host offering a key of another type is "changed", knownhosts.check). The set of algorithms stays the same.
+ */
+function connectOptionFor(cfg, knownTypes) {
+  const opt = connectOption(cfg);
+  if (!knownTypes || !knownTypes.length) return opt;
+  const list = offered(cfg, 'serverHostKey');
+  const known = list.filter((a) => knownTypes.includes(keyTypeOf(a)));
+  if (!known.length || known.length === list.length || known.every((a, i) => list[i] === a)) return opt;
+  return { ...(opt || {}), serverHostKey: [...known, ...list.filter((a) => !known.includes(a))] };
+}
+
 // ssh2's debug lines during the handshake: "Handshake: (remote) KEX method: a,b,c" and friends.
 const REMOTE_LINE = /^Handshake: \(remote\) (KEX method|Host key format|C->S cipher|S->C cipher|C->S MAC|S->C MAC): (.*)$/;
 const REMOTE_CAT = { 'KEX method': 'kex', 'Host key format': 'serverHostKey', 'C->S cipher': 'cipher', 'S->C cipher': 'cipher', 'C->S MAC': 'hmac', 'S->C MAC': 'hmac' };
@@ -220,4 +238,4 @@ function describe() {
   return { categories: CATEGORIES.slice(), labels: Object.fromEntries(CATEGORIES.map((c) => [c, labelOf(c)])), defaults: copy(DEFAULTS), supported: copy(SUPPORTED), legacy: copy(LEGACY), unavailable: copy(UNAVAILABLE), postQuantum: [...POST_QUANTUM_KEX] };
 }
 
-module.exports = { CATEGORIES, LABELS, DEFAULTS, SUPPORTED, LEGACY, UNAVAILABLE, POST_QUANTUM_KEX, isPostQuantum, parseList, presetLists, validate, normalize, connectOption, offered, noteRemote, explainHandshake, explainDhGroup, unavailableMessage, describe };
+module.exports = { CATEGORIES, LABELS, DEFAULTS, SUPPORTED, LEGACY, UNAVAILABLE, POST_QUANTUM_KEX, isPostQuantum, parseList, presetLists, validate, normalize, connectOption, connectOptionFor, offered, noteRemote, explainHandshake, explainDhGroup, unavailableMessage, describe };

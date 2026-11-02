@@ -34,7 +34,7 @@ function hashedMatch(entry, host) {
   const salt = Buffer.from(parts[2], 'base64');
   const hash = Buffer.from(parts[3], 'base64');
   const h = crypto.createHmac('sha1', salt).update(host).digest();
-  return h.equals(hash);
+  return h.length === hash.length && crypto.timingSafeEqual(h, hash);
 }
 
 /** The app's own known_hosts (OpenSSH format, so an external ssh can be pointed at it); never ~/.ssh/known_hosts. */
@@ -46,15 +46,39 @@ function files() {
   return [path.join(os.homedir(), '.ssh', 'known_hosts'), file()];
 }
 
+/** OpenSSH's wildcard match (match.c match_pattern): `*` any run of characters, `?` exactly one. */
+function globMatch(text, pattern) {
+  const re = new RegExp('^' + pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.') + '$', 's');
+  return re.test(text);
+}
+
 /**
- * @param list known_hosts files to consult (default: ~/.ssh/known_hosts read-only, then the app's own file)
- * @returns {'ok'|'mismatch'|'unknown'}
+ * Does a known_hosts host field (comma list, or one hashed name) name this host? Like OpenSSH: names compare without
+ * regard to case (they are lower-cased before matching, and before hashing), `*` / `?` wildcards apply, a `!pattern`
+ * that matches excludes the host whatever else the list says, and a non-default port is written `[host]:port`.
  */
-function check(host, port, keyBuf, list = files()) {
-  const pat = hostPattern(host, port);
-  const keyType = readKeyType(keyBuf);
-  const keyB64 = keyBuf.toString('base64');
-  let sawHost = false;
+function hostsMatch(field, host, port) {
+  const name = host.toLowerCase();
+  const pat = hostPattern(name, port);
+  if (field.startsWith('|1|')) return hashedMatch(field, pat);
+  let positive = false;
+  for (const raw of field.split(',')) {
+    if (!raw) continue;
+    const negated = raw.startsWith('!');
+    const p = (negated ? raw.slice(1) : raw).toLowerCase();
+    const hit = globMatch(pat, p);
+    if (hit && negated) return false;
+    if (hit) positive = true;
+  }
+  return positive;
+}
+
+/**
+ * The known_hosts lines that name this host, from every file of `list`: { marker, type, key } (marker '' for a plain
+ * line, 'revoked', 'cert-authority').
+ */
+function entriesFor(host, port, list) {
+  const out = [];
   for (const f of list) {
     let text;
     try {
@@ -66,22 +90,42 @@ function check(host, port, keyBuf, list = files()) {
       const line = raw.trim();
       if (!line || line.startsWith('#')) continue;
       const cols = line.split(/\s+/);
-      let i = 0;
-      if (cols[0].startsWith('@')) i = 1; // @cert-authority / @revoked
-      const hosts = cols[i];
-      const type = cols[i + 1];
-      const key = cols[i + 2];
+      let marker = '';
+      if (cols[0].startsWith('@')) marker = cols.shift().slice(1).toLowerCase();
+      const [hosts, type, key] = cols;
       if (!hosts || !type || !key) continue;
-      let match = false;
-      if (hosts.startsWith('|1|')) match = hashedMatch(hosts, pat);
-      else match = hosts.split(',').some((h) => h === pat || (h === host && (!port || port === 22)));
-      if (!match) continue;
-      if (type !== keyType) continue;
-      sawHost = true;
-      if (key === keyB64) return 'ok';
+      if (!hostsMatch(hosts, host, port)) continue;
+      out.push({ marker, type, key });
     }
   }
-  return sawHost ? 'mismatch' : 'unknown';
+  return out;
+}
+
+/**
+ * @param list known_hosts files to consult (default: ~/.ssh/known_hosts read-only, then the app's own file)
+ * @returns {'ok'|'mismatch'|'unknown'|'revoked'}
+ *   revoked  — an `@revoked` line holds this very key: refused whatever else the files say (OpenSSH does the same)
+ *   ok       — a plain line holds this key
+ *   mismatch — the host is known with another key, of this type or of another one ("keys of a different type are
+ *              already known for this host" in OpenSSH: a server that suddenly offers only a new type of key is as
+ *              suspect as one with a new key of the old type)
+ *   unknown  — no line names the host
+ * `@cert-authority` lines are certificate-signing keys, not host keys (MobAlt does not check host certificates): they
+ * neither accept a key nor make the host "known".
+ */
+function check(host, port, keyBuf, list = files()) {
+  const keyType = readKeyType(keyBuf);
+  const keyB64 = keyBuf.toString('base64');
+  const entries = entriesFor(host, port, list);
+  if (entries.some((e) => e.marker === 'revoked' && e.key === keyB64)) return 'revoked';
+  const plain = entries.filter((e) => !e.marker);
+  if (plain.some((e) => e.type === keyType && e.key === keyB64)) return 'ok';
+  return plain.length ? 'mismatch' : 'unknown';
+}
+
+/** The key types known_hosts holds for this host (plain lines), so the handshake can ask for one of them first. */
+function knownTypes(host, port, list = files()) {
+  return [...new Set(entriesFor(host, port, list).filter((e) => !e.marker).map((e) => e.type))];
 }
 
 function remember(host, port, keyBuf) {
@@ -93,10 +137,10 @@ function remember(host, port, keyBuf) {
 
 function forget(host, port) {
   const file = userDataFile('known_hosts');
-  const pat = hostPattern(host, port);
+  const pat = hostPattern(host, port).toLowerCase();
   try {
     const lines = fs.readFileSync(file, 'utf8').split('\n');
-    const keep = lines.filter((l) => !l.startsWith(pat + ' '));
+    const keep = lines.filter((l) => !l.toLowerCase().startsWith(pat + ' '));
     fs.writeFileSync(file, keep.join('\n'));
   } catch {}
 }
@@ -108,10 +152,10 @@ function forget(host, port) {
  */
 function ensure(host, port, keyBuf) {
   const status = check(host, port, keyBuf, [file()]);
-  if (status === 'ok') return false;
+  if (status === 'ok' || status === 'revoked') return false; // a revoked key never reaches here (refused), never copy it
   if (status === 'mismatch') forget(host, port);
   remember(host, port, keyBuf);
   return true;
 }
 
-module.exports = { check, remember, forget, ensure, file, fingerprint, readKeyType };
+module.exports = { check, knownTypes, hostsMatch, remember, forget, ensure, file, fingerprint, readKeyType };
