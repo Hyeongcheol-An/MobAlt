@@ -10,7 +10,7 @@ Xem thêm: [Mức tương đương tính năng với MobaXterm 26.6](MOBAXTERM_P
 ![MobAlt với hai shell từ xa đặt cạnh nhau](images/vi/hero.png)
 
 Mục lục: [Tải về và cài đặt](#tải-về-và-cài-đặt) · [Cập nhật](#cập-nhật) · [Phiên](#phiên) · [Kết nối](#kết-nối) ·
-[Terminal](#terminal) · [Tệp (SFTP / FTP)](#tệp-sftp--ftp) · [Đường hầm](#đường-hầm-chuyển-tiếp-cổng) ·
+[Terminal](#terminal) · [Tệp (SFTP / FTP)](#tệp-sftp--ftp) · [Phiên trình duyệt](#phiên-trình-duyệt) · [Đường hầm](#đường-hầm-chuyển-tiếp-cổng) ·
 [X11, Mosh, Serial, RDP/VNC](#x11-mosh-serial-rdpvnc) · [Công cụ và macro](#công-cụ-và-macro) ·
 [Không gian làm việc và cài đặt](#không-gian-làm-việc-và-cài-đặt) · [Phím tắt](#phím-tắt) ·
 [Dữ liệu và quyền riêng tư](#dữ-liệu-và-quyền-riêng-tư) · [Khắc phục sự cố](#khắc-phục-sự-cố)

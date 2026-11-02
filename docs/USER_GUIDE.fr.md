@@ -10,7 +10,7 @@ Voir aussi : [Parité fonctionnelle avec MobaXterm 26.6](MOBAXTERM_PARITY.md) �
 ![MobAlt avec deux shells distants côte à côte](images/fr/hero.png)
 
 Sommaire : [Installation](#installation) · [Mises à jour](#mises-à-jour) · [Sessions](#sessions) · [Connexion](#connexion) ·
-[Terminal](#terminal) · [Fichiers (SFTP / FTP)](#fichiers-sftp--ftp) · [Tunnels](#tunnels-redirection-de-port) ·
+[Terminal](#terminal) · [Fichiers (SFTP / FTP)](#fichiers-sftp--ftp) · [Sessions navigateur](#sessions-navigateur) · [Tunnels](#tunnels-redirection-de-port) ·
 [X11, Mosh, série, RDP/VNC](#x11-mosh-série-rdpvnc) · [Outils et macros](#outils-et-macros) ·
 [Espace de travail et réglages](#espace-de-travail-et-réglages) · [Raccourcis clavier](#raccourcis-clavier) ·
 [Données et confidentialité](#données-et-confidentialité) · [Dépannage](#dépannage)
