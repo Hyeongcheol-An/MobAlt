@@ -1,3 +1,9 @@
+## [0.16.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.16.0...v0.16.1) (2026-11-02)
+
+### Bug Fixes
+
+* say so when macOS Local Network privacy refuses a LAN connection ([efbc085](https://github.com/Hyeongcheol-An/MobAlt/commit/efbc085bea02d6a749092938313934f9a50072b9))
+
 ## [0.16.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.15.2...v0.16.0) (2026-11-01)
 
 ### Features
