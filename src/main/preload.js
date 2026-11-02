@@ -43,7 +43,7 @@ if (process.env.MOBALT_TEST_SCRIPT) {
 
 const EVENT_CHANNELS = [
   'term:data', 'term:exit', 'ssh:status', 'sftp:transfer', 'sftp:edit-synced', 'tunnels:changed',
-  'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'tools:scan', 'app:notice', 'app:bundle-updated',
+  'prompt:request', 'menu:action', 'tools:output', 'tools:done', 'tools:scan', 'app:notice', 'app:bundle-updated', 'app:update-progress',
   'detach:adopt', 'window:closing', 'settings:changed', 'sessions:changed', // several windows (detached tabs)
 ];
 // A detached window is the same page with ?detached=<key>; main hands it the tabs for that key once (detach.payload).
@@ -73,6 +73,7 @@ contextBridge.exposeInMainWorld('api', {
     testClipboardReal: (on) => invoke('test:clipboard-real', on), // true: this run uses the Mac's clipboard instead of its own in-memory one (test mode only)
     testQuitCheck: (verb) => invoke('test:quit-check', verb),
     testBundleUpdated: (version) => invoke('test:bundle-updated', version),
+    testUpdateProgress: (info) => invoke('test:update-progress', info), // the updater's download event (app:update-progress) as the windows hear it: { phase, version, percent, transferred, total, bytesPerSecond, message? } (test mode only)
     testNotice: (text) => invoke('test:notice', text),
     testNextDialog: (result) => invoke('test:next-dialog', result),
     testWolListen: (port) => invoke('test:wol-listen', port), // UDP listener on 127.0.0.1:<port> for magic packets (test mode only)
@@ -89,6 +90,10 @@ contextBridge.exposeInMainWorld('api', {
     // a different MobAlt.app is on disk (brew upgrade / dragged DMG): { version, current }; relaunch() restarts into it
     onBundleUpdated: (fn) => on('app:bundle-updated', fn),
     relaunch: () => invoke('app:relaunch'),
+    // the updater's download as it goes: { phase: 'downloading' | 'done' | 'error', version, percent, transferred, total, bytesPerSecond, message? }
+    onUpdateProgress: (fn) => on('app:update-progress', fn),
+    // quit into the downloaded update (the sheet's "Restart now", shared by the banner and Settings → Updates); false while nothing is downloaded
+    installUpdate: () => invoke('app:install-update'),
     // the chrome palette the renderer applied ({ background: '#rrggbb', scheme: 'dark'|'light' }): window background + native theme
     chrome: (chrome) => send('app:chrome', chrome),
     // the chrome the preload put on <html> before the first paint (null on a first launch)

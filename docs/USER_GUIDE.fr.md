@@ -36,7 +36,10 @@ Trois chemins mènent à une nouvelle version ; tous aboutissent au nouveau paq
 - **Mise à jour intégrée** : MobAlt consulte les GitHub Releases au démarrage (à désactiver dans Réglages → Mises à jour), et
   Aide → Rechercher les mises à jour… ou « Vérifier » dans Réglages → Mises à jour lance la vérification à la main. Une
   version plus récente est proposée dans un dialogue, téléchargée seulement si vous le décidez et installée quand vous quittez, ou
-  tout de suite avec « Redémarrer ».
+  tout de suite avec « Redémarrer ». Pendant le téléchargement, une ligne de progression — *Téléchargement de MobAlt
+  0.17.0 — 42 % (12.3 sur 29.4 MB, 2.1 MB/s)* — avec une barre fine s'affiche au-dessus des onglets et dans Réglages
+  → Mises à jour ; une fois le fichier complet, les deux proposent **Redémarrer** (ou **Plus tard** : il sera
+  installé quand vous quitterez), et un téléchargement qui a échoué en indique la raison pendant quelques secondes.
 - **Homebrew** : `brew upgrade --cask mobalt` remplace l'app dans Applications.
 - **DMG** : téléchargez le nouveau DMG depuis [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) et
   faites glisser MobAlt dans Applications pour remplacer l'ancien.

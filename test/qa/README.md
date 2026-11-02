@@ -77,6 +77,8 @@ await window.api.app.testDropFiles([path], { x, y }, windowId?); // files droppe
 await window.api.clipboard.kinds();                      // { text, image, formats }: what a paste would find on the clipboard
 await window.api.app.testBundleUpdated('0.11.0'); // pretend that MobAlt version is on disk → the relaunch banner (test mode only)
 (await window.api.app.testQuitCheck()).relaunchRequested; // true once the banner's Relaunch ran (test mode records, never restarts)
+await window.api.app.testUpdateProgress({ phase: 'downloading', version: '0.17.0', percent: 42, transferred, total, bytesPerSecond }); // the updater's download event (app:update-progress) → the banner and the Settings → Updates line; phase 'done' or 'error' (with message) too (test mode only)
+(await window.api.app.testQuitCheck()).installRequested;  // true once "Restart now" asked to install a downloaded update (recorded, never performed)
 await window.api.app.testNotice('Internal error: x'); // a main-process notice (app:notice) → error toast (test mode only)
 await window.api.app.testSilentListen(2213);            // → { port }: a TCP listener on 127.0.0.1 that accepts and never speaks — an SSH connection to it waits for the banner (test mode only)
 window.api.app.bootChrome();                   // the chrome the preload put on <html> before the first paint ({ background, scheme, theme, vars }; no vars on a first launch)

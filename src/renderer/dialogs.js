@@ -6,6 +6,7 @@ import { analysePaste, KIND_LABEL, DANGER_KINDS, PASTE_CONFIRM_CHARS } from './p
 import { DEFAULT_RULES, COLOR_KEYS, compileRules, normalizeRule } from './highlight.js';
 import { t, tn, LANGUAGES, SYSTEM_LOCALE, languageOf } from './i18n.js';
 import { normalizeBrowserUrl, browserHost } from './browserurl.js'; // a browser session's address: http(s) only, a bare host completed
+import { progressLine, progressParts } from './updateprogress.js'; // the updater's download on the Settings → Updates line, worded as on the banner
 
 const themeLabel = (k) => k.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 /**
@@ -925,15 +926,56 @@ export function settingsDialog(app) {
   // a choice applies at once to menus, panels and dialogs of every window (app.js _applyLanguage) — terminals are never touched
   const sysLang = languageOf(SYSTEM_LOCALE) || LANGUAGES[0];
   const language = select([['system', t('System default ({name})', { name: sysLang.name })], ...LANGUAGES.map((l) => [l.code, l.name])], languageOf(s.language) ? languageOf(s.language).code : 'system', { 'aria-label': t('Language') });
-  // "Check now" reports on its own line, e.g. "0.11.0 is already installed on disk; relaunch to use it"
+  // "Check now" reports on its own line, e.g. "0.11.0 is already installed on disk; relaunch to use it". A release the
+  // check offered and the user chose to download then takes the line over: the same event, figures and wording as the
+  // banner above the tabs (app.js onUpdateProgress), a thin bar under it and, once the file is complete, Restart now.
   const updStatus = h('span', { class: 'upd-status', 'aria-live': 'polite' });
+  const updBar = h('progress', { class: 'upd-bar', value: 0, max: 1, 'aria-label': t('Download progress'), hidden: true });
+  const updInstall = h('button', { class: 'btn small primary', type: 'button', hidden: true, onclick: () => {
+    if (document.activeElement === updInstall) checkNow.focus(); // Space / Enter: the focus must not fall to <body> when the button disables itself
+    updInstall.disabled = true; // one install: a second click would stack a second quitAndInstall behind the first
+    app.saveWorkspaceNow();
+    window.api.app.installUpdate().then((ok) => { if (!ok) updInstall.disabled = false; }, () => { updInstall.disabled = false; });
+  } }, t('Restart now'));
+  let shown = null; // the event the line shows right now
+  const showProgress = (p) => {
+    const line = progressLine(p, t);
+    if (!line) return;
+    // the line is a live region: the start, the end and a failure are announced, the once-a-second figures in between
+    // are not (the bar still exposes the value) — a screen reader would otherwise read the line all download long
+    const repeat = p.phase === 'downloading' && !!shown && shown.phase === 'downloading' && shown.version === p.version;
+    updStatus.setAttribute('aria-live', repeat ? 'off' : 'polite');
+    shown = p;
+    updStatus.textContent = line;
+    updBar.hidden = p.phase !== 'downloading';
+    if (!updBar.hidden) updBar.value = progressParts(p).percent / 100;
+    updInstall.hidden = p.phase !== 'done';
+    if (p.phase === 'done') updInstall.disabled = false; // a fresh offer: usable again
+  };
+  if (app.updateProgress) showProgress(app.updateProgress); // a download under way (or just finished) when the dialog opens
+  const offProgress = window.api.app.onUpdateProgress(showProgress);
+  // A download under way or complete keeps its line and bar through a check: the answer goes to a toast, unless it names
+  // another release — then the usual flow (the line shows the answer, the sheet offers the download). After a failed
+  // download the check's own answer shows on the line.
+  const busy = () => { const dl = app.updateProgress; return dl && (dl.phase === 'downloading' || dl.phase === 'done') ? dl : null; };
   const checkNow = h('button', { class: 'btn small', type: 'button', onclick: async () => {
-    updStatus.textContent = t('Checking…');
+    checkNow.disabled = true; // one check at a time; the button itself shows that one is running
+    updStatus.setAttribute('aria-live', 'polite'); // the outcome is announced, whatever the download's ticks set
+    if (!busy()) updStatus.textContent = t('Checking…');
     try {
       const r = await window.api.app.checkUpdates();
+      const dl = busy(); // the check may have re-sent the done event meanwhile
+      const keep = dl && (!r || r.status === 'error' || r.status === 'up-to-date' || r.status === 'source' || r.version === dl.version);
+      if (keep) {
+        showProgress(dl);
+        if (r && r.message && r.status !== 'available') toast(r.message, r.status === 'error' ? 'error' : 'info'); // "available" is what the line says already
+        return;
+      }
       updStatus.textContent = (r && r.message) || '';
     } catch (e) {
       updStatus.textContent = e.message;
+    } finally {
+      checkNow.disabled = false;
     }
   } }, t('Check now'));
   // Five section tabs (General / Terminal / Features / Logging / Updates): each fits the 900×560 minimum window without scrolling.
@@ -968,13 +1010,14 @@ export function settingsDialog(app) {
     ['updates', t('Updates'), h('div', { class: 'form-grid' },
       h('label', {}, t('Updates')), h('div', { class: 'checks' }, autoUpdate.el),
       h('div', { class: 'form-help' }, t('Releases on GitHub; a newer version is offered in a dialog and installed only when you agree')),
-      h('label', {}), h('div', { class: 'checks' }, checkNow, updStatus)
+      h('label', {}), h('div', { class: 'checks' }, checkNow, h('div', { class: 'upd-col' }, updStatus, updBar, updInstall)) // the line, then the bar and Restart now under it at the same left edge
     )],
   ]);
   const body = h('div', { class: 'settings-tabs' }, tabs.strip, ...Object.values(tabs.pages));
   const m = showModal({
     title: t('Settings'),
     width: 'wide',
+    onClose: () => offProgress(), // the dialog's progress listener goes with it
     body,
     buttons: [
       { label: t('Cancel'), value: null },
