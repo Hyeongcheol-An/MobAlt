@@ -2,7 +2,7 @@
 
 ### Features
 
-* **browser:** built-in browser session — a web page in a pane ([1d99e7a](https://github.com/Hyeongcheol-An/MobAlt/commit/1d99e7a23217dc25f59d1abfc564bfc18d92b5c4)), closes [#webview-layer](https://github.com/Hyeongcheol-An/MobAlt/issues/webview-layer)
+* **browser:** built-in browser session — a web page in a pane ([1d99e7a](https://github.com/Hyeongcheol-An/MobAlt/commit/1d99e7a23217dc25f59d1abfc564bfc18d92b5c4))
 * **i18n:** translate the browser session ([79fc111](https://github.com/Hyeongcheol-An/MobAlt/commit/79fc11107398c83833af01918ed960e57770c16a))
 
 ### Bug Fixes
