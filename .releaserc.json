@@ -10,7 +10,13 @@
         "preset": "conventionalcommits",
         "parserOpts": {
           "issuePrefixes": null
-        }
+        },
+        "releaseRules": [
+          {
+            "type": "release",
+            "release": "major"
+          }
+        ]
       }
     ],
     [
