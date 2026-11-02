@@ -169,6 +169,8 @@ html[dir="rtl"] .tree-row .sub { direction: ltr; unicode-bidi: isolate; text-ali
 #tab-add { width: 34px; border: 0; background: transparent; color: var(--fg-dim); font-size: 16px; }
 #tab-add:hover { background: var(--bg-3); color: var(--fg); }
 @keyframes pulse { 50% { opacity: .35; } }
+/* Reduce motion (System Settings → Accessibility → Display): the connecting dot stays lit, its yellow says it all */
+@media (prefers-reduced-motion: reduce) { .tab .dot.connecting { animation: none; } }
 
 #tab-content { flex: 1; position: relative; min-height: 0; background: var(--term-bg); }
 .tab-page { position: absolute; inset: 0; display: none; }
@@ -219,6 +221,8 @@ html[dir="rtl"] .tree-row .sub { direction: ltr; unicode-bidi: isolate; text-ali
 #find-bar button:hover { background: var(--bg-4); }
 #find-bar label { font-size: 11px; color: var(--fg-dim); display: flex; align-items: center; gap: 2px; }
 #find-bar .find-count { font-size: 11px; color: var(--fg-dim); min-width: 56px; text-align: center; font-variant-numeric: tabular-nums; }
+/* "1 / 6" is a number pair: left to right in Arabic as well (the bidi algorithm would show "6 / 1"); "No matches" is not */
+#find-bar .find-count.num { direction: ltr; unicode-bidi: isolate; }
 #find-bar.no-match #find-input { border-color: var(--red); }
 #find-bar.no-match .find-count { color: var(--danger-fg); }
 
@@ -624,7 +628,9 @@ body.find-open #toast-root { bottom: calc(anchor(--find-bar top, 92px) + 8px); }
 .ctx-item.danger:hover .k, .ctx-item.danger:focus-visible .k { color: var(--selection-fg-dim); }
 /* Disabled controls are visibly inert: dimmed, no hover, arrow cursor (a disabled primary button looked live). */
 .btn[disabled], .btn:disabled, .tb-btn:disabled, .icon-btn:disabled, .tools-form button:disabled, #find-bar button:disabled, .pane-head button:disabled, .quick button:disabled { opacity: .5; cursor: default; pointer-events: none; }
-.btn.primary[disabled], .btn.primary:disabled { background: var(--selection); border-color: var(--selection); }
+/* A disabled primary button is not the blue fill at half opacity (1.47:1 in the light theme): a plain button face with
+   the dim text, which the palette keeps at ≥ 4.5:1 on --bg-control in every theme (theme.js, test/unit/theme.test.js). */
+.btn.primary[disabled], .btn.primary:disabled { opacity: 1; background: var(--bg-control); border-color: var(--border); color: var(--fg-dim); }
 input:disabled, select:disabled, textarea:disabled { opacity: .6; cursor: default; }
 /* A session's colour is an accent (tab stripe, pane-head bar, tree dot), never a text colour: the tree shows it as a
    dot inside a 1px --border ring, which reads at ≥ 3:1 whatever colour was picked. */
@@ -956,7 +962,8 @@ html[dir="rtl"] .pane.browser .bt-back svg.i, html[dir="rtl"] .pane.browser .bt-
 .pane.browser.loading .bt-progress { display: block; }
 .pane.browser .bt-progress::before { content: ""; position: absolute; top: 0; bottom: 0; width: 30%; background: var(--accent); animation: bt-progress 1.1s ease-in-out infinite; }
 @keyframes bt-progress { 0% { left: -30%; } 100% { left: 100%; } }
-@media (prefers-reduced-motion: reduce) { .pane.browser .bt-progress::before { animation-duration: 2.4s; } }
+/* Reduce motion: no sweeping bar, a still one across the strip while the page loads */
+@media (prefers-reduced-motion: reduce) { .pane.browser .bt-progress::before { animation: none; left: 0; width: 100%; opacity: .6; } }
 /* the error view (did-fail-load): in the pane, the webview hidden meanwhile */
 .pane.browser .bt-error { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; text-align: center; color: var(--fg-dim); background: var(--bg); }
 .pane.browser .bt-error .big { font-size: 16px; font-weight: 600; color: var(--fg); }

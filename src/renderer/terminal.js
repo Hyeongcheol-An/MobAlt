@@ -4,7 +4,7 @@ import { connIdOf, errMsg } from './sftp.js';
 import { THEMES, searchDecorations, terminalTheme } from './theme.js';
 import { formatBytes, formatRate, formatUptime, formatLoad, memPercent, meterLevel } from './monitor.js';
 import { TermHighlighter, DEFAULT_RULES, highlightPalette } from './highlight.js';
-import { t, tn, onChange } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
+import { t, tn, onChange, tt } from './i18n.js'; // interface language: every label / message shown to the user goes through t() / tn()
 
 /** The marker the main process puts in front of its status lines (terminals.js STATUS_DIM / STATUS_FAIL): painted in _paint, where the pane's palette is known. */
 const STATUS_RE = /\x1b\]7704;(dim|fail)\x07/g;
@@ -52,8 +52,15 @@ const MONITOR_NOTES = {
   'monitor unavailable': () => t('monitor unavailable'),
 };
 
-/** Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg). */
-const startErrorText = (e) => errMsg(e);
+/**
+ * Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg) → { why, line }:
+ * `why` for the status bar and the FTP card, `line` for the terminal — main's terminal-language text when it sent one
+ * after a U+001F (main.js forPane: English for Arabic and Hindi), else the same.
+ */
+const startErrorText = (e) => {
+  const [why, line] = String((e && e.message) || e).split('\u001f');
+  return { why: errMsg({ message: why }), line: line || errMsg({ message: why }) };
+};
 /** A Mosh client that exits this soon after its spawn never got past the ssh bootstrap. */
 const MOSH_BOOTSTRAP_MS = 3000;
 
@@ -830,10 +837,19 @@ export class TermPane {
         this.setStatus('connected');
         this._sendStartup();
       } else if (this.kind === 'ssh') {
+        // one attempt at a time: a start() that a later one overtook (or a pane that went away) while main was still
+        // answering with the connection's id hands that connection back at once — never a second, invisible socket
+        const gen = this._startGen = (this._startGen || 0) + 1;
         this.setStatus('connecting');
         const r = await window.api.ssh.connect(this.session, size);
+        if (this.disposed || gen !== this._startGen) { window.api.ssh.disconnect(r.id); return; }
         this.termId = r.id;
         this.app.registerPane(this);
+        if (this._cancelRequested) {
+          this._cancelRequested = false;
+          await this.disconnect(); // main ends it with reason 'cancelled': "Connection attempt cancelled."
+          return;
+        }
       } else if (this.kind === 'telnet') {
         this.setStatus('connecting');
         const r = await window.api.term.spawnTelnet({ host: this.session.host, port: this.session.port || 23, username: this.session.username || '', ...size });
@@ -882,8 +898,9 @@ export class TermPane {
       }
       if (this.session?.logging && this.kind !== 'ftp') this.toggleLog(true);
     } catch (e) {
-      const why = startErrorText(e);
-      this.term.write(`\r\n\x1b[31m${t('Failed to start: {why}', { why })}\x1b[0m\r\n`);
+      this._cancelRequested = false; // a Cancel pressed before main answered: the attempt is over anyway, the next Reconnect is the user's
+      const { why, line } = startErrorText(e);
+      this.term.write(`\r\n\x1b[31m${tt('Failed to start: {why}', { why: line })}\x1b[0m\r\n`);
       if (this.kind === 'ftp') this.showFtpInfo('failed', why); // the card covers the terminal text
       this.setStatus('failed', why);
       this.markDead();
@@ -926,13 +943,16 @@ export class TermPane {
     return data.replace(STATUS_RE, (_, k) => c[k] || '');
   }
 
-  /** Toast / terminal line for a connection the server or the network ended (exit reason 'lost'); `sentence`: with its full stop (the dead line). */
+  /**
+   * Toast / terminal line for a connection the server or the network ended (exit reason 'lost'); `sentence`: with its
+   * full stop — the dead line written into the terminal, so in the terminal language (tt: English in Arabic and Hindi).
+   */
   lostMessage(detail, sentence = false, tunnelsStopped = 0) {
     const s = this.session || {};
-    if (this.kind === 'serial') return sentence ? t('Device {path} disconnected.', { path: s.serialPath }) : t('Device {path} disconnected', { path: s.serialPath });
+    if (this.kind === 'serial') return sentence ? tt('Device {path} disconnected.', { path: s.serialPath }) : t('Device {path} disconnected', { path: s.serialPath });
     const where = s.name || `${s.username ? s.username + '@' : ''}${s.host}${s.port && s.port !== 22 ? ':' + s.port : ''}`;
+    if (sentence) return detail ? tt('Connection to {where} was lost: {detail}.', { where, detail }) : tt('Connection to {where} was closed by the server.', { where });
     const full = detail ? t('Connection to {where} was lost: {detail}.', { where, detail }) : t('Connection to {where} was closed by the server.', { where });
-    if (sentence) return full;
     // the tunnels started from the Tunnels dialog on this connection went with it (the session's own come back with a
     // reconnect): a second sentence after the first one's full stop
     if (tunnelsStopped > 0) return full + ' ' + tn('{n} tunnel started from the Tunnels dialog was stopped.', '{n} tunnels started from the Tunnels dialog were stopped.', tunnelsStopped);
@@ -952,7 +972,7 @@ export class TermPane {
     if (this.kind === 'mosh' && !this._killed && (!this._moshScreen || Date.now() - (this._moshStartedAt || 0) < MOSH_BOOTSTRAP_MS)) {
       failed = true;
       msg = code ? t('mosh exited with code {code}', { code }) : t('mosh exited');
-      this.term.write(`\r\n\x1b[31m${t('Mosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?')}\x1b[0m\r\n`);
+      this.term.write(`\r\n\x1b[31m${tt('Mosh could not connect — see the output above; is mosh-server installed on the host and UDP 60000-61000 open?')}\x1b[0m\r\n`);
     }
     const lost = reason === 'lost'; // not a Disconnect, ⌘W or `exit`: say so in the terminal (app.js toasts it too)
     const cancelled = reason === 'cancelled'; // Disconnect (the pane's Cancel) while it was still connecting
@@ -961,7 +981,7 @@ export class TermPane {
       this.app.closePane(this, true);
       return;
     }
-    this.markDead(lost ? this.lostMessage(detail, true) : cancelled ? t('Connection attempt cancelled.') : null, lost ? 'lost' : cancelled ? 'cancelled' : null);
+    this.markDead(lost ? this.lostMessage(detail, true) : cancelled ? tt('Connection attempt cancelled.') : null, lost ? 'lost' : cancelled ? 'cancelled' : null);
   }
 
   /**
@@ -970,8 +990,30 @@ export class TermPane {
    */
   markDead(what, reason) {
     this.dead = true;
-    this.term.write(`\r\n\x1b[2m${t('── {what} Press Enter to reconnect, ⌘W to close. ──', { what: what || t('Session ended.') })}\x1b[0m\r\n`);
+    this._deadPad = 0;
+    // the callback runs once xterm has parsed the line, when the cursor position is the real one
+    this.term.write(`\r\n\x1b[2m${tt('── {what} Press Enter to reconnect, ⌘W to close. ──', { what: what || tt('Session ended.') })}\x1b[0m\r\n`, () => this._keepLineAboveOverlay());
     this.showOverlay(reason || (what ? 'lost' : null));
+  }
+
+  /**
+   * The Reconnect / Close strip covers the bottom rows of the terminal (it is taller than one row): when the shell ended
+   * near the last row, the dim line just written would sit under it. Blank lines scroll it up above the strip — only as
+   * many as the strip would still cover (cursorY + covered − rows), none when the line is higher up. reconnect() takes
+   * them back so the next attempt starts one blank row below the line, as without the strip.
+   */
+  _keepLineAboveOverlay() {
+    if (!this.dead || !this.overlay || this.disposed) return;
+    const screen = this.termEl.querySelector('.xterm-screen');
+    const sr = screen && screen.getBoundingClientRect();
+    let covered = 3; // a pane not on screen now (another tab): what the strip covers at the usual font sizes
+    if (sr && sr.height && this.term.rows) {
+      const rowH = sr.height / this.term.rows;
+      covered = Math.max(0, Math.ceil((sr.bottom - this.overlay.getBoundingClientRect().top) / rowH));
+    }
+    const pad = Math.max(0, this.term.buffer.active.cursorY + covered - this.term.rows);
+    this._deadPad = pad;
+    if (pad) this.term.write('\n'.repeat(pad));
   }
 
   /**
@@ -1021,6 +1063,8 @@ export class TermPane {
   }
 
   async reconnect() {
+    // an SSH attempt still waiting for its id (Cancel at +0 ms): it ends by itself in a moment, then Reconnect works
+    if (this.kind === 'ssh' && this.status === 'connecting' && !this.termId) return;
     if (this.termId) {
       await this.disconnect();
       // the old backend's exit event may still be in flight: forget its id now so it cannot be
@@ -1028,7 +1072,9 @@ export class TermPane {
       this.app.unregisterPane(this);
       this.termId = null;
     }
-    this.term.write('\r\n');
+    const pad = this._deadPad || 0; // the blank lines that lifted the dead line above the strip: the cursor goes back up
+    this._deadPad = 0;
+    this.term.write((pad ? `\x1b[${pad}A` : '') + '\r\n');
     await this.start();
     this.focus();
   }
@@ -1046,7 +1092,11 @@ export class TermPane {
   }
 
   async disconnect() {
-    if (!this.termId) return;
+    if (!this.termId) {
+      // an SSH pane in its first milliseconds of "Connecting…" has no id yet: start() cancels once it arrives
+      if (this.kind === 'ssh' && this.status === 'connecting') this._cancelRequested = true;
+      return;
+    }
     const id = this.termId;
     if (this.kind === 'ssh') await window.api.ssh.disconnect(id);
     else if (this.kind === 'ftp') {

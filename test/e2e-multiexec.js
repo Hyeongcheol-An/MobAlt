@@ -57,7 +57,7 @@
     await sleep(150);
     results.multiexecOn = app.multiexec === true && document.getElementById('btn-multiexec').classList.contains('on');
     results.bannerShownTab1 = !banner().hidden && bannerCount() === '2';
-    results.bannerWording = /keystrokes go to 2 visible terminal\(s\) in this tab/.test(banner().textContent);
+    results.bannerWording = /keystrokes go to 2 visible terminals in this tab/.test(banner().textContent);
     results.toastOn = toasts().includes('MultiExec ON: input goes to every visible terminal in this tab');
     results.buttonTooltip = /every visible terminal in this tab/.test(document.getElementById('btn-multiexec').title);
     await shot('60-multiexec-banner-tab1');
@@ -252,7 +252,7 @@
     g2.mxBox.click();
     await sleep(150);
     results.excludeByBox = g2.multiexecExcluded === true && g2.mxBox.checked && live(g2) && !g1.multiexecExcluded && app.multiexecTargets().length === 3 && !app.multiexecTargets().includes(g2);
-    results.bannerThreeOneExcluded = bannerCount() === '3' && /keystrokes go to 3 visible terminal\(s\) in this tab, 1 excluded/.test(banner().textContent);
+    results.bannerThreeOneExcluded = bannerCount() === '3' && /keystrokes go to 3 visible terminals in this tab, 1 excluded/.test(banner().textContent);
     await shot('70-multiexec-exclude-one');
     const m4 = mark();
     type(g1, m4);
@@ -276,7 +276,7 @@
     item('Activate none').click();
     await sleep(150);
     results.activateNone = G.every((p) => p.multiexecExcluded && p.mxBox.checked && live(p)) && bannerCount() === '0' && getComputedStyle(document.getElementById('multiexec-count')).display === 'none'
-      && /MultiExec is ON — every visible terminal is excluded — untick "Exclude … from MultiExec mode" under a pane/.test(banner().textContent) && !/visible terminal\(s\)/.test(banner().textContent) && !/, \d+ excluded/.test(banner().textContent);
+      && /MultiExec is ON — every visible terminal is excluded — untick "Exclude … from MultiExec mode" under a pane/.test(banner().textContent) && !/visible terminals? in this tab/.test(banner().textContent) && !/, \d+ excluded/.test(banner().textContent);
     await shot('72-multiexec-all-excluded');
     const m6 = mark();
     type(g1, m6);
@@ -296,7 +296,7 @@
     await sleep(100);
     item('Invert selection').click();
     await sleep(150);
-    results.invertSelection = !g2.multiexecExcluded && [g1, g3, g4].every((p) => p.multiexecExcluded && p.mxBox.checked) && bannerCount() === '1' && /1 visible terminal\(s\) in this tab, 3 excluded/.test(banner().textContent);
+    results.invertSelection = !g2.multiexecExcluded && [g1, g3, g4].every((p) => p.multiexecExcluded && p.mxBox.checked) && bannerCount() === '1' && /keystrokes go to 1 visible terminal in this tab, 3 excluded/.test(banner().textContent);
 
     // --- the pane context menu (⇧-right-click inside the terminal): a checkable "Exclude from MultiExec" entry, the same switch
     rightClick(g1.termEl, 40, 40, { shiftKey: true });

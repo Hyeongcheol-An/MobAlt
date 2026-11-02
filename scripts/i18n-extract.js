@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 // Collects every interface string into src/locales/catalog.json — the list each dictionary (src/locales/<code>.json)
-// has to cover. Sources: t('…') / tn('…', '…', n) calls in src/renderer/*.js and src/main/*.js (the first argument
+// has to cover. Sources: t('…') / tt('…') / tn('…', '…', n) calls in src/renderer/*.js and src/main/*.js (the first argument
 // must be a string literal, a template literal without ${}, or a ?: of those; anything else is reported) and the
 // data-i18n* hooks of src/renderer/index.html (data-i18n: the element's own text nodes; data-i18n-title /
 // -placeholder / -aria-label: that attribute).
@@ -61,11 +61,11 @@ function extractJs(file, src) {
     if (node.type !== 'CallExpression') return;
     const c = node.callee;
     const name = c.type === 'Identifier' ? c.name : c.type === 'MemberExpression' && !c.computed && c.property.type === 'Identifier' && c.object.type === 'Identifier' && /^(i18n|I18N)$/.test(c.object.name) ? c.property.name : null;
-    if (name !== 't' && name !== 'tn') return;
+    if (name !== 't' && name !== 'tn' && name !== 'tt') return; // tt(): t() for a terminal line, the same key
     const line = node.loc.start.line;
     const first = literalOf(node.arguments[0]);
     if (first.value === null) { errors.push(`${file}:${line}: ${name}() key is not a string literal (${first.reason})`); return; }
-    if (name === 't') {
+    if (name === 't' || name === 'tt') {
       for (const key of flat(first.value)) found.push({ key, line });
       return;
     }

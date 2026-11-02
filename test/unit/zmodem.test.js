@@ -319,3 +319,21 @@ test('a download is listed under its local name when the folder already has the 
   zm._finish(zm.transfers.get(t.id), 'cancelled');
   fs.rmSync(dir, { recursive: true, force: true });
 });
+
+test('Arabic: the transfer list keeps the translated reason, the terminal line is English all through (tt + inTerminal)', async () => {
+  const i18n = require('../../src/main/i18n');
+  i18n._use('ar', { 'the remote side stopped': 'توقف الطرف البعيد', 'Zmodem {kind} of {name} failed: {reason}': 'فشل {kind} Zmodem لـ {name}: {reason}', download: 'تنزيل' });
+  try {
+    const { registry, zm, text, handle } = harness();
+    zm.silenceMs = 60;
+    zm.drainIdleMs = 40;
+    const { t } = midTransfer(zm, registry, handle);
+    registry.bytes('t1', Buffer.from([0x2a, 0x18]));
+    await wait(200);
+    assert.equal(zm.listTransfers().find((x) => x.id === t.id).error, 'توقف الطرف البعيد');
+    assert.ok(text.out.includes(`${STATUS_FAIL}Zmodem download of big.bin failed: the remote side stopped`), text.out);
+    assert.ok(!/[؀-ۿ]/.test(text.out), 'no Arabic in the terminal: ' + JSON.stringify(text.out));
+  } finally {
+    i18n.setLocale('en');
+  }
+});

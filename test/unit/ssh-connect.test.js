@@ -114,3 +114,78 @@ test('a jump hop that times out is explained against the jump host: the nc hint 
   assert.match(msg, new RegExp(`nc -vz 127\\.0\\.0\\.1 ${jumpPort}`), 'the hint names the jump host and its port');
   assert.doesNotMatch(msg, /target\.example|2299/, 'never the target');
 });
+
+/** openShell over a stubbed connectClient: a fake client whose end() closes the connection (ctx.onClose), as ssh2's does. */
+function shellHarness({ openShell = false, settings = null } = {}) {
+  const exits = [];
+  const out = [];
+  let n = 0;
+  const registry = { newId: () => 'ssh-' + ++n, register() {}, data: (id, d) => out.push(d), bytes() {}, exit: (id, code, reason) => exits.push({ id, code, reason }) };
+  const ssh = new SshManager(registry, settings ? { getSettings: () => settings } : store, { status() {} });
+  const EventEmitter = require('events');
+  ssh.connectClient = (cfg, ctx) => {
+    const client = new EventEmitter();
+    client.end = () => setImmediate(() => ctx.onClose());
+    client.shell = (opts, sessOpts, cb) => {
+      if (!openShell) return; // the server has not answered the shell request yet
+      const stream = new EventEmitter();
+      stream.stderr = new EventEmitter();
+      stream.write = () => true;
+      stream.end = () => {};
+      stream.setWindow = () => {};
+      setImmediate(() => cb(null, stream));
+    };
+    return Promise.resolve({ client, jump: null });
+  };
+  return { ssh, exits, out };
+}
+const tick = (ms = 20) => new Promise((r) => setTimeout(r, ms));
+
+test('Disconnect after the login but before the shell opened ends as "cancelled", not as a session that ended', async () => {
+  const { ssh, exits } = shellHarness();
+  const { id } = ssh.openShell({ host: '127.0.0.1', port: 2222, username: 'u' });
+  await tick();
+  assert.ok(ssh.get(id) && ssh.get(id).client && !ssh.get(id).stream, 'client up, shell not open');
+  ssh.disconnect(id);
+  await tick();
+  assert.deepEqual(exits.map((e) => e.reason), ['cancelled']);
+});
+
+test('Disconnect of an open shell still ends as "closed"', async () => {
+  const { ssh, exits } = shellHarness({ openShell: true });
+  const { id } = ssh.openShell({ host: '127.0.0.1', port: 2222, username: 'u' });
+  await tick();
+  assert.ok(ssh.get(id) && ssh.get(id).stream, 'shell open');
+  ssh.disconnect(id);
+  await tick();
+  assert.deepEqual(exits.map((e) => e.reason), ['closed']);
+});
+
+test('verifyHost fails with the reason in the interface language and, for the Mosh pane, in the terminal language', async () => {
+  const i18n = require('../../src/main/i18n');
+  const refused = net.createServer();
+  await new Promise((r) => refused.listen(0, '127.0.0.1', r));
+  const port = refused.address().port;
+  await new Promise((r) => refused.close(r));
+  i18n._use('ar', { '{error} — the host is reachable but nothing listens on that port.': '{error} — المضيف متاح لكن لا شيء يستمع على هذا المنفذ.' });
+  try {
+    const ssh = new SshManager(null, store, { status() {} });
+    const r = await ssh.verifyHost({ host: '127.0.0.1', port, username: 'u' });
+    assert.equal(r.ok, false);
+    assert.match(r.error, /المضيف متاح/);
+    assert.match(r.terminalError, /ECONNREFUSED.* — the host is reachable but nothing listens on that port\./);
+  } finally {
+    i18n.setLocale('en');
+  }
+});
+
+test('a shell request that never gets an answer ends the pane as failed after the connection time limit', async () => {
+  const { ssh, exits, out } = shellHarness({ settings: { readyTimeout: 1000 } });
+  const { id } = ssh.openShell({ host: '127.0.0.1', port: 2222, username: 'u' });
+  await tick(300);
+  assert.deepEqual(exits, [], 'still waiting');
+  await tick(1000);
+  assert.deepEqual(exits.map((e) => e.reason), ['failed']);
+  assert.ok(out.join('').includes('Failed to open shell: timed out after 1 s'), out.join(''));
+  assert.equal(ssh.get(id), undefined);
+});

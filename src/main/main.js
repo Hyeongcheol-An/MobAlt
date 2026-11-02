@@ -1000,7 +1000,7 @@ function registerIpc() {
   // the monitoring bar's polling, counted (does it stop off screen?) and made to fail (the "unavailable" path)
   ipcMain.handle('test:monitor-stats', () => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
-    return { execCount: ssh.execCount, samples: monitor.samples };
+    return { execCount: ssh.execCount, samples: monitor.samples, sshConnections: ssh.conns.size }; // sshConnections: open or opening SSH connections (a ghost shows here)
   });
   ipcMain.handle('test:monitor-command', (_e, cmd) => {
     if (!process.env.MOBALT_TEST_SCRIPT) return null;
@@ -1070,20 +1070,29 @@ function registerIpc() {
     return file;
   });
 
+  // A pane prints a failed start into its terminal ("Failed to start: …") and shows it in the status bar. An error
+  // only crosses IPC as its message, so the terminal-language text (terminalMessage: English for Arabic and Hindi,
+  // i18n.errorFor) rides along after a U+001F separator; the renderer splits them (terminal.js startErrorText).
+  const forPane = (fn) => async (...args) => {
+    try { return await fn(...args); } catch (err) {
+      if (err && err.terminalMessage && err.terminalMessage !== err.message) throw new Error(`${err.message}\u001f${err.terminalMessage}`);
+      throw err;
+    }
+  };
   ipcMain.handle('term:spawn-local', (e, opts) => own(e, spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-telnet', (e, opts) => own(e, spawnTelnet(registry, { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-serial', (e, opts) => own(e, spawnSerial(registry, opts)));
   // Mosh bootstraps over an external ssh: the host key goes through the app's own prompt first and the
   // bootstrap then runs strictly against the app's known_hosts file (never ~/.ssh/known_hosts).
-  ipcMain.handle('term:spawn-mosh', async (e, opts) => {
+  ipcMain.handle('term:spawn-mosh', forPane(async (e, opts) => {
     // the session's Advanced SSH algorithm settings apply to this check (and to the SFTP companion), not to mosh's own ssh
     const v = await ssh.verifyHost({ name: opts.name, host: opts.host, port: opts.port || 22, username: opts.username, legacyAlgorithms: opts.legacyAlgorithms, pqKex: opts.pqKex, algorithms: opts.algorithms });
-    if (!v.ok) throw new Error(v.error || t('host key not accepted'));
+    if (!v.ok) throw Object.assign(new Error(v.error || t('host key not accepted')), { terminalMessage: v.terminalError });
     const r = own(e, spawnMosh(registry, store.getSettings(), { ...opts, ...sizeOf(opts), knownHostsFile: knownhosts.file() }));
     // the check's key exchange, for the pane to show as an SSH pane shows its own (the mosh client's output follows)
     return { ...r, handshakeLine: v.handshakeLine || '' };
-  });
-  ipcMain.handle('ftp:connect', async (e, cfg) => own(e, await ftp.connect(await mergeSecrets(cfg))));
+  }));
+  ipcMain.handle('ftp:connect', forPane(async (e, cfg) => own(e, await ftp.connect(await mergeSecrets(cfg)))));
   // A window takes over a live terminal (a detached tab, or one coming back): from now on its output goes there; the
   // ring buffer (last 256 KB) redraws what the previous window showed. What is still queued for the old owner is in
   // the ring already, so it is dropped here rather than sent twice. ok: false when the backend has ended meanwhile

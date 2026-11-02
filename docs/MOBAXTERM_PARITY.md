@@ -10,7 +10,7 @@ the documentation and the complete changelog (v1.0 → v26.6), plus the Home/Pro
 grouped the way MobaXterm's own documentation groups things. The MobAlt side was checked row by row
 against the 0.12.0 source (`src/main`, `src/renderer`), the [user guide](USER_GUIDE.md) and the
 README; nothing here is taken from memory. "Settings → …" means MobAlt's Settings dialog (⌘,),
-"Session editor" means ＋ Session (⌘N), "Sftp panel" is the file browser (⌘2), "Tools panel" is ⌘3.
+"Session editor" means ＋ Session (⌘N), "SFTP panel" is the file browser (⌘2), "Tools panel" is ⌘3.
 
 **How to read the status column.**
 
@@ -49,7 +49,7 @@ MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 
 | MobaXterm feature | MobAlt | How MobAlt does it, or why not |
 |---|---|---|
-| SSH session | ✅ | SSH type in the Session editor: ssh2 terminal, Sftp panel opens on connect, X11, jump host, tunnels, startup commands |
+| SSH session | ✅ | SSH type in the Session editor: ssh2 terminal, SFTP panel opens on connect, X11, jump host, tunnels, startup commands |
 | Telnet session | 🟡 | Telnet type with NAWS/TTYPE negotiation; host and port only, no keepalive, auto-login or "send ^M" options |
 | Rsh / Rlogin session | ➖ | obsolete clear-text protocols that macOS no longer ships clients for; use SSH (or Telnet for legacy gear) |
 | Xdmcp session | ❌ | no XDMCP session type; XQuartz can be started by hand with `X :1 -query host` |
@@ -57,8 +57,8 @@ MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 | RDP — new 64-bit engine | ➖ | MobaXterm-internal engine; on macOS Windows App is the RDP engine |
 | RDP — advanced (Restricted Admin, multi-monitor, drives…) | 🟡 | all of that is configured inside Windows App; MobAlt only hands over host, port and user |
 | VNC session | 🟡 | VNC type opens a `vnc://` URL in macOS Screen Sharing; `vnc://` works in Quick connect; no in-app viewer |
-| FTP session | ✅ | FTP type: explicit-TLS FTPS, anonymous login, self-signed certificate opt-in; browsed, transferred and edited in the Sftp panel (no ASCII mode) |
-| SFTP session | 🟡 | no SFTP-only session: the Sftp panel comes with every SSH session (and with Mosh through a companion SSH connection) |
+| FTP session | ✅ | FTP type: explicit-TLS FTPS, anonymous login, self-signed certificate opt-in; browsed, transferred and edited in the SFTP panel (no ASCII mode) |
+| SFTP session | 🟡 | no SFTP-only session: the SFTP panel comes with every SSH session (and with Mosh through a companion SSH connection) |
 | Serial (COM) session | ✅ | Serial type: USB-serial discovery, baud, data/stop bits, parity, flow control, local echo, Enter sends CR/LF/CRLF; no named pipes |
 | File session (local folder tab) | ❌ | no local file-browser tab; Finder or `open .` from a Local terminal |
 | Shell session (local terminal) | ✅ | Local type: your login shell (or any path, Settings → General → Local shell), Start folder, startup commands; ⌘T for a quick one |
@@ -68,7 +68,7 @@ MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 | WSL session | ➖ | Windows-only; a Local session already is a Unix shell |
 | Live session (unsaved) | ✅ | Quick connect field (⇧⌘N): `user@host[:port]` with `ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://` prefixes opens an unsaved session; shell commands and `-exec` are in §6 |
 | Custom shell script bookmark | 🟡 | a Local session whose Startup commands hold the script; no desktop shortcut |
-| "Open SFTP session with same parameters" | ✅ | pane menu → Open SFTP Browser / Sftp panel's "Open SFTP for this host (via SSH)" for Mosh; SSH sessions have the panel already |
+| "Open SFTP session with same parameters" | ✅ | pane menu → Open SFTP Browser / SFTP panel's "Open SFTP for this host (via SSH)" for Mosh; SSH sessions have the panel already |
 | Session count limit (Home: 12) | ➖ | no limits; MIT licence |
 
 ## 2. SSH specifics
@@ -85,7 +85,7 @@ MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 | Internal SSH agent "MobAgent" | 🟡 | no built-in agent: the macOS `ssh-agent` (`SSH_AUTH_SOCK`) is used; keys via `ssh-add --apple-use-keychain` |
 | External agents | ✅ | whatever `SSH_AUTH_SOCK` points at: ssh-agent, 1Password, Secretive, gpg-agent… |
 | Agent forwarding | ✅ | "Agent forwarding" in Advanced SSH |
-| SSH gateway / jump host (chained, per-hop credentials) | 🟡 | Advanced SSH → Jump host: a saved session or `user@host:port`, chains through the jump session's own jump host (3 hops), Sftp and X11 routed through; SSH only, no CyberArk/Teleport |
+| SSH gateway / jump host (chained, per-hop credentials) | 🟡 | Advanced SSH → Jump host: a saved session or `user@host:port`, chains through the jump session's own jump host (3 hops), SFTP and X11 routed through; SSH only, no CyberArk/Teleport |
 | Proxy (SOCKS / HTTP / netcat) | ❌ | no per-session proxy; use a jump host or a `-D` tunnel from another session |
 | Keepalive | ✅ | Settings → General → SSH keep-alive (s), per-session override in Advanced SSH; on by default (30 s) |
 | "Workaround for connection reset by peer" | 🟡 | no such checkbox; Advanced SSH → "Legacy algorithms (old devices)" is the knob for old servers |
@@ -95,7 +95,7 @@ MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 | Execute command / stay connected | ✅ | Startup commands (Session editor → Terminal): typed after login, the shell stays open |
 | Startup macro | 🟡 | Startup commands per session for every type, instead of attaching a recorded macro |
 | Remote monitoring bar (CPU/RAM/net/disk) | ✅ | a one-line strip under every SSH pane: CPU, memory used / total, root disk, network ↓ / ↑ rates, load average, uptime, host name; one POSIX `sh` snippet over an exec channel of the pane's own connection every 3 s (2–30 s), paused off screen, "monitor unavailable" on hosts without `sh`; on by default, per session (Advanced SSH), per pane (pane head, View menu) or global; Mosh panes use their SFTP companion connection |
-| Graphical SSH-browser (SFTP/SCP) | ✅ | Sftp panel (⌘2) opens on connect: upload/download with progress and cancel, mkdir, rename, chmod, delete, hidden files, double-click edits and saves back; SFTP only, no SCP mode |
+| Graphical SSH-browser (SFTP/SCP) | ✅ | SFTP panel (⌘2) opens on connect: upload/download with progress and cancel, mkdir, rename, chmod, delete, hidden files, double-click edits and saves back; SFTP only, no SCP mode |
 | SSH-browser extras (SUDO, history, paste, diff…) | 🟡 | has overwrite confirmation, preserved mtime on download, sort, Show in Finder, host-key prompt; no SUDO, address history, ⌘V file paste, SCP fallback, diff or column memory |
 | Follow terminal folder | ✅ | "SFTP follows terminal folder" session option (OSC 7 hook for bash/zsh) plus the panel's Follow checkbox; off by default |
 | Zmodem (rz/sz) | ✅ | In-terminal transfers in SSH, local, telnet and serial panes (zmodem.js Sentry on the byte stream): `sz` downloads, `rz` uploads, progress and cancel in the transfer list; not Mosh |
@@ -276,7 +276,7 @@ MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 | 26.5 — WebAuthn redirection in RDP | ➖ | Windows App |
 | 26.5 — SFTP drag into a local subfolder; CygUtils integrity; Customizer options | 🟡 | downloads go to a chosen folder (Download folder setting or dialog); no drag-out to Finder |
 | 26.4 — smart-card SSH auth (CAPI) + manager, smart card in MobAgent | ➖ | PKCS#11 via the macOS `ssh-agent` |
-| 26.4 — SSH → SFTP with same parameters, browser beside the tree, column widths, overwrite confirmation | 🟡 | Sftp panel is attached to each session and asks before overwriting; no side-by-side docking or column memory |
+| 26.4 — SSH → SFTP with same parameters, browser beside the tree, column widths, overwrite confirmation | 🟡 | SFTP panel is attached to each session and asks before overwriting; no side-by-side docking or column memory |
 | 26.4 — "linux" terminal type, compression off by default, Quick connect folder auto-expand | 🟡 | compression off by default; terminal type fixed; the filter shows matches |
 | 26.3 — paste confirmation polish | ✅ | a multi-line or long paste asks first: "Paste N lines into …?" with an editable preview, ⌘⏎ / Esc |
 | 26.2 — malicious-paste warning | ✅ | paste guard findings (hidden characters, pipe-to-shell, profile writes, destructive commands, homoglyphs) with "Paste cleaned" |
@@ -305,14 +305,14 @@ MobAlt has 55 in full, 39 in a narrower or different form and lacks 31.
 |---|---|---|
 | SFTP pane that follows `cd`, edit-and-upload on save | ✅ | "SFTP follows terminal folder" session option + Follow checkbox; double-click edits, ⌘S uploads; following is off by default |
 | Remote monitoring bar | ✅ | the strip under every SSH pane (§2), on by default; the pane head's pulse button, View → Remote Monitoring Bar or the context menu toggle it per pane |
-| Sidebar = session tree + macros + file browser, dockable, right placement | 🟡 | side strip with Sessions / Sftp / Tools / Macros (⌘1-4), one panel at a time, left side only, ⌘B hides |
+| Sidebar = session tree + macros + file browser, dockable, right placement | 🟡 | side strip with Sessions / SFTP / Tools / Macros (⌘1-4), one panel at a time, left side only, ⌘B hides |
 | Everything auto-saves (incl. Quick connect sessions) | 🟡 | sessions and settings save on Save, the workspace every 20 s; Quick connect sessions are not saved |
 | Right-click paste as a global toggle | ✅ | Settings → Terminal → "Right-click pastes (⇧-right-click for menu)", on by default |
 | Copy-on-select, Alt-drag rectangle, tunable delimiters | ✅ | Copy on select (toggle), ⌥-drag column selection; delimiters not tunable |
 | Multi-line paste guard with preview and malware checks | ✅ | "Paste N lines into …?" with an editable preview and the suspicious-content findings; both toggles in Settings → Features → Paste guard |
 | MultiExec and split views (Exclude, sync scroll) | ✅ | splits and grids up to 8 panes; MultiExec with the Exclude box under each terminal, Activate all / none / Invert selection and synchronised wheel scrolling |
 | Macros as first-class objects (WaitFor, nesting, folders, encryption) | 🟡 | recorded and text macros, play to one or all terminals; none of the extras |
-| Jump hosts as a dropdown | ✅ | Advanced SSH → Jump host dropdown of saved sessions (or manual), chained through the jump session's own jump host; Sftp and X11 routed through; SSH sessions only |
+| Jump hosts as a dropdown | ✅ | Advanced SSH → Jump host dropdown of saved sessions (or manual), chained through the jump session's own jump host; SFTP and X11 routed through; SSH sessions only |
 | Credentials vs passwords (named credentials, master password, Hello) | 🟡 | per-session passwords in the Keychain; no named credentials |
 | Tabs carry state (colour, icon, dots, pin, close-left/right, detach) | ✅ | colour, icon, status dot, green tree dot, Pin Tab (⇧⌘P), Close Tabs to the Left / Right, Detach to New Window (⌥⌘N); no output-activity marker (see Activity tracking) |
 | Home tab + Quick connect (raw `ssh user@host`) | 🟡 | Quick connect with raw `user@host` and scheme prefixes; no home tab, restore is automatic |
@@ -331,7 +331,7 @@ Each item is verified against the 0.12.0 source.
 - **An interface in eleven languages.** English, Korean, Simplified Chinese, Japanese, Vietnamese, Hindi, German, French, Spanish, Portuguese and Arabic (right-to-left, mirrored chrome), following the macOS language list or chosen in Settings, switched live without a restart, with the user guide in each (`src/main/i18n.js`, `src/locales/`, `docs/USER_GUIDE.<code>.md`). MobaXterm's interface is English only.
 - **Whole-window themes with contrast guarantees.** The chrome palette is derived from the terminal theme (`src/renderer/theme.js`); every text token keeps ≥ 4.5:1 and borders ≥ 3:1 on every surface, asserted by `test/unit/theme.test.js` for all six themes including Light. MobaXterm themes the terminal and offers one dark skin.
 - **Keyboard accessibility.** Session tree and SFTP list are a tree / listbox with a roving tabindex and Finder-style type-ahead, context menus open with ⇧F10 or the Menu key, dialogs trap and return focus (`src/renderer/sidebar.js`, `src/renderer/sftp.js`, `test/e2e-a11y.js`).
-- **Mosh with an SFTP companion.** A Mosh pane gets a shell-less SSH connection to the same host for the Sftp panel (`src/main/ssh.js`, `sftpOnly`).
+- **Mosh with an SFTP companion.** A Mosh pane gets a shell-less SSH connection to the same host for the SFTP panel (`src/main/ssh.js`, `sftpOnly`).
 - **FTPS** (explicit TLS) and anonymous FTP in the same file panel as SFTP (`src/main/ftp.js`); MobaXterm's FTP client is a separate tab type.
 - **Plain-text session logs.** Settings → Logging strips colours, cursor movement and the folder hook from logs (`PlainTextFilter` in `src/main/terminals.js`).
 - **On-disk update detection and relaunch banner.** `brew upgrade` or a DMG replacing the running bundle is noticed and offered as a relaunch that restores the workspace (`src/main/bundlewatch.js`).

@@ -76,7 +76,7 @@ and fill in the Basic tab. Double-click a session to connect; right-click for th
 | Local | Your macOS login shell (zsh/bash) with folder following |
 | Telnet | Classic telnet with NAWS/TTYPE negotiation; the session's username is sent at the `login:` prompt |
 | Serial | USB-serial console (baud, framing, flow control, local echo) |
-| FTP | FTP / FTPS (explicit TLS) file browser in the Sftp panel |
+| FTP | FTP / FTPS (explicit TLS) file browser in the SFTP panel |
 | RDP / VNC | Hands off to Windows App or macOS Screen Sharing |
 | Browser | A web page in a pane next to your terminals — a router, Grafana, a device's web UI, a tunnelled `localhost` (http/https only; see [Browser sessions](#browser-sessions)) |
 
@@ -243,7 +243,7 @@ folder dialog and leaves the field as it was when you cancel.
   stay decorated per terminal — in a long burst the oldest rows go plain first — and ⌘K drops them all.
 - **Zmodem (rz/sz)**: move files through the terminal itself, the classic way over a serial console or a jump host
   where SFTP is unavailable. Run `sz file …` on the remote to download to the Mac, or `rz` to upload from it; MobAlt
-  spots the transfer in the stream, pauses the terminal and shows it in the Sftp panel's transfer list (with Cancel)
+  spots the transfer in the stream, pauses the terminal and shows it in the SFTP panel's transfer list (with Cancel)
   and the status-bar counter. Downloads go to the Download folder (Settings → General), or a folder you pick when none
   is set; uploads open a file chooser. Works in SSH, local, telnet and serial panes — not Mosh (its stream is the mosh
   client's, not a raw byte stream). Turn it off with Settings → Features → Transfers → *Zmodem transfers (rz/sz)* (on by default);
@@ -254,7 +254,7 @@ folder dialog and leaves the field as it was when you cancel.
 - **Clipboard**: selecting copies (Settings → Terminal → Copy on select); right-click pastes
   (⇧-right-click opens the menu). Dropping files from Finder on an SSH terminal uploads them;
   on a local terminal it pastes the paths. When the shell's folder is not known (the session does not follow the terminal) they go to the folder the
-  Sftp panel shows for that connection, or you are asked first.
+  SFTP panel shows for that connection, or you are asked first.
 - **Paste guard**: a paste with more than one line (or over 1000 characters) asks first — *Paste N
   lines into …?* shows the text in an editable preview; ⌘⏎ pastes, Esc cancels. Every paste is also
   checked for what the clipboard does not show: zero-width and bidi characters, no-break spaces (a space
@@ -291,7 +291,7 @@ folder dialog and leaves the field as it was when you cancel.
 
 ![SFTP panel](images/sftp-panel.png)
 
-The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on connect
+The **SFTP** panel follows the active SSH or FTP pane. It opens automatically on connect
 (Settings → General → "Switch to SFTP panel when SSH connects").
 
 - Navigate by double-clicking folders, typing a path (`~` works) or using ⬆ / 🏠 / ⟳.
@@ -388,7 +388,7 @@ this Mac* (or *on the server* for a remote forward).
 - **Mosh**: needs `brew install mosh` locally and `mosh-server` on the host (UDP 60000-61000).
   The pane runs the mosh client; the SSH bootstrap uses your key, agent or an interactive prompt.
   Set the `mosh-server` path if it is not on the remote PATH.
-- **Mosh + SFTP**: mosh carries no SFTP channel, so the Sftp panel browses a Mosh host through a
+- **Mosh + SFTP**: mosh carries no SFTP channel, so the SFTP panel browses a Mosh host through a
   separate shell-less SSH connection to the same host (same key, agent and prompts). It opens
   automatically when "Open SFTP browser automatically" is on for the session (and "Switch to SFTP
   panel" in Settings → General), otherwise from the panel's "Open SFTP for this host (via SSH)" button or the
@@ -442,7 +442,10 @@ text right-aligned; terminals stay left-to-right). By default (**System default*
 the language list of macOS (System Settings → General → Language & Region): the first language in that list that
 MobAlt ships wins, English when none does. Settings → General → **Language** picks one explicitly; the change
 applies at once in every window — nothing restarts, connections stay up — and is remembered. Terminal output is never
-translated: what a remote host prints is shown as it is. The user guide exists in the same eleven languages
+translated: what a remote host prints is shown as it is. The lines MobAlt itself prints into a terminal ("Connecting
+to …", "Key exchange …", "Connection failed: …", "── Session ended. … ──") follow the interface language, except in
+Arabic and Hindi, where they stay in English: a terminal draws one character per cell, left to right, and cannot join
+Arabic letters or shape Devanagari. The user guide exists in the same eleven languages
 (`docs/USER_GUIDE.<language>.md`); Help → **User Guide** opens the one for the current language.
 
 In Arabic the whole window reads right to left: the side strip and the sidebar move to the right edge and the

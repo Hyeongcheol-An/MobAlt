@@ -66,6 +66,41 @@ test('t / tn with a dictionary: one string or [one, other], the source for anyth
   i18n.setLocale('en');
 });
 
+test('tt / inTerminal: terminal lines in English where xterm cannot draw the script (Arabic, Hindi), translated elsewhere', () => {
+  // xterm.js has no bidi and no shaping: the languages whose script needs either name English as their terminal language
+  assert.deepEqual(i18n.LANGUAGES.filter((l) => l.terminal).map((l) => [l.code, l.terminal]), [['hi', 'en'], ['ar', 'en']]);
+  const ar = { 'Connecting to {target}...': 'جارٍ الاتصال بـ {target}...', 'Session ended.': 'انتهت الجلسة.', '{error} — wrapped': '{error} — ملفوف' };
+  i18n._use('ar', ar);
+  assert.equal(i18n.t('Session ended.'), 'انتهت الجلسة.'); // toasts, dialogs, the status bar: translated
+  assert.equal(i18n.tt('Session ended.'), 'Session ended.'); // the terminal: English
+  assert.equal(i18n.tt('Connecting to {target}...', { target: 'u@h:22' }), 'Connecting to u@h:22...');
+  // nested t() calls (a hint composed around an error) take the terminal language inside inTerminal, and only there
+  assert.equal(i18n.inTerminal(() => i18n.t('{error} — wrapped', { error: i18n.t('Session ended.') })), 'Session ended. — wrapped');
+  assert.equal(i18n.t('Session ended.'), 'انتهت الجلسة.'); // the dictionary is back afterwards
+  assert.throws(() => i18n.inTerminal(() => { throw new Error('x'); }));
+  assert.equal(i18n.t('Session ended.'), 'انتهت الجلسة.'); // …even when fn throws
+  i18n._use('ko', { 'Session ended.': '세션이 끝났습니다.' });
+  assert.equal(i18n.tt('Session ended.'), '세션이 끝났습니다.'); // Korean draws fine in a terminal: translated there too
+  i18n.setLocale('en');
+  assert.equal(i18n.tt('Session ended.'), 'Session ended.');
+});
+
+test('errorFor: the message in the interface language, terminalMessage in the terminal language', () => {
+  i18n._use('ar', { 'host is required': 'المضيف مطلوب' });
+  const e = i18n.errorFor(() => i18n.t('host is required'));
+  assert.equal(e.message, 'المضيف مطلوب');
+  assert.equal(e.terminalMessage, 'host is required');
+  i18n._use('ko', { 'host is required': '호스트가 필요합니다' });
+  assert.equal(i18n.errorFor(() => i18n.t('host is required')).terminalMessage, '호스트가 필요합니다');
+  i18n.setLocale('en');
+});
+
+test('extractor: tt() keys are catalog keys like t()', () => {
+  const js = extractor.extractJs('x.js', "tt('Alpha'); i18n.tt('Beta {x}', { x }); tt(name);");
+  assert.deepEqual(js.found.map((f) => f.key), ['Alpha', 'Beta {x}']);
+  assert.equal(js.errors.length, 1);
+});
+
 test('loadDict: English is empty, an unknown code is empty, a shipped language reads its file', () => {
   assert.deepEqual(i18n.loadDict('en'), {});
   assert.deepEqual(i18n.loadDict('xx'), {});
@@ -118,6 +153,13 @@ test('scripts/i18n-status: check() reports missing, stale, placeholder and left-
   assert.ok(r.other.includes('left in English: "Open the file {name}"'));
   assert.ok(!r.other.some((m) => /Ping|Keep this one/.test(m))); // one word may stay; @keep lists the rest
   assert.deepEqual(status.check({}, cat).missing, Object.keys(cat.strings));
+  // @keep says what stays English: only catalog keys, each one mapped to itself
+  const k = status.check({ '@keep': ['Ping', 'Keep this one', 'RTT', 'Close Tab'], 'Close Tab': 'x', '{n} tab': ['{n} a', '{n} b'], 'Open the file {name}': 'y {name}', 'Ping': 'Ping', 'Keep this one': 'Keep this one' }, cat);
+  assert.deepEqual(k.keep, ['@keep lists a string that is not in the catalog: "RTT"', '@keep lists a string that is translated: "Close Tab" → "x"']);
+  assert.ok(status.problems({ '@keep': ['RTT'] }, cat).includes('@keep lists a string that is not in the catalog: "RTT"'));
+  // a tn() pair kept as in English: [one, other] equal to the key and its plural form is "kept", a translated pair is not
+  assert.deepEqual(status.check({ '@keep': ['{n} tab'], '{n} tab': ['{n} tab', '{n} tabs'] }, cat).keep, []);
+  assert.equal(status.check({ '@keep': ['{n} tab'], '{n} tab': ['{n} onglet', '{n} onglets'] }, cat).keep.length, 1);
   assert.deepEqual(status.problems({ 'Close Tab': '' }, { strings: { 'Close Tab': {} } }), ['empty: "Close Tab"']);
 });
 
@@ -131,9 +173,9 @@ for (const lang of i18n.LANGUAGES) {
     // every catalog string present and non-empty, no stale key, the placeholders of the source, [one, other] only for
     // a tn() pair, nothing of three words or more left in English unless @keep lists it (scripts/i18n-status.js)
     // I18N_STRICT=0 (a feature branch whose strings are not translated yet): a key the dictionary lacks or no longer
-    // needs is the translators' work in progress, not a failure; everything else (placeholders, empty values, English
-    // left in a long value) still is
-    const problems = status.problems(dict, catalog).filter((p) => strict || !/^(missing: |stale key )/.test(p));
+    // needs, and an @keep entry that a reworded key left behind, are the translators' work in progress, not a failure;
+    // everything else (placeholders, empty values, English left in a long value) still is
+    const problems = status.problems(dict, catalog).filter((p) => strict || !/^(missing: |stale key |@keep lists )/.test(p));
     assert.deepEqual(problems, [], `${problems.length} problem(s) — npm run i18n:status -- --list ${lang.code}:\n${problems.slice(0, 40).join('\n')}`);
   });
 }

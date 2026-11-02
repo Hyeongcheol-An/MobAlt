@@ -8,7 +8,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { StringDecoder } = require('string_decoder');
 const { ensureZdotdir } = require('./zdotdir');
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const { t, tn, tt, inTerminal, errorFor } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn(); a line written into a terminal through tt() (English where xterm cannot draw the script)
 const localnet = require('./localnet');
 
 /**
@@ -420,8 +420,8 @@ function shQuote(s) {
 function spawnMosh(registry, settings, { cols = 80, rows = 24, host, port, username, privateKeyPath, moshServer, moshPredict, knownHostsFile } = {}) {
   const pty = require('node-pty');
   const bin = findMosh();
-  if (!bin) throw new Error(t('mosh client not found — install it with "brew install mosh"'));
-  if (!host) throw new Error(t('host is required'));
+  if (!bin) throw errorFor(() => t('mosh client not found — install it with "brew install mosh"')); // printed in the pane too: errorFor
+  if (!host) throw errorFor(() => t('host is required'));
   const keyFile = privateKeyPath ? privateKeyPath.replace(/^~(?=\/|$)/, os.homedir()) : '';
   const hostKeyOpts = knownHostsFile
     ? ['-o', 'StrictHostKeyChecking=yes', '-o', shQuote(`UserKnownHostsFile="${String(knownHostsFile).replace(/"/g, '')}"`)]
@@ -475,7 +475,7 @@ function spawnTelnet(registry, { host, port = 23, username = '', cols = 80, rows
   };
 
   sock.on('connect', () => {
-    registry.data(id, `\x1b[90m${t('Connected to {target}', { target: `${host}:${port}` })}\x1b[0m\r\n`);
+    registry.data(id, `\x1b[90m${tt('Connected to {target}', { target: `${host}:${port}` })}\x1b[0m\r\n`);
     if (loginWatch) setTimeout(() => { loginWatch = null; }, 10000);
   });
   sock.on('data', (buf) => {
@@ -526,8 +526,8 @@ function spawnTelnet(registry, { host, port = 23, username = '', cols = 80, rows
     }
   });
   sock.on('error', (e) => {
-    const hint = localnet.hint(e, host); // refused on this Mac (macOS Local Network privacy)? say where the switch is
-    registry.data(id, `\r\n\x1b[31m${t('Telnet error: {error}', { error: hint ? `${e.message} — ${hint}` : e.message })}\x1b[0m\r\n`);
+    const hint = inTerminal(() => localnet.hint(e, host)); // refused on this Mac (macOS Local Network privacy)? say where the switch is
+    registry.data(id, `\r\n\x1b[31m${tt('Telnet error: {error}', { error: hint ? `${e.message} — ${hint}` : e.message })}\x1b[0m\r\n`);
     if (hint) localnet.notify(host);
   });
   sock.on('close', () => registry.exit(id, 0, 'closed'));
@@ -629,16 +629,16 @@ function spawnSerial(registry, opts) {
   };
   port.open((err) => {
     if (err) {
-      registry.data(id, `\r\n\x1b[31m${t('Cannot open {path}: {error}', { path: opts.path, error: driverReason(err) })}\x1b[0m\r\n`);
+      registry.data(id, `\r\n\x1b[31m${tt('Cannot open {path}: {error}', { path: opts.path, error: inTerminal(() => driverReason(err)) })}\x1b[0m\r\n`);
       return finish(1, 'failed');
     }
-    registry.data(id, `\x1b[90m${t('Connected to {path} @ {baud} {mode}', { path: opts.path, baud: baudRate, mode: `${port.settings.dataBits}${(port.settings.parity || 'none')[0].toUpperCase()}${port.settings.stopBits}` })}\x1b[0m\r\n`);
+    registry.data(id, `\x1b[90m${tt('Connected to {path} @ {baud} {mode}', { path: opts.path, baud: baudRate, mode: `${port.settings.dataBits}${(port.settings.parity || 'none')[0].toUpperCase()}${port.settings.stopBits}` })}\x1b[0m\r\n`);
     startProbe();
   });
   port.on('data', (b) => registry.bytes(id, b));
   port.on('error', (e) => {
     if (isGone(e)) return lost(e); // the device is gone: the drop is announced, not the EIO behind it
-    registry.data(id, `\r\n\x1b[31m${t('Serial error: {error}', { error: e.message })}\x1b[0m\r\n`);
+    registry.data(id, `\r\n\x1b[31m${tt('Serial error: {error}', { error: e.message })}\x1b[0m\r\n`);
   });
   port.on('close', (err) => finish(0, (err && err.disconnected) || lostError ? 'lost' : 'closed', (err && err.disconnected && err.message) || (lostError && lostError.message) || undefined));
   registry.register(id, {

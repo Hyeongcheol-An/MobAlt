@@ -5,8 +5,8 @@
 const fs = require('fs');
 const net = require('net');
 const crypto = require('crypto');
-const { execFileSync, spawn } = require('child_process');
-const { t, tn } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn()
+const { execFile, spawn } = require('child_process');
+const { t, tn, tt } = require('./i18n'); // interface language: every message shown to the user goes through t() / tn(); these are printed into the SSH pane, so tt()
 
 const XAUTH_CANDIDATES = ['/opt/X11/bin/xauth', '/usr/X11/bin/xauth', 'xauth'];
 
@@ -63,7 +63,16 @@ function tcpTarget(display) {
  * name ended in :N, which on a Mac that has used X over the network is a stale 192.168.x.x:0 cookie ahead of the local
  * one, and the server then answered every forwarded client with "Invalid MIT-MAGIC-COOKIE-1 key".
  */
-function localCookie(display) {
+// xauth is asked with -i (ignore locks: a read never waits for the lock another xauth — the test sshd's own `xauth add`,
+// a login — holds on ~/.Xauthority) and asynchronously with a time limit: it runs between the key exchange and the shell
+// request, and a synchronous call stuck on the lock froze the whole main process. No answer in time: no cookie — the
+// forwarded clients then meet the existing failure line, the session itself opens.
+const XAUTH_TIMEOUT_MS = 3000;
+const xauthList = (bin, args, env, timeout) => new Promise((resolve, reject) => {
+  execFile(bin, ['-i', 'list', ...args], { encoding: 'utf8', env, timeout, killSignal: 'SIGKILL' }, (err, out) => (err ? reject(err) : resolve(out)));
+});
+
+async function localCookie(display, { candidates = XAUTH_CANDIDATES, timeout = XAUTH_TIMEOUT_MS } = {}) {
   const num = displayNumber(display);
   const parse = (out) => {
     let fallback = null;
@@ -75,14 +84,16 @@ function localCookie(display) {
     }
     return fallback;
   };
-  for (const bin of XAUTH_CANDIDATES) {
+  for (const bin of candidates) {
     try {
       const env = { ...process.env, DISPLAY: display };
-      const exact = parse(execFileSync(bin, ['list', `:${num}`], { encoding: 'utf8', env }));
+      const exact = parse(await xauthList(bin, [`:${num}`], env, timeout));
       if (exact) return exact;
-      const any = parse(execFileSync(bin, ['list'], { encoding: 'utf8', env }));
+      const any = parse(await xauthList(bin, [], env, timeout));
       if (any) return any;
-    } catch {}
+    } catch (e) {
+      if (e && (e.killed || e.signal)) return null; // timed out: another binary would wait the same way
+    }
   }
   return null;
 }
@@ -100,7 +111,7 @@ async function ensureServer(onStatus, timeoutMs = 12000) {
   if (d) return d;
   const appPath = XQUARTZ_APPS.find((p) => fs.existsSync(p));
   if (!appPath) return null;
-  onStatus && onStatus(t('starting XQuartz…'));
+  onStatus && onStatus(tt('starting XQuartz…'));
   try {
     spawn('open', ['-g', '-a', appPath], { stdio: 'ignore', detached: true }).unref();
   } catch {
@@ -123,7 +134,7 @@ async function prepare(onStatus) {
   const display = await ensureServer(onStatus);
   if (!display) return null;
   const fake = crypto.randomBytes(16).toString('hex');
-  const real = localCookie(display);
+  const real = await localCookie(display);
   return {
     display,
     socketPath: socketPathFor(display),
@@ -154,7 +165,7 @@ function cookieMatches(presented, fakeHex) {
  */
 function proxy(channel, x11, onError) {
   const sock = x11.socketPath ? net.connect(x11.socketPath) : net.connect(tcpTarget(x11.display) || { port: 6000 });
-  sock.once('error', (e) => onError && onError(t('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
+  sock.once('error', (e) => onError && onError(tt('cannot connect to local X server at {display}: {error}', { display: x11.socketPath || x11.display, error: e.message })));
   let header = Buffer.alloc(0);
   // nothing to check or swap when the session has neither a fake nor a local cookie
   let done = !x11.fakeCookie && !x11.realCookie;
@@ -212,4 +223,4 @@ function proxy(channel, x11, onError) {
   channel.on('error', () => sock.destroy());
 }
 
-module.exports = { prepare, proxy, cookieMatches, isAvailable, ensureServer, findDisplay, displayNumber, socketPathFor };
+module.exports = { prepare, proxy, cookieMatches, isAvailable, ensureServer, findDisplay, displayNumber, socketPathFor, localCookie };

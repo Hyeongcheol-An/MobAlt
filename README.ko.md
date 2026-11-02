@@ -39,7 +39,7 @@ node-pty 기반의 Electron 앱이며 텔레메트리도 계정도 없습니다.
 | Host key 확인 | ✅ | `~/.ssh/known_hosts` + 앱 자체 목록, 키 변경 시 경고 |
 | MobaKeyGen(SSH 키 생성) | ✅ Generate SSH Key… | `ssh-keygen`으로 Ed25519 / RSA 4096 / ECDSA 생성, 패스프레이즈, 공개 키 + 지문, ssh-agent 등록, `ssh-copy-id`처럼 서버에 설치. 세션 편집기의 *Generate…*가 키 칸을 채움 |
 | 전문가 SSH 설정(KEX / 호스트 키 / 암호 / MAC, 양자내성) | ✅ | Advanced SSH의 세션별 알고리즘 목록(ssh2 기준 검증), "Legacy algorithms"는 프리셋. 불일치 시 양쪽이 제시한 목록을 보여 줌. "양자내성 키 교환"은 ML-KEM-768·sntrup761 하이브리드를 먼저 제시(sntrup761은 OpenSSH 8.5+, 9.0부터 기본; ML-KEM은 9.9+) |
-| 접속 시 SFTP 브라우저 | ✅ Sftp 패널 | 업로드/다운로드(폴더 재귀, 진행률, 취소, 다운로드 이어받기), 새 폴더, 이름 변경, 권한, 삭제, 숨김 파일, 이름 필터 |
+| 접속 시 SFTP 브라우저 | ✅ SFTP 패널 | 업로드/다운로드(폴더 재귀, 진행률, 취소, 다운로드 이어받기), 새 폴더, 이름 변경, 권한, 삭제, 숨김 파일, 이름 필터 |
 | Follow terminal folder | ✅ | bash/zsh용 OSC 7 셸 훅, 세션별 설정 |
 | 원격 모니터링 바 | ✅ | SSH 페인마다 아래에 CPU·메모리·루트 디스크·네트워크 속도·부하·가동 시간·호스트명. 세션 자체 연결로 `sh` 스니펫 하나를 3초마다(2–30초) 실행. 세션별·페인별(페인 머리글, View 메뉴)·Settings 전역 스위치 |
 | 원격 파일 편집 | ✅ | 내장 편집기(⌘S 저장) 또는 외부 편집기(저장 시 자동 업로드) |
@@ -66,7 +66,7 @@ node-pty 기반의 Electron 앱이며 텔레메트리도 계정도 없습니다.
 | 색상 테마 / 다크 모드 | ✅ | Moba Dark, One Dark, Dracula, Solarized Dark, Gruvbox Dark, Light가 터미널만이 아니라 창 전체(툴바·사이드바·탭·대화상자)에 적용. 세션별로 터미널 테마만 덮어쓰기 가능 |
 | 키워드 강조 | ✅ | 오류·경고·OK·IP 주소·URL·용량을 모든 터미널에서 색으로 표시. 편집 가능한 규칙 표(일반 텍스트 또는 정규식, 색 / 배경 / 굵게 / 밑줄, Settings → Features), 색은 테마에서 가져옴. 세션별로 켜고 끌 수 있음 |
 | Mosh | ✅ | mosh 클라이언트를 페인에서 실행(`brew install mosh` 필요), 키 또는 대화형 프롬프트로 ssh 부트스트랩, 동반 SSH 연결로 SFTP |
-| FTP / FTPS | ✅ | 명시적 TLS FTPS, 익명 FTP. Sftp 패널에서 탐색·전송·편집 |
+| FTP / FTPS | ✅ | 명시적 TLS FTPS, 익명 FTP. SFTP 패널에서 탐색·전송·편집 |
 | 웹 브라우저 탭 | ✅ 브라우저 세션 | 터미널 옆 페인에 웹 페이지 — 공유기 관리 화면, Grafana, 터널로 연 `localhost:port`. http/https만, 샌드박스, 뒤로 / 앞으로 / 새로 고침, ⌘L 주소 입력란. 다른 페인처럼 분할·확대·창 분리·작업대 복원. 로그인은 공유 또는 세션별 |
 
 MobaXterm 26.6과의 기능별 전체 비교: [docs/MOBAXTERM_PARITY.ko.md](docs/MOBAXTERM_PARITY.ko.md).
@@ -203,7 +203,7 @@ npm run perf           # 시작 시간·유휴 CPU·메모리·번들 크기 측
 - MobaXterm.ini는 비공개 형식이라 호스트/포트/사용자/폴더/X11 플래그만 가져오고 비밀번호는 가져오지 않습니다.
   `.ppk` 키는 `puttygen`으로 OpenSSH 형식으로 변환하세요.
 - Mosh는 이 Mac에 `mosh` 클라이언트, 원격 호스트에 `mosh-server`(UDP 60000-61000)가 필요합니다. 페인에서
-  mosh 클라이언트가 돌기 때문에 Zmodem은 쓸 수 없고, Sftp 패널은 별도의 SSH 연결로 호스트에 접속합니다.
+  mosh 클라이언트가 돌기 때문에 Zmodem은 쓸 수 없고, SFTP 패널은 별도의 SSH 연결로 호스트에 접속합니다.
 - *Timed out while waiting for handshake* / `ETIMEDOUT`이면 먼저 `nc -vz <host> <port>`로 도달 여부를 확인하세요.
   인증 실패가 반복되면 서버의 fail2ban이나 sshd `PerSourcePenalties`가 IP를 잠시 차단했을 수 있습니다.
 - macOS 15 이상에서는 로컬 네트워크의 호스트에 연결하려면 *로컬 네트워크* 권한이 필요합니다(시스템 설정 →

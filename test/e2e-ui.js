@@ -8,6 +8,9 @@
   const results = {};
   const closeModal = () => document.querySelector('.modal .close')?.click();
   try {
+    // the side strip names the panel as the protocol is written: SFTP
+    results.sftpStripLabel = document.querySelector('.strip-btn[data-panel="sftp"] span').textContent.trim() === 'SFTP';
+
     // session editor
     app.action('new-session');
     await sleep(400);
@@ -112,6 +115,55 @@
       results.localStartFolder = /^\/private\/tmp$/m.test(text);
       await shot('18-local-startup');
       await window.api.sessions.remove(s.id);
+    }
+
+    // a shell that ends on the bottom row: the dim "── Session ended. … ──" line stays readable above the
+    // Reconnect / Close strip (the strip is taller than one row and covers the last rows of the terminal)
+    {
+      const pane = await app.newLocalTab();
+      await sleep(1200);
+      pane.term.input('seq 1 300; exit 3\r'); // a non-zero status: the pane stays, marked dead, after the screen filled
+      for (let i = 0; i < 100 && !pane.dead; i++) await sleep(100);
+      await sleep(400);
+      const buf = pane.term.buffer.active;
+      let row = -1;
+      for (let i = buf.length - 1; i >= 0; i--) if (/Session ended/.test(buf.getLine(i)?.translateToString(true) || '')) { row = i; break; }
+      const sr = pane.el.querySelector('.xterm-screen').getBoundingClientRect(), rowH = sr.height / pane.term.rows;
+      const y = row - buf.viewportY, lineBottom = sr.top + (y + 1) * rowH, stripTop = pane.overlay ? pane.overlay.getBoundingClientRect().top : -1;
+      results.deadLineAboveStrip = pane.dead && row >= 0 && y >= 0 && y < pane.term.rows && lineBottom <= stripTop + 1;
+      if (!results.deadLineAboveStrip) log('deadLine', JSON.stringify({ dead: pane.dead, row, y, rows: pane.term.rows, lineBottom, stripTop }));
+      await shot('19-dead-line-above-strip');
+      // Reconnect: the new shell starts one blank row below the dead line, as it did before the padding
+      await pane.reconnect();
+      await sleep(1500);
+      const rowsText = []; for (let i = row; i < buf.length && i < row + 6; i++) rowsText.push(pane.term.buffer.active.getLine(i)?.translateToString(true) || '');
+      results.reconnectOneBlankRow = pane.status === 'connected' && rowsText[1].trim() === '' && rowsText[2].trim() !== '';
+      if (!results.reconnectOneBlankRow) log('reconnect rows', JSON.stringify(rowsText));
+      // a shell that ends high on the screen gets no padding at all
+      const fresh = await app.newLocalTab();
+      await sleep(1000);
+      fresh.term.input('clear; exit 4\r');
+      for (let i = 0; i < 60 && !fresh.dead; i++) await sleep(100);
+      await sleep(400);
+      results.noPadHighUp = fresh.dead && fresh._deadPad === 0;
+      await app.closePane(fresh, true);
+      await app.closePane(pane, true);
+      await sleep(300);
+    }
+
+    // the find bar closes with the last tab: it does not stay over the "No terminal open" card
+    {
+      await app.saveSettings({ confirmClose: false });
+      while (app.workspace.tabs.length) { await app.closeTab(app.workspace.tabs[0]); await sleep(150); }
+      const pane = await app.newLocalTab();
+      await sleep(600);
+      app.action('find');
+      await sleep(150);
+      const openBefore = !document.getElementById('find-bar').hidden;
+      await app.closeTab(pane.tab);
+      await sleep(400);
+      results.findBarClosesWithLastTab = openBefore && !app.workspace.tabs.length && document.getElementById('find-bar').hidden && !document.body.classList.contains('find-open') && !!document.querySelector('#tab-content .workspace-empty');
+      await shot('20-no-tab-no-find-bar');
     }
 
     log('RESULTS ' + JSON.stringify(results));

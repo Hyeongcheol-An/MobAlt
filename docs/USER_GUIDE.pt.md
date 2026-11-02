@@ -76,7 +76,7 @@ e preencha a aba Básico. Clique duas vezes numa sessão para conectar; clique c
 | Local | O seu shell de login do macOS (zsh/bash), com acompanhamento da pasta |
 | Telnet | Telnet clássico com negociação NAWS/TTYPE; o nome de usuário da sessão é enviado no prompt `login:` |
 | Serial | Console USB-serial (baud, enquadramento, controle de fluxo, eco local) |
-| FTP | Navegador de arquivos FTP / FTPS (TLS explícito) no painel Sftp |
+| FTP | Navegador de arquivos FTP / FTPS (TLS explícito) no painel SFTP |
 | RDP / VNC | Passa a conexão ao Windows App ou ao Compartilhamento de Tela do macOS |
 | Navegador | Uma página web num painel ao lado dos seus terminais — um roteador, o Grafana, a interface web de um dispositivo, um `localhost` encaminhado por túnel (só http/https; veja [Sessões de navegador](#sessões-de-navegador)) |
 
@@ -237,7 +237,7 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
   ficam decoradas por terminal — numa rajada longa, as linhas mais antigas perdem a cor primeiro — e ⌘K remove todas.
 - **Zmodem (rz/sz)**: transfira arquivos pelo próprio terminal, do jeito clássico, por um console serial ou um host de salto
   onde o SFTP não está disponível. Execute `sz arquivo …` no remoto para baixar para o Mac, ou `rz` para enviar a partir dele; o MobAlt
-  detecta a transferência no fluxo, pausa o terminal e a mostra na lista de transferências do painel Sftp (com Cancelar)
+  detecta a transferência no fluxo, pausa o terminal e a mostra na lista de transferências do painel SFTP (com Cancelar)
   e no contador da barra de estado. Os downloads vão para a Pasta de downloads (Ajustes → Geral), ou para uma pasta que você escolhe quando nenhuma
   está definida; os envios abrem um seletor de arquivos. Funciona em painéis SSH, locais, telnet e serial — não no Mosh (o fluxo dele é o do
   cliente mosh, não um fluxo de bytes bruto). Desative em Ajustes → Recursos → Transferências → *Transferências Zmodem (rz/sz)* (ativado por padrão);
@@ -247,7 +247,7 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
   com o mesmo nome é salvo como `nome (1).ext` e listado com esse nome.
 - **Área de transferência**: selecionar copia (Ajustes → Terminal → Copiar ao selecionar); o clique direito cola
   (⇧-clique direito abre o menu). Soltar arquivos do Finder num terminal SSH os envia;
-  num terminal local, cola os caminhos. Se a pasta do shell é desconhecida (a sessão não segue o terminal), eles vão para a pasta que o painel Sftp
+  num terminal local, cola os caminhos. Se a pasta do shell é desconhecida (a sessão não segue o terminal), eles vão para a pasta que o painel SFTP
   mostra para essa conexão; se o painel ainda não está aberto, você é perguntado antes.
 - **Proteção de colagem**: uma colagem com mais de uma linha (ou com mais de 1000 caracteres) pede confirmação antes — *Colar N
   linhas em …?* mostra o texto numa pré-visualização editável; ⌘⏎ cola, Esc cancela. Toda colagem também é
@@ -285,8 +285,8 @@ diálogo de pasta e deixa o campo como estava se você cancelar.
 
 ![Painel SFTP](images/pt/sftp-panel.png)
 
-O painel **Sftp** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente ao conectar
-(Ajustes → Geral → “Abrir o painel Sftp ao conectar via SSH”).
+O painel **SFTP** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente ao conectar
+(Ajustes → Geral → “Abrir o painel SFTP ao conectar via SSH”).
 
 - Navegue clicando duas vezes nas pastas, digitando um caminho (`~` funciona) ou usando ⬆ / 🏠 / ⟳.
   “Seguir terminal” mantém o painel na pasta atual do shell (requer a opção da
@@ -375,10 +375,10 @@ se conecta, e você é avisado se algum não conseguir escutar na porta. Uma por
 - **Mosh**: requer `brew install mosh` localmente e `mosh-server` no host (UDP 60000-61000).
   O painel executa o cliente mosh; a inicialização via SSH usa a sua chave, o agente ou um pedido interativo.
   Defina o caminho do `mosh-server` se ele não estiver no PATH remoto.
-- **Mosh + SFTP**: o mosh não transporta um canal SFTP, então o painel Sftp navega por um host Mosh através de uma
+- **Mosh + SFTP**: o mosh não transporta um canal SFTP, então o painel SFTP navega por um host Mosh através de uma
   conexão SSH separada e sem shell para o mesmo host (mesma chave, agente e pedidos). Ela abre
   automaticamente quando “Abrir o navegador SFTP automaticamente” está ativado na sessão (e “Abrir o painel
-  Sftp” em Ajustes → Geral); caso contrário, pelo botão “Abrir SFTP para este host (via SSH)” do painel ou por
+  SFTP” em Ajustes → Geral); caso contrário, pelo botão “Abrir SFTP para este host (via SSH)” do painel ou por
   “Abrir Navegador SFTP” no menu do painel; ela é encerrada junto com o painel.
 - **Serial**: o editor lista os dispositivos USB-serial; defina baud, bits de dados/parada, paridade, controle de fluxo,
   eco local e o que o Enter envia (CR, LF, CRLF). *Enviar Break* no menu do painel mantém a linha em estado de break
@@ -429,7 +429,7 @@ texto alinhado à direita; os terminais continuam da esquerda para a direita). P
 a lista de idiomas do macOS (Ajustes do Sistema → Geral → Idioma e Região): vence o primeiro idioma dessa lista que
 o MobAlt oferece, e o inglês quando nenhum deles é oferecido. Ajustes → Geral → **Idioma** escolhe um explicitamente; a mudança
 vale na hora em todas as janelas — nada reinicia, as conexões continuam ativas — e fica memorizada. A saída do terminal nunca é
-traduzida: o que um host remoto escreve é mostrado como está. O guia do usuário existe nos mesmos onze idiomas
+traduzida: o que um host remoto escreve é mostrado como está. As linhas que o próprio MobAlt escreve num terminal (“Conectando a …”, “Troca de chaves …”, “Falha na conexão: …”, “── Sessão encerrada. … ──”) seguem o idioma da interface, exceto em árabe e híndi, em que ficam em inglês: um terminal desenha um caractere por célula, da esquerda para a direita, e não consegue ligar as letras árabes nem compor o devanágari. O guia do usuário existe nos mesmos onze idiomas
 (`docs/USER_GUIDE.<language>.md`); Ajuda → **Guia do Usuário** abre o do idioma atual.
 
 Em árabe, a janela inteira é lida da direita para a esquerda: a faixa lateral e a barra lateral vão para a borda direita e os

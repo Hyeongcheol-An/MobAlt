@@ -2,7 +2,9 @@
 // edge, the terminals on the left, toasts bottom-left, menus opening towards the left of the pointer and staying in the
 // window, the dialog's ✕ on the left of its title — while the terminal, the technical fields (quick connect, paths)
 // and the split directions keep their left-to-right / physical meaning. Switching back to English restores it all.
-//   env -u ELECTRON_RUN_AS_NODE MOBALT_LANG=ar test/qa/run.sh test/e2e-rtl.js <out-dir> 180000
+//   env -u ELECTRON_RUN_AS_NODE MOBALT_LANG=ar test/qa/run.sh test/e2e-rtl.js <out-dir> 180000   (test/start-sshd.sh start first)
+// The lines MobAlt itself writes into a terminal ("Connecting to …", "── Session ended. … ──") stay in English: xterm.js
+// draws Arabic reversed and unjoined (src/main/i18n.js LANGUAGES `terminal`).
 // (without an Arabic dictionary the labels stay English: the direction follows the language code, not the strings)
 (async () => {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -57,6 +59,49 @@
     const i18n = await import('./i18n.js');
     const iso = i18n.format('{path} / {n}', { path: '~/Downloads', n: 3 });
     check('valuesIsolated', iso === '\u2068~/Downloads\u2069 / 3', JSON.stringify(iso));
+
+    // ---- the lines MobAlt writes into a terminal stay in English (xterm.js has no bidi and no shaping) ----
+    // needs the test sshd (test/start-sshd.sh start); the host-key dialog of this fresh run is accepted on sight
+    {
+      const user = app.info.home.split('/').pop(), keyDir = app.info.appPath + '/test/sshd-runtime';
+      const hk = new MutationObserver(() => { const b = document.querySelector('#modal-root .modal .btn.primary'); if (b) b.click(); });
+      hk.observe(document.getElementById('modal-root'), { childList: true, subtree: true });
+      const ss = await app.saveSession({ name: 'rtl-sshd', type: 'ssh', host: '127.0.0.1', port: 2222, username: user, authMethod: 'key', privateKeyPath: keyDir + '/client_ed25519', sftpAuto: false, monitor: false });
+      const sp = await app.openSession(ss);
+      for (let i = 0; i < 150 && sp.status !== 'connected' && !sp.dead; i++) await sleep(100);
+      await sleep(600);
+      const lines = () => [...Array(sp.term.buffer.active.length)].map((_, i) => sp.term.buffer.active.getLine(i)?.translateToString(true) || '');
+      const first = lines().filter((l) => l.trim()).slice(0, 3); // "Connecting to …", "Server accepts: …", "Key exchange …"
+      check('sshConnected', sp.status === 'connected', sp.status);
+      check('terminalLinesEnglish', first.length === 3 && /^Connecting to /.test(first[0]) && first.some((l) => /^Server accepts: /.test(l)) && first.some((l) => /^Key exchange /.test(l)) && first.every((l) => /^[\x20-\x7e]+$/.test(l)), first);
+      sp.term.input('exit\r');
+      for (let i = 0; i < 80 && !sp.dead; i++) await sleep(100);
+      await sleep(300);
+      const dead = lines().find((l) => /──/.test(l)) || '';
+      check('deadLineEnglish', /── Session ended\. Press Enter to reconnect, ⌘W to close\. ──/.test(dead), dead);
+      check('overlayTranslated', !!sp.overlay && sp.overlay.querySelector('span').textContent === i18n.t('Session ended.'), sp.overlay && sp.overlay.textContent);
+      await shot('rtl-terminal-lines');
+      hk.disconnect();
+      await app.closePane(sp, true); await sleep(300);
+    }
+
+    // a start that fails in main (a Mosh host-key check against a closed port): "Failed to start: …" in the terminal
+    // is English all through, the status bar keeps the Arabic reason (main.js forPane, terminal.js startErrorText)
+    {
+      const msgs = [], orig = app.onPaneStatus;
+      app.onPaneStatus = function (pane, msg) { if (msg) msgs.push(msg); return orig.call(this, pane, msg); };
+      const ms = await app.saveSession({ name: 'rtl-mosh', type: 'mosh', host: '127.0.0.1', port: 1, username: 'u' });
+      const mp = await app.openSession(ms);
+      for (let i = 0; i < 60 && !mp.dead; i++) await sleep(100);
+      await sleep(300); // xterm parses a write on the next frame
+      const text = [...Array(mp.term.buffer.active.length)].map((_, i) => mp.term.buffer.active.getLine(i)?.translateToString(true) || '').join('\n');
+      const from = text.indexOf('Failed to start: ');
+      const failed = from < 0 ? '' : text.slice(from).split(/\n\s*\n|──/)[0].replace(/\n/g, '').trim(); // the line wraps in the narrow pane
+      app.onPaneStatus = orig;
+      check('startFailureEnglish', /^Failed to start: .*ECONNREFUSED.* — the host is reachable but nothing listens on that port\./.test(failed) && !/[\u0600-\u06ff]/.test(text), { failed, text: text.trim().slice(0, 300) });
+      check('startFailureStatusArabic', msgs.some((m) => /ECONNREFUSED/.test(m) && /[\u0600-\u06ff]/.test(m) && !/\u001f/.test(m)), msgs);
+      await app.closePane(mp, true); await sleep(300);
+    }
 
     // ---- toasts: bottom-left quadrant ----
     ui.toast('RTL toast sample', 'info'); await sleep(250);
@@ -153,6 +198,15 @@
     app.action('multiexec'); await sleep(150); app.action('find'); await sleep(200);
     const fb = document.querySelector('#find-bar').getBoundingClientRect();
     check('findBarAtTheLeft', fb.left < W() / 2 && fb.left >= 0, { l: fb.left, r: fb.right });
+    // the counter "1 / 3" reads left to right (the bidi algorithm alone shows "3 / 1"); "No matches" stays a sentence
+    app.activePane().term.write('\r\nrtlfind rtlfind rtlfind\r\n'); await sleep(200);
+    const fin = document.querySelector('#find-input'), cnt = document.querySelector('#find-count');
+    fin.value = 'rtlfind'; fin.dispatchEvent(new Event('input')); await sleep(400);
+    const cs = getComputedStyle(cnt);
+    check('findCountLtr', /^\d+ \/ \d+$/.test(cnt.textContent) && cs.direction === 'ltr' && cs.unicodeBidi === 'isolate', { text: cnt.textContent, dir: cs.direction, ub: cs.unicodeBidi });
+    fin.value = 'zz-no-such-text-zz'; fin.dispatchEvent(new Event('input')); await sleep(400);
+    check('findNoMatchSentenceRtl', cnt.textContent === i18n.t('No matches') && getComputedStyle(cnt).direction === 'rtl', { text: cnt.textContent, dir: getComputedStyle(cnt).direction });
+    fin.value = 'rtlfind'; fin.dispatchEvent(new Event('input')); await sleep(300);
     ui.toast('Toast above the find bar', 'warn'); await sleep(200);
     await shot('rtl-split-find');
     app.action('find-close'); app.action('multiexec'); await sleep(150);
