@@ -141,8 +141,9 @@ function setupUpdater(store, getWin, hooks = {}) {
       const blocking = (await others()).length;
       if (blocking || !state.downloaded) { // (a Squirrel error during the look forgot the file: nothing to install)
         const version = state.downloaded;
-        state.installing = false;
-        if (blocking && version) await otherInstancesSheet(win(), version);
+        // the latch stays up while the sheet is open: a click in another window meanwhile shares this answer instead of
+        // queueing a second sheet (the sheet is modal to the main window only)
+        try { if (blocking && version) await otherInstancesSheet(win(), version); } finally { state.installing = false; }
         return false;
       }
       try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}

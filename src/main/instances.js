@@ -39,7 +39,9 @@ function parseOtherInstances(text, exe, pid) {
  */
 function otherInstances(exe, pid = process.pid) {
   return new Promise((resolve) => {
-    execFile('/bin/ps', ['-axo', 'pid,ppid,comm'], { timeout: 3000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => {
+    // -x without -a: this user's processes only. ShipIt waits for the instances of this login session; another user's
+    // MobAlt (fast user switching) is not ours to quit and must not hold the install.
+    execFile('/bin/ps', ['-xo', 'pid,ppid,comm'], { timeout: 3000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout) => {
       if (err) return resolve([]);
       try { resolve(parseOtherInstances(stdout, exe, pid)); } catch { resolve([]); }
     });
