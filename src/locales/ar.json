@@ -1526,5 +1526,11 @@
   "No route to {where} (EHOSTUNREACH)": "لا يوجد مسار إلى {where} (EHOSTUNREACH)",
   "On a Mac this usually means macOS has not allowed MobAlt on the local network: turn MobAlt on under System Settings → Privacy & Security → Local Network, then connect again.": "على الـ Mac يعني هذا عادةً أن macOS لم يسمح لـ MobAlt بالوصول إلى الشبكة المحلية: فعّل MobAlt في إعدادات النظام ← الخصوصية والأمن ← الشبكة المحلية، ثم اتصل مرة أخرى.",
   "Open System Settings": "فتح إعدادات النظام",
-  "The connection to {host} was refused on this Mac before anything was sent (EHOSTUNREACH). On macOS 15 and later this usually means MobAlt is not allowed on the local network: turn it on under System Settings → Privacy & Security → Local Network, then connect again. Hosts outside the local network are not affected.": "رُفض الاتصال بـ {host} على هذا الـ Mac قبل إرسال أي شيء (EHOSTUNREACH). في macOS 15 والإصدارات الأحدث يعني هذا عادةً أن MobAlt غير مسموح له بالوصول إلى الشبكة المحلية: فعّله في إعدادات النظام ← الخصوصية والأمن ← الشبكة المحلية، ثم اتصل مرة أخرى. لا يتأثر المضيفون خارج الشبكة المحلية."
+  "The connection to {host} was refused on this Mac before anything was sent (EHOSTUNREACH). On macOS 15 and later this usually means MobAlt is not allowed on the local network: turn it on under System Settings → Privacy & Security → Local Network, then connect again. Hosts outside the local network are not affected.": "رُفض الاتصال بـ {host} على هذا الـ Mac قبل إرسال أي شيء (EHOSTUNREACH). في macOS 15 والإصدارات الأحدث يعني هذا عادةً أن MobAlt غير مسموح له بالوصول إلى الشبكة المحلية: فعّله في إعدادات النظام ← الخصوصية والأمن ← الشبكة المحلية، ثم اتصل مرة أخرى. لا يتأثر المضيفون خارج الشبكة المحلية.",
+  "Downloading MobAlt {version}…": "جارٍ تنزيل MobAlt {version}…",
+  "Downloading MobAlt {version} — {percent} % ({transferred} of {total} MB, {speed} MB/s)": "جارٍ تنزيل MobAlt {version} — {percent}% ({transferred} من {total} MB بسرعة {speed} MB/s)",
+  "MobAlt {version} downloaded — it is installed when you quit, or restart now": "تم تنزيل MobAlt {version} — سيتم تثبيته عند الإنهاء، أو أعِد التشغيل الآن",
+  "Download of MobAlt {version} failed: {error}": "فشل تنزيل MobAlt {version}: {error}",
+  "Download progress": "تقدم التنزيل",
+  "Quit and install the downloaded update": "الإنهاء وتثبيت التحديث الذي تم تنزيله"
 }
