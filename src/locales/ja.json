@@ -1458,5 +1458,8 @@
   "URL copied": "URLをコピーしました",
   "URL is required": "URLは必須です",
   "Use user@host[:port], optionally with ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc://, or an http:// / https:// address": "user@host[:port]の形式で入力してください。ssh:// mosh:// telnet:// ftp:// ftps:// rdp:// vnc:// を前に付けることもできます。http:// / https:// のアドレスも開けます",
-  "User name": "ユーザ名"
+  "User name": "ユーザ名",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "このホスト鍵はknown_hostsで失効済みとしてマークされています。MobAltはこの鍵では接続しません。",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "このMacでは秘密情報を暗号化できません（キーチェーンを使用できません）— パスワードは保護されずに保存されます",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": "、うち{n}件は開くとコマンドを実行（起動時コマンドまたはカスタムシェル）"
 }

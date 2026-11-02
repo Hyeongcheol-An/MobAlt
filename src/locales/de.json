@@ -1608,5 +1608,11 @@
   "MobAlt {version} downloaded — it is installed when you quit, or restart now": "MobAlt {version} heruntergeladen — wird beim Beenden installiert",
   "Download of MobAlt {version} failed: {error}": "Download von MobAlt {version} fehlgeschlagen: {error}",
   "Download progress": "Downloadfortschritt",
-  "Quit and install the downloaded update": "Beenden und das heruntergeladene Update installieren"
+  "Quit and install the downloaded update": "Beenden und das heruntergeladene Update installieren",
+  "This host key is marked as revoked in known_hosts. MobAlt will not connect with it.": "Dieser Hostschlüssel ist in known_hosts als widerrufen markiert. MobAlt baut damit keine Verbindung auf.",
+  "Secrets cannot be encrypted on this Mac (Keychain unavailable) — passwords are stored unprotected": "Geheimnisse können auf diesem Mac nicht verschlüsselt werden (Schlüsselbund nicht verfügbar) — Passwörter werden ungeschützt gespeichert",
+  ", {n} of them runs commands when opened (startup commands or a custom shell)": [
+    ", davon führt {n} beim Öffnen Befehle aus (Startbefehle oder eigene Shell)",
+    ", davon führen {n} beim Öffnen Befehle aus (Startbefehle oder eigene Shell)"
+  ]
 }
