@@ -76,6 +76,17 @@ MOBALT_APP_DIR=/path/to/checkout test/qa/run.sh ...      # run another checkout 
   `MOBALT_APP=dist-qa/mac-arm64/MobAlt.app` runs a packaged app — it has to be a `npm run pack:qa` build (a release
   such as `/Applications/MobAlt.app` ignores the test script and the run ends without a RESULTS line), `LOCALNET_HOST=` picks the host (default: the gateway).
 
+- Where a run leaves things (all under `<out-dir>/userdata` unless noted, and deleted with it): settings, sessions,
+  `known_hosts`, workspace; the local shell's history (`userdata/zdotdir/.zsh_history`, unless your zsh files set
+  `HISTFILE`); browser panes' cookies and cache (`userdata/Partitions/browser*`); session logs
+  (`userdata/MobAlt Logs/`). Remote files opened with *Edit in external editor* are copied to `$TMPDIR/mobalt-edit/`
+  and removed when the app quits (a run that is killed leaves them). `**/userdata/` and `**/MobAlt Logs/` are
+  git-ignored.
+- Security checks: `test/e2e-hostkey.js` (the host-key dialog from the keyboard: a changed key is not accepted by
+  Enter, a key of another type is "changed", an `@revoked` key is refused; needs the test sshd) and
+  `test/e2e-security.js` (what the window may open: external URLs, folders, `vnc://`, navigation, `window.open`,
+  OSC 8 links; no server).
+
 ## Renderer API available to scripts
 
 ```js

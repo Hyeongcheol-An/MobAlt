@@ -93,7 +93,9 @@ whose `id` matches an existing one is replaced by the file's version (a password
 every other one is added — a hand-written entry without an `id` is always added, and a `password` written
 into the file is taken and stored encrypted — folders are added and nothing is deleted, so importing the same
 file twice changes nothing. Entries without a name, with an unknown type or a bad port are skipped and
-counted in the toast; a file that is not a MobAlt sessions file is refused with the reason. `~/.ssh/config`
+counted in the toast; a file that is not a MobAlt sessions file is refused with the reason. The toast also says
+how many of the imported sessions run commands when opened (startup commands, or a local session's shell) — look at
+those before you open them when the file came from someone else. `~/.ssh/config`
 skips hosts you already have (same folder and name). MobaXterm bookmarks go under a `MobaXterm` folder; one
 imported before (same folder, name and host) is refreshed in place — host, port, user, X11 and compression
 follow the `.ini`, while its saved password, icon, colour, tunnels and a key path you set stay — so importing
@@ -114,7 +116,11 @@ folder dialog and leaves the field as it was when you cancel.
   default keys in `~/.ssh` before prompting. Choose *Password*, *Private key* or *SSH agent* to
   restrict it. Keys with a passphrase prompt once; tick "Save in session" to keep it.
 - **Host keys**: the first connection shows the fingerprint (SHA256 and MD5). Accepting stores the
-  key; a changed key is flagged loudly and never accepted silently.
+  key; a changed key is flagged loudly and never accepted silently: in that dialog **Cancel** is the default button,
+  so Enter refuses — accepting the new key takes a click on *Accept new key* (or Tab to it). A host already known
+  with a key of another type counts as changed, like OpenSSH. A key marked `@revoked` in a `known_hosts` file is
+  refused outright: the dialog says why and has no Accept button. Host names in `known_hosts` match regardless of
+  case, and `*` / `?` / `!` patterns work as in OpenSSH.
 - **SSH keys**: Session → Generate SSH Key… (also the Tools panel, and *Generate…* next to the
   private-key field in the session editor) runs macOS's `ssh-keygen` for you: Ed25519 (default),
   RSA 4096 or ECDSA, a comment, an optional passphrase with a strength hint, and the file (default
@@ -295,6 +301,10 @@ The **Sftp** panel follows the active SSH or FTP pane. It opens automatically on
   with ⌘ / ⇧. Drag files from Finder onto the list to upload; existing names ask before overwriting.
 - Double-click a text file to edit it in the built-in editor (⌘S saves back). "Edit in external
   editor" opens it in your editor (Settings → General → External editor) and re-uploads on every save.
+  The setting is a program and its arguments — `code --wait`, `open -a "Sublime Text"`, `mate -w {file}` — started
+  directly, not through a shell: quotes group words, `{file}` is replaced by the file's path (else the path goes
+  last), and nothing else is expanded (no `$VAR`, `~` only at the start of the program, no `;` or pipes). The local
+  copy lives in `$TMPDIR/mobalt-edit/` and is deleted when MobAlt quits.
 - Transfers show progress, speed and a cancel button; "Show in Finder" after a download. A download is written to
   `<name>.part` and takes its name once complete; if it stops (a dropped connection, Disconnect), the next download
   of the same file offers *Resume* or *Start over*.
@@ -365,7 +375,9 @@ this Mac* (or *on the server* for a remote forward).
 ## X11, Mosh, Serial, RDP/VNC
 
 - **X11**: tick "X11 forwarding" in Advanced SSH. MobAlt starts XQuartz when needed, forwards the
-  display and swaps the auth cookie, so `xeyes` or `gedit` just work. The status bar shows X11
+  display and swaps the auth cookie, so `xeyes` or `gedit` just work. Only X clients that present the session's
+  own (fake) cookie get through — what sshd sets up for your login — so another user on the server cannot reach
+  your Mac's display. The status bar shows X11
   availability.
 - **Mosh**: needs `brew install mosh` locally and `mosh-server` on the host (UDP 60000-61000).
   The pane runs the mosh client; the SSH bootstrap uses your key, agent or an interactive prompt.
@@ -485,9 +497,15 @@ session filter or the quick-connect box clears it and returns to the terminal.
 
 Everything stays in `~/Library/Application Support/MobAlt/`: `sessions.json` (passwords and
 passphrases encrypted through the macOS Keychain), `settings.json`, `known_hosts`,
-`workspace.json`, and the zsh integration files. Session logs go to `~/Documents/MobAlt Logs/`.
+`workspace.json`, and the zsh integration files (`zdotdir/`, which also holds the local shell's history,
+`zdotdir/.zsh_history`, unless your own zsh files set `HISTFILE`). These files, the app's `known_hosts` and session logs are readable by your account only
+(0600). Session logs go to `~/Documents/MobAlt Logs/`. Browser panes keep their cookies and cache under
+`Partitions/` in the same folder (cookies encrypted). A remote file opened with *Edit in external editor* is copied to
+`$TMPDIR/mobalt-edit/` and deleted when MobAlt quits. If the Keychain cannot be used, saved passwords still work but
+are stored unprotected (base64), and MobAlt shows a warning once per run.
 MobAlt connects only to the hosts you configure; the optional update check reads the release list
-on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
+on GitHub and nothing else. Links open in your default browser only when they are `http(s)` or `mailto` (a
+terminal link with any other scheme does nothing). Details: [SECURITY.md](../SECURITY.md).
 
 ## Troubleshooting
 
@@ -507,7 +525,8 @@ on GitHub and nothing else. Details: [SECURITY.md](../SECURITY.md).
   of those in Advanced SSH → Algorithms (or *Reset to defaults*); for an old appliance that only
   offers SHA-1 / CBC, tick "Legacy algorithms (old devices)".
 - **Host key changed**: the server was reinstalled, or something is intercepting the connection.
-  Only accept if you know why; the old key can be removed from `known_hosts` in the config folder.
+  Only accept if you know why (Enter cancels; click *Accept new key*); the old key can be removed from `known_hosts`
+  in the config folder.
 - **X11 app does not appear**: install XQuartz, and make sure the remote shell does not override
   `DISPLAY` in its startup files.
 - **Mosh**: "mosh client not found" means `brew install mosh` is missing locally;
