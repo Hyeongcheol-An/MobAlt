@@ -307,6 +307,8 @@ Le panneau **SFTP** suit le volet SSH ou FTP actif. Il s'ouvre automatiquement �
 
 ## Sessions navigateur
 
+![La page d'administration d'un routeur dans un volet à côté du shell qui le gère](images/fr/browser-session.png)
+
 Une session **Navigateur** ouvre une page web dans un volet qui lui est propre — la page d'administration d'un routeur,
 Grafana, l'interface web d'un appareil, le port `localhost` d'un tunnel — à côté des terminaux qui la gèrent. Créez-en
 une avec ＋ Session → Navigateur (l'URL ; un nom qui vaut par défaut l'hôte ; une icône et une couleur comme pour

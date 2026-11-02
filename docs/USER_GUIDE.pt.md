@@ -304,6 +304,8 @@ O painel **SFTP** acompanha o painel SSH ou FTP ativo. Ele abre automaticamente 
 
 ## Sessões de navegador
 
+![A página de administração de um roteador num painel ao lado do shell que o gerencia](images/pt/browser-session.png)
+
 Uma sessão **Navegador** abre uma página web num painel próprio — a página de administração de um roteador, o Grafana,
 a interface web de um dispositivo, a porta `localhost` de um túnel — ao lado dos terminais que a administram. Crie uma
 com ＋ Sessão → Navegador (a URL; um nome que por padrão é o host; um ícone e uma cor como em qualquer sessão) ou digite
