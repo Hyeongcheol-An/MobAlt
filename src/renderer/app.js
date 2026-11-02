@@ -395,9 +395,11 @@ class App {
       this.saveWorkspaceNow(); // sent before app:relaunch on the same channel, so it lands first
       window.api.app.relaunch();
     });
-    $('#update-install').addEventListener('click', () => {
+    $('#update-install').addEventListener('click', (e) => {
+      const b = e.currentTarget;
+      b.disabled = true; // one install: a second click would stack a second quitAndInstall behind the first
       this.saveWorkspaceNow(); // as for Relaunch: the workspace is on disk before the quit
-      window.api.app.installUpdate();
+      window.api.app.installUpdate().then((ok) => { if (!ok) b.disabled = false; }, () => { b.disabled = false; });
     });
     $('#update-later').addEventListener('click', () => {
       if (this.updateProgress) this.updateProgress = null;
@@ -1209,6 +1211,12 @@ class App {
   onUpdateProgress(p) {
     if (!p || typeof p !== 'object' || !p.phase) return;
     clearTimeout(this._updateErrorTimer);
+    // The banner is a live region (role="status"): the start, the end and a failure are announced, the once-a-second
+    // figures in between are not (the bar still exposes the value) — or a screen reader would read the line all download long.
+    const prev = this.updateProgress;
+    const repeat = p.phase === 'downloading' && !!prev && prev.phase === 'downloading' && prev.version === p.version;
+    $('#update-banner').setAttribute('aria-live', repeat ? 'off' : 'polite');
+    if (p.phase === 'done') $('#update-install').disabled = false; // a fresh offer (a later check found the file again): the button is usable again
     this.updateProgress = p;
     if (p.phase === 'error') {
       this._updateErrorTimer = setTimeout(() => {
@@ -1225,6 +1233,7 @@ class App {
     const p = this.updateProgress;
     const mode = p ? p.phase : this.updateOnDisk && this.updateOnDisk !== this.updateDismissed ? 'on-disk' : '';
     $('#update-banner').dataset.mode = mode;
+    if (mode !== 'downloading') $('#update-banner').setAttribute('aria-live', 'polite'); // only the download's ticks are kept quiet (onUpdateProgress)
     const bar = $('#update-progress');
     bar.hidden = mode !== 'downloading';
     if (!bar.hidden) bar.value = progressParts(p).percent / 100;

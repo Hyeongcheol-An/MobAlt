@@ -521,13 +521,14 @@ body.find-open #toast-root { bottom: 84px; }                       /* toasts nev
 #update-banner .btn.small:not(.primary) { background: transparent; border-color: var(--info-border); color: var(--info-fg); }
 #update-banner .btn.small:not(.primary):hover { background: color-mix(in srgb, var(--info-fg) 10%, transparent); }
 #update-banner .btn:focus-visible { outline: 2px solid var(--info-fg); outline-offset: 1px; } /* the accent ring would sink into the blue bar */
-/* The same bar while the updater downloads a release (app.js onUpdateProgress): the thin progress bar sits in the row, so
-   the banner keeps its one-row height in every state and the terminals re-fit only when it appears or goes. */
+/* The same bar while the updater downloads a release (app.js onUpdateProgress): the thin progress bar sits in the row. The
+   bar's height is pinned to its tallest state (a 22px button, 4px of padding above and below, the 1px border), so the
+   text-only states — downloading, failed — are as tall as the ones with buttons and the terminals re-fit only when the
+   bar appears or goes, never between its states. */
+#update-banner { min-height: 31px; box-sizing: border-box; }
 #update-banner progress { width: 140px; height: 8px; flex: none; accent-color: var(--accent); }
-#update-banner progress[hidden], #update-banner .btn[hidden] { display: none; }
 .form-grid .checks .upd-status { align-self: center; font-size: 12px; color: var(--fg-dim); } /* "Check now" outcome in Settings → Updates */
 .form-grid .checks .upd-bar { flex: 1 1 100%; max-width: 280px; height: 8px; accent-color: var(--accent); } /* the download's bar under that line, on a row of its own */
-.form-grid .checks .upd-bar[hidden] { display: none; }
 
 /* ---- qa3 features ---- */
 /* Toasts never cover the open find bar, whatever sits under the bar (status-bar height, a wrapped status row):

@@ -191,7 +191,7 @@
         <div id="multiexec-banner" role="status" aria-live="polite" hidden>MultiExec is ON — keystrokes go to <b id="multiexec-count">0</b> visible terminal(s) in this tab</div>
         <!-- a different MobAlt.app is on disk (brew upgrade / dragged DMG while running), or the updater is downloading a
              release (the line, a thin bar, then Restart now): app.js fills the text and shows the controls of the state -->
-        <div id="update-banner" role="status" hidden>
+        <div id="update-banner" role="status" aria-live="polite" hidden>
           <span id="update-banner-text"></span>
           <progress id="update-progress" value="0" max="1" aria-label="Download progress" data-i18n-aria-label hidden></progress>
           <button id="update-relaunch" class="btn small primary" type="button" title="Quit and start the version on disk" data-i18n data-i18n-title>Relaunch</button>

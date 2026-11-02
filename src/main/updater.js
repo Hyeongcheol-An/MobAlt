@@ -59,8 +59,9 @@ function setupUpdater(store, getWin, hooks = {}) {
   if (!app.isPackaged) return { check: sourceCheck, install: () => false };
 
   // download: { version, last } while a download runs (last: the latest figures, so "done" can repeat the size);
-  // downloaded: the version whose file is complete and waits for the quit (or install())
-  const state = { manual: false, quiet: false, pending: null, done: null, download: null, downloaded: null };
+  // downloaded: the version whose file is complete and waits for the quit (or install()); lastDone: that event, sent
+  // again when a check finds the release once more; installing: install() ran (a second click does nothing more)
+  const state = { manual: false, quiet: false, pending: null, done: null, download: null, downloaded: null, lastDone: null, installing: false };
   const loud = () => state.manual && !state.quiet; // this check's outcome is reported in a sheet (read before finish() resets it)
   // One check at a time; whoever asked gets the outcome once, then the bundle watch looks at the disk again.
   const finish = (result) => {
@@ -77,33 +78,52 @@ function setupUpdater(store, getWin, hooks = {}) {
   };
   // The download as the windows see it. Every event carries the version and the four figures (a window draws the
   // whole line from any one of them); a failure carries its message. A listener that throws never breaks the download.
+  const emit = (info) => { try { hooks.progress && hooks.progress(info); } catch {} };
   const report = (phase, figures = {}, message) => {
     if (!state.download) return;
     const d = state.download;
     d.last = { ...(d.last || { percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 }), ...figures };
     const info = { phase, version: d.version, percent: d.last.percent, transferred: d.last.transferred, total: d.last.total, bytesPerSecond: d.last.bytesPerSecond };
     if (message !== undefined) info.message = message;
-    try { hooks.progress && hooks.progress(info); } catch {}
+    if (phase === 'done') state.lastDone = info; // sent again when a later check finds this release (the way back to Restart now)
+    emit(info);
   };
+  // A download that broke off. downloadUpdate() rejects for every failure — electron-updater's errorHandler emits 'error'
+  // and rethrows, a cancellation rejects without the event — so this is the one place that reports it; the 'error'
+  // listener below leaves the download alone (that event is also a failed *check*: Settings → Check now hitting a DNS
+  // error while the file keeps coming from the CDN must not end the download).
   const failDownload = (e) => {
-    if (!state.download) return; // the 'error' event already reported it (downloadUpdate rejects as well)
-    report('error', {}, e && e.message ? e.message : String(e));
+    if (!state.download) return;
+    report('error', {}, (e && e.message) || t('Download failed')); // never a line that ends in "failed: "
     state.download = null;
   };
   const startDownload = (autoUpdater, version) => {
+    if (state.download) return; // one download at a time: a newer release found meanwhile must not relabel the running one (AppUpdater hands back the download in progress)
     state.download = { version, last: null };
     report('downloading', { percent: 0, transferred: 0, total: 0, bytesPerSecond: 0 }); // "Download" did something: the line appears before the first byte
     autoUpdater.downloadUpdate().catch((e) => {
-      failDownload(e); // a cancellation rejects without an 'error' event; a failure did both (the second report is skipped)
-      dialogs.showMessageBox(win(), { type: 'error', message: t('Download failed'), detail: e.message });
+      failDownload(e);
+      dialogs.showMessageBox(win(), { type: 'error', message: t('Download failed'), detail: (e && e.message) || String(e) });
     });
   };
   const install = () => {
     const autoUpdater = loadAutoUpdater();
     if (!autoUpdater || !state.downloaded) return false;
+    if (state.installing) return true; // a second click while the quit is under way: nothing more to do (a second quitAndInstall would stack on MacUpdater)
+    state.installing = true;
     try { hooks.beforeInstall && hooks.beforeInstall(); } catch {}
     setImmediate(() => autoUpdater.quitAndInstall());
     return true;
+  };
+  // The "ready to install" sheet: after the download, and again when a loud check finds the file already complete.
+  const offerInstall = async (version) => {
+    const r = await dialogs.showMessageBox(win(), {
+      type: 'info',
+      message: t('MobAlt {version} is ready to install', { version }),
+      detail: t('Restart now to install it, or keep working: it is installed when you quit.'),
+      buttons: [t('Restart now'), t('Later')], defaultId: 0, cancelId: 1,
+    });
+    if (r.response === 0) install();
   };
   // The module and its listeners, on the first check (the updater is never needed before that).
   let wired = false;
@@ -135,9 +155,19 @@ function setupUpdater(store, getWin, hooks = {}) {
         }
         return;
       }
-      finish({ status: 'available', version: info.version, message: t('MobAlt {version} is available', { version: info.version }) });
-      // That release is downloading already, or its file is complete: the banner and the Settings line show it; no second offer.
-      if ((state.download && state.download.version === info.version) || state.downloaded === info.version) return;
+      const available = { status: 'available', version: info.version, message: t('MobAlt {version} is available', { version: info.version }) };
+      // The file of that release is complete already (the sheet and the banner were both answered Later): the windows get
+      // the "done" event again — the way back to Restart now — and a loud check shows the ready-to-install sheet again.
+      if (state.downloaded === info.version) {
+        emit(state.lastDone || { phase: 'done', version: info.version, percent: 100, transferred: 0, total: 0, bytesPerSecond: 0 });
+        finish(available);
+        if (manual) await offerInstall(info.version);
+        return;
+      }
+      finish(available);
+      // A download is running (this release, or an older one found first): the banner and the Settings line show it; no
+      // second offer, and never two downloads at once (a newer release waits for the next check).
+      if (state.download) return;
       const r = await dialogs.showMessageBox(win(), {
         type: 'info',
         message: t('MobAlt {version} is available', { version: info.version }),
@@ -161,16 +191,11 @@ function setupUpdater(store, getWin, hooks = {}) {
         report('done', { percent: 100, transferred: total, total });
         state.download = null;
       }
-      const r = await dialogs.showMessageBox(win(), {
-        type: 'info',
-        message: t('MobAlt {version} is ready to install', { version: state.downloaded }),
-        detail: t('Restart now to install it, or keep working: it is installed when you quit.'),
-        buttons: [t('Restart now'), t('Later')], defaultId: 0, cancelId: 1,
-      });
-      if (r.response === 0) install();
+      await offerInstall(state.downloaded);
     });
     autoUpdater.on('error', (e) => {
-      failDownload(e); // a download that broke off: the windows hear why (the sheet comes from downloadUpdate's rejection)
+      // A failed check. electron-updater fires this for a failed download too, but that one is reported from
+      // downloadUpdate()'s rejection (startDownload): a check that fails while the file keeps coming must not end the download.
       const manual = loud();
       finish({ status: 'error', message: t('Update check failed: {error}', { error: e.message }) });
       if (manual) dialogs.showMessageBox(win(), { type: 'error', message: t('Update check failed'), detail: e.message });

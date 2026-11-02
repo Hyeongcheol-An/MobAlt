@@ -3,8 +3,10 @@
 // only, and Relaunch goes through the quit question (nothing is live here) before restarting — recorded, not
 // performed, in test mode. The updater's download (app:update-progress, fed by the test hook) uses the same bar: the
 // progress line with a thin bar and no buttons while it runs (Settings → Updates shows the same line and follows
-// it), Restart now / Later once the file is complete (Restart now is recorded, never performed), the reason for a
-// moment when it failed. Also: a main-process notice (app:notice) shows up as an error toast that wraps an unbroken
+// it), Restart now / Later once the file is complete (Restart now is recorded, never performed, and the clicked button
+// is disabled), the reason for a moment when it failed. The bar keeps one height across its states (no second re-fit),
+// and only the start, the end and a failure are announced (aria-live off for the ticks in between). Also: a
+// main-process notice (app:notice) shows up as an error toast that wraps an unbroken
 // path, an empty notice shows nothing, and the toast stack stays above the open find bar (also with both banners up
 // in a small window).
 //   test/qa/run.sh test/e2e-update.js <out-dir>
@@ -31,7 +33,8 @@
     results.text = text();
     results.textOk = text() === `MobAlt 0.11.0 is installed on disk — you are running ${app.info.version}. Relaunch to use it.`;
     results.panesRefit = pane.term.rows < rows0;
-    log('rows', rows0, '→', pane.term.rows);
+    const heightOnDisk = banner().offsetHeight;
+    log('rows', rows0, '→', pane.term.rows, 'banner height', heightOnDisk);
     // keyboard: Relaunch and Later are ordinary Tab stops
     const btns = ['update-relaunch', 'update-later'].map((id) => document.getElementById(id));
     results.buttonsTabbable = btns.every((b) => b && b.tabIndex === 0 && !b.disabled && b.offsetParent !== null);
@@ -56,6 +59,7 @@
     await sleep(300);
     results.progressStartText = visible() && text() === 'Downloading MobAlt 0.17.0…';
     results.progressBarShown = !bar().hidden && bar().offsetParent !== null && bar().value === 0 && bar().getAttribute('aria-label') === 'Download progress';
+    results.liveStartPolite = banner().getAttribute('aria-live') === 'polite'; // the start is announced…
     results.progressNoButtons = ['update-relaunch', 'update-install', 'update-later'].every((id) => btn(id).hidden && btn(id).offsetParent === null);
     results.progressPanesRefit = pane.term.rows < rows0;
     await progress({ phase: 'downloading', percent: 41.8, transferred: 12.3 * MB, total: 29.4 * MB, bytesPerSecond: 2.1 * MB });
@@ -63,6 +67,8 @@
     const mid = 'Downloading MobAlt 0.17.0 — 42 % (12.3 of 29.4 MB, 2.1 MB/s)';
     results.progressMidText = text() === mid;
     results.progressBarValue = Math.abs(bar().value - 0.42) < 0.001;
+    results.liveTicksOff = banner().getAttribute('aria-live') === 'off'; // …the once-a-second figures are not
+    const rowsDownloading = pane.term.rows, heightDownloading = banner().offsetHeight;
     results.progressLiveRegion = banner().getAttribute('role') === 'status';
     log('progress', text(), 'bar', bar().value);
     await shot('65-update-progress');
@@ -80,6 +86,7 @@
     await sleep(300);
     results.settingsLineFollows = updStatus().textContent === text() && text() === 'Downloading MobAlt 0.17.0 — 77 % (22.6 of 29.4 MB, 2.4 MB/s)';
     results.settingsBarFollows = Math.abs(updBar().value - 0.77) < 0.001 && Math.abs(bar().value - 0.77) < 0.001;
+    results.settingsLiveTicksOff = updStatus().getAttribute('aria-live') === 'off' && banner().getAttribute('aria-live') === 'off';
     await shot('66-update-progress-settings');
     // done: both say the file is complete; the banner offers Restart now / Later, Settings its own Restart now
     await progress({ phase: 'done', percent: 100, transferred: 29.4 * MB, total: 29.4 * MB, bytesPerSecond: 2.4 * MB });
@@ -87,12 +94,16 @@
     const doneText = 'MobAlt 0.17.0 downloaded — it is installed when you quit, or restart now';
     results.doneText = text() === doneText && updStatus().textContent === doneText;
     results.doneControls = !btn('update-install').hidden && !btn('update-later').hidden && btn('update-relaunch').hidden && bar().hidden && updBar().hidden;
+    results.liveDonePolite = banner().getAttribute('aria-live') === 'polite' && updStatus().getAttribute('aria-live') === 'polite';
+    results.doneSameHeight = banner().offsetHeight === heightDownloading && heightDownloading === heightOnDisk && pane.term.rows === rowsDownloading; // pinned height: no second re-fit between states
+    log('banner height', heightDownloading, '→', banner().offsetHeight, 'rows', rowsDownloading, '→', pane.term.rows);
     const settingsInstall = [...modal.querySelectorAll('.modal-body button')].find((b) => b.textContent === 'Restart now');
     results.settingsInstallShown = !!settingsInstall && !settingsInstall.hidden && settingsInstall.offsetParent !== null;
     results.noInstallBefore = (await window.api.app.testQuitCheck()).installRequested === false;
     settingsInstall.click(); // the main process's install path (recorded in test mode, never performed)
     await sleep(300);
     results.settingsInstallRequested = (await window.api.app.testQuitCheck()).installRequested === true;
+    results.settingsInstallDisabled = settingsInstall.disabled === true; // one install per click
     await shot('67-update-done-settings');
     document.querySelector('.modal .close').click();
     await sleep(250);
@@ -110,6 +121,7 @@
     await progress({ phase: 'error', message: 'net::ERR_INTERNET_DISCONNECTED' });
     await sleep(300);
     results.errorText = visible() && text() === 'Download of MobAlt 0.17.0 failed: net::ERR_INTERNET_DISCONNECTED';
+    results.liveErrorPolite = banner().getAttribute('aria-live') === 'polite';
     results.errorNoControls = bar().hidden && btn('update-install').hidden && btn('update-later').hidden && btn('update-relaunch').hidden;
     await shot('69-update-error');
     await sleep(900);

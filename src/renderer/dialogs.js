@@ -908,23 +908,36 @@ export function settingsDialog(app) {
   // banner above the tabs (app.js onUpdateProgress), a thin bar under it and, once the file is complete, Restart now.
   const updStatus = h('span', { class: 'upd-status', 'aria-live': 'polite' });
   const updBar = h('progress', { class: 'upd-bar', value: 0, max: 1, 'aria-label': t('Download progress'), hidden: true });
-  const updInstall = h('button', { class: 'btn small primary', type: 'button', hidden: true, onclick: () => { app.saveWorkspaceNow(); window.api.app.installUpdate(); } }, t('Restart now'));
+  const updInstall = h('button', { class: 'btn small primary', type: 'button', hidden: true, onclick: () => {
+    updInstall.disabled = true; // one install: a second click would stack a second quitAndInstall behind the first
+    app.saveWorkspaceNow();
+    window.api.app.installUpdate().then((ok) => { if (!ok) updInstall.disabled = false; }, () => { updInstall.disabled = false; });
+  } }, t('Restart now'));
+  let shown = null; // the event the line shows right now
   const showProgress = (p) => {
     const line = progressLine(p, t);
     if (!line) return;
+    // the line is a live region: the start, the end and a failure are announced, the once-a-second figures in between
+    // are not (the bar still exposes the value) — a screen reader would otherwise read the line all download long
+    const repeat = p.phase === 'downloading' && !!shown && shown.phase === 'downloading' && shown.version === p.version;
+    updStatus.setAttribute('aria-live', repeat ? 'off' : 'polite');
+    shown = p;
     updStatus.textContent = line;
     updBar.hidden = p.phase !== 'downloading';
     if (!updBar.hidden) updBar.value = progressParts(p).percent / 100;
     updInstall.hidden = p.phase !== 'done';
+    if (p.phase === 'done') updInstall.disabled = false; // a fresh offer: usable again
   };
   if (app.updateProgress) showProgress(app.updateProgress); // a download under way (or just finished) when the dialog opens
   const offProgress = window.api.app.onUpdateProgress(showProgress);
   const checkNow = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+    updStatus.setAttribute('aria-live', 'polite'); // the outcome is announced, whatever the download's ticks set
     updStatus.textContent = t('Checking…');
     try {
       const r = await window.api.app.checkUpdates();
       const dl = app.updateProgress;
-      if (dl && r && r.status === 'available' && r.version === dl.version) return showProgress(dl); // that release is downloading already: the figures stay
+      // that release is downloading already, or its file is complete: the figures stay; after a failed download the check's own answer shows
+      if (dl && dl.phase !== 'error' && r && r.status === 'available' && r.version === dl.version) return showProgress(dl);
       updStatus.textContent = (r && r.message) || '';
     } catch (e) {
       updStatus.textContent = e.message;
