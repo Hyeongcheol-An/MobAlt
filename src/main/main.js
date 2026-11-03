@@ -1410,11 +1410,15 @@ function registerIpc() {
   ipcMain.handle('shell:open-external', (_e, url) => (urlpolicy.externalUrlAllowed(url) ? shell.openExternal(url) : false));
   ipcMain.handle('browser:favicon', (e, id, url) => fetchFavicon(e.sender, id, url)); // a browser pane's page icon as a data: URL (null when there is none)
   // a browser pane's history (the <webview> tag's own canGoBack / goBack went with the webContents methods they wrapped):
-  // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward'
+  // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward' |
+  // 'user' (the renderer is about to load or reload the page itself)
   ipcMain.handle('browser:nav', (e, id, op) => {
     const wc = guestOf(e.sender, id);
     if (!wc) return null;
     const nav = wc.navigationHistory;
+    // the user moved the pane on purpose (a typed address, Reload, Retry, Back / Forward): a page that was shut for
+    // looping to user@ itself (hardenWebviews) may navigate again, with a fresh allowance
+    if (op === 'user' || op === 'back' || op === 'forward') stripGuards.get(wc)?.reset();
     if (op === 'back' && nav.canGoBack()) nav.goBack();
     else if (op === 'forward' && nav.canGoForward()) nav.goForward();
     return { canGoBack: nav.canGoBack(), canGoForward: nav.canGoForward() };
@@ -1535,6 +1539,8 @@ function guestOf(sender, id) {
 /** How often a guest's links to user@host are loaded again without the name before they are only cancelled. */
 const STRIP_RELOADS_MAX = 10;
 const STRIP_RELOADS_WINDOW_MS = 5000;
+/** guest webContents → { reset() }: lifts a guest's user@ loop stop when the user navigates (browser:nav 'user' / 'back' / 'forward'). */
+const stripGuards = new WeakMap();
 function hardenWebviews() {
   app.on('web-contents-created', (_e, contents) => {
     contents.on('will-attach-webview', (event, webPreferences, params) => {
@@ -1569,16 +1575,29 @@ function hardenWebviews() {
       // loaded again without it (a password in an address is still refused, never followed). The reload is a GET, so a
       // form POSTed to such an address loses its data — acceptable for an address no browser should be sent to.
       // A page that keeps doing it (a script on the loaded page sending itself to user@ again) is stopped by a cap:
-      // past STRIP_RELOADS_MAX in STRIP_RELOADS_WINDOW_MS the link is only cancelled and the pane stays where it is.
+      // past STRIP_RELOADS_MAX in STRIP_RELOADS_WINDOW_MS the document is shut — every navigation and popup it starts is
+      // cancelled, its load stopped, and the window told (browser:loop-stopped → the pane's error view, "The page keeps
+      // redirecting to itself.") — until the user moves the pane on purpose (browser:nav 'user' / 'back' / 'forward').
+      // A rate limit alone would let such a page reload itself a couple of times a second for ever.
       const stripTimes = [];
+      let stripStopped = false;
       const stripReloadAllowed = () => {
+        if (stripStopped) return false;
         const now = Date.now();
         while (stripTimes.length && now - stripTimes[0] > STRIP_RELOADS_WINDOW_MS) stripTimes.shift();
-        if (stripTimes.length >= STRIP_RELOADS_MAX) return false;
+        if (stripTimes.length >= STRIP_RELOADS_MAX) {
+          stripStopped = true;
+          try { guest.stop(); } catch {}
+          const host = guest.hostWebContents;
+          if (host && !host.isDestroyed()) host.send('browser:loop-stopped', guest.id);
+          return false;
+        }
         stripTimes.push(now);
         return true;
       };
+      stripGuards.set(guest, { reset: () => { stripStopped = false; stripTimes.length = 0; } });
       guest.on('will-navigate', (ev, url) => {
+        if (stripStopped) return ev.preventDefault(); // the page was shut for looping: nothing it starts goes anywhere
         if (isBrowserUrl(url)) return;
         ev.preventDefault();
         const to = browserUrlWithoutUser(url);

@@ -19,10 +19,26 @@ import { urlProblem } from './dialogs.js'; // why an address was refused, worded
 
 let seq = 0;
 let layerWired = false;
+const livePanes = new Set(); // this window's browser panes (the main process names a guest by its webContents id)
+let loopWired = false;
+/** browser:loop-stopped (main.js hardenWebviews): a page that kept sending itself to user@ was shut; its pane says why. */
+function wireLoopStopped() {
+  if (loopWired || !window.api?.browser?.onLoopStopped) return;
+  loopWired = true;
+  window.api.browser.onLoopStopped((id) => {
+    for (const p of livePanes) {
+      let wcId = null;
+      try { wcId = p.ready ? p.webview.getWebContentsId() : null; } catch {}
+      if (wcId === id) p._onLoopStopped();
+    }
+  });
+}
 const faviconCache = new Map(); // favicon URL → data: URL (or null: nothing usable there), per window
 const FAVICON_CACHE_MAX = 200;
 /** Chromium's net error for a load that was stopped or replaced (webview did-fail-load): not a failure of the page. */
 const ERR_ABORTED = -3;
+/** Chromium's net error for a redirect loop: also what the pane shows for a page shut for looping to user@ itself. */
+const ERR_TOO_MANY_REDIRECTS = -310;
 /** ⌘= / ⌘- step the page's zoom level by this (Chromium: 0.5 = one of the browser's own zoom steps). */
 const ZOOM_STEP = 0.5;
 
@@ -56,7 +72,7 @@ function errorHint(code) {
     case -105: return t('The host name could not be found.'); // NAME_NOT_RESOLVED
     case -7: case -118: return t('The server did not answer in time.'); // TIMED_OUT, CONNECTION_TIMED_OUT
     case -106: return t('There is no network connection.'); // INTERNET_DISCONNECTED
-    case -310: return t('The page keeps redirecting to itself.'); // TOO_MANY_REDIRECTS
+    case ERR_TOO_MANY_REDIRECTS: return t('The page keeps redirecting to itself.'); // also a page shut for looping to user@ (_onLoopStopped)
     case -312: return t('This port is one Chromium refuses to use for web pages.'); // UNSAFE_PORT
     default:
       if (code <= -200 && code >= -299) return t('The site\'s certificate is not trusted (self-signed, expired or for another name): open the page in your browser to inspect it.'); // CERT_*
@@ -109,6 +125,7 @@ export class BrowserPane {
     this.mounted = false;
     this._dragOver = false; // a session / tab is dragged over the pane: the page steps aside for the drop zone
     this._pendingUrl = null; // an address given before the guest exists (loadUrl): opened on dom-ready
+    this._shut = false; // the main process shut the page for looping to user@ itself (_onLoopStopped) until the user navigates
 
     this.el = h('div', { class: 'pane browser', dataset: { pane: this.id } },
       // the same head as a terminal pane (shown while the tab is split): status dot, icon, title, zoom chip, ⚙, ⤢, splits, ✕
@@ -163,6 +180,8 @@ export class BrowserPane {
       this.titleLocked = true;
     }
     this.updateTitle();
+    livePanes.add(this);
+    wireLoopStopped();
   }
 
   /** The <webview>, wired; appended to the layer by mount() (the page starts loading then). */
@@ -181,12 +200,14 @@ export class BrowserPane {
     wv.setAttribute('role', 'document');
     wv.setAttribute('aria-label', this.title);
     wv.classList.add('off');
-    wv.addEventListener('did-start-loading', () => this._onLoadStart());
-    wv.addEventListener('did-stop-loading', () => this._onLoadStop());
-    wv.addEventListener('did-fail-load', (e) => this._onFailLoad(e));
-    wv.addEventListener('did-navigate', (e) => this._onNavigate(e.url, true));
-    wv.addEventListener('did-navigate-in-page', (e) => { if (e.isMainFrame !== false) this._onNavigate(e.url, false); });
-    wv.addEventListener('page-title-updated', (e) => this._onPageTitle(e.title));
+    // while the page is shut for looping (_onLoopStopped), what it still starts — each attempt the main process cancels
+    // reports a load start and stop — must not take the error view down: only the user's own navigation ends it
+    wv.addEventListener('did-start-loading', () => { if (!this._shut) this._onLoadStart(); });
+    wv.addEventListener('did-stop-loading', () => { if (!this._shut) this._onLoadStop(); });
+    wv.addEventListener('did-fail-load', (e) => { if (!this._shut) this._onFailLoad(e); });
+    wv.addEventListener('did-navigate', (e) => { if (!this._shut) this._onNavigate(e.url, true); });
+    wv.addEventListener('did-navigate-in-page', (e) => { if (!this._shut && e.isMainFrame !== false) this._onNavigate(e.url, false); });
+    wv.addEventListener('page-title-updated', (e) => { if (!this._shut) this._onPageTitle(e.title); });
     wv.addEventListener('page-favicon-updated', (e) => this._onFavicon(e.favicons));
     wv.addEventListener('dom-ready', () => this._onDomReady());
     wv.addEventListener('found-in-page', (e) => this._onFound(e.result));
@@ -286,6 +307,7 @@ export class BrowserPane {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
+    livePanes.delete(this);
     if (this._i18nOff) { this._i18nOff(); this._i18nOff = null; }
     if (this.ro) this.ro.disconnect();
     this.webview.remove(); // the guest goes with it
@@ -336,7 +358,10 @@ export class BrowserPane {
     this._showError(false);
     this.urlEl.value = url;
     this.openBtn.disabled = !/^https?:/i.test(url); // about:blank: nothing to open outside
-    if (this.ready) this.webview.loadURL(url).catch(() => {}); // a failed load is reported by did-fail-load; the promise's rejection says the same
+    if (this.ready) {
+      this._userNav(); // a page the main process shut for looping may navigate again (sent first: the load goes over the same pipe after it)
+      this.webview.loadURL(url).catch(() => {}); // a failed load is reported by did-fail-load; the promise's rejection says the same
+    }
     else if (this.mounted) {
       // the guest is being made and its first load is under way: dom-ready opens this address (changing src now would
       // race that load, and the loser is logged by Electron as an ERR_ABORTED "Unexpected error while loading URL")
@@ -346,10 +371,11 @@ export class BrowserPane {
     this.app.saveWorkspaceSoon?.();
   }
 
-  back() { return this._nav('back'); }
-  forward() { return this._nav('forward'); }
+  back() { this._shut = false; return this._nav('back'); } // main lifts its loop stop on 'back' / 'forward' itself
+  forward() { this._shut = false; return this._nav('forward'); }
   reload() {
     if (this.failed || !this.ready) return this.retry(); // a failed page, or a guest that is gone: the address again (a new guest when needed)
+    this._userNav();
     this.webview.reload();
   }
   stop() { if (this.ready) this.webview.stop(); }
@@ -364,6 +390,7 @@ export class BrowserPane {
   }
   /** A new <webview> for `url` in place of one whose guest is gone (closed, crashed): a guest cannot be revived. */
   _remake(url) {
+    this._shut = false; // a new guest: nothing of the old page's stop carries over
     this.webview.remove();
     this.url = url;
     this.failed = null;
@@ -397,6 +424,33 @@ export class BrowserPane {
   _pageUrl() {
     // a page reached through a redirect to user@host keeps the name in its URL: the pane records it without
     try { if (!this.ready) return ''; const u = String(this.webview.getURL() || ''); return browserUrlWithoutUser(u) || u; } catch { return ''; }
+  }
+
+  /** Tell the main process the next load is the user's own (browser:nav 'user'): it lifts a user@ loop stop on the guest. */
+  _userNav() {
+    this._shut = false;
+    let id;
+    try { id = this.webview.getWebContentsId(); } catch { return; }
+    try { window.api.browser.nav(id, 'user').catch(() => {}); } catch {}
+  }
+
+  /**
+   * The main process shut the page for sending itself to user@ over and over (browser:loop-stopped): the error view
+   * with "The page keeps redirecting to itself." — Retry, a typed address, Back / Forward let it go again.
+   */
+  _onLoopStopped() {
+    if (this.disposed) return;
+    this._shut = true;
+    this.loading = false;
+    this.el.classList.remove('loading');
+    this.bodyEl.removeAttribute('aria-busy');
+    this._syncReload();
+    this._syncNav();
+    const description = 'ERR_TOO_MANY_REDIRECTS';
+    this.failed = { code: ERR_TOO_MANY_REDIRECTS, description, url: this.url };
+    this._showError(true);
+    this.place(); // the webview steps aside for the error view
+    this.setStatus('failed', description);
   }
 
   /**
