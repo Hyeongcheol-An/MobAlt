@@ -1531,10 +1531,19 @@ function guestOf(sender, id) {
   const wc = webContents.fromId(id);
   return wc && !wc.isDestroyed() && wc.getType() === 'webview' && wc.hostWebContents && !wc.hostWebContents.isDestroyed() && wc.hostWebContents.id === sender.id ? wc : null;
 }
-/** How often a guest's links to user@host are loaded again without the name before they are only cancelled. */
+/**
+ * How often a guest's links to user@host are loaded again without the name before the page is shut: a burst (10 in
+ * 5 s) or a slower, steady loop (30 in a minute — a page that reloads itself every 700 ms never trips the burst cap).
+ */
 const STRIP_RELOADS_MAX = 10;
 const STRIP_RELOADS_WINDOW_MS = 5000;
-/** guest webContents → { reset() }: lifts a guest's user@ loop stop when the user navigates (browser:nav 'user' / 'back' / 'forward'). */
+const STRIP_RELOADS_LONG_MAX = 30;
+const STRIP_RELOADS_LONG_WINDOW_MS = 60000;
+/**
+ * guest webContents → { reset() }: lifts a guest's user@ loop stop when the user navigates (browser:nav 'user' / 'back' /
+ * 'forward'). Each reset is counted; browser:loop-stopped carries the count it was sent at, so the renderer, which counts
+ * the resets it asked for, can drop a stop that was already on its way when the user navigated.
+ */
 const stripGuards = new WeakMap();
 function hardenWebviews() {
   app.on('web-contents-created', (_e, contents) => {
@@ -1570,27 +1579,29 @@ function hardenWebviews() {
       // loaded again without it (a password in an address is still refused, never followed). The reload is a GET, so a
       // form POSTed to such an address loses its data — acceptable for an address no browser should be sent to.
       // A page that keeps doing it (a script on the loaded page sending itself to user@ again) is stopped by a cap:
-      // past STRIP_RELOADS_MAX in STRIP_RELOADS_WINDOW_MS the document is shut — every navigation and popup it starts is
+      // past STRIP_RELOADS_MAX in STRIP_RELOADS_WINDOW_MS, or STRIP_RELOADS_LONG_MAX in STRIP_RELOADS_LONG_WINDOW_MS, the document is shut — every navigation and popup it starts is
       // cancelled, its load stopped, and the window told (browser:loop-stopped → the pane's error view, "The page keeps
       // redirecting to itself.") — until the user moves the pane on purpose (browser:nav 'user' / 'back' / 'forward').
       // A rate limit alone would let such a page reload itself a couple of times a second for ever.
-      const stripTimes = [];
+      const stripTimes = []; // the strip-reloads of the last STRIP_RELOADS_LONG_WINDOW_MS, oldest first
       let stripStopped = false;
+      let stripResets = 0; // the user's navigations so far (reset): the generation a loop-stopped message belongs to
       const stripReloadAllowed = () => {
         if (stripStopped) return false;
         const now = Date.now();
-        while (stripTimes.length && now - stripTimes[0] > STRIP_RELOADS_WINDOW_MS) stripTimes.shift();
-        if (stripTimes.length >= STRIP_RELOADS_MAX) {
+        while (stripTimes.length && now - stripTimes[0] > STRIP_RELOADS_LONG_WINDOW_MS) stripTimes.shift();
+        const recent = stripTimes.filter((t0) => now - t0 <= STRIP_RELOADS_WINDOW_MS).length;
+        if (recent >= STRIP_RELOADS_MAX || stripTimes.length >= STRIP_RELOADS_LONG_MAX) {
           stripStopped = true;
           try { guest.stop(); } catch {}
           const host = guest.hostWebContents;
-          if (host && !host.isDestroyed()) host.send('browser:loop-stopped', guest.id);
+          if (host && !host.isDestroyed()) host.send('browser:loop-stopped', guest.id, stripResets);
           return false;
         }
         stripTimes.push(now);
         return true;
       };
-      stripGuards.set(guest, { reset: () => { stripStopped = false; stripTimes.length = 0; } });
+      stripGuards.set(guest, { reset: () => { stripStopped = false; stripTimes.length = 0; stripResets++; } });
       guest.on('will-navigate', (ev, url) => {
         if (stripStopped) return ev.preventDefault(); // the page was shut for looping: nothing it starts goes anywhere
         if (isBrowserUrl(url)) return;

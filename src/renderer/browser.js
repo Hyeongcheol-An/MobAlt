@@ -25,11 +25,11 @@ let loopWired = false;
 function wireLoopStopped() {
   if (loopWired || !window.api?.browser?.onLoopStopped) return;
   loopWired = true;
-  window.api.browser.onLoopStopped((id) => {
+  window.api.browser.onLoopStopped((id, gen) => {
     for (const p of livePanes) {
       let wcId = null;
       try { wcId = p.ready ? p.webview.getWebContentsId() : null; } catch {}
-      if (wcId === id) p._onLoopStopped();
+      if (wcId === id) p._onLoopStopped(gen);
     }
   });
 }
@@ -126,6 +126,7 @@ export class BrowserPane {
     this._dragOver = false; // a session / tab is dragged over the pane: the page steps aside for the drop zone
     this._pendingUrl = null; // an address given before the guest exists (loadUrl): opened on dom-ready
     this._shut = false; // the main process shut the page for looping to user@ itself (_onLoopStopped) until the user navigates
+    this._navGen = 0; // the user navigations told to main for the current guest ('user' / 'back' / 'forward'): main counts the same
 
     this.el = h('div', { class: 'pane browser', dataset: { pane: this.id } },
       // the same head as a terminal pane (shown while the tab is split): status dot, icon, title, zoom chip, ⚙, ⤢, splits, ✕
@@ -186,6 +187,7 @@ export class BrowserPane {
 
   /** The <webview>, wired; appended to the layer by mount() (the page starts loading then). */
   _makeWebview() {
+    this._navGen = 0; // a new guest: main's count for it starts at 0 too
     const wv = document.createElement('webview');
     wv.setAttribute('partition', this.partition); // before src: the partition cannot change once the guest exists
     wv.setAttribute('webpreferences', 'contextIsolation=yes, sandbox=yes, nodeIntegration=no'); // main.js forces these anyway
@@ -371,8 +373,8 @@ export class BrowserPane {
     this.app.saveWorkspaceSoon?.();
   }
 
-  back() { this._shut = false; return this._nav('back'); } // main lifts its loop stop on 'back' / 'forward' itself
-  forward() { this._shut = false; return this._nav('forward'); }
+  back() { return this._nav('back'); } // main lifts its loop stop on 'back' / 'forward' itself (_nav clears ours)
+  forward() { return this._nav('forward'); }
   reload() {
     if (this.failed || !this.ready) return this.retry(); // a failed page, or a guest that is gone: the address again (a new guest when needed)
     this._userNav();
@@ -431,6 +433,7 @@ export class BrowserPane {
     this._shut = false;
     let id;
     try { id = this.webview.getWebContentsId(); } catch { return; }
+    this._navGen++;
     try { window.api.browser.nav(id, 'user').catch(() => {}); } catch {}
   }
 
@@ -438,8 +441,9 @@ export class BrowserPane {
    * The main process shut the page for sending itself to user@ over and over (browser:loop-stopped): the error view
    * with "The page keeps redirecting to itself." — Retry, a typed address, Back / Forward let it go again.
    */
-  _onLoopStopped() {
+  _onLoopStopped(gen) {
     if (this.disposed) return;
+    if (Number.isInteger(gen) && gen < this._navGen) return; // sent before the user's latest navigation: about the page that went, not this one
     this._shut = true;
     this.loading = false;
     this.el.classList.remove('loading');
@@ -462,6 +466,7 @@ export class BrowserPane {
     if (!this.ready || this.disposed) return null;
     let id;
     try { id = this.webview.getWebContentsId(); } catch { return null; }
+    if (op === 'back' || op === 'forward') { this._shut = false; this._navGen++; } // main lifts the loop stop on these (and counts them)
     let st = null;
     try { st = await window.api.browser.nav(id, op); } catch {}
     if (this.disposed) return null;

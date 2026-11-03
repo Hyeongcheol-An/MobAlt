@@ -217,7 +217,7 @@ contextBridge.exposeInMainWorld('api', {
   browser: {
     favicon: (id, url) => invoke('browser:favicon', id, url),
     nav: (id, op) => invoke('browser:nav', id, op), // the page's history: 'state' | 'back' | 'forward' | 'user' → { canGoBack, canGoForward }
-    onLoopStopped: (fn) => on('browser:loop-stopped', fn), // (guest webContents id): the page was shut for looping to user@ itself
+    onLoopStopped: (fn) => on('browser:loop-stopped', fn), // (guest webContents id, generation = the user navigations main had seen): the page was shut for looping to user@ itself
   },
   launch: {
     rdp: (cfg) => invoke('launch:rdp', cfg),
