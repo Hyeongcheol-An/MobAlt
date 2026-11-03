@@ -95,7 +95,9 @@ function installCommand(remoteFile, blob) {
     `f=${target}`, 'd=$(dirname "$f")', 'umask 077',
     '[ -d "$d" ] || mkdir -p "$d" || exit 1',
     '[ -e "$f" ] || { : > "$f" && chmod 600 "$f"; } || exit 1',
-    `if grep -qsF -- ${shq(blob)} "$f"; then echo MOBALT_KEY_PRESENT; else { [ ! -s "$f" ] || [ -z "$(tail -c1 "$f")" ] || echo; cat; } >> "$f" && echo MOBALT_KEY_ADDED; fi`,
+    // already there: the key on stdin is still read to the end (and dropped) — exiting without reading it would leave
+    // its writer (the ssh2 channel, a test's pipe) writing into a closed pipe (EPIPE)
+    `if grep -qsF -- ${shq(blob)} "$f"; then echo MOBALT_KEY_PRESENT; cat >/dev/null; exit 0; else { [ ! -s "$f" ] || [ -z "$(tail -c1 "$f")" ] || echo; cat; } >> "$f" && echo MOBALT_KEY_ADDED; fi`,
   ].join('; ');
   return `exec sh -c ${shq(script)}`;
 }

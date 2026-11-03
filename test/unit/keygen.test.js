@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const keygen = require('../../src/main/keygen');
 
 test('keygenArgs: ed25519 has no size, rsa defaults to 4096, ecdsa to 256; every value is its own argument', () => {
@@ -58,7 +58,7 @@ test('installCommand: ssh-copy-id semantics in one sh -c, the key body quoted, ~
   assert.match(cmd, /mkdir -p "\$d"/);
   assert.match(cmd, /chmod 600 "\$f"/);
   assert.match(cmd, /grep -qsF -- '\\''AAAAC3NzaC1lZDI1NTE5AAAAIJ6vY\+Qz\/8x='\\'' "\$f"/);
-  assert.match(cmd, /MOBALT_KEY_PRESENT/);
+  assert.match(cmd, /echo MOBALT_KEY_PRESENT; cat >\/dev\/null; exit 0;/); // the key on stdin is drained, never left unread
   assert.match(cmd, /cat; } >> "\$f" && echo MOBALT_KEY_ADDED/);
   // an absolute file with a quote in its name is quoted for the shell; the default file when none is given
   assert.match(keygen.installCommand("/srv/it's/keys", blob), /f='\\''\/srv\/it'\\''\\'\\'''\\''s\/keys'\\''/);
@@ -76,12 +76,26 @@ test('installCommand runs: appends once, keeps the file at 0600, creates a priva
   const blob = 'AAAAC3NzaC1lZDI1NTE5AAAAIJ6vY';
   const line = `ssh-ed25519 ${blob} test@mobalt`;
   const file = path.join(dir, 'sub', 'authorized_keys');
-  const sh = (input) => execFileSync('/bin/sh', ['-c', keygen.installCommand(file, blob)], { input, encoding: 'utf8' }).trim();
+  // the input comes from a file, not a pipe: a script that exits without reading it cannot make the write fail (EPIPE)
+  const run = (cmd, input, env = process.env) => {
+    const inFile = path.join(dir, 'stdin');
+    fs.writeFileSync(inFile, input);
+    const fd = fs.openSync(inFile, 'r');
+    try { return execFileSync('/bin/sh', ['-c', cmd], { stdio: [fd, 'pipe', 'pipe'], encoding: 'utf8', env }).trim(); } finally { fs.closeSync(fd); }
+  };
+  const sh = (input) => run(keygen.installCommand(file, blob), input);
   assert.equal(sh(line + '\n'), 'MOBALT_KEY_ADDED');
   assert.equal(fs.readFileSync(file, 'utf8'), line + '\n');
   assert.equal((fs.statSync(file).mode & 0o777).toString(8), '600');
   assert.equal((fs.statSync(path.dirname(file)).mode & 0o777).toString(8), '700');
   assert.equal(sh(line + '\n'), 'MOBALT_KEY_PRESENT');
+  assert.equal(fs.readFileSync(file, 'utf8'), line + '\n');
+  // already present, the key written through a pipe (as the ssh2 channel does), more than a pipe buffer of it: the
+  // script reads it all, so the writer never meets a closed pipe, and it still exits 0
+  const piped = spawnSync('/bin/sh', ['-c', keygen.installCommand(file, blob)], { input: line + '\n' + '#'.repeat(1024 * 1024) + '\n', encoding: 'utf8' });
+  assert.equal(piped.error, undefined);
+  assert.equal(piped.status, 0);
+  assert.equal(piped.stdout.trim(), 'MOBALT_KEY_PRESENT');
   assert.equal(fs.readFileSync(file, 'utf8'), line + '\n');
   // an existing file without a trailing newline gets one before the key
   fs.writeFileSync(file, 'ssh-rsa AAAAB3 other');
@@ -89,9 +103,9 @@ test('installCommand runs: appends once, keeps the file at 0600, creates a priva
   assert.equal(fs.readFileSync(file, 'utf8'), `ssh-rsa AAAAB3 other\n${line}\n`);
   // a file name with a quote and spaces survives both layers of quoting; ~/ resolves against the server's $HOME
   const odd = path.join(dir, "it's here", 'auth keys');
-  assert.equal(execFileSync('/bin/sh', ['-c', keygen.installCommand(odd, blob)], { input: line + '\n', encoding: 'utf8' }).trim(), 'MOBALT_KEY_ADDED');
+  assert.equal(run(keygen.installCommand(odd, blob), line + '\n'), 'MOBALT_KEY_ADDED');
   assert.equal(fs.readFileSync(odd, 'utf8'), line + '\n');
-  assert.equal(execFileSync('/bin/sh', ['-c', keygen.installCommand('~/tilde/ak', blob)], { input: line + '\n', encoding: 'utf8', env: { ...process.env, HOME: dir } }).trim(), 'MOBALT_KEY_ADDED');
+  assert.equal(run(keygen.installCommand('~/tilde/ak', blob), line + '\n', { ...process.env, HOME: dir }), 'MOBALT_KEY_ADDED');
   assert.equal(fs.readFileSync(path.join(dir, 'tilde', 'ak'), 'utf8'), line + '\n');
   fs.rmSync(dir, { recursive: true, force: true });
 });
