@@ -1,3 +1,14 @@
+## [1.0.1](https://github.com/Hyeongcheol-An/MobAlt/compare/v1.0.0...v1.0.1) (2026-11-03)
+
+### Bug Fixes
+
+* **browser:** name the pane after the session when a load fails ([180ba2e](https://github.com/Hyeongcheol-An/MobAlt/commit/180ba2e7bd886724cb4ea4381891084453f1a6a5))
+* **browser:** shut a page that keeps sending itself to user@ ([4071339](https://github.com/Hyeongcheol-An/MobAlt/commit/40713398fc8658d40bb4e57cbb68c8e8a8b81673))
+* **browser:** shut a slow user@ loop too, drop a stale stop message ([79a0462](https://github.com/Hyeongcheol-An/MobAlt/commit/79a0462de2b6bf9c38f82f478e9ef1f4dafde6f5))
+* **i18n:** natural Korean particles, accurate Net info labels, the Japanese realm line ([8e4530b](https://github.com/Hyeongcheol-An/MobAlt/commit/8e4530bbd9a341df2c23fb845dc6e735b5d47b54))
+* **keygen:** drain the key when it is already installed ([cbcd088](https://github.com/Hyeongcheol-An/MobAlt/commit/cbcd088f08165c52b6661da62dcbdc246126b820))
+* **terminal:** hand a failed mosh / FTP start back as a reply ([354dbb0](https://github.com/Hyeongcheol-An/MobAlt/commit/354dbb0fa0da8e7c2a73a454eb4adc9d1420f4a2))
+
 ## [1.0.0](https://github.com/Hyeongcheol-An/MobAlt/compare/v0.18.0...v1.0.0) (2026-11-02)
 
 ### Features
