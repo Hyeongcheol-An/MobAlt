@@ -448,6 +448,7 @@ export class BrowserPane {
     this._syncNav();
     const description = 'ERR_TOO_MANY_REDIRECTS';
     this.failed = { code: ERR_TOO_MANY_REDIRECTS, description, url: this.url };
+    this._titleAfterFailure();
     this._showError(true);
     this.place(); // the webview steps aside for the error view
     this.setStatus('failed', description);
@@ -517,7 +518,7 @@ export class BrowserPane {
       const cur = this._pageUrl();
       if (cur && cur !== this.url) { this.url = cur; if (document.activeElement !== this.urlEl) this.urlEl.value = cur; }
     }
-    if (!this.pageTitle && !this.titleLocked) { // the document that loaded has no <title>: the session's name (or the host), not the page before it
+    if (!this.failed && !this.pageTitle && !this.titleLocked) { // the document that loaded has no <title>: the session's name (or the host), not the page before it
       const auto = this._autoTitle();
       if (auto !== this.title) { this.title = auto; this.updateTitle(); }
     }
@@ -535,6 +536,7 @@ export class BrowserPane {
     }
     const code = e.errorCode, description = String(e.errorDescription || '').replace(/^net::/, '');
     this.failed = { code, description, url: browserUrlWithoutUser(e.validatedURL) || e.validatedURL || this.url }; // a user@ redirect hop: shown and retried without the name
+    this._titleAfterFailure();
     this._showError(true);
     this.place(); // the webview steps aside for the error view
     this.setStatus('failed', description);
@@ -545,6 +547,7 @@ export class BrowserPane {
     if (this.disposed) return;
     const reason = details && details.reason ? String(details.reason) : 'gone';
     this.failed = { code: 0, description: t('The page\'s process ended ({reason})', { reason }), url: this.url };
+    this._titleAfterFailure();
     this.ready = false;
     this.loading = false;
     this._syncNote(false);
@@ -572,10 +575,24 @@ export class BrowserPane {
   }
 
   _onPageTitle(title) {
+    if (this.failed) return; // the error view is up: no page there to name the pane (_titleAfterFailure)
     this.pageTitle = String(title || '').trim();
     if (this.titleLocked) return; // Rename Pane…: the name stands
     this.title = this._autoTitle();
     this.updateTitle();
+  }
+
+  /**
+   * The error view replaced the page: the pane is no longer named after the page that was there before (its title
+   * would say the load worked) but, as for a page without a <title>, after the session (or the failed address's
+   * host) — unless the user renamed it. The next page that loads names it again (page-title-updated).
+   */
+  _titleAfterFailure() {
+    this.pageTitle = '';
+    if (this.titleLocked) return;
+    const url = (this.failed && this.failed.url) || this.url;
+    const auto = this.session?.name || browserHost(url) || url;
+    if (auto !== this.title) { this.title = auto; this.updateTitle(); }
   }
 
   /**

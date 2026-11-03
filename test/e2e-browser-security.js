@@ -104,13 +104,13 @@
     await inGuest(p, 'window.close()', false);
     await waitFor(() => p.status === 'failed', 5000, 'closed → failed');
     await sleep(200);
-    results.windowCloseErrorView = !p.errorEl.hidden && /closed/.test(p.errorEl.textContent) && p.webview.classList.contains('off') && !p.ready;
+    results.windowCloseErrorView = !p.errorEl.hidden && /closed/.test(p.errorEl.textContent) && p.webview.classList.contains('off') && !p.ready && p.title === 'Local web' && p.tab.title === 'Local web'; // not "Page B": that page is gone
     await shot('s2-window-close');
     const oldWebview = p.webview;
     p.retryBtn.click();
     await loaded(p, '/b');
     await waitFor(() => p.title === 'Page B', 5000, 'title after retry');
-    results.windowCloseRetry = p.webview !== oldWebview && !oldWebview.isConnected && p.errorEl.hidden && (await inGuest(p, 'document.title', false)) === 'Page B' && p.canBack === false;
+    results.windowCloseRetry = p.title === 'Page B' && p.tab.title === 'Page B' && p.webview !== oldWebview && !oldWebview.isConnected && p.errorEl.hidden && (await inGuest(p, 'document.title', false)) === 'Page B' && p.canBack === false;
 
     // ---------- HTTP Basic authentication through the app's own prompt ----------
     p.navigate(SITE + 'auth');
@@ -213,7 +213,7 @@
     await sleep(3000); // a page only slowed down would have asked for itself ~8 more times by now
     const selfHits2 = await countSelf();
     log('self loop requests', selfHits1, '→', selfHits2, 'after 3 s; still', p.status);
-    results.selfLoopStopped = selfLoopView && selfHits1 > 0 && selfHits1 <= 15 && selfHits2 === selfHits1 && p.status === 'failed';
+    results.selfLoopStopped = selfLoopView && p.title === 'Local web' && selfHits1 > 0 && selfHits1 <= 15 && selfHits2 === selfHits1 && p.status === 'failed';
     // a typed address afterwards works (the user moved the pane on purpose: the stop is lifted for the next page)
     p.urlEl.focus();
     p.urlEl.value = SITE + 'b';
