@@ -99,8 +99,26 @@
       const failed = from < 0 ? '' : text.slice(from).split(/\n\s*\n|──/)[0].replace(/\n/g, '').trim(); // the line wraps in the narrow pane
       app.onPaneStatus = orig;
       check('startFailureEnglish', /^Failed to start: .*ECONNREFUSED.* — the host is reachable but nothing listens on that port\./.test(failed) && !/[\u0600-\u06ff]/.test(text), { failed, text: text.trim().slice(0, 300) });
-      check('startFailureStatusArabic', msgs.some((m) => /ECONNREFUSED/.test(m) && /[\u0600-\u06ff]/.test(m) && !/\u001f/.test(m)), msgs);
+      check('startFailureStatusArabic', msgs.some((m) => /ECONNREFUSED/.test(m) && /[\u0600-\u06ff]/.test(m) && !/[\u0000-\u001f]/.test(m)), msgs);
       await app.closePane(mp, true); await sleep(300);
+    }
+    // the same for FTP to a refused port: main answers { ok: false, error, terminalError } (paneerror.js), so the two
+    // texts arrive apart — English in the terminal, Arabic in the status bar — and main prints no handler error
+    // (anonymous: no user name, so no password prompt comes first)
+    {
+      const msgs = [], orig = app.onPaneStatus;
+      app.onPaneStatus = function (pane, msg) { if (msg) msgs.push(msg); return orig.call(this, pane, msg); };
+      const fs = await app.saveSession({ name: 'rtl-ftp', type: 'ftp', host: '127.0.0.1', port: 1, sftpAuto: false });
+      const fp = await app.openSession(fs);
+      for (let i = 0; i < 80 && !fp.dead; i++) await sleep(100);
+      await sleep(300);
+      const text = [...Array(fp.term.buffer.active.length)].map((_, i) => fp.term.buffer.active.getLine(i)?.translateToString(true) || '').join('\n');
+      const from = text.indexOf('Failed to start: ');
+      const failed = from < 0 ? '' : text.slice(from).split(/\n\s*\n|──/)[0].replace(/\n/g, '').trim();
+      app.onPaneStatus = orig;
+      check('ftpStartFailureEnglish', /^Failed to start: Connection refused .*no FTP server listens on that port$/.test(failed) && !/[\u0600-\u06ff]/.test(text) && !/[\u0000-\u001f]/.test(failed), { failed, text: text.trim().slice(0, 300) });
+      check('ftpStartFailureStatusArabic', fp.status === 'failed' && msgs.some((m) => /[\u0600-\u06ff]/.test(m) && !/[\u0000-\u001f]/.test(m)), msgs);
+      await app.closePane(fp, true); await sleep(300);
     }
 
     // ---- toasts: bottom-left quadrant ----

@@ -390,7 +390,7 @@ se conecta, e você é avisado se algum não conseguir escutar na porta. Uma por
 
 ## Ferramentas e macros
 
-- Painel **Ferramentas**: ping, traceroute, consulta DNS, varredura de portas e informações da rede local, com um botão
+- Painel **Ferramentas**: ping, traceroute, consulta DNS, varredura de portas e *Info. rede* (a configuração de rede deste Mac), com um botão
   Parar para execuções longas.
 - **Wake-on-LAN** (painel Ferramentas): digite o endereço MAC em qualquer grafia (`aa:bb:cc:dd:ee:ff`,
   `aa-bb-…`, `aabb.ccdd.eeff` ou hexadecimal puro) e pressione Despertar: o pacote mágico sai três vezes como
