@@ -34,6 +34,7 @@ const { ZmodemManager, fmtBytes } = require('./zmodem');
 const editor = require('./editor'); // external editor: the stale edit-folder sweep at start-up
 const urlpolicy = require('./urlpolicy'); // what a window may open outside the app (external URLs, folders, vnc://)
 const { isBrowserUrl, browserUrlWithoutUser } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
+const { forPane } = require('./paneerror'); // a pane's failed start as a reply ({ ok: false, error, terminalError }), not a rejection
 
 const pkg = require('../../package.json');
 bootTimes.mainLoaded = Date.now();
@@ -1070,15 +1071,9 @@ function registerIpc() {
     return file;
   });
 
-  // A pane prints a failed start into its terminal ("Failed to start: …") and shows it in the status bar. An error
-  // only crosses IPC as its message, so the terminal-language text (terminalMessage: English for Arabic and Hindi,
-  // i18n.errorFor) rides along after a U+001F separator; the renderer splits them (terminal.js startErrorText).
-  const forPane = (fn) => async (...args) => {
-    try { return await fn(...args); } catch (err) {
-      if (err && err.terminalMessage && err.terminalMessage !== err.message) throw new Error(`${err.message}\u001f${err.terminalMessage}`);
-      throw err;
-    }
-  };
+  // A pane prints a failed start into its terminal ("Failed to start: …") and shows it in the status bar: forPane
+  // (paneerror.js) answers { ok: false, error, terminalError } instead of rejecting — both texts reach the renderer
+  // (terminal.js start / startErrorText), and nothing is printed to stderr for an expected failure.
   ipcMain.handle('term:spawn-local', (e, opts) => own(e, spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-telnet', (e, opts) => own(e, spawnTelnet(registry, { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-serial', (e, opts) => own(e, spawnSerial(registry, opts)));

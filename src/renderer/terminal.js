@@ -53,13 +53,18 @@ const MONITOR_NOTES = {
 };
 
 /**
- * Text for a failed start: the IPC wrapper stripped and FTP replies translated (see sftp.js errMsg) → { why, line }:
- * `why` for the status bar and the FTP card, `line` for the terminal — main's terminal-language text when it sent one
- * after a U+001F (main.js forPane: English for Arabic and Hindi), else the same.
+ * Text for a failed start → { why, line }: `why` for the status bar and the FTP card (the IPC wrapper stripped and FTP
+ * replies translated, see sftp.js errMsg), `line` for the terminal — main's terminal-language text when it sent one
+ * (main.js forPane → { ok: false, error, terminalError }: English for Arabic and Hindi), else the same as `why`.
  */
-const startErrorText = (e) => {
-  const [why, line] = String((e && e.message) || e).split('\u001f');
-  return { why: errMsg({ message: why }), line: line || errMsg({ message: why }) };
+const startErrorText = (error, terminalError) => {
+  const why = errMsg({ message: String(error ?? '') });
+  return { why, line: terminalError && String(terminalError) !== String(error) ? String(terminalError) : why };
+};
+/** A start handler's reply that says it failed (main.js forPane): thrown, so start()'s catch handles it like any rejection. */
+const throwIfFailed = (r) => {
+  if (r && r.ok === false) throw Object.assign(new Error(String(r.error || '')), { terminalError: r.terminalError });
+  return r;
 };
 /** A Mosh client that exits this soon after its spawn never got past the ssh bootstrap. */
 const MOSH_BOOTSTRAP_MS = 3000;
@@ -872,7 +877,7 @@ export class TermPane {
         this.setStatus('connecting');
         const s = this.session;
         // main verifies the host key (app prompt) before the client is spawned; a declined key rejects here
-        const r = await window.api.term.spawnMosh({ name: s.name, host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, legacyAlgorithms: !!s.legacyAlgorithms, pqKex: !!s.pqKex, algorithms: s.algorithms, ...size });
+        const r = throwIfFailed(await window.api.term.spawnMosh({ name: s.name, host: s.host, port: s.port || 22, username: s.username, privateKeyPath: s.privateKeyPath, moshServer: s.moshServer, moshPredict: s.moshPredict, legacyAlgorithms: !!s.legacyAlgorithms, pqKex: !!s.pqKex, algorithms: s.algorithms, ...size }));
         this.termId = r.id;
         this.app.registerPane(this);
         if (r.handshakeLine) this.term.write(this._paint(r.handshakeLine)); // the host-key check's key exchange (post-quantum when the option is on), before the mosh client takes over
@@ -887,7 +892,7 @@ export class TermPane {
       } else if (this.kind === 'ftp') {
         this.setStatus('connecting');
         this.showFtpInfo('connecting');
-        const r = await window.api.ftp.connect(this.session);
+        const r = throwIfFailed(await window.api.ftp.connect(this.session));
         this.termId = r.id;
         this.app.registerPane(this);
         this.remoteCwd = r.home;
@@ -899,7 +904,7 @@ export class TermPane {
       if (this.session?.logging && this.kind !== 'ftp') this.toggleLog(true);
     } catch (e) {
       this._cancelRequested = false; // a Cancel pressed before main answered: the attempt is over anyway, the next Reconnect is the user's
-      const { why, line } = startErrorText(e);
+      const { why, line } = startErrorText((e && e.message) || e, e && e.terminalError); // a failed reply (throwIfFailed) or a plain rejection
       this.term.write(`\r\n\x1b[31m${tt('Failed to start: {why}', { why: line })}\x1b[0m\r\n`);
       if (this.kind === 'ftp') this.showFtpInfo('failed', why); // the card covers the terminal text
       this.setStatus('failed', why);
