@@ -402,7 +402,7 @@ servidor* para un reenvío remoto).
 
 ## Herramientas y macros
 
-- Panel **Utilidades**: ping, traceroute, consulta DNS, escaneo de puertos e información de la red local, con un
+- Panel **Utilidades**: ping, traceroute, consulta DNS, escaneo de puertos e *Info. red* (la configuración de red de este Mac), con un
   botón Detener para las ejecuciones largas.
 - **Wake-on-LAN** (panel Utilidades): escribe la dirección MAC con cualquier notación (`aa:bb:cc:dd:ee:ff`,
   `aa-bb-…`, `aabb.ccdd.eeff` o hexadecimal sin separadores) y pulsa Despertar: el paquete mágico sale tres veces como
