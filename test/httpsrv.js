@@ -21,6 +21,9 @@
 //   /keys         a page that swallows every keydown and records the keys it saw (window.__keys)
 //   /redir-user   302 to http://someone@<this host>/b (a redirect carrying a user name: followed, the name dropped)
 //   /redir-loop   302 to http://someone@<this host>/redir-loop, for ever (Chromium's redirect limit must end it)
+//   /selfloop     a page whose script sends it to http://u@<this host>/selfloop every 100 ms, for ever (the app must
+//                 shut it after a bounded number of reloads, not just slow it down)
+//   /slowloop     the same every 700 ms: slower than the burst cap, caught by the minute-long one
 //   /count?path=P how many requests this server has had for path P so far (text/plain)
 //   /icon.png     a 16 × 16 PNG favicon
 //   /router       "Router admin — demo": a made-up status page (documentation addresses only) for the user guide's
@@ -65,6 +68,10 @@ const routes = {
   '/router': () => `<!doctype html><html><head><meta charset="utf-8"><title>Router admin — demo</title><link rel="icon" href="/icon.png">
 <style>body{font:15px -apple-system,Helvetica,sans-serif;margin:0;background:#f4f6f8;color:#222}header{background:#1f6feb;color:#fff;padding:14px 20px;font-weight:600}main{padding:20px}table{border-collapse:collapse;background:#fff}td,th{border:1px solid #ddd;padding:6px 12px;text-align:left}</style></head>
 <body><header>Demo router · 192.0.2.1</header><main><h2>Status</h2><table><tr><th>WAN</th><td>up · 203.0.113.9</td></tr><tr><th>LAN</th><td>192.0.2.0/24 · 14 clients</td></tr><tr><th>Wi-Fi</th><td>2.4 GHz · 5 GHz</td></tr><tr><th>Uptime</th><td>41 days</td></tr></table></main></body></html>`,
+  '/selfloop': () => page('Self loop', `<p id="sl">This page keeps sending itself to a user@ address.</p>
+<script>setInterval(() => { location = 'http://u@127.0.0.1:${port}/selfloop'; }, 100);</script>`),
+  '/slowloop': () => page('Slow loop', `<p id="sl">This page sends itself to a user@ address every 700 ms.</p>
+<script>setTimeout(() => { location = 'http://u@127.0.0.1:${port}/slowloop'; }, 700);</script>`),
   '/keys': () => page('Keys page', `<p id="k">This page swallows every key.</p><input id="kf" placeholder="focus me">
 <script>window.__keys = []; window.addEventListener('keydown', (e) => { window.__keys.push((e.metaKey ? 'M' : '') + (e.ctrlKey ? 'C' : '') + (e.shiftKey ? 'S' : '') + e.key); e.preventDefault(); }, true);</script>`),
 };

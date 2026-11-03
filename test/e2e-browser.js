@@ -143,15 +143,20 @@
     await sleep(200);
     results.errorView = !p.errorEl.hidden && /could not be loaded/.test(p.errorEl.textContent) && /CONNECTION_REFUSED/.test(p.errorEl.textContent) && /\(-102\)/.test(p.errorEl.textContent)
       && p.errorEl.querySelector('.url').textContent === 'http://127.0.0.1:42599/' && p.webview.classList.contains('off') && /· failed/.test(status()) && p.tab.tabEl.querySelector('.dot').classList.contains('failed');
+    // the error view replaced Page A: the pane and the tab are named after the session again, not the page that went
+    results.errorViewTitle = p.title === 'Local web' && p.tab.title === 'Local web' && p.headTitle.textContent === 'Local web';
+    if (!results.errorViewTitle) log('title on the error view:', p.title, p.tab.title);
     if (!results.errorView) log('error view:', p.errorEl.hidden, JSON.stringify(p.errorEl.textContent), p.webview.className, status(), p.tab.tabEl.querySelector('.dot').className);
     await shot('b3-error');
     const beforeRetry = starts;
     p.retryBtn.click();
     await waitFor(() => starts === beforeRetry + 1, 3000, 'retry started');
     await waitFor(() => p.status === 'failed' && !p.loading, 10000, 'failed again');
-    results.retryRuns = p.failed && p.failed.url === 'http://127.0.0.1:42599/' && !p.errorEl.hidden;
+    results.retryRuns = p.failed && p.failed.url === 'http://127.0.0.1:42599/' && !p.errorEl.hidden && p.title === 'Local web';
     p.navigate(SITE);
     await loaded(p, '/');
+    await waitFor(() => p.title === 'Page A', 5000, 'title after recovery').catch(() => {});
+    results.titleAfterRecovery = p.title === 'Page A' && p.tab.title === 'Page A';
     await sleep(200);
     results.recovers = p.errorEl.hidden && !p.webview.classList.contains('off') && p.failed === null && status() === `BROWSER · ${SITE} · loaded`;
 

@@ -34,6 +34,7 @@ const { ZmodemManager, fmtBytes } = require('./zmodem');
 const editor = require('./editor'); // external editor: the stale edit-folder sweep at start-up
 const urlpolicy = require('./urlpolicy'); // what a window may open outside the app (external URLs, folders, vnc://)
 const { isBrowserUrl, browserUrlWithoutUser } = require('./browserurl'); // what a browser pane's <webview> may ever load (also loaded by the renderer)
+const { forPane } = require('./paneerror'); // a pane's failed start as a reply ({ ok: false, error, terminalError }), not a rejection
 
 const pkg = require('../../package.json');
 bootTimes.mainLoaded = Date.now();
@@ -1070,15 +1071,9 @@ function registerIpc() {
     return file;
   });
 
-  // A pane prints a failed start into its terminal ("Failed to start: …") and shows it in the status bar. An error
-  // only crosses IPC as its message, so the terminal-language text (terminalMessage: English for Arabic and Hindi,
-  // i18n.errorFor) rides along after a U+001F separator; the renderer splits them (terminal.js startErrorText).
-  const forPane = (fn) => async (...args) => {
-    try { return await fn(...args); } catch (err) {
-      if (err && err.terminalMessage && err.terminalMessage !== err.message) throw new Error(`${err.message}\u001f${err.terminalMessage}`);
-      throw err;
-    }
-  };
+  // A pane prints a failed start into its terminal ("Failed to start: …") and shows it in the status bar: forPane
+  // (paneerror.js) answers { ok: false, error, terminalError } instead of rejecting — both texts reach the renderer
+  // (terminal.js start / startErrorText), and nothing is printed to stderr for an expected failure.
   ipcMain.handle('term:spawn-local', (e, opts) => own(e, spawnLocal(registry, store.getSettings(), { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-telnet', (e, opts) => own(e, spawnTelnet(registry, { ...opts, ...sizeOf(opts) })));
   ipcMain.handle('term:spawn-serial', (e, opts) => own(e, spawnSerial(registry, opts)));
@@ -1410,11 +1405,15 @@ function registerIpc() {
   ipcMain.handle('shell:open-external', (_e, url) => (urlpolicy.externalUrlAllowed(url) ? shell.openExternal(url) : false));
   ipcMain.handle('browser:favicon', (e, id, url) => fetchFavicon(e.sender, id, url)); // a browser pane's page icon as a data: URL (null when there is none)
   // a browser pane's history (the <webview> tag's own canGoBack / goBack went with the webContents methods they wrapped):
-  // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward'
+  // only for a guest the calling window embeds — { canGoBack, canGoForward } after any of 'state' | 'back' | 'forward' |
+  // 'user' (the renderer is about to load or reload the page itself)
   ipcMain.handle('browser:nav', (e, id, op) => {
     const wc = guestOf(e.sender, id);
     if (!wc) return null;
     const nav = wc.navigationHistory;
+    // the user moved the pane on purpose (a typed address, Reload, Retry, Back / Forward): a page that was shut for
+    // looping to user@ itself (hardenWebviews) may navigate again, with a fresh allowance
+    if (op === 'user' || op === 'back' || op === 'forward') stripGuards.get(wc)?.reset();
     if (op === 'back' && nav.canGoBack()) nav.goBack();
     else if (op === 'forward' && nav.canGoForward()) nav.goForward();
     return { canGoBack: nav.canGoBack(), canGoForward: nav.canGoForward() };
@@ -1532,9 +1531,20 @@ function guestOf(sender, id) {
   const wc = webContents.fromId(id);
   return wc && !wc.isDestroyed() && wc.getType() === 'webview' && wc.hostWebContents && !wc.hostWebContents.isDestroyed() && wc.hostWebContents.id === sender.id ? wc : null;
 }
-/** How often a guest's links to user@host are loaded again without the name before they are only cancelled. */
+/**
+ * How often a guest's links to user@host are loaded again without the name before the page is shut: a burst (10 in
+ * 5 s) or a slower, steady loop (30 in a minute — a page that reloads itself every 700 ms never trips the burst cap).
+ */
 const STRIP_RELOADS_MAX = 10;
 const STRIP_RELOADS_WINDOW_MS = 5000;
+const STRIP_RELOADS_LONG_MAX = 30;
+const STRIP_RELOADS_LONG_WINDOW_MS = 60000;
+/**
+ * guest webContents → { reset() }: lifts a guest's user@ loop stop when the user navigates (browser:nav 'user' / 'back' /
+ * 'forward'). Each reset is counted; browser:loop-stopped carries the count it was sent at, so the renderer, which counts
+ * the resets it asked for, can drop a stop that was already on its way when the user navigated.
+ */
+const stripGuards = new WeakMap();
 function hardenWebviews() {
   app.on('web-contents-created', (_e, contents) => {
     contents.on('will-attach-webview', (event, webPreferences, params) => {
@@ -1569,16 +1579,31 @@ function hardenWebviews() {
       // loaded again without it (a password in an address is still refused, never followed). The reload is a GET, so a
       // form POSTed to such an address loses its data — acceptable for an address no browser should be sent to.
       // A page that keeps doing it (a script on the loaded page sending itself to user@ again) is stopped by a cap:
-      // past STRIP_RELOADS_MAX in STRIP_RELOADS_WINDOW_MS the link is only cancelled and the pane stays where it is.
-      const stripTimes = [];
+      // past STRIP_RELOADS_MAX in STRIP_RELOADS_WINDOW_MS, or STRIP_RELOADS_LONG_MAX in STRIP_RELOADS_LONG_WINDOW_MS, the document is shut — every navigation and popup it starts is
+      // cancelled, its load stopped, and the window told (browser:loop-stopped → the pane's error view, "The page keeps
+      // redirecting to itself.") — until the user moves the pane on purpose (browser:nav 'user' / 'back' / 'forward').
+      // A rate limit alone would let such a page reload itself a couple of times a second for ever.
+      const stripTimes = []; // the strip-reloads of the last STRIP_RELOADS_LONG_WINDOW_MS, oldest first
+      let stripStopped = false;
+      let stripResets = 0; // the user's navigations so far (reset): the generation a loop-stopped message belongs to
       const stripReloadAllowed = () => {
+        if (stripStopped) return false;
         const now = Date.now();
-        while (stripTimes.length && now - stripTimes[0] > STRIP_RELOADS_WINDOW_MS) stripTimes.shift();
-        if (stripTimes.length >= STRIP_RELOADS_MAX) return false;
+        while (stripTimes.length && now - stripTimes[0] > STRIP_RELOADS_LONG_WINDOW_MS) stripTimes.shift();
+        const recent = stripTimes.filter((t0) => now - t0 <= STRIP_RELOADS_WINDOW_MS).length;
+        if (recent >= STRIP_RELOADS_MAX || stripTimes.length >= STRIP_RELOADS_LONG_MAX) {
+          stripStopped = true;
+          try { guest.stop(); } catch {}
+          const host = guest.hostWebContents;
+          if (host && !host.isDestroyed()) host.send('browser:loop-stopped', guest.id, stripResets);
+          return false;
+        }
         stripTimes.push(now);
         return true;
       };
+      stripGuards.set(guest, { reset: () => { stripStopped = false; stripTimes.length = 0; stripResets++; } });
       guest.on('will-navigate', (ev, url) => {
+        if (stripStopped) return ev.preventDefault(); // the page was shut for looping: nothing it starts goes anywhere
         if (isBrowserUrl(url)) return;
         ev.preventDefault();
         const to = browserUrlWithoutUser(url);

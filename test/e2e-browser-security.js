@@ -7,7 +7,9 @@
 // 401 page, demo / demo signs in, a prompt still up when the pane closes is withdrawn); a page that swallows every
 // keydown does not take ⌘L from the app, yet gets ⌘K / ⌘B / ⌘D (they are the page's); a page's link with a user name
 // is followed without it, one with a password is not; a redirect to user@ is followed without the name and a
-// user@ redirect loop ends in the error view after a bounded number of requests; the address field drops a user
+// user@ redirect loop ends in the error view after a bounded number of requests, and so does a page whose script keeps
+// sending itself to user@ (shut, not only slowed down — a burst and a slow 700 ms loop alike; a typed address afterwards
+// works, a stop message older than it is dropped); the address field drops a user
 // name; an address with a password is refused everywhere.
 //   test/e2e-browser.sh <out-dir>                               (all phases, the site started for them)
 //   test/qa/run.sh test/e2e-browser-security.js <out-dir> 180000 (alone: node test/httpsrv.js --port 42510 --log <out-dir>/httpsrv.log)
@@ -103,13 +105,13 @@
     await inGuest(p, 'window.close()', false);
     await waitFor(() => p.status === 'failed', 5000, 'closed → failed');
     await sleep(200);
-    results.windowCloseErrorView = !p.errorEl.hidden && /closed/.test(p.errorEl.textContent) && p.webview.classList.contains('off') && !p.ready;
+    results.windowCloseErrorView = !p.errorEl.hidden && /closed/.test(p.errorEl.textContent) && p.webview.classList.contains('off') && !p.ready && p.title === 'Local web' && p.tab.title === 'Local web'; // not "Page B": that page is gone
     await shot('s2-window-close');
     const oldWebview = p.webview;
     p.retryBtn.click();
     await loaded(p, '/b');
     await waitFor(() => p.title === 'Page B', 5000, 'title after retry');
-    results.windowCloseRetry = p.webview !== oldWebview && !oldWebview.isConnected && p.errorEl.hidden && (await inGuest(p, 'document.title', false)) === 'Page B' && p.canBack === false;
+    results.windowCloseRetry = p.title === 'Page B' && p.tab.title === 'Page B' && p.webview !== oldWebview && !oldWebview.isConnected && p.errorEl.hidden && (await inGuest(p, 'document.title', false)) === 'Page B' && p.canBack === false;
 
     // ---------- HTTP Basic authentication through the app's own prompt ----------
     p.navigate(SITE + 'auth');
@@ -200,6 +202,46 @@
     const loopHits = Number(await inGuest(p, 'document.body.textContent', false));
     log('redirect loop requests', loopHits);
     results.redirectLoopBounded = loopFailed && loopHits > 0 && loopHits <= 25;
+    // a page whose own script keeps sending it to user@itself (every 100 ms): after the strip-and-reload cap the page
+    // is shut — the error view says why, and the server stops seeing requests (a rate limit alone kept it at ~2.6/s)
+    p.navigate(SITE + 'selfloop');
+    await waitFor(() => p.status === 'failed' && !p.errorEl.hidden, 15000, 'self loop → error view').catch(() => {});
+    const selfLoopView = p.status === 'failed' && !p.errorEl.hidden && p.errorEl.textContent.includes('The page keeps redirecting to itself.') && p.webview.classList.contains('off');
+    log('self loop error', p.errorEl.textContent.trim().slice(0, 140));
+    await shot('s5-self-loop');
+    const countSelf = async () => (await requests(/ GET \/selfloop /)).length;
+    const selfHits1 = await countSelf();
+    await sleep(3000); // a page only slowed down would have asked for itself ~8 more times by now
+    const selfHits2 = await countSelf();
+    log('self loop requests', selfHits1, '→', selfHits2, 'after 3 s; still', p.status);
+    results.selfLoopStopped = selfLoopView && p.title === 'Local web' && selfHits1 > 0 && selfHits1 <= 15 && selfHits2 === selfHits1 && p.status === 'failed';
+    // a typed address afterwards works (the user moved the pane on purpose: the stop is lifted for the next page)
+    p.urlEl.focus();
+    p.urlEl.value = SITE + 'b';
+    p.urlEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    await loaded(p, '/b');
+    await inGuest(p, "location = 'http://someone@127.0.0.1:42510/'", false); // and the page's own user@ link is followed again (without the name)
+    await loaded(p, '/');
+    results.selfLoopTypedAddressAfter = p.url === SITE && p.errorEl.hidden && !p.webview.classList.contains('off') && (await countSelf()) === selfHits2;
+    // a loop-stopped message that was already on its way when the user navigated (main's generation is behind the
+    // pane's) is about the page that went: it is dropped, the new page stays
+    p._onLoopStopped(p._navGen - 1);
+    results.staleLoopStopIgnored = p.errorEl.hidden && p.status === 'connected' && !p._shut;
+    // a slower loop (every 700 ms: never 10 in 5 s) is caught by the minute-long cap (30 in 60 s) — the real constants,
+    // no test hook: ~25 s of this run
+    const t1 = Date.now();
+    p.navigate(SITE + 'slowloop');
+    await waitFor(() => p.status === 'failed' && !p.errorEl.hidden, 60000, 'slow loop → error view').catch(() => {});
+    const slowMs = Date.now() - t1;
+    const countSlow = async () => (await requests(/ GET \/slowloop /)).length;
+    const slowHits1 = await countSlow();
+    await sleep(3000);
+    const slowHits2 = await countSlow();
+    log('slow loop', slowHits1, '→', slowHits2, 'requests; shut after', slowMs, 'ms');
+    results.slowLoopStopped = p.status === 'failed' && p.errorEl.textContent.includes('The page keeps redirecting to itself.') && slowHits1 >= 25 && slowHits1 <= 35 && slowHits2 === slowHits1;
+    p.navigate(SITE + 'b');
+    await loaded(p, '/b');
+    results.slowLoopTypedAddressAfter = p.url === SITE + 'b' && p.errorEl.hidden && p.title === 'Page B';
     // the address field (the renderer's loadUrl path): a user name is dropped, the page loads without it
     p.urlEl.focus();
     p.urlEl.value = 'http://u@127.0.0.1:42510/b';
