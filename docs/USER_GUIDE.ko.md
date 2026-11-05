@@ -19,8 +19,15 @@ MobAlt는 macOS용 MobaXterm 스타일 작업 환경입니다. 왼쪽에 세션 
 
 ## 설치
 
-- **Homebrew**: `brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
-  (Homebrew 7부터 외부 tap은 한 번 신뢰 처리가 필요하며, 이후 `brew upgrade --cask mobalt`로 업데이트)
+- **Homebrew**:
+  ```bash
+  brew tap Hyeongcheol-An/tap
+  brew trust Hyeongcheol-An/tap
+  brew install --cask mobalt
+  ```
+  Homebrew 7부터는 외부 tap을 한 번 신뢰 처리하기 전까지 그 tap의 cask를 설치하지 않습니다. `brew trust Hyeongcheol-An/tap`은 tap의 모든 cask에,
+  `brew trust --cask Hyeongcheol-An/tap/mobalt`는 이 cask에만 적용되며, 이 명령이 없는 Homebrew 6 이하에서는 이 단계를 건너뛰세요. 이후 업데이트는
+  `brew upgrade --cask mobalt`.
 - **DMG**: [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases)에서 Apple Silicon(`arm64`) 또는
   Intel(`x64`) DMG를 받아 MobAlt를 응용 프로그램 폴더로 끌어다 놓습니다.
 
@@ -483,5 +490,8 @@ macOS 키체인 기반 암호화), `settings.json`, `known_hosts`, `workspace.js
   호스트에 없거나 PATH에 없는 것입니다(세션에 경로 지정).
 - **직접 빌드한 앱의 Gatekeeper 경고**: 한 번 우클릭 → 열기, 또는
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
+- **`Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.`**: Homebrew 7부터는
+  신뢰 처리하지 않은 tap에서 설치하지 않습니다. `brew trust Hyeongcheol-An/tap`(이 cask만이면
+  `brew trust --cask Hyeongcheol-An/tap/mobalt`)을 실행한 뒤 `brew install --cask mobalt`를 다시 실행하세요.
 - **`brew upgrade --cask mobalt`에서 `hdiutil: attach failed – Resource busy`**: 그 순간 다른 Homebrew
   프로세스(예: `brew audit`, `brew fetch`)가 같은 DMG를 마운트하고 있던 것입니다. 명령을 다시 실행하면 됩니다.

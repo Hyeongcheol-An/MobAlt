@@ -17,8 +17,16 @@ MobAlt macOS के लिए MobaXterm-शैली का वर्कबे�
 
 ## इंस्टॉल
 
-- **Homebrew**: `brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
-  (Homebrew 7 किसी थर्ड-पार्टी tap पर एक बार भरोसा करने को कहता है; बाद में `brew upgrade --cask mobalt` अपडेट करता है)
+- **Homebrew**:
+  ```bash
+  brew tap Hyeongcheol-An/tap
+  brew trust Hyeongcheol-An/tap
+  brew install --cask mobalt
+  ```
+  Homebrew 7 और उसके बाद के संस्करण किसी थर्ड-पार्टी tap के cask तब तक लोड नहीं करते जब तक आप उस tap पर एक बार भरोसा न
+  करें: `brew trust Hyeongcheol-An/tap` उस tap के सभी cask पर लागू होता है,
+  `brew trust --cask Hyeongcheol-An/tap/mobalt` सिर्फ़ इसी पर; Homebrew 6 और पुराने संस्करणों में यह कमांड नहीं है,
+  इसलिए यह चरण छोड़ दें। बाद में `brew upgrade --cask mobalt` अपडेट करता है।
 - **DMG**: [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) से Apple Silicon (`arm64`) या Intel (`x64`)
   वाला DMG डाउनलोड करें और MobAlt को Applications में खींचकर छोड़ें।
 
@@ -492,5 +500,9 @@ MobAlt के मेनू, टूलबार, पैनल, डायलॉग
   मतलब वह होस्ट पर नहीं है या उसके PATH में नहीं है (सेशन में पाथ सेट करें)।
 - **स्वयं बनाए ऐप पर Gatekeeper चेतावनी**: एक बार राइट-क्लिक → खोलें (Open) चुनें, या
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`।
+- **`Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.`**: Homebrew 7 और
+  उसके बाद के संस्करण ऐसे tap से इंस्टॉल नहीं करते जिस पर आपने भरोसा न किया हो। `brew trust Hyeongcheol-An/tap`
+  (सिर्फ़ इस cask के लिए `brew trust --cask Hyeongcheol-An/tap/mobalt`) चलाएँ, फिर `brew install --cask mobalt` दोबारा
+  चलाएँ।
 - **`brew upgrade --cask mobalt` से `hdiutil: attach failed – Resource busy`**: किसी और Homebrew प्रोसेस (जैसे
   `brew audit` या `brew fetch`) ने उसी क्षण वही DMG माउंट कर रखा था। बस कमांड फिर से चलाएँ।

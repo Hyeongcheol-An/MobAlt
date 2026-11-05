@@ -17,8 +17,15 @@ Contents: [Install](#install) · [Updating](#updating) · [Sessions](#sessions) 
 
 ## Install
 
-- **Homebrew**: `brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
-  (Homebrew 7 asks you to trust a third-party tap once; `brew upgrade --cask mobalt` updates later)
+- **Homebrew**:
+  ```bash
+  brew tap Hyeongcheol-An/tap
+  brew trust Hyeongcheol-An/tap
+  brew install --cask mobalt
+  ```
+  Homebrew 7 and later refuse casks from a third-party tap until you trust it once: `brew trust Hyeongcheol-An/tap`
+  covers every cask of the tap, `brew trust --cask Hyeongcheol-An/tap/mobalt` just this one; on Homebrew 6 and earlier
+  the command does not exist, so skip it. Later updates: `brew upgrade --cask mobalt`.
 - **DMG**: download the Apple Silicon (`arm64`) or Intel (`x64`) DMG from
   [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) and drag MobAlt to Applications.
 
@@ -544,6 +551,9 @@ terminal link with any other scheme does nothing). Details: [SECURITY.md](../SEC
   its path in the session when it is not on the remote PATH.
 - **Gatekeeper warning on a self-built app**: right-click → Open once, or
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
+- **`Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.`**: Homebrew 7 and
+  later do not install from a tap you have not trusted. Run `brew trust Hyeongcheol-An/tap` (or
+  `brew trust --cask Hyeongcheol-An/tap/mobalt` for this cask only), then `brew install --cask mobalt` again.
 - **`hdiutil: attach failed – Resource busy` from `brew upgrade --cask mobalt`**: another Homebrew process
   (for example `brew audit` or `brew fetch`) had the same DMG mounted at that moment. Just run the command
   again.
