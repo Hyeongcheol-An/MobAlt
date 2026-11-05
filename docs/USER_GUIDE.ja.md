@@ -17,8 +17,15 @@ MobAlt は macOS 向けの MobaXterm スタイルのワークベンチです。�
 
 ## インストール
 
-- **Homebrew**：`brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
-  （Homebrew 7 ではサードパーティの tap を一度信頼する必要があります。以後は `brew upgrade --cask mobalt` でアップデートできます）
+- **Homebrew**：
+  ```bash
+  brew tap Hyeongcheol-An/tap
+  brew trust Hyeongcheol-An/tap
+  brew install --cask mobalt
+  ```
+  Homebrew 7 以降は、サードパーティの tap を一度信頼するまでその cask を読み込みません。`brew trust Hyeongcheol-An/tap` は tap 内のすべての cask
+  を、`brew trust --cask Hyeongcheol-An/tap/mobalt` はこの cask だけを信頼します。Homebrew 6 以前にはこのコマンドがないので、この手順は飛ばしてください。以後は
+  `brew upgrade --cask mobalt` でアップデートできます。
 - **DMG**：[Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) から Apple Silicon（`arm64`）または
   Intel（`x64`）の DMG をダウンロードし、MobAlt をアプリケーションフォルダにドラッグします。
 
@@ -510,6 +517,9 @@ macOS のキーチェーンで暗号化）、`settings.json`、`known_hosts`、`
   found」はホストにないか、その PATH に入っていないということです（セッションでパスを設定してください）。
 - **自分でビルドしたアプリへの Gatekeeper の警告**：右クリック → 開く を一度行うか、
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app` を実行します。
+- **`Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.`**：Homebrew 7
+  以降は、信頼していない tap からはインストールしません。`brew trust Hyeongcheol-An/tap`（この cask だけなら
+  `brew trust --cask Hyeongcheol-An/tap/mobalt`）を実行してから、もう一度 `brew install --cask mobalt` を実行してください。
 - **`brew upgrade --cask mobalt` で `hdiutil: attach failed – Resource busy`**：別の Homebrew プロセス
   （たとえば `brew audit` や `brew fetch`）がその瞬間に同じ DMG をマウントしていました。コマンドをもう一度
   実行してください。

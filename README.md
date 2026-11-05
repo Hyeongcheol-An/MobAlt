@@ -97,9 +97,13 @@ for RDP.
 
 ```bash
 brew tap Hyeongcheol-An/tap
-brew trust Hyeongcheol-An/tap      # Homebrew 7+ asks you to trust third-party taps once
+brew trust Hyeongcheol-An/tap
 brew install --cask mobalt
 ```
+
+Homebrew 7 and later refuse casks from a third-party tap until you trust it once: `brew trust Hyeongcheol-An/tap`
+covers every cask of the tap, `brew trust --cask Hyeongcheol-An/tap/mobalt` just this one; on Homebrew 6 and earlier
+the command does not exist, so skip it.
 
 Later updates: `brew upgrade --cask mobalt`. The cask is also kept in this repository (`Casks/mobalt.rb`).
 
@@ -309,6 +313,10 @@ keychain when one is present; otherwise they are unsigned and need right-click â
 - Serial: only devices macOS exposes as serial ports (`/dev/cu.*`) are listed; an adapter that needs a vendor driver
   (some CH34x / PL2303 chips) shows up once that driver is installed. Unplugging the device ends the session; the
   pane says the connection was lost.
+- Homebrew 7 and later stop `brew install --cask mobalt` with
+  `Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.` until the tap is
+  trusted: run `brew trust Hyeongcheol-An/tap` (or `brew trust --cask Hyeongcheol-An/tap/mobalt` for this cask only)
+  and install again.
 
 ## License
 

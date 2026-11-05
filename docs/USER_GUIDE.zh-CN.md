@@ -17,8 +17,15 @@ MobAlt 是一款 MobaXterm 风格的 macOS 工作台：左侧是会话树，中�
 
 ## 安装
 
-- **Homebrew**：`brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
-  （Homebrew 7 会要求你对第三方 tap 授予一次信任；之后用 `brew upgrade --cask mobalt` 更新）
+- **Homebrew**：
+  ```bash
+  brew tap Hyeongcheol-An/tap
+  brew trust Hyeongcheol-An/tap
+  brew install --cask mobalt
+  ```
+  Homebrew 7 及更高版本在你对第三方 tap 授予一次信任之前，会拒绝加载其中的 cask：`brew trust Hyeongcheol-An/tap` 信任该 tap 的所有
+  cask，`brew trust --cask Hyeongcheol-An/tap/mobalt` 只信任这一个；Homebrew 6 及更早版本没有这个命令，跳过即可。之后用
+  `brew upgrade --cask mobalt` 更新。
 - **DMG**：从 [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) 下载 Apple 芯片（`arm64`）或
   Intel（`x64`）版 DMG，将 MobAlt 拖到“应用程序”文件夹。
 
@@ -447,5 +454,8 @@ SFTP 列表和标签栏（每个列表算一个 Tab 停靠点，用方向键在�
   “mosh-server not found”表示主机上没有安装 mosh-server，或它不在 PATH 中（请在会话中设置路径）。
 - **自行构建的应用出现 Gatekeeper 警告**：右键点击 →“打开”一次，或运行
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`。
+- **`Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.`**：Homebrew 7
+  及更高版本不会从未受信任的 tap 安装。运行 `brew trust Hyeongcheol-An/tap`（只针对这个 cask 则用
+  `brew trust --cask Hyeongcheol-An/tap/mobalt`），然后重新运行 `brew install --cask mobalt`。
 - **`brew upgrade --cask mobalt` 报告 `hdiutil: attach failed – Resource busy`**：另一个 Homebrew 进程
   （例如 `brew audit` 或 `brew fetch`）当时正挂载着同一个 DMG。重新运行该命令即可。

@@ -95,9 +95,13 @@ GitHub Releases에서 새 버전을 확인하며(Settings → Updates, Help → 
 
 ```bash
 brew tap Hyeongcheol-An/tap
-brew trust Hyeongcheol-An/tap      # Homebrew 7부터 외부 tap은 한 번 신뢰 처리가 필요합니다
+brew trust Hyeongcheol-An/tap
 brew install --cask mobalt
 ```
+
+Homebrew 7부터는 외부 tap을 한 번 신뢰 처리하기 전까지 그 tap의 cask를 설치하지 않습니다.
+`brew trust Hyeongcheol-An/tap`은 tap의 모든 cask에, `brew trust --cask Hyeongcheol-An/tap/mobalt`는 이 cask에만
+적용되며, 이 명령이 없는 Homebrew 6 이하에서는 이 단계를 건너뛰세요.
 
 이후 업데이트는 `brew upgrade --cask mobalt`. cask 파일은 이 저장소에도 있습니다(`Casks/mobalt.rb`).
 
@@ -215,6 +219,10 @@ npm run perf           # 시작 시간·유휴 CPU·메모리·번들 크기 측
   아닙니다.
 - 시리얼: macOS가 시리얼 포트(`/dev/cu.*`)로 드러내는 장치만 나열됩니다. 제조사 드라이버가 필요한 어댑터(일부
   CH34x / PL2303)는 드라이버를 설치해야 보입니다. 장치를 뽑으면 세션이 끝나고 페인에 연결이 끊겼다고 표시됩니다.
+- Homebrew 7 이상에서는 tap을 신뢰 처리하기 전까지 `brew install --cask mobalt`가
+  `Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.`로 멈춥니다.
+  `brew trust Hyeongcheol-An/tap`(이 cask만이면 `brew trust --cask Hyeongcheol-An/tap/mobalt`)을 실행한 뒤 다시
+  설치하세요.
 
 ## 라이선스
 

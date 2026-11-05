@@ -17,8 +17,16 @@ Mục lục: [Tải về và cài đặt](#tải-về-và-cài-đặt) · [Cập
 
 ## Tải về và cài đặt
 
-- **Homebrew**: `brew tap Hyeongcheol-An/tap && brew trust Hyeongcheol-An/tap && brew install --cask mobalt`
-  (Homebrew 7 yêu cầu bạn tin cậy tap của bên thứ ba một lần; về sau `brew upgrade --cask mobalt` sẽ cập nhật)
+- **Homebrew**:
+  ```bash
+  brew tap Hyeongcheol-An/tap
+  brew trust Hyeongcheol-An/tap
+  brew install --cask mobalt
+  ```
+  Homebrew 7 trở lên từ chối cask từ tap của bên thứ ba cho đến khi bạn tin cậy tap đó một lần:
+  `brew trust Hyeongcheol-An/tap` áp dụng cho mọi cask của tap, `brew trust --cask Hyeongcheol-An/tap/mobalt` chỉ cho
+  cask này; Homebrew 6 trở về trước không có lệnh này, hãy bỏ qua bước đó. Về sau `brew upgrade --cask mobalt` sẽ cập
+  nhật.
 - **DMG**: tải DMG cho Apple Silicon (`arm64`) hoặc Intel (`x64`) từ
   [Releases](https://github.com/Hyeongcheol-An/MobAlt/releases) rồi kéo MobAlt vào thư mục Ứng dụng (Applications).
 
@@ -511,6 +519,9 @@ trên GitHub, ngoài ra không gì khác. Liên kết chỉ mở trong trình du
   phiên).
 - **Cảnh báo Gatekeeper với ứng dụng tự build**: nhấp chuột phải → Mở một lần, hoặc
   `xattr -dr com.apple.quarantine /Applications/MobAlt.app`.
+- **`Error: Refusing to load cask hyeongcheol-an/tap/mobalt from untrusted tap hyeongcheol-an/tap.`**: Homebrew 7 trở
+  lên không cài đặt từ tap mà bạn chưa tin cậy. Chạy `brew trust Hyeongcheol-An/tap` (hoặc
+  `brew trust --cask Hyeongcheol-An/tap/mobalt` nếu chỉ cho cask này), rồi chạy lại `brew install --cask mobalt`.
 - **`hdiutil: attach failed – Resource busy` khi chạy `brew upgrade --cask mobalt`**: một tiến trình Homebrew khác
   (ví dụ `brew audit` hoặc `brew fetch`) đang gắn cùng tệp DMG đó vào lúc ấy. Chỉ cần chạy lại
   lệnh.
